@@ -54,14 +54,16 @@ Phases 0–4 are the MVP (PRD Phase 1). Phase 5 is PRD Phase 2. Phase 6 is PRD P
 
 **Objective:** get real business data into the unified schema, from at least one real source plus manual upload, so there's something to query in Phase 2.
 
-**Deliverables**
-- Normalized schema: `Product`, `Transaction`, `LineItem`, `InventoryUsage`, `Shift`, each carrying `businessId` + `branchId`.
-- `DataSourceAdapter` interface: `pullSales()`, `pullInventory()`, `pullShifts()`.
-- CSV/Excel upload adapter (works for any business on day one — this unblocks onboarding per FR-05, regardless of POS vendor).
-- One live POS API adapter as the reference implementation (pick the most common vendor among target early users; this is the template for every future connector).
-- Ingestion job runner (queue or scheduled task) that normalizes and de-duplicates incoming records; a sync-status view so an owner can see "last synced: 2 hours ago" per branch.
+**Status: CSV/Excel path done and verified. Live POS adapter deferred — see decision below.**
 
-**Exit criteria:** uploading a CSV or connecting the reference POS populates `Transaction`/`LineItem` rows queryable per branch and per date range.
+**Deliverables**
+- ✅ Normalized schema: `Product`, `Transaction`, `LineItem`, `InventoryUsage`, `Shift`, each carrying `businessId` + `branchId`.
+- ✅ CSV/Excel upload adapter (works for any business on day one — this unblocks onboarding per FR-05, regardless of POS vendor). One library (`xlsx`) reads both formats; rows group into transactions by an external id; bad rows are reported per-row without failing the whole file.
+- ⏸️ One live POS API adapter as the reference implementation — **investigated and deferred.** Petpooja (India's dominant restaurant POS, the natural first pick given this PRD's market) was researched directly: its public, documented API (`onlineorderingapisv210.docs.apiary.io`) is an *order-injection* API built for aggregators like Zomato/Swiggy to push orders **into** Petpooja — there is no documented endpoint to pull sales/transactions **out**. Their reporting/export feature is a manual one-click dashboard export, not a programmatic API. True live sync would require Petpooja granting enterprise reporting-API access through their partnerships team — a business-development step, not an engineering one, and not something to build against speculatively. Decision: Petpooja (and by extension most Indian restaurant POS systems in the same position) goes through the CSV path already built — a merchant exports from their POS dashboard and uploads it. Revisit a live adapter only once a specific vendor's real, pull-capable API is confirmed (either a different vendor, or Petpooja after a partner conversation).
+- `DataSourceAdapter` interface (`pullSales()`, `pullInventory()`, `pullShifts()`) — not built; deferred along with the live adapter, since there's only one adapter (CSV) to abstract over so far.
+- Ingestion job runner (queue or scheduled task) for *live* sources — not applicable yet (CSV upload is inherently on-demand, not scheduled); revisit once a live adapter exists. A sync-status view (`SyncRun` history, `DataSourceConnection.lastSyncedAt`) is already in place and works for the CSV path today.
+
+**Exit criteria:** ~~uploading a CSV or connecting the reference POS~~ uploading a CSV populates `Transaction`/`LineItem` rows queryable per branch and per date range. **Met** (verified via automated tests and a live end-to-end run).
 
 ---
 
@@ -157,17 +159,18 @@ Runs partly in parallel with Phases 4–6, but nothing ships to real businesses 
 
 ## 11. Immediate Next Steps (from current repo state)
 
-1. Replace the standalone `User` model in [backend/prisma/schema.prisma](backend/prisma/schema.prisma) with `Business` / `Branch` / `Membership` (Phase 0).
-2. Add tenant-resolution middleware in [backend/src/middleware/](backend/src/middleware/) alongside the existing `errorHandler.js`.
-3. Stand up the signup flow (create `Business` + first `OWNER`) reusing the existing `user.controller.js` / `user.service.js` pattern.
-4. Replace [frontend/src/screens/HomeScreen.tsx](frontend/src/screens/HomeScreen.tsx) with an auth-gated shell once login exists, ahead of the Phase 2 chat screen.
+Phases 0 and 1's CSV path are both done and verified (schema, migrations, tests, CI, an auth-gated frontend shell, and a Postman collection covering all of it). What's actually next:
+
+1. **Phase 2 — Core Query Engine.** Blocked on an LLM provider being wired in (Anthropic API key not yet provided).
+2. **Design pass** on the existing screens (Login/Signup/Home) — deferred earlier in favor of features; still open.
+3. **Live POS adapter** — blocked on either picking a different pull-capable vendor or a Petpooja partner conversation (see Section 12).
 
 ---
 
 ## 12. Open Risks (carried from PRD Section 12)
 
 - **Gujarati NLU/voice quality** — validate early with real speakers; text-first fallback if voice accuracy is weak.
-- **POS integration breadth** — define the initial supported-vendor shortlist before Phase 1 starts; CSV upload is the permanent fallback for everyone else.
+- **POS integration breadth** — investigated Petpooja (the natural first pick for this PRD's market) directly: its public API has no data-export/reporting endpoint, only order-injection for aggregators. A live adapter needs either a different vendor with a genuine pull API, or a partner-level conversation with Petpooja for reporting access — neither resolved yet. CSV upload is not just a fallback for everyone else; for now it's the *only* path for Petpooja merchants specifically, and is working end-to-end.
 - **Data privacy regulation differs by market** — no market launch without its own compliance review (Phase 7).
 - **Pricing model** — undefined; validate during Phase 4–5 user testing, not assumed upfront.
 - **PRD not yet validated with external owners** — treat Section 6 priorities (and thus this phase order) as provisional until early user interviews confirm them, especially the Phase 2/3 ordering of query-engine vs. voice.
