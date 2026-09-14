@@ -4,6 +4,12 @@ const { signToken } = require('../utils/jwt');
 
 const SALT_ROUNDS = 10;
 
+// Every endpoint that returns a user (signup/login/me) includes the same
+// membership shape, so the client never has to special-case "I got this
+// user from login vs. from /me" — that inconsistency previously meant the
+// app only knew the caller's role right after signup, not after login.
+const MEMBERSHIP_SELECT = { id: true, businessId: true, role: true, status: true };
+
 function sanitizeUser(user) {
   const { passwordHash, ...safe } = user;
   return safe;
@@ -23,14 +29,14 @@ async function signup({ email, password, name, businessName, industry, country, 
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-  const { user, business } = await prisma.$transaction(async (tx) => {
+  const { user, business, membership } = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({ data: { email, passwordHash, name } });
 
     const business = await tx.business.create({
       data: { name: businessName, industry, country, defaultCurrency, timezone },
     });
 
-    await tx.membership.create({
+    const membership = await tx.membership.create({
       data: {
         userId: user.id,
         businessId: business.id,
@@ -40,15 +46,24 @@ async function signup({ email, password, name, businessName, industry, country, 
       },
     });
 
-    return { user, business };
+    return { user, business, membership };
   });
 
   const token = signToken({ sub: user.id });
-  return { token, user: sanitizeUser(user), business };
+  const membershipView = {
+    id: membership.id,
+    businessId: membership.businessId,
+    role: membership.role,
+    status: membership.status,
+  };
+  return { token, user: { ...sanitizeUser(user), memberships: [membershipView] }, business };
 }
 
 async function login({ email, password }) {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: { memberships: { select: MEMBERSHIP_SELECT } },
+  });
   if (!user) {
     const err = new Error('Invalid email or password');
     err.status = 401;
@@ -69,11 +84,7 @@ async function login({ email, password }) {
 async function getCurrentUser(userId) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: {
-      memberships: {
-        select: { id: true, businessId: true, role: true, status: true },
-      },
-    },
+    include: { memberships: { select: MEMBERSHIP_SELECT } },
   });
   if (!user) return null;
   return sanitizeUser(user);
