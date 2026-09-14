@@ -64,4 +64,23 @@ async function addBranchAccess(req, res, next) {
   }
 }
 
-module.exports = { createBranch, listBranches, getBranch, createMembership, addBranchAccess };
+async function listTransactions(req, res, next) {
+  try {
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    const transactions = await businessService.listTransactions(req.tenant.businessId, req.params.branchId, {
+      limit,
+    });
+    res.json(transactions);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  createBranch,
+  listBranches,
+  getBranch,
+  createMembership,
+  addBranchAccess,
+  listTransactions,
+};

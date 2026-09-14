@@ -60,8 +60,14 @@ model Business {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  branches    Branch[]
-  memberships Membership[]
+  branches              Branch[]
+  memberships           Membership[]
+  dataSourceConnections DataSourceConnection[]
+  products              Product[]
+  transactions          Transaction[]
+  inventoryItems        InventoryItem[]
+  inventoryUsages       InventoryUsage[]
+  staffMembers          StaffMember[]
 
   @@map("businesses")
 }
@@ -84,7 +90,13 @@ model Branch {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
-  branchAccess BranchAccess[]
+  branchAccess          BranchAccess[]
+  dataSourceConnections DataSourceConnection[]
+  productDetails        ProductBranchDetail[]
+  transactions          Transaction[]
+  inventoryUsages       InventoryUsage[]
+  staffMembers          StaffMember[]
+  shifts                Shift[]
 
   @@unique([businessId, code])
   @@index([businessId])
@@ -102,23 +114,24 @@ model User {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  memberships Membership[]
+  memberships  Membership[]
+  staffMembers StaffMember[]
 
   @@map("users")
 }
 
 model Membership {
-  id         String            @id @default(uuid())
+  id         String           @id @default(uuid())
   userId     String
-  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   businessId String
-  business   Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business   Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
   role       MembershipRole
-  status     MembershipStatus  @default(ACTIVE)
+  status     MembershipStatus @default(ACTIVE)
   invitedAt  DateTime?
   joinedAt   DateTime?
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   branchAccess BranchAccess[]
 
@@ -140,4 +153,246 @@ model BranchAccess {
 
   @@unique([membershipId, branchId])
   @@map("branch_access")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 1 — Data Ingestion (see /database-table.md section 4 for full rationale)
+// ---------------------------------------------------------------------------
+
+enum DataSourceStatus {
+  CONNECTED
+  ERROR
+  DISCONNECTED
+  PENDING
+}
+
+enum SyncFrequency {
+  MANUAL
+  HOURLY
+  DAILY
+}
+
+enum SyncRunStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  UPI
+  WALLET
+  OTHER
+  MIXED
+}
+
+enum TransactionStatus {
+  COMPLETED
+  REFUNDED
+  VOIDED
+}
+
+enum InventoryUsageSource {
+  SYSTEM_CALCULATED
+  MANUAL_ENTRY
+}
+
+enum StaffStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// One row per connected POS/data source per business (or per branch, for POS
+// systems that authenticate per-location). `provider` is an open string, not
+// a closed enum — adding a new POS vendor is data, never a migration.
+model DataSourceConnection {
+  id            String           @id @default(uuid())
+  businessId    String
+  business      Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId      String?
+  branch        Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  provider      String
+  displayName   String
+  authConfig    Json?
+  status        DataSourceStatus @default(PENDING)
+  syncFrequency SyncFrequency    @default(MANUAL)
+  lastSyncedAt  DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  syncRuns     SyncRun[]
+  transactions Transaction[]
+
+  @@index([businessId])
+  @@map("data_source_connections")
+}
+
+// Append-only ingestion job log — needed to show "last synced: 2 hours ago"
+// and to debug ingestion failures.
+model SyncRun {
+  id                     String               @id @default(uuid())
+  dataSourceConnectionId String
+  dataSourceConnection   DataSourceConnection @relation(fields: [dataSourceConnectionId], references: [id], onDelete: Cascade)
+  startedAt              DateTime             @default(now())
+  finishedAt             DateTime?
+  status                 SyncRunStatus        @default(RUNNING)
+  recordsIngested        Int                  @default(0)
+  errorMessage           String?
+  sourceFileName         String?
+
+  @@index([dataSourceConnectionId])
+  @@map("sync_runs")
+}
+
+// Business-level catalog (shared across branches); price/availability varies
+// per branch via ProductBranchDetail.
+model Product {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  sku        String?
+  category   String?
+  unit       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  branchDetails ProductBranchDetail[]
+  lineItems     LineItem[]
+
+  @@index([businessId])
+  @@map("products")
+}
+
+model ProductBranchDetail {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  branchId  String
+  branch    Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  costPrice Decimal @db.Decimal(12, 2)
+  sellPrice Decimal @db.Decimal(12, 2)
+  isActive  Boolean @default(true)
+
+  @@unique([productId, branchId])
+  @@map("product_branch_details")
+}
+
+// The core sales fact table. Every metric in the query engine (Phase 2)
+// ultimately aggregates this.
+model Transaction {
+  id                     String                @id @default(uuid())
+  businessId             String
+  business               Business              @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId               String
+  branch                 Branch                @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  dataSourceConnectionId String?
+  dataSourceConnection   DataSourceConnection? @relation(fields: [dataSourceConnectionId], references: [id], onDelete: SetNull)
+  externalId             String?
+  occurredAt             DateTime
+  staffMemberId          String?
+  staffMember            StaffMember?          @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
+  totalAmount            Decimal               @db.Decimal(12, 2)
+  taxAmount              Decimal               @default(0) @db.Decimal(12, 2)
+  discountAmount         Decimal               @default(0) @db.Decimal(12, 2)
+  currency               String
+  paymentMethod          PaymentMethod
+  status                 TransactionStatus     @default(COMPLETED)
+  createdAt              DateTime              @default(now())
+
+  lineItems LineItem[]
+
+  @@unique([branchId, externalId])
+  @@index([businessId, branchId, occurredAt])
+  @@map("transactions")
+}
+
+model LineItem {
+  id                  String      @id @default(uuid())
+  transactionId       String
+  transaction         Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  productId           String?
+  product             Product?    @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productNameSnapshot String
+  quantity            Decimal     @db.Decimal(12, 3)
+  unitPrice           Decimal     @db.Decimal(12, 2)
+  lineTotal           Decimal     @db.Decimal(12, 2)
+  costPriceSnapshot   Decimal?    @db.Decimal(12, 2)
+
+  @@index([transactionId])
+  @@map("line_items")
+}
+
+model InventoryItem {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  unit       String
+  category   String?
+
+  usageRecords InventoryUsage[]
+
+  @@index([businessId])
+  @@map("inventory_items")
+}
+
+// Daily usage/wastage per branch per item.
+model InventoryUsage {
+  id              String               @id @default(uuid())
+  businessId      String
+  business        Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId        String
+  branch          Branch               @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  inventoryItemId String
+  inventoryItem   InventoryItem        @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  date            DateTime             @db.Date
+  quantityUsed    Decimal              @db.Decimal(12, 3)
+  quantityWasted  Decimal              @default(0) @db.Decimal(12, 3)
+  wastageReason   String?
+  costImpact      Decimal?             @db.Decimal(12, 2)
+  source          InventoryUsageSource @default(MANUAL_ENTRY)
+
+  @@index([businessId, branchId, date])
+  @@map("inventory_usage")
+}
+
+// POS/HR record — distinct from User, because most cashiers/cooks never log
+// into the app. userId links the two only when a staff member also has app
+// access.
+model StaffMember {
+  id         String      @id @default(uuid())
+  businessId String
+  business   Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId   String
+  branch     Branch      @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name       String
+  role       String
+  externalId String?
+  status     StaffStatus @default(ACTIVE)
+
+  shifts       Shift[]
+  transactions Transaction[]
+
+  @@index([businessId, branchId])
+  @@map("staff_members")
+}
+
+model Shift {
+  id             String      @id @default(uuid())
+  staffMemberId  String
+  staffMember    StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  branchId       String
+  branch         Branch      @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  startedAt      DateTime
+  endedAt        DateTime?
+  scheduledStart DateTime?
+  scheduledEnd   DateTime?
+
+  @@index([staffMemberId])
+  @@map("shifts")
 }

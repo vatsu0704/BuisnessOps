@@ -68,4 +68,15 @@ async function addBranchAccess(businessId, membershipId, branchId) {
   return prisma.branchAccess.create({ data: { membershipId, branchId } });
 }
 
-module.exports = { createBranch, listBranches, getBranch, createMembership, addBranchAccess };
+// Recent-first, capped list — enough to verify an ingestion run landed
+// correctly without building out pagination/filtering yet.
+function listTransactions(businessId, branchId, { limit = 50 } = {}) {
+  return prisma.transaction.findMany({
+    where: { businessId, branchId },
+    include: { lineItems: true },
+    orderBy: { occurredAt: 'desc' },
+    take: Math.min(limit, 200),
+  });
+}
+
+module.exports = { createBranch, listBranches, getBranch, createMembership, addBranchAccess, listTransactions };
