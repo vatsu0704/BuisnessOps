@@ -28,7 +28,8 @@
     { "key": "businessId", "value": "", "type": "string" },
     { "key": "branchAId", "value": "", "type": "string" },
     { "key": "branchBId", "value": "", "type": "string" },
-    { "key": "membershipId", "value": "", "type": "string" }
+    { "key": "membershipId", "value": "", "type": "string" },
+    { "key": "dataSourceId", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -604,6 +605,153 @@
                 "exec": [
                   "pm.test('Status is 401 - no Authorization header', function () {",
                   "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Data Ingestion (Owner/Admin)",
+      "item": [
+        {
+          "name": "Create Data Source",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"provider\": \"CSV_UPLOAD\",\n  \"displayName\": \"Manual CSV Import\",\n  \"branchId\": \"{{branchAId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/data-sources",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "data-sources"]
+            },
+            "description": "Registers a CSV upload channel for a branch. Requires OWNER or ADMIN. Run after the Branches folder so branchAId is set."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Data source created (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('dataSourceId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Upload CSV",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": [] }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/data-sources/{{dataSourceId}}/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "data-sources", "{{dataSourceId}}", "upload"]
+            },
+            "description": "Multipart upload — field name must be \"file\". Requires OWNER or ADMIN, and dataSourceId to be set (run 'Create Data Source' first).\n\nPostman never embeds actual file bytes in a collection, so select the file yourself: Body > form-data > the \"file\" row > choose postman/sample-sales.csv (a ready-made sample with a grouped transaction, a standalone row, and one deliberately invalid row to see PARTIAL status)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Upload succeeds (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  console.log('recordsProcessed:', body.recordsProcessed, 'valid:', body.recordsValid, 'failed:', body.recordsFailed);",
+                  "  console.log('transactionsCreated:', body.transactionsCreated, 'transactionsUpdated:', body.transactionsUpdated);",
+                  "  console.log('syncRun.status:', body.syncRun && body.syncRun.status);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List Sync Runs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/data-sources/{{dataSourceId}}/sync-runs",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "data-sources", "{{dataSourceId}}", "sync-runs"]
+            },
+            "description": "History of ingestion runs for this data source, most recent first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/branches/{{branchAId}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "branches", "{{branchAId}}", "transactions"]
+            },
+            "description": "Reads back what the upload actually created — branch-scoped like the rest of Phase 0 (a MANAGER token only works here if scoped to this branch)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
                   "});"
                 ]
               }

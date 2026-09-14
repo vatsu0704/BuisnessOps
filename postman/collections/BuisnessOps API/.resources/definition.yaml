@@ -19,6 +19,7 @@ variables:
   branchAId: ""
   branchBId: ""
   membershipId: ""
+  dataSourceId: ""
 scripts:
   - type: http:beforeRequest
     code: |-

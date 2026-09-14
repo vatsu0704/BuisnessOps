@@ -1,0 +1,29 @@
+$kind: http-request
+description: Registers a CSV upload channel for a branch. Requires OWNER or ADMIN. Run after the Branches folder so branchAId is set.
+url: "{{baseUrl}}/businesses/{{businessId}}/data-sources"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "provider": "CSV_UPLOAD",
+      "displayName": "Manual CSV Import",
+      "branchId": "{{branchAId}}"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{ownerToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Data source created (201)', function () {
+        pm.response.to.have.status(201);
+      });
+      if (pm.response.code === 201) {
+        pm.collectionVariables.set('dataSourceId', pm.response.json().id);
+      }
+    language: text/javascript
+order: 1000

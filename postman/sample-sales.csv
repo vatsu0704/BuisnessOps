@@ -1,0 +1,6 @@
+transaction_external_id,occurred_at,product_name,sku,quantity,unit_price,payment_method,tax_amount,discount_amount
+TXN-1,2026-01-05T10:00:00Z,Masala Chai,CHAI-001,2,25,CASH,2,0
+TXN-1,2026-01-05T10:00:00Z,Samosa,SAM-001,1,15,CASH,0,0
+TXN-2,2026-01-05T11:30:00Z,Masala Chai,CHAI-001,3,25,UPI,3,5
+,2026-01-06T09:00:00Z,Cold Coffee,,1,60,CARD,0,0
+TXN-3,2026-01-06T12:00:00Z,Bad Row Item,,,60,CARD,0,0

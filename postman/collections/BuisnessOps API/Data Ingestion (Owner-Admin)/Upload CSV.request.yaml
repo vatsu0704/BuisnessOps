@@ -1,0 +1,31 @@
+$kind: http-request
+description: |-
+  Multipart upload — field name must be "file". Requires OWNER or ADMIN, and dataSourceId to be set (run 'Create Data Source' first).
+
+  Postman never embeds actual file bytes in a collection, so if the file field below doesn't come through pre-filled: open this request, go to Body > form-data, set the "file" row's type to File, and browse to postman/sample-sales.csv (a ready-made sample with a grouped transaction, a standalone row, and one deliberately invalid row to see PARTIAL status).
+url: "{{baseUrl}}/businesses/{{businessId}}/data-sources/{{dataSourceId}}/upload"
+method: POST
+body:
+  type: formdata
+  formdata:
+    - key: file
+      type: file
+      src: ""
+auth:
+  type: bearer
+  credentials:
+    token: "{{ownerToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Upload succeeds (201)', function () {
+        pm.response.to.have.status(201);
+      });
+      if (pm.response.code === 201) {
+        const body = pm.response.json();
+        console.log('recordsProcessed:', body.recordsProcessed, 'valid:', body.recordsValid, 'failed:', body.recordsFailed);
+        console.log('transactionsCreated:', body.transactionsCreated, 'transactionsUpdated:', body.transactionsUpdated);
+        console.log('syncRun.status:', body.syncRun && body.syncRun.status);
+      }
+    language: text/javascript
+order: 2000
