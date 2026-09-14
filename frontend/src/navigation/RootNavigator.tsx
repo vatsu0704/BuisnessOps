@@ -1,16 +1,34 @@
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import HomeScreen from '@/screens/HomeScreen';
-
-export type RootStackParamList = {
-  Home: undefined;
-};
-
-const Stack = createNativeStackNavigator<RootStackParamList>();
+import { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useAuthStore } from '@/store/authStore';
+import AuthNavigator from './AuthNavigator';
+import AppNavigator from './AppNavigator';
 
 export default function RootNavigator() {
-  return (
-    <Stack.Navigator initialRouteName="Home">
-      <Stack.Screen name="Home" component={HomeScreen} />
-    </Stack.Navigator>
-  );
+  const isBootstrapping = useAuthStore((s) => s.isBootstrapping);
+  const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
+  const bootstrap = useAuthStore((s) => s.bootstrap);
+
+  useEffect(() => {
+    bootstrap();
+  }, [bootstrap]);
+
+  if (isBootstrapping) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return token && user ? <AppNavigator /> : <AuthNavigator />;
 }
+
+const styles = StyleSheet.create({
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
