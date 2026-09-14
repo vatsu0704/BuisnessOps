@@ -1,0 +1,28 @@
+$kind: http-request
+description: Requires the target email to already have an account (run 'Signup (Manager Candidate)' first) — there's no invite-by-email flow yet, membership is created ACTIVE immediately. Requires OWNER or ADMIN.
+url: "{{baseUrl}}/businesses/{{businessId}}/memberships"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "manager.{{runId}}@test.buisnessops.dev",
+      "role": "MANAGER"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{ownerToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Membership created (201)', function () {
+        pm.response.to.have.status(201);
+      });
+      if (pm.response.code === 201) {
+        pm.collectionVariables.set('membershipId', pm.response.json().id);
+      }
+    language: text/javascript
+order: 1000

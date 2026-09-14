@@ -7,13 +7,137 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ---------------------------------------------------------------------------
+// Phase 0 — Foundations (see /database-table.md section 3 for full rationale)
+// ---------------------------------------------------------------------------
+
+enum Industry {
+  RETAIL
+  FOOD_BEVERAGE
+  SERVICES
+  FRANCHISE_OTHER
+}
+
+enum Locale {
+  EN
+  HI
+  GU
+}
+
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  REVOKED
+}
+
+model Business {
+  id              String   @id @default(uuid())
+  name            String
+  industry        Industry
+  country         String
+  defaultCurrency String
+  defaultLocale   Locale   @default(EN)
+  timezone        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  branches    Branch[]
+  memberships Membership[]
+
+  @@map("businesses")
+}
+
+model Branch {
+  id         String       @id @default(uuid())
+  businessId String
+  business   Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  code       String
+  city       String?
+  region     String?
+  country    String?
+  latitude   Decimal?     @db.Decimal(9, 6)
+  longitude  Decimal?     @db.Decimal(9, 6)
+  timezone   String
+  currency   String?
+  status     BranchStatus @default(ACTIVE)
+  openedAt   DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  branchAccess BranchAccess[]
+
+  @@unique([businessId, code])
+  @@index([businessId])
+  @@map("branches")
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String     @id @default(uuid())
+  email           String     @unique
+  passwordHash    String
+  name            String?
+  phone           String?
+  preferredLocale Locale     @default(EN)
+  status          UserStatus @default(ACTIVE)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  memberships Membership[]
 
   @@map("users")
+}
+
+model Membership {
+  id         String            @id @default(uuid())
+  userId     String
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId String
+  business   Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  role       MembershipRole
+  status     MembershipStatus  @default(ACTIVE)
+  invitedAt  DateTime?
+  joinedAt   DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  branchAccess BranchAccess[]
+
+  @@unique([userId, businessId])
+  @@index([businessId])
+  @@map("memberships")
+}
+
+// Explicit branch scoping for MANAGER/STAFF roles. OWNER/ADMIN roles ignore
+// this table and have implicit all-branch access within their business
+// (enforced in the tenant-resolution middleware, not here).
+model BranchAccess {
+  id           String     @id @default(uuid())
+  membershipId String
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  branchId     String
+  branch       Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([membershipId, branchId])
+  @@map("branch_access")
 }

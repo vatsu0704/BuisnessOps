@@ -1,0 +1,15 @@
+$kind: http-request
+description: No auth, no tenant. Sanity check that the API is up.
+url: "{{baseUrl}}/health"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status is 200 and status ok', function () {
+        pm.response.to.have.status(200);
+        pm.expect(pm.response.json().status).to.eql('ok');
+      });
+    language: text/javascript
+order: 1000

@@ -1,0 +1,35 @@
+$kind: http-request
+description: Creates the User, their Business, and the founding OWNER Membership in one transaction. Captures ownerToken/businessId/ownerUserId for later requests.
+url: "{{baseUrl}}/auth/signup"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "owner.{{runId}}@test.buisnessops.dev",
+      "password": "TestPass123!",
+      "name": "Demo Owner",
+      "businessName": "Demo Business {{runId}}",
+      "industry": "RETAIL",
+      "country": "IN",
+      "defaultCurrency": "INR",
+      "timezone": "Asia/Kolkata"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Owner signup succeeds (201)', function () {
+        pm.response.to.have.status(201);
+      });
+      if (pm.response.code === 201) {
+        const body = pm.response.json();
+        pm.collectionVariables.set('ownerToken', body.token);
+        pm.collectionVariables.set('businessId', body.business.id);
+        pm.collectionVariables.set('ownerUserId', body.user.id);
+      }
+    language: text/javascript
+order: 1000

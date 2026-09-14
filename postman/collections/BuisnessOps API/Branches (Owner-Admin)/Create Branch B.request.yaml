@@ -1,0 +1,33 @@
+$kind: http-request
+description: A second branch in the same business — this is the one the manager in 'Manager Scoping Checks' should NOT be able to read.
+url: "{{baseUrl}}/businesses/{{businessId}}/branches"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Lake Road",
+      "code": "B",
+      "city": "Pune",
+      "region": "Maharashtra",
+      "country": "IN",
+      "timezone": "Asia/Kolkata",
+      "currency": "INR"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{ownerToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Branch B created (201)', function () {
+        pm.response.to.have.status(201);
+      });
+      if (pm.response.code === 201) {
+        pm.collectionVariables.set('branchBId', pm.response.json().id);
+      }
+    language: text/javascript
+order: 2000

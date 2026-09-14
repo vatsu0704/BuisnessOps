@@ -1,0 +1,21 @@
+$kind: http-request
+description: OWNER/ADMIN see every branch in the business (no filtering applied).
+url: "{{baseUrl}}/businesses/{{businessId}}/branches"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{ownerToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status is 200', function () {
+        pm.response.to.have.status(200);
+      });
+      pm.test('Owner sees both branches', function () {
+        const ids = pm.response.json().map(b => b.id);
+        pm.expect(ids).to.include(pm.collectionVariables.get('branchAId'));
+        pm.expect(ids).to.include(pm.collectionVariables.get('branchBId'));
+      });
+    language: text/javascript
+order: 3000

@@ -1,0 +1,678 @@
+{
+  "info": {
+    "_postman_id": "b8b6a2e4-6b1a-4c3a-9e2a-1f3a7c9d4a10",
+    "name": "BuisnessOps API",
+    "description": "Phase 0 (Foundations) API surface: auth, tenant/business/branch management, and role-based branch scoping. Backed by the Prisma/PostgreSQL schema in /database-table.md and the build order in /PROJECT_FLOW.md.\n\nHow to use:\n1. Set the `baseUrl` variable (defaults to http://localhost:4000/api) and start the backend (`cd backend && npm run dev`).\n2. Run requests top-to-bottom within a folder, or use Collection Runner on the whole collection — each request's test script captures ids/tokens into collection variables (`ownerToken`, `businessId`, `branchAId`, etc.) for the next request to use automatically.\n3. `runId` is set once per run (from the current timestamp) and reused in generated emails/names so re-running the collection never collides with a previous run's data.\n\nThe \"Manager Scoping Checks\" folder is a Postman-runnable version of the Phase 0 exit-criteria test in backend/tests/tenant-isolation.test.js: a branch-scoped MANAGER can read their own branch but is blocked (403) from a sibling branch in the same business, even knowing its real id.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('runId')) {",
+          "  pm.collectionVariables.set('runId', Date.now().toString());",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000/api", "type": "string" },
+    { "key": "runId", "value": "", "type": "string" },
+    { "key": "ownerToken", "value": "", "type": "string" },
+    { "key": "ownerUserId", "value": "", "type": "string" },
+    { "key": "managerToken", "value": "", "type": "string" },
+    { "key": "managerUserId", "value": "", "type": "string" },
+    { "key": "businessId", "value": "", "type": "string" },
+    { "key": "branchAId", "value": "", "type": "string" },
+    { "key": "branchBId", "value": "", "type": "string" },
+    { "key": "membershipId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "No auth, no tenant. Sanity check that the API is up."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 and status ok', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"owner.{{runId}}@test.buisnessops.dev\",\n  \"password\": \"TestPass123!\",\n  \"name\": \"Demo Owner\",\n  \"businessName\": \"Demo Business {{runId}}\",\n  \"industry\": \"RETAIL\",\n  \"country\": \"IN\",\n  \"defaultCurrency\": \"INR\",\n  \"timezone\": \"Asia/Kolkata\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signup"]
+            },
+            "description": "Creates the User, their Business, and the founding OWNER Membership in one transaction. Captures ownerToken/businessId/ownerUserId for later requests."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Owner signup succeeds (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('ownerToken', body.token);",
+                  "  pm.collectionVariables.set('businessId', body.business.id);",
+                  "  pm.collectionVariables.set('ownerUserId', body.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Signup (Manager Candidate)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"manager.{{runId}}@test.buisnessops.dev\",\n  \"password\": \"TestPass123!\",\n  \"name\": \"Demo Manager\",\n  \"businessName\": \"Manager Solo Business {{runId}}\",\n  \"industry\": \"RETAIL\",\n  \"country\": \"IN\",\n  \"defaultCurrency\": \"INR\",\n  \"timezone\": \"Asia/Kolkata\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signup"]
+            },
+            "description": "There is no 'join an existing business' signup path — every signup creates its own solo business. This user's solo business is unused; they get invited into the owner's real business in the Memberships folder."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager candidate signup succeeds (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('managerUserId', body.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"owner.{{runId}}@test.buisnessops.dev\",\n  \"password\": \"TestPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Re-fetches ownerToken. Useful if you're re-running requests without re-running Signup."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Owner login succeeds (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('ownerToken', pm.response.json().token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login (Manager)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"manager.{{runId}}@test.buisnessops.dev\",\n  \"password\": \"TestPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Run this after the Memberships folder has invited this user into the owner's business, so managerToken reflects their membership."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager login succeeds (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('managerToken', pm.response.json().token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get Current User (Me)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Returns the authenticated user plus all of their Memberships (id, businessId, role, status)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Password hash is never returned', function () {",
+                  "  pm.expect(pm.response.json()).to.not.have.property('passwordHash');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Branches (Owner/Admin)",
+      "item": [
+        {
+          "name": "Create Branch A",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"name\": \"Main Street\",\n  \"code\": \"A\",\n  \"city\": \"Mumbai\",\n  \"region\": \"Maharashtra\",\n  \"country\": \"IN\",\n  \"timezone\": \"Asia/Kolkata\",\n  \"currency\": \"INR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/branches",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "branches"]
+            },
+            "description": "Requires OWNER or ADMIN role in the business (enforced by requireRole)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Branch A created (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('branchAId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Create Branch B",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"name\": \"Lake Road\",\n  \"code\": \"B\",\n  \"city\": \"Pune\",\n  \"region\": \"Maharashtra\",\n  \"country\": \"IN\",\n  \"timezone\": \"Asia/Kolkata\",\n  \"currency\": \"INR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/branches",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "branches"]
+            },
+            "description": "A second branch in the same business — this is the one the manager in 'Manager Scoping Checks' should NOT be able to read."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Branch B created (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('branchBId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List Branches (Owner)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/branches",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "branches"]
+            },
+            "description": "OWNER/ADMIN see every branch in the business (no filtering applied)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Owner sees both branches', function () {",
+                  "  const ids = pm.response.json().map(b => b.id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('branchAId'));",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('branchBId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get Branch by ID (Owner)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/branches/{{branchAId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "branches", "{{branchAId}}"]
+            },
+            "description": "OWNER/ADMIN can fetch any branch id in their business."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Memberships (Owner/Admin)",
+      "item": [
+        {
+          "name": "Invite Manager",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"manager.{{runId}}@test.buisnessops.dev\",\n  \"role\": \"MANAGER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/memberships",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "memberships"]
+            },
+            "description": "Requires the target email to already have an account (run 'Signup (Manager Candidate)' first) — there's no invite-by-email flow yet, membership is created ACTIVE immediately. Requires OWNER or ADMIN."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Membership created (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('membershipId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Grant Branch Access to Manager (Branch A only)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"branchId\": \"{{branchAId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/memberships/{{membershipId}}/branch-access",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "memberships", "{{membershipId}}", "branch-access"]
+            },
+            "description": "Scopes the manager's membership to Branch A only. Branch B is deliberately left out so the next folder can demonstrate the block."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Branch access granted (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Manager Scoping Checks",
+      "item": [
+        {
+          "name": "Get Branch A as Manager (Allowed)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/branches/{{branchAId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "branches", "{{branchAId}}"]
+            },
+            "description": "Run 'Login (Manager)' after granting branch access, so managerToken is set. Expect 200 — the manager is scoped to this branch."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 - manager is scoped to Branch A', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get Branch B as Manager (Blocked - 403)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/branches/{{branchBId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "branches", "{{branchBId}}"]
+            },
+            "description": "Phase 0 exit criteria: a branch-scoped manager must not be able to read another branch's data in the same business, even knowing its real id. Expect 403."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403 - manager is NOT scoped to Branch B', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List Branches as Manager (Scoped)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/branches",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "branches"]
+            },
+            "description": "The list endpoint filters, rather than 403ing, since there's no single branchId to reject — same underlying access list."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('List includes Branch A but excludes Branch B', function () {",
+                  "  const ids = pm.response.json().map(b => b.id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('branchAId'));",
+                  "  pm.expect(ids).to.not.include(pm.collectionVariables.get('branchBId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get Branch as Unauthenticated (Blocked - 401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/branches/{{branchAId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "branches", "{{branchAId}}"]
+            },
+            "description": "No Authorization header at all. Expect 401 from requireAuth, before tenant/role logic even runs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401 - no Authorization header', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users (legacy scaffold)",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            },
+            "description": "Pre-Phase-0 scaffold endpoint. NOT protected by requireAuth and returns every user across every tenant — do not rely on this beyond local development; it predates the multi-tenancy model and should be revisited before anything beyond Phase 0 ships."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{ownerUserId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{ownerUserId}}"]
+            },
+            "description": "Same caveat as List Users — unauthenticated, untenanted legacy scaffold."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+$kind: http-request
+description: Requires OWNER or ADMIN role in the business (enforced by requireRole).
+url: "{{baseUrl}}/businesses/{{businessId}}/branches"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Main Street",
+      "code": "A",
+      "city": "Mumbai",
+      "region": "Maharashtra",
+      "country": "IN",
+      "timezone": "Asia/Kolkata",
+      "currency": "INR"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{ownerToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Branch A created (201)', function () {
+        pm.response.to.have.status(201);
+      });
+      if (pm.response.code === 201) {
+        pm.collectionVariables.set('branchAId', pm.response.json().id);
+      }
+    language: text/javascript
+order: 1000

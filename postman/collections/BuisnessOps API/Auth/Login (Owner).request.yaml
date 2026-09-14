@@ -1,0 +1,26 @@
+$kind: http-request
+description: Re-fetches ownerToken. Useful if you're re-running requests without re-running Signup.
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "owner.{{runId}}@test.buisnessops.dev",
+      "password": "TestPass123!"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Owner login succeeds (200)', function () {
+        pm.response.to.have.status(200);
+      });
+      if (pm.response.code === 200) {
+        pm.collectionVariables.set('ownerToken', pm.response.json().token);
+      }
+    language: text/javascript
+order: 3000

@@ -1,0 +1,28 @@
+$kind: collection
+description: |-
+  Phase 0 (Foundations) API surface: auth, tenant/business/branch management, and role-based branch scoping. Backed by the Prisma/PostgreSQL schema in /database-table.md and the build order in /PROJECT_FLOW.md.
+
+  How to use:
+  1. Set the `baseUrl` variable (defaults to http://localhost:4000/api) and start the backend (`cd backend && npm run dev`).
+  2. Run requests top-to-bottom within a folder, or use Collection Runner on the whole collection — each request's test script captures ids/tokens into collection variables (`ownerToken`, `businessId`, `branchAId`, etc.) for the next request to use automatically.
+  3. `runId` is set once per run (from the current timestamp) and reused in generated emails/names so re-running the collection never collides with a previous run's data.
+
+  The "Manager Scoping Checks" folder is a Postman-runnable version of the Phase 0 exit-criteria test in backend/tests/tenant-isolation.test.js: a branch-scoped MANAGER can read their own branch but is blocked (403) from a sibling branch in the same business, even knowing its real id.
+variables:
+  baseUrl: http://localhost:4000/api
+  runId: ""
+  ownerToken: ""
+  ownerUserId: ""
+  managerToken: ""
+  managerUserId: ""
+  businessId: ""
+  branchAId: ""
+  branchBId: ""
+  membershipId: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      if (!pm.collectionVariables.get('runId')) {
+        pm.collectionVariables.set('runId', Date.now().toString());
+      }
+    language: text/javascript

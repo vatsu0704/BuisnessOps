@@ -1,0 +1,14 @@
+$kind: http-request
+description: Pre-Phase-0 scaffold endpoint. NOT protected by requireAuth and returns every user across every tenant — do not rely on this beyond local development; it predates the multi-tenancy model and should be revisited before anything beyond Phase 0 ships.
+url: "{{baseUrl}}/users"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status is 200', function () {
+        pm.response.to.have.status(200);
+      });
+    language: text/javascript
+order: 1000

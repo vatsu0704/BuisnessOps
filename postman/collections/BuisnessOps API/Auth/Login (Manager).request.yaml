@@ -1,0 +1,26 @@
+$kind: http-request
+description: Run this after the Memberships folder has invited this user into the owner's business, so managerToken reflects their membership.
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "manager.{{runId}}@test.buisnessops.dev",
+      "password": "TestPass123!"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Manager login succeeds (200)', function () {
+        pm.response.to.have.status(200);
+      });
+      if (pm.response.code === 200) {
+        pm.collectionVariables.set('managerToken', pm.response.json().token);
+      }
+    language: text/javascript
+order: 4000

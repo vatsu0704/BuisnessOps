@@ -1,0 +1,33 @@
+$kind: http-request
+description: There is no 'join an existing business' signup path — every signup creates its own solo business. This user's solo business is unused; they get invited into the owner's real business in the Memberships folder.
+url: "{{baseUrl}}/auth/signup"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "manager.{{runId}}@test.buisnessops.dev",
+      "password": "TestPass123!",
+      "name": "Demo Manager",
+      "businessName": "Manager Solo Business {{runId}}",
+      "industry": "RETAIL",
+      "country": "IN",
+      "defaultCurrency": "INR",
+      "timezone": "Asia/Kolkata"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Manager candidate signup succeeds (201)', function () {
+        pm.response.to.have.status(201);
+      });
+      if (pm.response.code === 201) {
+        const body = pm.response.json();
+        pm.collectionVariables.set('managerUserId', body.user.id);
+      }
+    language: text/javascript
+order: 2000
