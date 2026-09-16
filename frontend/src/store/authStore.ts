@@ -6,7 +6,7 @@ import type { SignupPayload, LoginPayload } from '@/api/auth';
 import type { User } from '@/types/user';
 import type { Business } from '@/types/business';
 
-const TOKEN_KEY = 'buisnessops_token';
+const TOKEN_KEY = 'biziq_token';
 
 interface AuthState {
   // True only for the one-time check on app launch (token in SecureStore? still valid?).

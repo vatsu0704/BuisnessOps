@@ -10,6 +10,8 @@ module.exports = function (api) {
           alias: { '@': './src' },
         },
       ],
+      // must stay last
+      'react-native-reanimated/plugin',
     ],
   };
 };

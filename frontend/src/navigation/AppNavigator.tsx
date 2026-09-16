@@ -1,16 +1,66 @@
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import TabBarIcon from '@/components/TabBarIcon';
+import AlertsScreen from '@/screens/AlertsScreen';
 import HomeScreen from '@/screens/HomeScreen';
+import ReportsScreen from '@/screens/ReportsScreen';
+import SettingsScreen from '@/screens/SettingsScreen';
+import { colors } from '@/theme';
 
-export type AppStackParamList = {
+export type AppTabParamList = {
   Home: undefined;
+  Reports: undefined;
+  Alerts: undefined;
+  Settings: undefined;
 };
 
-const Stack = createNativeStackNavigator<AppStackParamList>();
+const Tab = createBottomTabNavigator<AppTabParamList>();
 
 export default function AppNavigator() {
   return (
-    <Stack.Navigator initialRouteName="Home">
-      <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'BuisnessOps' }} />
-    </Stack.Navigator>
+    <Tab.Navigator
+      initialRouteName="Home"
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          height: 62,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+      }}
+    >
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          tabBarIcon: (props) => <TabBarIcon {...props} name="chatbubble-ellipses-outline" />,
+        }}
+      />
+      <Tab.Screen
+        name="Reports"
+        component={ReportsScreen}
+        options={{
+          tabBarIcon: (props) => <TabBarIcon {...props} name="bar-chart-outline" />,
+        }}
+      />
+      <Tab.Screen
+        name="Alerts"
+        component={AlertsScreen}
+        options={{
+          tabBarIcon: (props) => <TabBarIcon {...props} name="notifications-outline" />,
+        }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          tabBarIcon: (props) => <TabBarIcon {...props} name="options-outline" />,
+        }}
+      />
+    </Tab.Navigator>
   );
 }

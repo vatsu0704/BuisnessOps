@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+// Must stay a `process.env.X` member expression: Babel inlines EXPO_PUBLIC_* at build
+// time by matching that exact shape. The cast is only because React Native's ambient
+// types declare NODE_ENV alone on process.env.
+const API_BASE_URL =
+  (process.env as { EXPO_PUBLIC_API_URL?: string }).EXPO_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
