@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { StyleSheet, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as SplashScreen from 'expo-splash-screen';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export default function AnimatedSplash({ ready, onFinish }: Props) {
+  const { t } = useTranslation();
   const startedAt = useRef(Date.now());
   const fade = useSharedValue(1);
   const wordmark = useSharedValue(0);
@@ -54,7 +56,7 @@ export default function AnimatedSplash({ ready, onFinish }: Props) {
       <BrandMark size={226} tile={false} />
       <Animated.View style={wordmarkStyle}>
         <Text style={styles.wordmark}>BizIQ</Text>
-        <Text style={styles.tagline}>Ask your business anything</Text>
+        <Text style={styles.tagline}>{t('splash.tagline')}</Text>
       </Animated.View>
     </Animated.View>
   );

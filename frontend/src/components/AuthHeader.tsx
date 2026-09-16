@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BrandMark from '@/components/BrandMark';
+import LanguageToggle from '@/components/LanguageToggle';
 import PressableScale from '@/components/PressableScale';
 import { colors, radius, spacing } from '@/theme';
 
@@ -22,12 +23,15 @@ export default function AuthHeader({ onBack, caption }: Props) {
         <Text style={styles.wordmark}>BizIQ</Text>
         {caption ? <Text style={styles.caption}>{caption}</Text> : null}
       </View>
+      <View style={styles.spacer} />
+      <LanguageToggle />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  spacer: { flex: 1 },
   backButton: {
     width: 38,
     height: 38,

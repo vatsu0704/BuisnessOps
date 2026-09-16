@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { User } from '@/types/user';
+import type { Locale, User } from '@/types/user';
 import type { Business, Industry } from '@/types/business';
 
 export interface SignupPayload {
@@ -36,5 +36,10 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
 
 export async function fetchCurrentUser(): Promise<User> {
   const { data } = await apiClient.get<User>('/auth/me');
+  return data;
+}
+
+export async function updatePreferredLocale(preferredLocale: Locale): Promise<User> {
+  const { data } = await apiClient.patch<User>('/auth/me/locale', { preferredLocale });
   return data;
 }

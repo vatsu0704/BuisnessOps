@@ -1,6 +1,6 @@
 export type MembershipRole = 'OWNER' | 'ADMIN' | 'MANAGER' | 'STAFF';
 export type MembershipStatus = 'INVITED' | 'ACTIVE' | 'REVOKED';
-export type Locale = 'EN' | 'HI' | 'GU';
+export type Locale = 'EN' | 'HI' | 'GU' | 'MR';
 
 export interface Membership {
   id: string;

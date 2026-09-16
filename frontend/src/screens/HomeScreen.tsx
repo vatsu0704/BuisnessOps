@@ -1,5 +1,6 @@
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -9,6 +10,7 @@ import { useBranches } from '@/hooks/useBranches';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import BrandMark from '@/components/BrandMark';
 import InfoCard from '@/components/InfoCard';
+import LanguageToggle from '@/components/LanguageToggle';
 import PhaseNotice from '@/components/PhaseNotice';
 import Pill from '@/components/Pill';
 import PressableScale from '@/components/PressableScale';
@@ -27,6 +29,7 @@ function initials(name?: string | null, email?: string | null): string {
 }
 
 export default function HomeScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const business = useAuthStore((s) => s.business);
   const { branches, isLoading, error, refresh, stats } = useBranches();
@@ -41,11 +44,10 @@ export default function HomeScreen({ navigation }: Props) {
           <BrandMark size={34} />
           <Text style={styles.wordmark}>BizIQ</Text>
           <View style={styles.topBarSpacer} />
+          <LanguageToggle />
           <View style={styles.branchChip}>
             <Ionicons name="git-branch-outline" size={13} color={colors.primary} />
-            <Text style={styles.branchChipText}>
-              {stats.total === 1 ? '1 branch' : `${stats.total} branches`}
-            </Text>
+            <Text style={styles.branchChipText}>{t('home.branchCount', { count: stats.total })}</Text>
           </View>
           <PressableScale
             testID="home-open-settings"
@@ -71,15 +73,15 @@ export default function HomeScreen({ navigation }: Props) {
           }
         >
           <AnimatedEntrance delay={step(0)} style={styles.greetingBlock}>
-            <Text style={styles.greeting}>Hi {firstName}</Text>
+            <Text style={styles.greeting}>{t('home.greeting', { name: firstName })}</Text>
             {business ? <Text style={styles.business}>{business.name}</Text> : null}
           </AnimatedEntrance>
 
           <AnimatedEntrance delay={step(1)}>
             <View style={styles.statRow}>
-              <StatTile label="Branches" value={stats.total} />
-              <StatTile label="Active" value={stats.active} accent={colors.success} />
-              <StatTile label="Cities" value={stats.cities} />
+              <StatTile label={t('home.statBranches')} value={stats.total} />
+              <StatTile label={t('home.statActive')} value={stats.active} accent={colors.success} />
+              <StatTile label={t('home.statCities')} value={stats.cities} />
             </View>
           </AnimatedEntrance>
 
@@ -96,8 +98,8 @@ export default function HomeScreen({ navigation }: Props) {
             <AnimatedEntrance delay={step(2)} style={styles.block}>
               <InfoCard
                 icon="storefront-outline"
-                title="No branches yet"
-                subtitle="Add your first branch to start tracking sales, stock and staff per location."
+                title={t('home.emptyTitle')}
+                subtitle={t('home.emptySubtitle')}
               />
             </AnimatedEntrance>
           ) : null}
@@ -106,8 +108,8 @@ export default function HomeScreen({ navigation }: Props) {
             <AnimatedEntrance delay={step(2)} style={styles.block}>
               <View style={styles.card}>
                 <View style={styles.cardHead}>
-                  <Text style={styles.cardTitle}>Your branches</Text>
-                  <Pill label={`${stats.active} active`} />
+                  <Text style={styles.cardTitle}>{t('home.branchesTitle')}</Text>
+                  <Pill label={t('home.activeCount', { count: stats.active })} />
                 </View>
                 {branches.slice(0, 5).map((branch, index) => (
                   <View key={branch.id} style={[styles.branchRow, index > 0 && styles.branchRowDivided]}>
@@ -126,7 +128,7 @@ export default function HomeScreen({ navigation }: Props) {
                   </View>
                 ))}
                 {branches.length > 5 ? (
-                  <Text style={styles.more}>+{branches.length - 5} more</Text>
+                  <Text style={styles.more}>{t('common.more', { count: branches.length - 5 })}</Text>
                 ) : null}
               </View>
             </AnimatedEntrance>
@@ -135,22 +137,18 @@ export default function HomeScreen({ navigation }: Props) {
           <AnimatedEntrance delay={step(3)} style={styles.block}>
             <PhaseNotice
               icon="sparkles-outline"
-              badge="Next up"
-              title="Ask your business anything"
-              body="The query engine turns plain-language questions into answers computed from your own sales data, with the numbers behind every answer. It switches on once an AI provider is connected."
-              examples={[
-                'What were October sales versus last year?',
-                'Which branch had the lowest sales last month, and why?',
-                'Compare my Ahmedabad and Surat outlets this week.',
-              ]}
+              badge={t('home.queryBadge')}
+              title={t('home.queryTitle')}
+              body={t('home.queryBody')}
+              examples={[t('home.queryExample1'), t('home.queryExample2'), t('home.queryExample3')]}
             />
           </AnimatedEntrance>
 
           <AnimatedEntrance delay={step(4)} style={styles.block}>
             <InfoCard
               icon="cloud-upload-outline"
-              title="Bring your sales data in"
-              subtitle="Upload sales history from CSV or Excel — the ingestion pipeline is already live."
+              title={t('home.dataTitle')}
+              subtitle={t('home.dataSubtitle')}
             />
           </AnimatedEntrance>
         </ScrollView>
@@ -159,13 +157,13 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={styles.askBar}>
             <View style={styles.askInput}>
               <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.textTertiary} />
-              <Text style={styles.askPlaceholder}>Ask about sales, stock or branches…</Text>
+              <Text style={styles.askPlaceholder}>{t('home.askPlaceholder')}</Text>
             </View>
             <View style={styles.askSend}>
               <Ionicons name="arrow-up" size={18} color={colors.white} />
             </View>
           </View>
-          <Text style={styles.askNote}>Available once the query engine is connected</Text>
+          <Text style={styles.askNote}>{t('home.askNote')}</Text>
         </AnimatedEntrance>
       </SafeAreaView>
     </View>

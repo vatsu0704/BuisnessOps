@@ -1,22 +1,16 @@
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import LanguageSelector from '@/components/LanguageSelector';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
-import type { Industry } from '@/types/business';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
-
-const INDUSTRY_LABEL: Record<Industry, string> = {
-  RETAIL: 'Retail',
-  FOOD_BEVERAGE: 'Food & Beverage',
-  SERVICES: 'Services',
-  FRANCHISE_OTHER: 'Franchise / Other',
-};
 
 function initials(name?: string | null, email?: string | null): string {
   const source = name?.trim() || email || '';
@@ -37,6 +31,7 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
 }
 
 export default function SettingsScreen() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const business = useAuthStore((s) => s.business);
   const logout = useAuthStore((s) => s.logout);
@@ -50,7 +45,7 @@ export default function SettingsScreen() {
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <ScrollView contentContainerStyle={styles.content}>
           <AnimatedEntrance delay={step(0)}>
-            <Text style={styles.screenTitle}>Settings</Text>
+            <Text style={styles.screenTitle}>{t('settings.title')}</Text>
           </AnimatedEntrance>
 
           <AnimatedEntrance delay={step(1)} style={styles.block}>
@@ -73,31 +68,35 @@ export default function SettingsScreen() {
 
           <AnimatedEntrance delay={step(2)} style={styles.block}>
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Account</Text>
-              <Row label="Email" value={user?.email ?? '—'} />
-              {membership ? <Row label="Role" value={membership.role} /> : null}
+              <Text style={styles.sectionTitle}>{t('settings.account')}</Text>
+              <Row label={t('settings.email')} value={user?.email ?? '—'} />
+              {membership ? <Row label={t('settings.role')} value={membership.role} /> : null}
             </View>
           </AnimatedEntrance>
 
           {business ? (
             <AnimatedEntrance delay={step(3)} style={styles.block}>
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Business</Text>
-                <Row label="Name" value={business.name} />
-                <Row label="Industry" value={INDUSTRY_LABEL[business.industry] ?? business.industry} />
-                <Row label="Branches" value={String(stats.total)} />
-                <Row label="Country" value={business.country} />
-                <Row label="Currency" value={business.defaultCurrency} />
-                <Row label="Timezone" value={business.timezone} />
-                <Row label="Business ID" value={business.id} mono />
+                <Text style={styles.sectionTitle}>{t('settings.business')}</Text>
+                <Row label={t('settings.name')} value={business.name} />
+                <Row label={t('settings.industry')} value={t(`industry.${business.industry}`)} />
+                <Row label={t('settings.branches')} value={String(stats.total)} />
+                <Row label={t('settings.country')} value={business.country} />
+                <Row label={t('settings.currency')} value={business.defaultCurrency} />
+                <Row label={t('settings.timezone')} value={business.timezone} />
+                <Row label={t('settings.businessId')} value={business.id} mono />
               </View>
             </AnimatedEntrance>
           ) : null}
 
           <AnimatedEntrance delay={step(4)} style={styles.block}>
+            <LanguageSelector />
+          </AnimatedEntrance>
+
+          <AnimatedEntrance delay={step(5)} style={styles.block}>
             <PressableScale testID="settings-logout" style={styles.logout} onPress={() => logout()}>
               <Ionicons name="log-out-outline" size={18} color={colors.error} />
-              <Text style={styles.logoutText}>Log out</Text>
+              <Text style={styles.logoutText}>{t('settings.logout')}</Text>
             </PressableScale>
           </AnimatedEntrance>
         </ScrollView>

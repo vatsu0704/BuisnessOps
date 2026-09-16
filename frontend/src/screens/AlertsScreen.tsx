@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import PhaseNotice from '@/components/PhaseNotice';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -7,26 +8,24 @@ import { colors, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 
 export default function AlertsScreen() {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <ScreenBackground />
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <ScrollView contentContainerStyle={styles.content}>
           <AnimatedEntrance delay={step(0)}>
-            <Text style={styles.title}>Alerts</Text>
+            <Text style={styles.title}>{t('alerts.title')}</Text>
           </AnimatedEntrance>
 
           <AnimatedEntrance delay={step(1)} style={styles.block}>
             <PhaseNotice
               icon="notifications-outline"
-              badge="Planned"
-              title="Told before you ask"
-              body="Scheduled checks watch your data for sustained sales decline, wastage outliers and unusual cash-versus-digital mix, then raise an alert with the one or two metrics most likely behind it."
-              examples={[
-                'A branch whose sales have slipped for several days running',
-                'Wastage rates drifting above the company norm',
-                'What needs my attention today?',
-              ]}
+              badge={t('alerts.badge')}
+              title={t('alerts.noticeTitle')}
+              body={t('alerts.noticeBody')}
+              examples={[t('alerts.example1'), t('alerts.example2'), t('alerts.example3')]}
             />
           </AnimatedEntrance>
         </ScrollView>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -23,19 +24,16 @@ import { haptics } from '@/utils/haptics';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Signup'>;
 
-const INDUSTRIES: {
-  value: Industry;
-  label: string;
-  caption: string;
-  icon: keyof typeof Ionicons.glyphMap;
-}[] = [
-  { value: 'RETAIL', label: 'Retail', caption: 'Shops & stores', icon: 'storefront-outline' },
-  { value: 'FOOD_BEVERAGE', label: 'Food & Beverage', caption: 'Cafés, restaurants', icon: 'restaurant-outline' },
-  { value: 'SERVICES', label: 'Services', caption: 'Salons, clinics', icon: 'construct-outline' },
-  { value: 'FRANCHISE_OTHER', label: 'Franchise / Other', caption: 'Multi-brand', icon: 'business-outline' },
+// Labels and captions come from the translation files, keyed by `value`.
+const INDUSTRIES: { value: Industry; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: 'RETAIL', icon: 'storefront-outline' },
+  { value: 'FOOD_BEVERAGE', icon: 'restaurant-outline' },
+  { value: 'SERVICES', icon: 'construct-outline' },
+  { value: 'FRANCHISE_OTHER', icon: 'business-outline' },
 ];
 
 export default function SignupScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
@@ -117,15 +115,13 @@ export default function SignupScreen({ navigation }: Props) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <AnimatedEntrance delay={step(0)}>
-              <AuthHeader caption="Business intelligence" onBack={() => navigation.navigate('Login')} />
+              <AuthHeader caption={t('signup.headerCaption')} onBack={() => navigation.navigate('Login')} />
             </AnimatedEntrance>
 
             <AnimatedEntrance delay={step(1)} style={styles.intro}>
-              <Pill label="Multi-branch ready" icon="git-branch-outline" />
-              <Text style={styles.heading}>Register your business</Text>
-              <Text style={styles.subtitle}>
-                Create your owner account, then connect branches and bring your sales data in.
-              </Text>
+              <Pill label={t('signup.pill')} icon="git-branch-outline" />
+              <Text style={styles.heading}>{t('signup.heading')}</Text>
+              <Text style={styles.subtitle}>{t('signup.subtitle')}</Text>
             </AnimatedEntrance>
 
             {error ? (
@@ -139,21 +135,21 @@ export default function SignupScreen({ navigation }: Props) {
 
             <AnimatedEntrance delay={step(2)}>
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Your account</Text>
+                <Text style={styles.sectionTitle}>{t('signup.accountSection')}</Text>
 
                 <FormInput
                   testID="signup-name"
-                  label="Full name"
+                  label={t('signup.fullName')}
                   icon="person-outline"
-                  placeholder="Rajesh Patel"
+                  placeholder={t('signup.fullNamePlaceholder')}
                   value={name}
                   onChangeText={onFieldChange(setName)}
                 />
                 <FormInput
                   testID="signup-email"
-                  label="Work email"
+                  label={t('signup.email')}
                   icon="mail-outline"
-                  placeholder="you@business.com"
+                  placeholder={t('signup.emailPlaceholder')}
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType="email-address"
@@ -162,10 +158,10 @@ export default function SignupScreen({ navigation }: Props) {
                 />
                 <FormInput
                   testID="signup-password"
-                  label="Create password"
-                  hint="min 8 characters"
+                  label={t('signup.createPassword')}
+                  hint={t('signup.passwordHint')}
                   icon="lock-closed-outline"
-                  placeholder="Enter a password"
+                  placeholder={t('signup.passwordPlaceholder')}
                   isPassword
                   value={password}
                   onChangeText={onFieldChange(setPassword)}
@@ -174,38 +170,38 @@ export default function SignupScreen({ navigation }: Props) {
 
                 <FormInput
                   testID="signup-confirm-password"
-                  label="Confirm password"
+                  label={t('signup.confirmPassword')}
                   icon="shield-checkmark-outline"
-                  placeholder="Re-enter your password"
+                  placeholder={t('signup.confirmPlaceholder')}
                   isPassword
                   value={confirmPassword}
                   onChangeText={onFieldChange(setConfirmPassword)}
                 />
-                {passwordsMatch ? null : <Text style={styles.mismatch}>Passwords do not match yet.</Text>}
+                {passwordsMatch ? null : <Text style={styles.mismatch}>{t('signup.mismatch')}</Text>}
               </View>
             </AnimatedEntrance>
 
             <AnimatedEntrance delay={step(3)}>
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Business details</Text>
+                <Text style={styles.sectionTitle}>{t('signup.businessSection')}</Text>
 
                 <FormInput
                   testID="signup-businessName"
-                  label="Business / brand name"
+                  label={t('signup.businessName')}
                   icon="briefcase-outline"
-                  placeholder="e.g. Apex Retail Stores"
+                  placeholder={t('signup.businessNamePlaceholder')}
                   value={businessName}
                   onChangeText={onFieldChange(setBusinessName)}
                 />
 
-                <Text style={styles.fieldLabel}>Industry</Text>
+                <Text style={styles.fieldLabel}>{t('signup.industry')}</Text>
                 <View style={styles.grid}>
                   {INDUSTRIES.map((opt) => (
                     <View key={opt.value} style={styles.gridItem}>
                       <SegmentedOption
                         testID={`signup-industry-${opt.value}`}
-                        title={opt.label}
-                        caption={opt.caption}
+                        title={t(`industry.${opt.value}`)}
+                        caption={t(`industry.${opt.value}_caption`)}
                         icon={opt.icon}
                         selected={industry === opt.value}
                         onPress={() => setIndustry(opt.value)}
@@ -217,7 +213,7 @@ export default function SignupScreen({ navigation }: Props) {
                 <View style={styles.row}>
                   <View style={styles.rowItem}>
                     <FormInput
-                      label="Country"
+                      label={t('signup.country')}
                       icon="flag-outline"
                       autoCapitalize="characters"
                       value={country}
@@ -226,7 +222,7 @@ export default function SignupScreen({ navigation }: Props) {
                   </View>
                   <View style={styles.rowItem}>
                     <FormInput
-                      label="Currency"
+                      label={t('signup.currency')}
                       icon="cash-outline"
                       autoCapitalize="characters"
                       value={defaultCurrency}
@@ -236,7 +232,7 @@ export default function SignupScreen({ navigation }: Props) {
                 </View>
 
                 <FormInput
-                  label="Timezone"
+                  label={t('signup.timezone')}
                   icon="time-outline"
                   value={timezone}
                   onChangeText={onFieldChange(setTimezone)}
@@ -247,7 +243,7 @@ export default function SignupScreen({ navigation }: Props) {
             <AnimatedEntrance delay={step(4)}>
               <PrimaryButton
                 testID="signup-submit"
-                title={isSubmitting ? 'Creating account...' : 'Create account & continue'}
+                title={isSubmitting ? t('signup.submitting') : t('signup.submit')}
                 icon="arrow-forward"
                 loading={isSubmitting}
                 disabled={!canSubmit}
@@ -258,8 +254,8 @@ export default function SignupScreen({ navigation }: Props) {
             <AnimatedEntrance delay={step(5)} style={styles.infoWrap}>
               <InfoCard
                 icon="cloud-upload-outline"
-                title="Bring your sales data in"
-                subtitle="Upload sales history from CSV or Excel once your account is set up."
+                title={t('signup.dataTitle')}
+                subtitle={t('signup.dataSubtitle')}
               />
             </AnimatedEntrance>
 
@@ -271,7 +267,7 @@ export default function SignupScreen({ navigation }: Props) {
                 scaleTo={0.97}
               >
                 <Text style={styles.link}>
-                  Already have a BizIQ account? <Text style={styles.linkStrong}>Log in</Text>
+                  {t('signup.haveAccount')} <Text style={styles.linkStrong}>{t('signup.logIn')}</Text>
                 </Text>
               </PressableScale>
             </AnimatedEntrance>

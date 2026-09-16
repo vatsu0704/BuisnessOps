@@ -90,4 +90,15 @@ async function getCurrentUser(userId) {
   return sanitizeUser(user);
 }
 
-module.exports = { signup, login, getCurrentUser };
+// Language is stored per user rather than per device so a manager who signs in
+// on a shared terminal still gets their own language.
+async function updatePreferredLocale(userId, preferredLocale) {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { preferredLocale },
+    include: { memberships: { select: MEMBERSHIP_SELECT } },
+  });
+  return sanitizeUser(user);
+}
+
+module.exports = { signup, login, getCurrentUser, updatePreferredLocale };

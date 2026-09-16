@@ -1,0 +1,151 @@
+{
+  "common": {
+    "brand": "BizIQ",
+    "active": "active",
+    "more": "+{{count}} more"
+  },
+  "language": {
+    "title": "Language",
+    "subtitle": "Choose the language for the app",
+    "en": "English",
+    "hi": "Hindi",
+    "gu": "Gujarati",
+    "mr": "Marathi"
+  },
+  "tabs": {
+    "home": "Home",
+    "reports": "Reports",
+    "alerts": "Alerts",
+    "settings": "Settings"
+  },
+  "splash": {
+    "tagline": "Ask your business anything"
+  },
+  "login": {
+    "pill": "Merchant & manager portal",
+    "headingPrefix": "Welcome to",
+    "subtitle": "Ask about sales, stock and branch performance in plain language — and get answers you can trace back to your own data.",
+    "heroEyebrow": "Built for multi-branch",
+    "heroTitle": "One question, every branch",
+    "heroSubtitle": "Compare outlets, spot what moved, and see the numbers behind each answer.",
+    "divider": "Sign in with email",
+    "email": "Work email",
+    "emailPlaceholder": "you@business.com",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "submit": "Sign in to BizIQ",
+    "submitting": "Signing in...",
+    "registerTitle": "New to BizIQ?",
+    "registerSubtitle": "Register your business and connect your first branch.",
+    "footer": "Multi-branch retail & F&B · Owner, manager and staff roles"
+  },
+  "signup": {
+    "headerCaption": "Business intelligence",
+    "pill": "Multi-branch ready",
+    "heading": "Register your business",
+    "subtitle": "Create your owner account, then connect branches and bring your sales data in.",
+    "accountSection": "Your account",
+    "fullName": "Full name",
+    "fullNamePlaceholder": "Rajesh Patel",
+    "email": "Work email",
+    "emailPlaceholder": "you@business.com",
+    "createPassword": "Create password",
+    "passwordHint": "min 8 characters",
+    "passwordPlaceholder": "Enter a password",
+    "confirmPassword": "Confirm password",
+    "confirmPlaceholder": "Re-enter your password",
+    "mismatch": "Passwords do not match yet.",
+    "businessSection": "Business details",
+    "businessName": "Business / brand name",
+    "businessNamePlaceholder": "e.g. Apex Retail Stores",
+    "industry": "Industry",
+    "country": "Country",
+    "currency": "Currency",
+    "timezone": "Timezone",
+    "submit": "Create account & continue",
+    "submitting": "Creating account...",
+    "dataTitle": "Bring your sales data in",
+    "dataSubtitle": "Upload sales history from CSV or Excel once your account is set up.",
+    "haveAccount": "Already have a BizIQ account?",
+    "logIn": "Log in"
+  },
+  "industry": {
+    "RETAIL": "Retail",
+    "RETAIL_caption": "Shops & stores",
+    "FOOD_BEVERAGE": "Food & Beverage",
+    "FOOD_BEVERAGE_caption": "Cafés, restaurants",
+    "SERVICES": "Services",
+    "SERVICES_caption": "Salons, clinics",
+    "FRANCHISE_OTHER": "Franchise / Other",
+    "FRANCHISE_OTHER_caption": "Multi-brand"
+  },
+  "password": {
+    "level": "Security level",
+    "tooShort": "Too short",
+    "weak": "Weak",
+    "good": "Good",
+    "strong": "Strong",
+    "hintShort": "needs 8+ characters",
+    "hintVariety": "add numbers or capitals",
+    "hintLength": "8+ characters",
+    "hintVaried": "nicely varied"
+  },
+  "home": {
+    "greeting": "Hi {{name}}",
+    "branchCount": "{{count}} branch",
+    "branchCount_plural": "{{count}} branches",
+    "statBranches": "Branches",
+    "statActive": "Active",
+    "statCities": "Cities",
+    "emptyTitle": "No branches yet",
+    "emptySubtitle": "Add your first branch to start tracking sales, stock and staff per location.",
+    "branchesTitle": "Your branches",
+    "activeCount": "{{count}} active",
+    "queryBadge": "Next up",
+    "queryTitle": "Ask your business anything",
+    "queryBody": "The query engine turns plain-language questions into answers computed from your own sales data, with the numbers behind every answer. It switches on once an AI provider is connected.",
+    "queryExample1": "What were October sales versus last year?",
+    "queryExample2": "Which branch had the lowest sales last month, and why?",
+    "queryExample3": "Compare my Ahmedabad and Surat outlets this week.",
+    "dataTitle": "Bring your sales data in",
+    "dataSubtitle": "Upload sales history from CSV or Excel — the ingestion pipeline is already live.",
+    "askPlaceholder": "Ask about sales, stock or branches…",
+    "askNote": "Available once the query engine is connected"
+  },
+  "phase": {
+    "examplesLabel": "What you'll be able to ask"
+  },
+  "reports": {
+    "title": "Reports",
+    "badge": "Planned",
+    "noticeTitle": "Cross-branch reporting",
+    "noticeBody": "Compare any set of branches against each other and against your company average, then browse the same numbers the chat answers are computed from — so figures can never drift between asking and browsing.",
+    "example1": "Top and bottom performing branches by any metric",
+    "example2": "Company-average benchmarking per branch",
+    "example3": "City and region grouping for franchise networks"
+  },
+  "alerts": {
+    "title": "Alerts",
+    "badge": "Planned",
+    "noticeTitle": "Told before you ask",
+    "noticeBody": "Scheduled checks watch your data for sustained sales decline, wastage outliers and unusual cash-versus-digital mix, then raise an alert with the one or two metrics most likely behind it.",
+    "example1": "A branch whose sales have slipped for several days running",
+    "example2": "Wastage rates drifting above the company norm",
+    "example3": "What needs my attention today?"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "email": "Email",
+    "role": "Role",
+    "business": "Business",
+    "name": "Name",
+    "industry": "Industry",
+    "branches": "Branches",
+    "country": "Country",
+    "currency": "Currency",
+    "timezone": "Timezone",
+    "businessId": "Business ID",
+    "logout": "Log out"
+  }
+}

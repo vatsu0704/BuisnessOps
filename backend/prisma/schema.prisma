@@ -22,6 +22,7 @@ enum Locale {
   EN
   HI
   GU
+  MR
 }
 
 enum BranchStatus {

@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import Pill from '@/components/Pill';
 import { colors, radius, spacing } from '@/theme';
 
@@ -12,6 +13,8 @@ type Props = {
 };
 
 export default function PhaseNotice({ icon, badge, title, body, examples }: Props) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.card}>
       <View style={styles.head}>
@@ -26,7 +29,7 @@ export default function PhaseNotice({ icon, badge, title, body, examples }: Prop
 
       {examples?.length ? (
         <View style={styles.examples}>
-          <Text style={styles.examplesLabel}>What you&apos;ll be able to ask</Text>
+          <Text style={styles.examplesLabel}>{t('phase.examplesLabel')}</Text>
           {examples.map((example) => (
             <View key={example} style={styles.exampleRow}>
               <Ionicons name="chatbubble-ellipses-outline" size={13} color={colors.textTertiary} />

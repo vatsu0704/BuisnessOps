@@ -1,4 +1,5 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useTranslation } from 'react-i18next';
 import TabBarIcon from '@/components/TabBarIcon';
 import AlertsScreen from '@/screens/AlertsScreen';
 import HomeScreen from '@/screens/HomeScreen';
@@ -16,6 +17,8 @@ export type AppTabParamList = {
 const Tab = createBottomTabNavigator<AppTabParamList>();
 
 export default function AppNavigator() {
+  const { t } = useTranslation();
+
   return (
     <Tab.Navigator
       initialRouteName="Home"
@@ -37,6 +40,7 @@ export default function AppNavigator() {
         name="Home"
         component={HomeScreen}
         options={{
+          tabBarLabel: t('tabs.home'),
           tabBarIcon: (props) => <TabBarIcon {...props} name="chatbubble-ellipses-outline" />,
         }}
       />
@@ -44,6 +48,7 @@ export default function AppNavigator() {
         name="Reports"
         component={ReportsScreen}
         options={{
+          tabBarLabel: t('tabs.reports'),
           tabBarIcon: (props) => <TabBarIcon {...props} name="bar-chart-outline" />,
         }}
       />
@@ -51,6 +56,7 @@ export default function AppNavigator() {
         name="Alerts"
         component={AlertsScreen}
         options={{
+          tabBarLabel: t('tabs.alerts'),
           tabBarIcon: (props) => <TabBarIcon {...props} name="notifications-outline" />,
         }}
       />
@@ -58,6 +64,7 @@ export default function AppNavigator() {
         name="Settings"
         component={SettingsScreen}
         options={{
+          tabBarLabel: t('tabs.settings'),
           tabBarIcon: (props) => <TabBarIcon {...props} name="options-outline" />,
         }}
       />

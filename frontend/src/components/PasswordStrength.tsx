@@ -1,19 +1,28 @@
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { colors, radius, spacing } from '@/theme';
 import { duration } from '@/theme/motion';
 
 const SEGMENTS = 4;
 
-type Strength = { score: number; label: string; color: string; hint: string };
+type LabelKey = 'password.tooShort' | 'password.weak' | 'password.good' | 'password.strong';
+type HintKey = 'password.hintShort' | 'password.hintVariety' | 'password.hintLength' | 'password.hintVaried';
+
+type Strength = {
+  score: number;
+  labelKey: LabelKey | null;
+  hintKey: HintKey | null;
+  color: string;
+};
 
 export function scorePassword(password: string): Strength {
   if (password.length === 0) {
-    return { score: 0, label: '', color: colors.border, hint: '' };
+    return { score: 0, labelKey: null, hintKey: null, color: colors.border };
   }
   if (password.length < 8) {
-    return { score: 1, label: 'Too short', color: colors.error, hint: 'needs 8+ characters' };
+    return { score: 1, labelKey: 'password.tooShort', hintKey: 'password.hintShort', color: colors.error };
   }
 
   const variety =
@@ -22,11 +31,13 @@ export function scorePassword(password: string): Strength {
     Number(/\d/.test(password)) +
     Number(/[^A-Za-z0-9]/.test(password));
 
-  if (variety <= 1) return { score: 2, label: 'Weak', color: colors.warning, hint: 'add numbers or capitals' };
-  if (variety === 2 || password.length < 12) {
-    return { score: 3, label: 'Good', color: colors.primary, hint: '8+ characters' };
+  if (variety <= 1) {
+    return { score: 2, labelKey: 'password.weak', hintKey: 'password.hintVariety', color: colors.warning };
   }
-  return { score: 4, label: 'Strong', color: colors.success, hint: 'nicely varied' };
+  if (variety === 2 || password.length < 12) {
+    return { score: 3, labelKey: 'password.good', hintKey: 'password.hintLength', color: colors.primary };
+  }
+  return { score: 4, labelKey: 'password.strong', hintKey: 'password.hintVaried', color: colors.success };
 }
 
 function Segment({ active, color, index }: { active: boolean; color: string; index: number }) {
@@ -45,17 +56,18 @@ function Segment({ active, color, index }: { active: boolean; color: string; ind
 }
 
 export default function PasswordStrength({ password }: { password: string }) {
-  const { score, label, color, hint } = scorePassword(password);
+  const { t } = useTranslation();
+  const { score, labelKey, hintKey, color } = scorePassword(password);
 
   if (password.length === 0) return null;
 
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={styles.caption}>Security level</Text>
+        <Text style={styles.caption}>{t('password.level')}</Text>
         <Text style={[styles.value, { color }]}>
-          {label}
-          {hint ? <Text style={styles.hint}>{`  ·  ${hint}`}</Text> : null}
+          {labelKey ? t(labelKey) : ''}
+          {hintKey ? <Text style={styles.hint}>{`  ·  ${t(hintKey)}`}</Text> : null}
         </Text>
       </View>
       <View style={styles.track}>

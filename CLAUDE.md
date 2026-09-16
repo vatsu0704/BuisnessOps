@@ -76,6 +76,24 @@ access is impossible by construction rather than by convention.
   than hand-drawn. `BrandMark.tsx` deliberately mirrors the icon's proportions —
   change both together or the in-app logo and the launcher icon will drift apart.
 
+## Translations
+
+The app ships in English, Hindi and Gujarati. **Never hardcode a user-facing
+string** — render it with `t('section.key')` from `useTranslation()`.
+
+- Strings live in `src/i18n/locales/{en,hi,gu}.json`. `en.json` is the source of
+  truth: `src/i18n/i18next.d.ts` types `t()` against it, so a key missing from
+  `en.json` is a compile error rather than text that renders as the raw key.
+- Adding a language means adding a JSON file and one row in `LANGUAGES`
+  (`src/i18n/index.ts`). Nothing else in the app changes.
+- Language resolution order: an explicit choice stored on the device, then the
+  account's `preferredLocale`, then the device language, then English. Changing it
+  persists locally and PATCHes `/auth/me/locale` so other devices follow.
+- i18next runs with `compatibilityJSON: 'v3'` because React Native has no
+  dependable `Intl.PluralRules`; plurals therefore use `key` / `key_plural`.
+- The Hindi and Gujarati files were written without a native-speaker review. Treat
+  wording fixes from a speaker as expected, not as defects.
+
 ## Native Android builds
 
 The app ships as a **development build** (`expo-dev-client`), not Expo Go.

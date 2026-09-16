@@ -1,5 +1,6 @@
 const authService = require('../services/auth.service');
 const { validateSignup, validateLogin } = require('../validations/auth.validation');
+const { validateUpdateLocale } = require('../validations/user.validation');
 
 async function signup(req, res, next) {
   try {
@@ -35,4 +36,16 @@ async function me(req, res, next) {
   }
 }
 
-module.exports = { signup, login, me };
+async function updateLocale(req, res, next) {
+  try {
+    const errors = validateUpdateLocale(req.body);
+    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+
+    const user = await authService.updatePreferredLocale(req.userId, req.body.preferredLocale);
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { signup, login, me, updateLocale };

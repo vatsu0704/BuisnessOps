@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -22,6 +23,7 @@ import { haptics } from '@/utils/haptics';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -73,27 +75,24 @@ export default function LoginScreen({ navigation }: Props) {
             </AnimatedEntrance>
 
             <AnimatedEntrance delay={step(1)} style={styles.intro}>
-              <Pill label="Merchant & Manager Portal" icon="trending-up" />
+              <Pill label={t('login.pill')} icon="trending-up" />
               <Text style={styles.heading}>
-                Welcome to <Text style={styles.headingBrand}>BizIQ</Text>
+                {t('login.headingPrefix')} <Text style={styles.headingBrand}>BizIQ</Text>
               </Text>
-              <Text style={styles.subtitle}>
-                Ask about sales, stock and branch performance in plain language — and get answers you can trace
-                back to your own data.
-              </Text>
+              <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
             </AnimatedEntrance>
 
             <AnimatedEntrance delay={step(2)}>
               <HeroCard
-                eyebrow="Built for multi-branch"
-                title="One question, every branch"
-                subtitle="Compare outlets, spot what moved, and see the numbers behind each answer."
+                eyebrow={t('login.heroEyebrow')}
+                title={t('login.heroTitle')}
+                subtitle={t('login.heroSubtitle')}
                 icon="bar-chart"
               />
             </AnimatedEntrance>
 
             <AnimatedEntrance delay={step(3)}>
-              <SectionDivider label="Sign in with email" />
+              <SectionDivider label={t('login.divider')} />
             </AnimatedEntrance>
 
             <AnimatedEntrance delay={step(4)}>
@@ -109,9 +108,9 @@ export default function LoginScreen({ navigation }: Props) {
 
                 <FormInput
                   testID="login-email"
-                  label="Work email"
+                  label={t('login.email')}
                   icon="mail-outline"
-                  placeholder="you@business.com"
+                  placeholder={t('login.emailPlaceholder')}
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType="email-address"
@@ -123,9 +122,9 @@ export default function LoginScreen({ navigation }: Props) {
                 />
                 <FormInput
                   testID="login-password"
-                  label="Password"
+                  label={t('login.password')}
                   icon="lock-closed-outline"
-                  placeholder="Enter your password"
+                  placeholder={t('login.passwordPlaceholder')}
                   isPassword
                   value={password}
                   onChangeText={(text) => {
@@ -136,7 +135,7 @@ export default function LoginScreen({ navigation }: Props) {
 
                 <PrimaryButton
                   testID="login-submit"
-                  title={isSubmitting ? 'Signing in...' : 'Sign in to BizIQ'}
+                  title={isSubmitting ? t('login.submitting') : t('login.submit')}
                   icon="arrow-forward"
                   loading={isSubmitting}
                   disabled={!canSubmit}
@@ -149,14 +148,14 @@ export default function LoginScreen({ navigation }: Props) {
               <InfoCard
                 testID="login-goto-signup"
                 icon="storefront-outline"
-                title="New to BizIQ?"
-                subtitle="Register your business and connect your first branch."
+                title={t('login.registerTitle')}
+                subtitle={t('login.registerSubtitle')}
                 onPress={() => navigation.navigate('Signup')}
               />
             </AnimatedEntrance>
 
             <AnimatedEntrance delay={step(6)}>
-              <Text style={styles.footerNote}>Multi-branch retail & F&B · Owner, manager and staff roles</Text>
+              <Text style={styles.footerNote}>{t('login.footer')}</Text>
             </AnimatedEntrance>
           </ScrollView>
         </KeyboardAvoidingView>
