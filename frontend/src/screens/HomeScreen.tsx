@@ -1,10 +1,14 @@
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import type { AppTabParamList } from '@/navigation/AppNavigator';
+import type { AppStackParamList } from '@/navigation/AppNavigator';
+import type { AppTabParamList } from '@/navigation/TabNavigator';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
@@ -12,7 +16,6 @@ import BrandMark from '@/components/BrandMark';
 import InfoCard from '@/components/InfoCard';
 import LanguageToggle from '@/components/LanguageToggle';
 import PhaseNotice from '@/components/PhaseNotice';
-import Pill from '@/components/Pill';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
 import StatTile from '@/components/StatTile';
@@ -33,6 +36,14 @@ export default function HomeScreen({ navigation }: Props) {
   const user = useAuthStore((s) => s.user);
   const business = useAuthStore((s) => s.business);
   const { branches, isLoading, error, refresh, stats } = useBranches();
+  const rootNavigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+
+  // A branch created in the modal must show up the moment we return to Home.
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh])
+  );
 
   const firstName = user?.name?.trim().split(/\s+/)[0] ?? user?.email ?? '';
 
@@ -97,9 +108,11 @@ export default function HomeScreen({ navigation }: Props) {
           {!error && stats.total === 0 ? (
             <AnimatedEntrance delay={step(2)} style={styles.block}>
               <InfoCard
+                testID="home-add-first-branch"
                 icon="storefront-outline"
                 title={t('home.emptyTitle')}
                 subtitle={t('home.emptySubtitle')}
+                onPress={() => rootNavigation.navigate('AddBranch')}
               />
             </AnimatedEntrance>
           ) : null}
@@ -109,7 +122,14 @@ export default function HomeScreen({ navigation }: Props) {
               <View style={styles.card}>
                 <View style={styles.cardHead}>
                   <Text style={styles.cardTitle}>{t('home.branchesTitle')}</Text>
-                  <Pill label={t('home.activeCount', { count: stats.active })} />
+                  <PressableScale
+                    testID="home-add-branch"
+                    style={styles.addBranch}
+                    onPress={() => rootNavigation.navigate('AddBranch')}
+                  >
+                    <Ionicons name="add" size={15} color={colors.primary} />
+                    <Text style={styles.addBranchText}>{t('home.addBranch')}</Text>
+                  </PressableScale>
                 </View>
                 {branches.slice(0, 5).map((branch, index) => (
                   <View key={branch.id} style={[styles.branchRow, index > 0 && styles.branchRowDivided]}>
@@ -146,9 +166,11 @@ export default function HomeScreen({ navigation }: Props) {
 
           <AnimatedEntrance delay={step(4)} style={styles.block}>
             <InfoCard
+              testID="home-open-upload"
               icon="cloud-upload-outline"
               title={t('home.dataTitle')}
               subtitle={t('home.dataSubtitle')}
+              onPress={() => rootNavigation.navigate('Upload')}
             />
           </AnimatedEntrance>
         </ScrollView>
@@ -224,6 +246,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   cardTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
+  addBranch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm - 2,
+  },
+  addBranchText: { fontSize: 12, fontWeight: '700', color: colors.primary },
   branchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   branchRowDivided: { borderTopWidth: 1, borderTopColor: colors.border },
   statusDot: { width: 8, height: 8, borderRadius: 4 },

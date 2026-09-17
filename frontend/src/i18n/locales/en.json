@@ -110,7 +110,8 @@
     "dataTitle": "Bring your sales data in",
     "dataSubtitle": "Upload sales history from CSV or Excel — the ingestion pipeline is already live.",
     "askPlaceholder": "Ask about sales, stock or branches…",
-    "askNote": "Available once the query engine is connected"
+    "askNote": "Available once the query engine is connected",
+    "addBranch": "Add branch"
   },
   "phase": {
     "examplesLabel": "What you'll be able to ask"
@@ -147,5 +148,43 @@
     "timezone": "Timezone",
     "businessId": "Business ID",
     "logout": "Log out"
+  },
+  "addBranch": {
+    "title": "Add branch",
+    "subtitle": "Branches are how sales, stock and staff are tracked per location. You can add more at any time.",
+    "name": "Branch name",
+    "namePlaceholder": "e.g. Ring Road Outlet",
+    "code": "Branch code",
+    "codeHint": "your internal reference",
+    "codePlaceholder": "e.g. SUR-01",
+    "city": "City",
+    "region": "Region",
+    "currency": "Currency",
+    "timezone": "Timezone",
+    "submit": "Create branch",
+    "submitting": "Creating..."
+  },
+  "upload": {
+    "title": "Upload sales data",
+    "subtitle": "Import sales history from a CSV or Excel file. Rows sharing a transaction id are grouped into one transaction.",
+    "branchSection": "Which branch is this data for?",
+    "fileSection": "File",
+    "pick": "Choose a CSV or Excel file",
+    "pickHint": "Up to 5 MB",
+    "pickChange": "Tap to choose a different file",
+    "columnsLabel": "Required columns",
+    "columnsOptional": "Optional: transaction_external_id, sku, unit, tax_amount, discount_amount",
+    "submit": "Upload and import",
+    "uploading": "Importing...",
+    "doneTitle": "Import complete",
+    "partialTitle": "Imported with some skipped rows",
+    "created": "Created",
+    "updated": "Updated",
+    "failed": "Skipped",
+    "rowErrors": "Rows that were skipped",
+    "noBranchesTitle": "Add a branch first",
+    "noBranchesSubtitle": "Sales data is imported into a specific branch, so you need at least one.",
+    "templateTitle": "Download template",
+    "templateSubtitle": "A sample CSV with the exact columns this importer expects."
   }
 }

@@ -78,7 +78,18 @@ async function login({ email, password }) {
   }
 
   const token = signToken({ sub: user.id });
-  return { token, user: sanitizeUser(user) };
+  return { token, user: sanitizeUser(user), business: await primaryBusiness(user) };
+}
+
+// signup/login/me all hand back the same {user, business} shape for the same reason
+// they already share MEMBERSHIP_SELECT: the client must not have to care which
+// endpoint the session came from. Returning business only from signup previously
+// meant the app knew the business name right after registering but lost it on the
+// next login or app restart.
+async function primaryBusiness(user) {
+  const businessId = user.memberships?.[0]?.businessId;
+  if (!businessId) return null;
+  return prisma.business.findUnique({ where: { id: businessId } });
 }
 
 async function getCurrentUser(userId) {
@@ -87,7 +98,7 @@ async function getCurrentUser(userId) {
     include: { memberships: { select: MEMBERSHIP_SELECT } },
   });
   if (!user) return null;
-  return sanitizeUser(user);
+  return { user: sanitizeUser(user), business: await primaryBusiness(user) };
 }
 
 // Language is stored per user rather than per device so a manager who signs in

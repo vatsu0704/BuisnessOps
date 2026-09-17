@@ -1,8 +1,10 @@
-# Project Flow — AI Business Intelligence Platform
+# Project Flow — BizIQ
 
 This document translates the product requirements (PRD) into a buildable engineering sequence for this repo: **React Native/Expo (TypeScript) frontend + Node.js/Express backend + PostgreSQL via Prisma**. It exists so that at any point in the build, anyone can answer "what phase are we in, what does it depend on, and how do we know it's done."
 
-The repo today is a bare scaffold — Express app with a single `User` model, an Expo app with one screen. Everything below starts from that.
+The product is named **BizIQ** (Android package `com.biziq.app`), renamed from the earlier "BuisnessOps". The old name deliberately survives where changing it would be disruptive — the repository folder and the Postgres database name `buisnessops` — and those are not typos to fix.
+
+**Where the repo actually is:** Phases 0 and 1 (CSV path) are done. The app ships as an Expo **development build** rather than Expo Go, with its own icon, animated splash and a four-tab shell (Home, Reports, Alerts, Settings). Phase 3's UI i18n is done ahead of order; the rest of Phase 3 and all of Phase 2 are not started.
 
 ---
 
@@ -20,16 +22,18 @@ These decisions shape every phase and shouldn't be revisited per-feature:
 
 ## 2. Phase Map
 
-| Phase | Focus | Maps to PRD |
-|---|---|---|
-| 0 | Foundations: multi-tenant data model, auth, RBAC | prerequisite to Phase 1 |
-| 1 | Data ingestion: unified schema, CSV/Excel upload, first POS adapter | FR-04, FR-05 |
-| 2 | Core query engine: metrics catalog + NL → answer pipeline (English first) | FR-01, FR-06 |
-| 3 | Multi-language + voice | FR-02, FR-03 |
-| 4 | Reporting & cross-branch comparison | FR-06, FR-07 |
-| 5 | Proactive intelligence: alerts, benchmarking, wastage, cash-mix, seasonal correlation | FR-08–FR-12 |
-| 6 | Strategic & franchise: staff analytics, royalty automation, expansion what-if, forecasting | FR-13–FR-16 |
-| 7 | Hardening: security, compliance, performance, billing | NFRs (Section 7) |
+| Phase | Focus | Maps to PRD | Status |
+|---|---|---|---|
+| 0 | Foundations: multi-tenant data model, auth, RBAC | prerequisite to Phase 1 | ✅ done |
+| 1 | Data ingestion: unified schema, CSV/Excel upload, first POS adapter | FR-04, FR-05 | ✅ CSV path done; live POS adapter deferred |
+| 2 | Core query engine: metrics catalog + NL → answer pipeline (English first) | FR-01, FR-06 | ⛔ blocked on an LLM provider |
+| 3 | Multi-language + voice | FR-02, FR-03 | 🟡 UI i18n done (en/hi/gu/mr); voice and query-language work outstanding |
+| 4 | Reporting & cross-branch comparison | FR-06, FR-07 | ⏳ not started (tab exists, shows a planned notice) |
+| 5 | Proactive intelligence: alerts, benchmarking, wastage, cash-mix, seasonal correlation | FR-08–FR-12 | ⏳ not started (tab exists, shows a planned notice) |
+| 6 | Strategic & franchise: staff analytics, royalty automation, expansion what-if, forecasting | FR-13–FR-16 | ⏳ not started |
+| 7 | Hardening: security, compliance, performance, billing | NFRs (Section 7) | ⏳ not started |
+
+Phase 3's UI half landed out of order, ahead of Phase 2 — that was a deliberate request, not a plan change. The phase ordering below still stands.
 
 Phases 0–4 are the MVP (PRD Phase 1). Phase 5 is PRD Phase 2. Phase 6 is PRD Phase 3. Phase 7 runs partly in parallel with 4–6 but gates any real launch.
 
@@ -87,12 +91,17 @@ Phases 0–4 are the MVP (PRD Phase 1). Phase 5 is PRD Phase 2. Phase 6 is PRD P
 
 **Objective:** FR-02, FR-03 — the same query engine in Hindi and Gujarati, by text and by voice.
 
+**Status: UI i18n done (and extended to Marathi). Everything that depends on the query engine is blocked behind Phase 2; voice is not started.**
+
 **Deliverables**
-- UI i18n: all static strings in en/hi/gu (structure this so a fourth language is a translation file, not a code change).
-- Intent parser extended to accept hi/gu input — reuses the same language-agnostic intent schema from Phase 2, so only the parsing prompt/model changes per language.
-- Answer composer extended to phrase results in the query's language.
-- Voice: STT on-device mic capture → text → existing pipeline → optional TTS response. Ship English voice first, then Hindi/Gujarati once STT/TTS accuracy is validated (PRD Section 12 flags Gujarati as higher-risk — validate with real speakers before enabling voice for it, text-first if needed).
-- Locale-aware currency/date/number formatting per business's region (NFR: Localization beyond language).
+- ✅ UI i18n: every static string renders through `t()`, with translations in **en / hi / gu / mr**. Strings live in `frontend/src/i18n/locales/*.json`; `en.json` is the source of truth and `t()` is typed against it, so a missing key is a compile error rather than text that renders as the raw key. Language resolution is device choice → account `preferredLocale` → device language → English, persisted locally and to the account via `PATCH /auth/me/locale`.
+- ⚠️ "A fourth language is a translation file, not a code change" holds for the **UI** — a JSON file plus one row in `LANGUAGES`. It does **not** hold for account persistence: `preferredLocale` is a Postgres enum, so a new language also needs a schema change, a migration, the backend validation list and the frontend `Locale` union. Marathi needed five files, not two. Budget for that when adding the next language.
+- ⏳ Intent parser extended to accept hi/gu input — reuses the same language-agnostic intent schema from Phase 2, so only the parsing prompt/model changes per language. **Blocked on Phase 2.**
+- ⏳ Answer composer extended to phrase results in the query's language. **Blocked on Phase 2.**
+- ⏳ Voice: STT on-device mic capture → text → existing pipeline → optional TTS response. Ship English voice first, then Hindi/Gujarati once STT/TTS accuracy is validated (PRD Section 12 flags Gujarati as higher-risk — validate with real speakers before enabling voice for it, text-first if needed). **Not started.**
+- ⏳ Locale-aware currency/date/number formatting per business's region (NFR: Localization beyond language). **Not started** — Hermes has no dependable `Intl`, so this needs its own approach rather than assuming `Intl.NumberFormat` works on device.
+
+**Translation quality caveat:** the hi/gu/mr files were written without a native-speaker review. Wording corrections from a speaker are expected, not defects — and PRD Section 12 already flags Gujarati as the higher-risk language.
 
 **Exit criteria:** the same benchmark question set from Phase 2's exit criteria passes in all three languages, text and voice, with Gujarati explicitly spot-checked for accuracy before enabling voice input for it.
 
@@ -159,11 +168,21 @@ Runs partly in parallel with Phases 4–6, but nothing ships to real businesses 
 
 ## 11. Immediate Next Steps (from current repo state)
 
-Phases 0 and 1's CSV path are both done and verified (schema, migrations, tests, CI, an auth-gated frontend shell, and a Postman collection covering all of it). What's actually next:
+Done and verified: Phases 0 and 1's CSV path (schema, migrations, tests, CI, Postman collection); the BizIQ brand (icon, adaptive icon, animated splash); a designed and animated Login/Signup/Home; a four-tab app shell; and Phase 3's UI i18n in four languages.
 
-1. **Phase 2 — Core Query Engine.** Blocked on an LLM provider being wired in (Anthropic API key not yet provided).
-2. **Design pass** on the existing screens (Login/Signup/Home) — deferred earlier in favor of features; still open.
-3. **Live POS adapter** — blocked on either picking a different pull-capable vendor or a Petpooja partner conversation (see Section 12).
+An onboarding path now exists end to end: register → add a branch → upload sales data. Branch creation and CSV/Excel upload are both reachable from Home as modal screens, so Phase 1's ingestion pipeline is finally usable from the app rather than only from Postman.
+
+What's actually next:
+
+1. **Show the ingested data.** Sales rows now land in `Transaction`/`LineItem`, but nothing reads them back — Home's stat tiles still only count branches. `GET /branches/:branchId/transactions` already exists; wiring it up turns the tiles into real sales figures and makes the ingestion visible to the person who just did it.
+2. **Phase 2 — Core Query Engine.** Still blocked on an LLM provider being wired in (Anthropic API key not yet provided). The Home screen already has the answer surface and the disabled ask bar waiting for it.
+3. **Locale-aware formatting** (Phase 3 leftover) — becomes urgent as soon as step 1 renders currency; see the Hermes `Intl` caveat in Section 6.
+4. **Staff and manager invites.** `POST /memberships` and `branch-access` work and are covered by the tenant-isolation tests, but have no UI, so the whole RBAC model is unreachable from the app.
+5. **Live POS adapter** — blocked on either picking a different pull-capable vendor or a Petpooja partner conversation (see Section 12).
+
+**Ingestion contract, for whoever builds on it:** required CSV columns are `occurred_at, product_name, quantity, unit_price, payment_method`; optional `transaction_external_id, sku, unit, tax_amount, discount_amount`. Rows sharing a `transaction_external_id` group into one transaction. A data source is bound to exactly one branch — there is no per-row branch column — so each branch gets its own `CSV_UPLOAD` source. Bad rows are skipped and reported per row rather than failing the file.
+
+**Screens that exist but are deliberately hollow:** Reports (Phase 4) and Alerts (Phase 5) render an honest "planned" notice rather than mock data, and Home's ask bar is visibly inactive. Replace each with the real thing as its phase lands; none of them are stubs that were forgotten.
 
 ---
 

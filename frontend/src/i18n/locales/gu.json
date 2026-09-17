@@ -110,7 +110,8 @@
     "dataTitle": "તમારો વેચાણ ડેટા લાવો",
     "dataSubtitle": "CSV અથવા Excel માંથી વેચાણ ઇતિહાસ અપલોડ કરો — ઇન્જેશન પાઇપલાઇન પહેલેથી ચાલુ છે.",
     "askPlaceholder": "વેચાણ, સ્ટોક કે શાખાઓ વિશે પૂછો…",
-    "askNote": "ક્વેરી એન્જિન જોડાયા પછી ઉપલબ્ધ થશે"
+    "askNote": "ક્વેરી એન્જિન જોડાયા પછી ઉપલબ્ધ થશે",
+    "addBranch": "શાખા ઉમેરો"
   },
   "phase": {
     "examplesLabel": "તમે શું પૂછી શકશો"
@@ -147,5 +148,43 @@
     "timezone": "સમય ક્ષેત્ર",
     "businessId": "વ્યવસાય આઈડી",
     "logout": "લૉગ આઉટ"
+  },
+  "addBranch": {
+    "title": "શાખા ઉમેરો",
+    "subtitle": "શાખાઓ દ્વારા દરેક સ્થળનું વેચાણ, સ્ટોક અને સ્ટાફ ટ્રૅક થાય છે. તમે ગમે ત્યારે વધુ ઉમેરી શકો છો.",
+    "name": "શાખાનું નામ",
+    "namePlaceholder": "દા.ત. રિંગ રોડ આઉટલેટ",
+    "code": "શાખા કોડ",
+    "codeHint": "તમારો આંતરિક સંદર્ભ",
+    "codePlaceholder": "દા.ત. SUR-01",
+    "city": "શહેર",
+    "region": "પ્રદેશ",
+    "currency": "ચલણ",
+    "timezone": "સમય ક્ષેત્ર",
+    "submit": "શાખા બનાવો",
+    "submitting": "બની રહી છે..."
+  },
+  "upload": {
+    "title": "વેચાણ ડેટા અપલોડ કરો",
+    "subtitle": "CSV અથવા Excel ફાઇલમાંથી વેચાણ ઇતિહાસ આયાત કરો. એક જ ટ્રાન્ઝેક્શન આઈડી ધરાવતી હરોળ એક ટ્રાન્ઝેક્શન બને છે.",
+    "branchSection": "આ ડેટા કઈ શાખાનો છે?",
+    "fileSection": "ફાઇલ",
+    "pick": "CSV અથવા Excel ફાઇલ પસંદ કરો",
+    "pickHint": "વધુમાં વધુ 5 MB",
+    "pickChange": "બીજી ફાઇલ પસંદ કરવા ટૅપ કરો",
+    "columnsLabel": "જરૂરી કૉલમ",
+    "columnsOptional": "વૈકલ્પિક: transaction_external_id, sku, unit, tax_amount, discount_amount",
+    "submit": "અપલોડ કરો અને આયાત કરો",
+    "uploading": "આયાત થઈ રહ્યું છે...",
+    "doneTitle": "આયાત પૂર્ણ",
+    "partialTitle": "કેટલીક હરોળ છોડીને આયાત થયું",
+    "created": "બન્યા",
+    "updated": "અપડેટ થયા",
+    "failed": "છોડ્યા",
+    "rowErrors": "છોડેલી હરોળ",
+    "noBranchesTitle": "પહેલાં શાખા ઉમેરો",
+    "noBranchesSubtitle": "વેચાણ ડેટા કોઈ શાખામાં આયાત થાય છે, તેથી ઓછામાં ઓછી એક જરૂરી છે.",
+    "templateTitle": "ટેમ્પલેટ ડાઉનલોડ કરો",
+    "templateSubtitle": "નમૂના CSV જેમાં આ ઇમ્પોર્ટરને જોઈતા ચોક્કસ કૉલમ છે."
   }
 }

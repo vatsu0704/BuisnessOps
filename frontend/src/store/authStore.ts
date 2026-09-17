@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import * as secureStorage from '@/utils/secureStorage';
 import { setAuthToken, extractErrorMessage } from '@/api/client';
-import { signup as signupRequest, login as loginRequest, fetchCurrentUser } from '@/api/auth';
+import { signup as signupRequest, login as loginRequest, fetchSession } from '@/api/auth';
 import type { SignupPayload, LoginPayload } from '@/api/auth';
 import type { User } from '@/types/user';
 import type { Business } from '@/types/business';
@@ -42,13 +42,13 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
     setAuthToken(token);
     try {
-      const user = await fetchCurrentUser();
-      set({ token, user, isBootstrapping: false });
+      const { user, business } = await fetchSession();
+      set({ token, user, business, isBootstrapping: false });
     } catch {
       // Stored token is expired/invalid — drop it and fall back to login.
       await secureStorage.deleteItem(TOKEN_KEY);
       setAuthToken(null);
-      set({ token: null, user: null, isBootstrapping: false });
+      set({ token: null, user: null, business: null, isBootstrapping: false });
     }
   },
 
@@ -58,7 +58,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
       const result = await loginRequest(payload);
       await secureStorage.setItem(TOKEN_KEY, result.token);
       setAuthToken(result.token);
-      set({ token: result.token, user: result.user, isSubmitting: false });
+      set({
+        token: result.token,
+        user: result.user,
+        business: result.business ?? null,
+        isSubmitting: false,
+      });
     } catch (err) {
       set({ isSubmitting: false, error: extractErrorMessage(err) });
       throw err;

@@ -28,9 +28,9 @@ async function login(req, res, next) {
 
 async function me(req, res, next) {
   try {
-    const user = await authService.getCurrentUser(req.userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
+    const session = await authService.getCurrentUser(req.userId);
+    if (!session) return res.status(404).json({ message: 'User not found' });
+    res.json(session);
   } catch (err) {
     next(err);
   }

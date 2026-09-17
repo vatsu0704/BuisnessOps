@@ -21,7 +21,12 @@ export interface LoginPayload {
 export interface AuthResponse {
   token: string;
   user: User;
-  business?: Business;
+  business: Business | null;
+}
+
+export interface SessionResponse {
+  user: User;
+  business: Business | null;
 }
 
 export async function signup(payload: SignupPayload): Promise<AuthResponse> {
@@ -34,8 +39,8 @@ export async function login(payload: LoginPayload): Promise<AuthResponse> {
   return data;
 }
 
-export async function fetchCurrentUser(): Promise<User> {
-  const { data } = await apiClient.get<User>('/auth/me');
+export async function fetchSession(): Promise<SessionResponse> {
+  const { data } = await apiClient.get<SessionResponse>('/auth/me');
   return data;
 }
 
