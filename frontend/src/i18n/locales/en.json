@@ -51,6 +51,7 @@
     "email": "Work email",
     "emailPlaceholder": "you@business.com",
     "emailInvalid": "Enter a valid email address.",
+    "invitedAs": "You've been invited to join {{businessName}} as {{role}}.",
     "createPassword": "Create password",
     "passwordHint": "min 8 characters",
     "passwordPlaceholder": "Enter a password",
@@ -65,6 +66,7 @@
     "currency": "Currency",
     "timezone": "Timezone",
     "submit": "Create account & continue",
+    "joinSubmit": "Join {{businessName}}",
     "submitting": "Creating account...",
     "dataTitle": "Bring your sales data in",
     "dataSubtitle": "Upload sales history from CSV or Excel once your account is set up.",
@@ -265,7 +267,8 @@
     "inviteSubtitle": "Give someone access to this business",
     "empty": "No team members yet",
     "allBranches": "Access to all branches",
-    "noBranches": "No branch access granted yet"
+    "noBranches": "No branch access granted yet",
+    "pending": "Pending"
   },
   "inviteMember": {
     "title": "Invite a member",

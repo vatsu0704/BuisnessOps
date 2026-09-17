@@ -51,6 +51,7 @@
     "email": "કામનું ઈમેલ",
     "emailPlaceholder": "you@business.com",
     "emailInvalid": "માન્ય ઈમેલ સરનામું દાખલ કરો.",
+    "invitedAs": "તમને {{businessName}} માં {{role}} તરીકે જોડાવા માટે આમંત્રિત કરવામાં આવ્યા છે.",
     "createPassword": "પાસવર્ડ બનાવો",
     "passwordHint": "ઓછામાં ઓછા 8 અક્ષર",
     "passwordPlaceholder": "પાસવર્ડ દાખલ કરો",
@@ -65,6 +66,7 @@
     "currency": "ચલણ",
     "timezone": "સમય ક્ષેત્ર",
     "submit": "ખાતું બનાવો અને આગળ વધો",
+    "joinSubmit": "{{businessName}} માં જોડાઓ",
     "submitting": "ખાતું બની રહ્યું છે...",
     "dataTitle": "તમારો વેચાણ ડેટા લાવો",
     "dataSubtitle": "ખાતું તૈયાર થયા પછી CSV અથવા Excel માંથી વેચાણ ઇતિહાસ અપલોડ કરો.",
@@ -265,7 +267,8 @@
     "inviteSubtitle": "આ વ્યવસાયની ઍક્સેસ આપો",
     "empty": "હજુ સુધી કોઈ ટીમ સભ્ય નથી",
     "allBranches": "તમામ શાખાઓની ઍક્સેસ",
-    "noBranches": "હજુ સુધી કોઈ શાખા ઍક્સેસ આપી નથી"
+    "noBranches": "હજુ સુધી કોઈ શાખા ઍક્સેસ આપી નથી",
+    "pending": "બાકી"
   },
   "inviteMember": {
     "title": "સભ્યને આમંત્રિત કરો",

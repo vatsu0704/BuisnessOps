@@ -51,6 +51,7 @@
     "email": "कामाचा ईमेल",
     "emailPlaceholder": "you@business.com",
     "emailInvalid": "वैध ईमेल पत्ता टाका.",
+    "invitedAs": "तुम्हाला {{businessName}} मध्ये {{role}} म्हणून सामील होण्यासाठी आमंत्रित केले आहे.",
     "createPassword": "पासवर्ड तयार करा",
     "passwordHint": "किमान 8 अक्षरे",
     "passwordPlaceholder": "पासवर्ड टाका",
@@ -65,6 +66,7 @@
     "currency": "चलन",
     "timezone": "वेळ क्षेत्र",
     "submit": "खाते तयार करा आणि पुढे जा",
+    "joinSubmit": "{{businessName}} मध्ये सामील व्हा",
     "submitting": "खाते तयार होत आहे...",
     "dataTitle": "तुमचा विक्री डेटा आणा",
     "dataSubtitle": "खाते तयार झाल्यावर CSV किंवा Excel मधून विक्रीचा इतिहास अपलोड करा.",
@@ -265,7 +267,8 @@
     "inviteSubtitle": "या व्यवसायाचा प्रवेश द्या",
     "empty": "अजून कोणताही टीम सदस्य नाही",
     "allBranches": "सर्व शाखांचा प्रवेश",
-    "noBranches": "अजून कोणताही शाखा प्रवेश दिलेला नाही"
+    "noBranches": "अजून कोणताही शाखा प्रवेश दिलेला नाही",
+    "pending": "प्रलंबित"
   },
   "inviteMember": {
     "title": "सदस्याला आमंत्रित करा",

@@ -6,11 +6,13 @@ export interface SignupPayload {
   email: string;
   password: string;
   name: string;
-  businessName: string;
-  industry: Industry;
-  country: string;
-  defaultCurrency: string;
-  timezone: string;
+  // Omitted when the email has a pending invite — the backend joins that
+  // business instead of creating a new one, so these become irrelevant.
+  businessName?: string;
+  industry?: Industry;
+  country?: string;
+  defaultCurrency?: string;
+  timezone?: string;
 }
 
 export interface LoginPayload {

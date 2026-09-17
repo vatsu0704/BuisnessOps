@@ -98,7 +98,7 @@ One row per (user, business) — carries the role. Replaces a naive `User.busine
 | userId | String | FK → User |
 | businessId | String | FK → Business |
 | role | Enum: `OWNER, ADMIN, MANAGER, STAFF` | per PRD Section 8 |
-| status | Enum: `INVITED, ACTIVE, REVOKED` | |
+| status | Enum: `INVITED, ACTIVE, REVOKED` | `INVITED` is not currently set by any code path — "invited, no account yet" is modeled by `Invite` below instead, since a Membership row requires a real `userId`. Kept for a future self-serve accept/decline step on an *existing* account being invited to a *new* business, which isn't built yet either. |
 | invitedAt / joinedAt | DateTime, nullable | |
 | unique | (userId, businessId) | one role per person per business |
 
@@ -111,6 +111,20 @@ Explicit branch scoping for `MANAGER`/`STAFF` roles (a manager can cover more th
 | membershipId | String | FK → Membership |
 | branchId | String | FK → Branch |
 | unique | (membershipId, branchId) | |
+
+### `Invite`
+A pending invite for an email with no BizIQ account yet — added alongside the Team screen so an owner can invite someone who hasn't signed up, not just someone who already has. Deliberately its own model rather than a `Membership` in `INVITED` status: `Membership.userId` is required (a membership is always for a real person). Signup checks for a `PENDING` match on the submitted email and, if found, joins that business with the stored role/branches instead of creating a new one — see `auth.service.js` and `invite.service.js`.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId | String | FK → Business |
+| email | String | lowercased before every read/write |
+| role | Enum: `OWNER, ADMIN, MANAGER, STAFF` | never actually `OWNER` in practice — only `ADMIN`/`MANAGER`/`STAFF` are invitable |
+| branchIds | String[] | branches to grant `BranchAccess` for once claimed; empty for `ADMIN` (implicit full access) |
+| status | Enum: `PENDING, ACCEPTED, REVOKED` | `REVOKED` is defined but nothing sets it yet — there's no "cancel an invite" action built |
+| invitedAt / acceptedAt | DateTime, nullable | |
+| unique | (businessId, email) | re-inviting the same email to the same business updates this row rather than creating a second one |
 
 ---
 
@@ -483,7 +497,7 @@ Two layers, per the NFR (no cross-tenant leakage under any condition):
 
 | Phase | New tables |
 |---|---|
-| 0 — Foundations | `Business`, `Branch`, `User`, `Membership`, `BranchAccess` |
+| 0 — Foundations | `Business`, `Branch`, `User`, `Membership`, `BranchAccess`, `Invite` (added later, alongside the Team screen) |
 | 1 — Data Ingestion | `DataSourceConnection`, `SyncRun`, `Product`, `ProductBranchDetail`, `Transaction`, `LineItem`, `InventoryItem`, `InventoryUsage`, `StaffMember`, `Shift` |
 | 4a — Attendance & Salary Slip (ad hoc, built out of phase order) | `Attendance`, `SalarySlip` |
 | 2–4 — Query Engine & Reporting | `Conversation`, `QueryLog`, `QueryFeedback` |

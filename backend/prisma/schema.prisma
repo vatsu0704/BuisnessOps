@@ -71,8 +71,37 @@ model Business {
   staffMembers          StaffMember[]
   attendanceRecords     Attendance[]
   salarySlips           SalarySlip[]
+  invites               Invite[]
 
   @@map("businesses")
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+// A pending invite for an email with no BizIQ account yet. Deliberately not
+// a Membership row: Membership.userId is required (a membership is always
+// for a real person), so "invited, but not a person here yet" needs its own
+// model. Signup checks for a match on the submitted email and, if found,
+// joins that business with the stored role/branches instead of creating a
+// new one — see auth.service.js and invite.service.js.
+model Invite {
+  id         String       @id @default(uuid())
+  businessId String
+  business   Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  email      String
+  role       MembershipRole
+  branchIds  String[]     @default([])
+  status     InviteStatus @default(PENDING)
+  invitedAt  DateTime     @default(now())
+  acceptedAt DateTime?
+
+  @@unique([businessId, email])
+  @@index([email, status])
+  @@map("invites")
 }
 
 model Branch {

@@ -1,4 +1,5 @@
 const businessService = require('../services/business.service');
+const inviteService = require('../services/invite.service');
 const {
   validateCreateBranch,
   validateCreateMembership,
@@ -41,8 +42,8 @@ async function createMembership(req, res, next) {
     const errors = validateCreateMembership(req.body);
     if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
 
-    const membership = await businessService.createMembership(req.tenant.businessId, req.body);
-    res.status(201).json(membership);
+    const result = await inviteService.inviteMember(req.tenant.businessId, req.body);
+    res.status(201).json(result.pending ? { pending: true, ...result.invite } : { pending: false, ...result.membership });
   } catch (err) {
     next(err);
   }
@@ -52,6 +53,15 @@ async function listMemberships(req, res, next) {
   try {
     const memberships = await businessService.listMemberships(req.tenant.businessId);
     res.json(memberships);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listInvites(req, res, next) {
+  try {
+    const invites = await inviteService.listInvites(req.tenant.businessId);
+    res.json(invites);
   } catch (err) {
     next(err);
   }
@@ -105,6 +115,7 @@ module.exports = {
   getBranch,
   createMembership,
   listMemberships,
+  listInvites,
   addBranchAccess,
   listTransactions,
   getSalesSummary,

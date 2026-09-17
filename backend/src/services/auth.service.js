@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/db');
 const { signToken } = require('../utils/jwt');
+const inviteService = require('./invite.service');
 
 const SALT_ROUNDS = 10;
 
@@ -15,48 +16,63 @@ function sanitizeUser(user) {
   return safe;
 }
 
-// Creates the user, their business, and the founding OWNER membership in one
-// transaction — there is no "join an existing business" path here; that
-// happens via createMembership (business.service.js) once an OWNER/ADMIN
-// invites the user by email.
+// Two paths, decided by whether an OWNER/ADMIN somewhere already invited
+// this email (invite.service.js's pending Invite, created when they invited
+// someone with no account yet):
+//  - invited: join every business that invited them, with the role/branches
+//    that invite already specified — the person never self-selects a role,
+//    since a role has to come from someone with the authority to grant it.
+//  - not invited: the original "create my own business" path, as OWNER.
+// Either way happens inside one transaction, so a partial account can never
+// exist (e.g. a user row with no membership at all).
 async function signup({ email, password, name, businessName, industry, country, defaultCurrency, timezone }) {
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const normalizedEmail = email.toLowerCase().trim();
+
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
     const err = new Error('An account with this email already exists');
     err.status = 409;
     throw err;
   }
 
+  const pendingInvites = await inviteService.getPendingInvites(normalizedEmail);
+
+  if (pendingInvites.length === 0 && (!businessName || !industry || !country || !defaultCurrency || !timezone)) {
+    const err = new Error(
+      'businessName, industry, country, defaultCurrency and timezone are required to create a new business'
+    );
+    err.status = 400;
+    throw err;
+  }
+
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-  const { user, business, membership } = await prisma.$transaction(async (tx) => {
-    const user = await tx.user.create({ data: { email, passwordHash, name } });
+  const { user, business, memberships } = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({ data: { email: normalizedEmail, passwordHash, name } });
+
+    if (pendingInvites.length > 0) {
+      const memberships = await inviteService.claimPendingInvites(tx, user.id, pendingInvites);
+      const business = await tx.business.findUnique({ where: { id: memberships[0].businessId } });
+      return { user, business, memberships };
+    }
 
     const business = await tx.business.create({
       data: { name: businessName, industry, country, defaultCurrency, timezone },
     });
-
     const membership = await tx.membership.create({
-      data: {
-        userId: user.id,
-        businessId: business.id,
-        role: 'OWNER',
-        status: 'ACTIVE',
-        joinedAt: new Date(),
-      },
+      data: { userId: user.id, businessId: business.id, role: 'OWNER', status: 'ACTIVE', joinedAt: new Date() },
     });
-
-    return { user, business, membership };
+    return { user, business, memberships: [membership] };
   });
 
   const token = signToken({ sub: user.id });
-  const membershipView = {
-    id: membership.id,
-    businessId: membership.businessId,
-    role: membership.role,
-    status: membership.status,
-  };
-  return { token, user: { ...sanitizeUser(user), memberships: [membershipView] }, business };
+  const membershipViews = memberships.map((m) => ({
+    id: m.id,
+    businessId: m.businessId,
+    role: m.role,
+    status: m.status,
+  }));
+  return { token, user: { ...sanitizeUser(user), memberships: membershipViews }, business };
 }
 
 async function login({ email, password }) {

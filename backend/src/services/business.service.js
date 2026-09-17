@@ -35,31 +35,6 @@ function getBranch(businessId, branchId) {
   return prisma.branch.findFirst({ where: { id: branchId, businessId } });
 }
 
-// Simplified "invite": the target user must already have an account. There
-// is no pending-invite/email flow yet — the membership is created ACTIVE
-// immediately. Revisit if/when self-serve invites by email are needed.
-async function createMembership(businessId, { email, role }) {
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    const err = new Error('No account found for this email — ask them to sign up first');
-    err.status = 404;
-    throw err;
-  }
-
-  const existing = await prisma.membership.findUnique({
-    where: { userId_businessId: { userId: user.id, businessId } },
-  });
-  if (existing) {
-    const err = new Error('This user is already a member of this business');
-    err.status = 409;
-    throw err;
-  }
-
-  return prisma.membership.create({
-    data: { userId: user.id, businessId, role, status: 'ACTIVE', joinedAt: new Date() },
-  });
-}
-
 // OWNER/ADMIN-only "who's on the team" view. Ordered oldest-first so the
 // owner's own membership (created at signup) always leads the list.
 function listMemberships(businessId) {
@@ -73,27 +48,30 @@ function listMemberships(businessId) {
   });
 }
 
-async function addBranchAccess(businessId, membershipId, branchId) {
-  const membership = await prisma.membership.findFirst({ where: { id: membershipId, businessId } });
+// `client` defaults to the top-level prisma singleton but accepts a
+// `$transaction` callback's tx client too, so invite.service.js can grant
+// branch access atomically alongside the membership that needs it.
+async function addBranchAccess(businessId, membershipId, branchId, client = prisma) {
+  const membership = await client.membership.findFirst({ where: { id: membershipId, businessId } });
   if (!membership) {
     const err = new Error('Membership not found in this business');
     err.status = 404;
     throw err;
   }
 
-  const branch = await prisma.branch.findFirst({ where: { id: branchId, businessId } });
+  const branch = await client.branch.findFirst({ where: { id: branchId, businessId } });
   if (!branch) {
     const err = new Error('Branch not found in this business');
     err.status = 404;
     throw err;
   }
 
-  const existing = await prisma.branchAccess.findUnique({
+  const existing = await client.branchAccess.findUnique({
     where: { membershipId_branchId: { membershipId, branchId } },
   });
   if (existing) return existing;
 
-  return prisma.branchAccess.create({ data: { membershipId, branchId } });
+  return client.branchAccess.create({ data: { membershipId, branchId } });
 }
 
 // Recent-first, capped list — enough to verify an ingestion run landed
@@ -129,7 +107,6 @@ module.exports = {
   createBranch,
   listBranches,
   getBranch,
-  createMembership,
   listMemberships,
   addBranchAccess,
   listTransactions,

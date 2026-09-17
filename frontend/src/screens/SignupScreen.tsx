@@ -8,6 +8,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/AuthNavigator';
 import { useAuthStore } from '@/store/authStore';
 import type { Industry } from '@/types/business';
+import { lookupInvite } from '@/api/team';
+import type { InviteLookupResult } from '@/types/team';
 import { isValidEmail } from '@/utils/validation';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import AuthHeader from '@/components/AuthHeader';
@@ -44,6 +46,7 @@ export default function SignupScreen({ navigation }: Props) {
   const [country, setCountry] = useState('IN');
   const [defaultCurrency, setDefaultCurrency] = useState('INR');
   const [timezone, setTimezone] = useState('Asia/Kolkata');
+  const [inviteInfo, setInviteInfo] = useState<InviteLookupResult | null>(null);
 
   const signup = useAuthStore((s) => s.signup);
   const isSubmitting = useAuthStore((s) => s.isSubmitting);
@@ -73,17 +76,45 @@ export default function SignupScreen({ navigation }: Props) {
   const passwordsMatch = confirmPassword.length === 0 || password === confirmPassword;
   const emailTrimmed = email.trim();
   const emailInvalid = emailTrimmed.length > 0 && !isValidEmail(emailTrimmed);
+  const isInviteMode = !!inviteInfo;
+
+  // Someone might already have been invited by an owner before ever signing
+  // up (Team screen -> Invite a member, when the email has no account yet).
+  // If so, join that business with the role/branches already chosen instead
+  // of asking them to fill in — and create — business details that would
+  // just be discarded. Debounced so this doesn't fire on every keystroke.
+  useEffect(() => {
+    if (!isValidEmail(emailTrimmed)) {
+      setInviteInfo(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      lookupInvite(emailTrimmed)
+        .then((result) => {
+          if (!cancelled) setInviteInfo(result);
+        })
+        .catch(() => {
+          if (!cancelled) setInviteInfo(null);
+        });
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [emailTrimmed]);
 
   const canSubmit =
     name.trim().length > 0 &&
-    businessName.trim().length > 0 &&
     emailTrimmed.length > 0 &&
     !emailInvalid &&
     password.length >= 8 &&
     password === confirmPassword &&
-    country.trim().length > 0 &&
-    defaultCurrency.trim().length > 0 &&
-    timezone.trim().length > 0 &&
+    (isInviteMode ||
+      (businessName.trim().length > 0 &&
+        country.trim().length > 0 &&
+        defaultCurrency.trim().length > 0 &&
+        timezone.trim().length > 0)) &&
     !isSubmitting;
 
   async function handleSubmit() {
@@ -91,13 +122,17 @@ export default function SignupScreen({ navigation }: Props) {
     try {
       await signup({
         name: name.trim(),
-        businessName: businessName.trim(),
-        email: email.trim().toLowerCase(),
+        email: emailTrimmed.toLowerCase(),
         password,
-        industry,
-        country: country.trim(),
-        defaultCurrency: defaultCurrency.trim(),
-        timezone: timezone.trim(),
+        ...(isInviteMode
+          ? {}
+          : {
+              businessName: businessName.trim(),
+              industry,
+              country: country.trim(),
+              defaultCurrency: defaultCurrency.trim(),
+              timezone: timezone.trim(),
+            }),
       });
       haptics.success();
     } catch {
@@ -161,6 +196,14 @@ export default function SignupScreen({ navigation }: Props) {
                   onChangeText={onFieldChange(setEmail)}
                 />
                 {emailInvalid ? <Text style={styles.mismatch}>{t('signup.emailInvalid')}</Text> : null}
+                {inviteInfo ? (
+                  <AnimatedEntrance delay={0} distance={-8} style={styles.inviteBanner}>
+                    <Ionicons name="mail-open-outline" size={16} color={colors.primary} />
+                    <Text style={styles.inviteBannerText}>
+                      {t('signup.invitedAs', { businessName: inviteInfo.businessName, role: t(`role.${inviteInfo.role}`) })}
+                    </Text>
+                  </AnimatedEntrance>
+                ) : null}
                 <FormInput
                   testID="signup-password"
                   label={t('signup.createPassword')}
@@ -186,6 +229,7 @@ export default function SignupScreen({ navigation }: Props) {
               </View>
             </AnimatedEntrance>
 
+            {!isInviteMode ? (
             <AnimatedEntrance delay={step(3)}>
               <View style={styles.card}>
                 <Text style={styles.sectionTitle}>{t('signup.businessSection')}</Text>
@@ -244,11 +288,18 @@ export default function SignupScreen({ navigation }: Props) {
                 />
               </View>
             </AnimatedEntrance>
+            ) : null}
 
             <AnimatedEntrance delay={step(4)}>
               <PrimaryButton
                 testID="signup-submit"
-                title={isSubmitting ? t('signup.submitting') : t('signup.submit')}
+                title={
+                  isSubmitting
+                    ? t('signup.submitting')
+                    : isInviteMode
+                      ? t('signup.joinSubmit', { businessName: inviteInfo?.businessName })
+                      : t('signup.submit')
+                }
                 icon="arrow-forward"
                 loading={isSubmitting}
                 disabled={!canSubmit}
@@ -298,6 +349,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     ...shadow.md,
   },
+  inviteBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primaryLight,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    marginBottom: spacing.lg,
+  },
+  inviteBannerText: { color: colors.primary, fontSize: 12.5, fontWeight: '600', flex: 1, lineHeight: 17 },
   sectionTitle: {
     ...typography.label,
     color: colors.textSecondary,

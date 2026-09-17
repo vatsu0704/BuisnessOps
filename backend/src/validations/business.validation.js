@@ -35,6 +35,11 @@ function validateCreateMembership(body) {
   if (!body.role || !INVITABLE_ROLES.includes(body.role)) {
     errors.push(`role must be one of ${INVITABLE_ROLES.join(', ')}`);
   }
+  if (body.branchIds !== undefined) {
+    if (!Array.isArray(body.branchIds) || body.branchIds.some((id) => typeof id !== 'string')) {
+      errors.push('branchIds must be an array of strings');
+    }
+  }
   return errors;
 }
 

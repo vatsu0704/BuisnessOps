@@ -6,10 +6,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
-import { listMemberships } from '@/api/team';
+import { listInvites, listMemberships } from '@/api/team';
 import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
-import type { TeamMember } from '@/types/team';
+import type { PendingInvite, TeamMember } from '@/types/team';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import InfoCard from '@/components/InfoCard';
 import Pill from '@/components/Pill';
@@ -27,6 +27,7 @@ export default function TeamScreen({ navigation }: Props) {
   const businessId = useAuthStore((s) => s.user?.memberships?.[0]?.businessId);
 
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +36,12 @@ export default function TeamScreen({ navigation }: Props) {
     setIsLoading(true);
     setError(null);
     try {
-      setMembers(await listMemberships(businessId));
+      const [membersResult, invitesResult] = await Promise.all([
+        listMemberships(businessId),
+        listInvites(businessId),
+      ]);
+      setMembers(membersResult);
+      setInvites(invitesResult);
     } catch (err) {
       setError(extractErrorMessage(err));
     } finally {
@@ -80,18 +86,30 @@ export default function TeamScreen({ navigation }: Props) {
             </AnimatedEntrance>
           ) : null}
 
-          {!isLoading && members.length === 0 && !error ? (
+          {!isLoading && members.length === 0 && invites.length === 0 && !error ? (
             <AnimatedEntrance delay={step(1)} style={styles.block}>
               <Text style={styles.emptyText}>{t('team.empty')}</Text>
             </AnimatedEntrance>
           ) : null}
+
+          {invites.map((invite, index) => (
+            <AnimatedEntrance key={invite.id} delay={step(Math.min(index + 1, 5))} style={styles.block}>
+              <View style={[styles.card, styles.pendingCard]}>
+                <View style={styles.cardHead}>
+                  <Text style={styles.name}>{invite.email}</Text>
+                  <Pill label={t('team.pending')} tone="muted" />
+                </View>
+                <Text style={styles.meta}>{t(`role.${invite.role}`)}</Text>
+              </View>
+            </AnimatedEntrance>
+          ))}
 
           {members.map((member, index) => (
             <AnimatedEntrance key={member.id} delay={step(Math.min(index + 1, 5))} style={styles.block}>
               <View style={styles.card}>
                 <View style={styles.cardHead}>
                   <Text style={styles.name}>{member.user.name ?? member.user.email}</Text>
-                  <Pill label={member.role} />
+                  <Pill label={t(`role.${member.role}`)} />
                 </View>
                 <Text style={styles.meta}>{member.user.email}</Text>
                 {FULL_ACCESS_ROLES.has(member.role) ? (
@@ -145,6 +163,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     ...shadow.sm,
   },
+  pendingCard: { borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border, shadowOpacity: 0 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   name: { fontSize: 15, fontWeight: '700', color: colors.text, flex: 1 },
   meta: { fontSize: 12.5, color: colors.textSecondary, marginTop: 2 },

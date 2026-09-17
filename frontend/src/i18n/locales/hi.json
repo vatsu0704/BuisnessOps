@@ -51,6 +51,7 @@
     "email": "कार्य ईमेल",
     "emailPlaceholder": "you@business.com",
     "emailInvalid": "एक मान्य ईमेल पता दर्ज करें।",
+    "invitedAs": "आपको {{businessName}} में {{role}} के रूप में शामिल होने के लिए आमंत्रित किया गया है।",
     "createPassword": "पासवर्ड बनाएं",
     "passwordHint": "कम से कम 8 अक्षर",
     "passwordPlaceholder": "पासवर्ड दर्ज करें",
@@ -65,6 +66,7 @@
     "currency": "मुद्रा",
     "timezone": "समय क्षेत्र",
     "submit": "खाता बनाएं और आगे बढ़ें",
+    "joinSubmit": "{{businessName}} में शामिल हों",
     "submitting": "खाता बनाया जा रहा है...",
     "dataTitle": "अपना बिक्री डेटा लाएं",
     "dataSubtitle": "खाता तैयार होने के बाद CSV या Excel से बिक्री इतिहास अपलोड करें।",
@@ -265,7 +267,8 @@
     "inviteSubtitle": "इस व्यवसाय तक पहुंच दें",
     "empty": "अभी तक कोई टीम सदस्य नहीं",
     "allBranches": "सभी शाखाओं तक पहुंच",
-    "noBranches": "अभी तक कोई शाखा पहुंच नहीं दी गई"
+    "noBranches": "अभी तक कोई शाखा पहुंच नहीं दी गई",
+    "pending": "लंबित"
   },
   "inviteMember": {
     "title": "सदस्य आमंत्रित करें",

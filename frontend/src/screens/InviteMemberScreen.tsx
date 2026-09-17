@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
-import { grantBranchAccess, inviteMember } from '@/api/team';
+import { inviteMember } from '@/api/team';
 import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
@@ -68,12 +68,11 @@ export default function InviteMemberScreen({ navigation }: Props) {
     setIsSubmitting(true);
     setError(null);
     try {
-      const membership = await inviteMember(businessId, { email: emailTrimmed, role });
-      if (needsBranches) {
-        await Promise.all(
-          Array.from(selectedBranchIds).map((branchId) => grantBranchAccess(businessId, membership.id, branchId))
-        );
-      }
+      await inviteMember(businessId, {
+        email: emailTrimmed,
+        role,
+        branchIds: needsBranches ? Array.from(selectedBranchIds) : undefined,
+      });
       haptics.success();
       navigation.goBack();
     } catch (err) {

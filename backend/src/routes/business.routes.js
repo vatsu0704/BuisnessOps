@@ -21,6 +21,7 @@ scoped.get('/sales-summary', businessController.getSalesSummary);
 
 scoped.post('/memberships', requireRole('OWNER', 'ADMIN'), businessController.createMembership);
 scoped.get('/memberships', requireRole('OWNER', 'ADMIN'), businessController.listMemberships);
+scoped.get('/invites', requireRole('OWNER', 'ADMIN'), businessController.listInvites);
 scoped.post(
   '/memberships/:membershipId/branch-access',
   requireRole('OWNER', 'ADMIN'),
