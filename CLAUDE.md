@@ -49,6 +49,15 @@ Frontend (from `frontend/`):
 | `npm run android` | Build the native app and install it on a connected device |
 | `npm run web` | Browser preview, useful for quick UI checks |
 
+## Running the app
+
+Vatsal runs both dev servers himself, in his own terminal — backend's `npm run
+dev` and frontend's `npm run android` / Metro. **Never start or restart either
+one.** If a task mechanically requires a currently-running one to stop first
+(e.g. releasing the Windows file lock on the Prisma query engine DLL so
+`prisma generate` can complete), stop it, say so plainly, and leave it
+stopped for him to restart — don't start it back up yourself.
+
 ## Backend conventions
 
 Requests flow `routes/` → `controllers/` → `services/` → Prisma, with

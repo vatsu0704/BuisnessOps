@@ -17,8 +17,10 @@ scoped.post('/branches', requireRole('OWNER', 'ADMIN'), businessController.creat
 scoped.get('/branches', businessController.listBranches);
 scoped.get('/branches/:branchId', requireBranchAccess, businessController.getBranch);
 scoped.get('/branches/:branchId/transactions', requireBranchAccess, businessController.listTransactions);
+scoped.get('/sales-summary', businessController.getSalesSummary);
 
 scoped.post('/memberships', requireRole('OWNER', 'ADMIN'), businessController.createMembership);
+scoped.get('/memberships', requireRole('OWNER', 'ADMIN'), businessController.listMemberships);
 scoped.post(
   '/memberships/:membershipId/branch-access',
   requireRole('OWNER', 'ADMIN'),

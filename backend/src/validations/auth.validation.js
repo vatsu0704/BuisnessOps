@@ -1,9 +1,11 @@
+const { isValidEmail } = require('./shared');
+
 const INDUSTRIES = ['RETAIL', 'FOOD_BEVERAGE', 'SERVICES', 'FRANCHISE_OTHER'];
 
 function validateSignup(body) {
   const errors = [];
 
-  if (!body.email || typeof body.email !== 'string' || !/^\S+@\S+\.\S+$/.test(body.email)) {
+  if (!isValidEmail(body.email)) {
     errors.push('A valid email is required');
   }
   if (!body.password || typeof body.password !== 'string' || body.password.length < 8) {

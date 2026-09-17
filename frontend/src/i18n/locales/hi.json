@@ -2,7 +2,8 @@
   "common": {
     "brand": "BizIQ",
     "active": "सक्रिय",
-    "more": "+{{count}} और"
+    "more": "+{{count}} और",
+    "loading": "लोड हो रहा है…"
   },
   "language": {
     "title": "भाषा",
@@ -49,6 +50,7 @@
     "fullNamePlaceholder": "राजेश पटेल",
     "email": "कार्य ईमेल",
     "emailPlaceholder": "you@business.com",
+    "emailInvalid": "एक मान्य ईमेल पता दर्ज करें।",
     "createPassword": "पासवर्ड बनाएं",
     "passwordHint": "कम से कम 8 अक्षर",
     "passwordPlaceholder": "पासवर्ड दर्ज करें",
@@ -79,6 +81,12 @@
     "FRANCHISE_OTHER": "फ्रैंचाइज़ी / अन्य",
     "FRANCHISE_OTHER_caption": "मल्टी-ब्रांड"
   },
+  "role": {
+    "OWNER": "मालिक",
+    "ADMIN": "एडमिन",
+    "MANAGER": "मैनेजर",
+    "STAFF": "स्टाफ"
+  },
   "password": {
     "level": "सुरक्षा स्तर",
     "tooShort": "बहुत छोटा",
@@ -94,9 +102,9 @@
     "greeting": "नमस्ते {{name}}",
     "branchCount": "{{count}} शाखा",
     "branchCount_plural": "{{count}} शाखाएं",
+    "statSales": "बिक्री",
+    "statTransactions": "ऑर्डर",
     "statBranches": "शाखाएं",
-    "statActive": "सक्रिय",
-    "statCities": "शहर",
     "emptyTitle": "अभी कोई शाखा नहीं",
     "emptySubtitle": "बिक्री, स्टॉक और स्टाफ ट्रैक करने के लिए अपनी पहली शाखा जोड़ें।",
     "branchesTitle": "आपकी शाखाएं",
@@ -147,6 +155,12 @@
     "currency": "मुद्रा",
     "timezone": "समय क्षेत्र",
     "businessId": "व्यापार आईडी",
+    "attendance": "मेरी उपस्थिति",
+    "attendanceSubtitle": "पंच इन/आउट करें और अपना इतिहास देखें",
+    "staff": "स्टाफ और वेतन",
+    "staffSubtitle": "स्टाफ, उपस्थिति और सैलरी स्लिप प्रबंधित करें",
+    "team": "टीम और अनुमतियां",
+    "teamSubtitle": "लोगों को आमंत्रित करें और पहुंच प्रबंधित करें",
     "logout": "लॉग आउट"
   },
   "addBranch": {
@@ -186,5 +200,87 @@
     "noBranchesSubtitle": "बिक्री डेटा किसी शाखा में आयात होता है, इसलिए कम से कम एक ज़रूरी है।",
     "templateTitle": "टेम्पलेट डाउनलोड करें",
     "templateSubtitle": "एक नमूना CSV जिसमें वही कॉलम हैं जो यह इंपोर्टर अपेक्षित करता है।"
+  },
+  "attendanceStatus": {
+    "PRESENT": "उपस्थित",
+    "ABSENT": "अनुपस्थित",
+    "HALF_DAY": "आधा दिन",
+    "LEAVE": "छुट्टी"
+  },
+  "attendance": {
+    "title": "मेरी उपस्थिति",
+    "notStaff": "आप इस व्यवसाय के स्टाफ सदस्य के रूप में पंजीकृत नहीं हैं, इसलिए अभी पंच इन करने के लिए कुछ नहीं है।",
+    "today": "आज",
+    "notPunchedIn": "अभी तक पंच इन नहीं किया",
+    "punchedInAt": "{{time}} पर पंच इन किया",
+    "doneForToday": "{{inTime}} पर इन · {{outTime}} पर आउट",
+    "punchIn": "पंच इन",
+    "punchOut": "पंच आउट",
+    "noHistory": "इस महीने के लिए कोई उपस्थिति दर्ज नहीं है"
+  },
+  "staff": {
+    "title": "स्टाफ",
+    "add": "स्टाफ जोड़ें",
+    "addSubtitle": "किसी को पंजीकृत करें ताकि उनकी उपस्थिति और वेतन ट्रैक किया जा सके",
+    "empty": "अभी तक कोई स्टाफ नहीं जोड़ा गया",
+    "appAccess": "ऐप एक्सेस",
+    "hasSalary": "सैलरी सेट है"
+  },
+  "addStaff": {
+    "title": "स्टाफ जोड़ें",
+    "subtitle": "हर स्टाफ सदस्य एक शाखा से जुड़ा होता है। ईमेल तभी जोड़ें जब उन्हें खुद पंच इन करना हो।",
+    "branchSection": "वे किस शाखा में काम करते हैं?",
+    "name": "नाम",
+    "namePlaceholder": "जैसे प्रिया मेहता",
+    "role": "भूमिका",
+    "rolePlaceholder": "जैसे कैशियर",
+    "baseSalary": "मासिक वेतन",
+    "baseSalaryPlaceholder": "जैसे 18000",
+    "optional": "वैकल्पिक",
+    "invalidNumber": "एक मान्य संख्या दर्ज करें।",
+    "email": "अकाउंट ईमेल",
+    "emailHint": "वैकल्पिक — मौजूदा अकाउंट से जोड़ता है",
+    "emailPlaceholder": "their.email@example.com",
+    "emailInvalid": "एक मान्य ईमेल पता दर्ज करें।",
+    "submit": "स्टाफ सदस्य जोड़ें",
+    "submitting": "जोड़ा जा रहा है..."
+  },
+  "staffDetail": {
+    "title": "स्टाफ सदस्य",
+    "baseSalary": "{{amount}} / माह",
+    "noSalary": "कोई सैलरी सेट नहीं है — पेरोल अभी जनरेट नहीं हो सकता",
+    "noSalaryHint": "पेस्लिप जनरेट करने से पहले इस व्यक्ति के लिए मासिक वेतन सेट करें।",
+    "markSection": "दिन चिह्नित करें",
+    "date": "तारीख़",
+    "markSubmit": "सहेजें",
+    "payrollSection": "पेरोल — {{month}}",
+    "deductions": "कटौती",
+    "invalidNumber": "एक मान्य संख्या दर्ज करें।",
+    "generateSlip": "पेस्लिप जनरेट करें",
+    "pastSlips": "पिछली पेस्लिप"
+  },
+  "team": {
+    "title": "टीम",
+    "invite": "सदस्य आमंत्रित करें",
+    "inviteSubtitle": "इस व्यवसाय तक पहुंच दें",
+    "empty": "अभी तक कोई टीम सदस्य नहीं",
+    "allBranches": "सभी शाखाओं तक पहुंच",
+    "noBranches": "अभी तक कोई शाखा पहुंच नहीं दी गई"
+  },
+  "inviteMember": {
+    "title": "सदस्य आमंत्रित करें",
+    "subtitle": "उन्हें जोड़ने के लिए पहले से एक BizIQ अकाउंट होना चाहिए — जिस ईमेल से उन्होंने साइन अप किया था, उससे आमंत्रित करें।",
+    "email": "ईमेल",
+    "emailPlaceholder": "them@example.com",
+    "emailHint": "पहले से अकाउंट होना चाहिए",
+    "emailInvalid": "एक मान्य ईमेल पता दर्ज करें।",
+    "roleSection": "भूमिका",
+    "roleHint_ADMIN": "हर शाखा और सेटिंग तक पूरी पहुंच, बिलिंग को छोड़कर मालिक जैसी ही।",
+    "roleHint_MANAGER": "आपके द्वारा नीचे दी गई शाखाओं तक पूरी पहुंच।",
+    "roleHint_STAFF": "आपके द्वारा नीचे दी गई शाखाओं तक सीमित, परिचालन पहुंच।",
+    "branchSection": "वे किन शाखाओं तक पहुंच सकते हैं?",
+    "noBranches": "पहले एक शाखा जोड़ें।",
+    "submit": "आमंत्रण भेजें",
+    "submitting": "आमंत्रित किया जा रहा है..."
   }
 }

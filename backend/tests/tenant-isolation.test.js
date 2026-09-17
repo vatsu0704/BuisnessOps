@@ -140,4 +140,23 @@ describe('Tenant & branch isolation (Phase 0 exit criteria)', () => {
     const res = await request(app).get(`/api/businesses/${businessId}/branches/${branchAId}`);
     expect(res.statusCode).toBe(401);
   });
+
+  it('lets the owner list the team, including the manager’s branch access', async () => {
+    const res = await request(app)
+      .get(`/api/businesses/${businessId}/memberships`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveLength(2); // owner + invited manager
+
+    const managerRow = res.body.find((m) => m.role === 'MANAGER');
+    expect(managerRow.user.email).toBe(managerEmail);
+    expect(managerRow.branchAccess.map((ba) => ba.branch.id)).toEqual([branchAId]);
+  });
+
+  it('blocks a manager from listing the team (OWNER/ADMIN only)', async () => {
+    const res = await request(app)
+      .get(`/api/businesses/${businessId}/memberships`)
+      .set('Authorization', `Bearer ${managerToken}`);
+    expect(res.statusCode).toBe(403);
+  });
 });

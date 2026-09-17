@@ -162,6 +162,25 @@ describe('CSV ingestion (Phase 1)', () => {
     expect(list.body).toHaveLength(4);
   });
 
+  it('returns an aggregated sales summary respecting branch access', async () => {
+    const ownerRes = await request(app)
+      .get(`/api/businesses/${businessId}/sales-summary`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(ownerRes.statusCode).toBe(200);
+    const inr = ownerRes.body.byCurrency.find((row) => row.currency === 'INR');
+    expect(inr).toBeDefined();
+    expect(Number(inr.totalSales)).toBeCloseTo(260); // 65 + 75 + 60 + 60 across the 4 transactions
+    expect(inr.transactionCount).toBe(4);
+
+    // The manager's BranchAccess covers this same (only) branch, so they see the same totals.
+    const managerRes = await request(app)
+      .get(`/api/businesses/${businessId}/sales-summary`)
+      .set('Authorization', `Bearer ${managerToken}`);
+    expect(managerRes.statusCode).toBe(200);
+    expect(managerRes.body.byCurrency).toEqual(ownerRes.body.byCurrency);
+  });
+
   it('lists the sync run history for the data source', async () => {
     const res = await request(app)
       .get(`/api/businesses/${businessId}/data-sources/${dataSourceId}/sync-runs`)

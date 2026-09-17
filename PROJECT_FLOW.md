@@ -4,7 +4,7 @@ This document translates the product requirements (PRD) into a buildable enginee
 
 The product is named **BizIQ** (Android package `com.biziq.app`), renamed from the earlier "BuisnessOps". The old name deliberately survives where changing it would be disruptive — the repository folder and the Postgres database name `buisnessops` — and those are not typos to fix.
 
-**Where the repo actually is:** Phases 0 and 1 (CSV path) are done. The app ships as an Expo **development build** rather than Expo Go, with its own icon, animated splash and a four-tab shell (Home, Reports, Alerts, Settings). Phase 3's UI i18n is done ahead of order; the rest of Phase 3 and all of Phase 2 are not started.
+**Where the repo actually is:** Phases 0 and 1 (CSV path) are done. The app ships as an Expo **development build** rather than Expo Go, with its own icon, animated splash and a four-tab shell (Home, Reports, Alerts, Settings). Phase 3's UI i18n is done ahead of order; the rest of Phase 3 and all of Phase 2 are not started. An **Attendance & Salary Slip module** was also added outside the phase sequence, on request — backend and frontend both done (see 4a below).
 
 ---
 
@@ -68,6 +68,30 @@ Phases 0–4 are the MVP (PRD Phase 1). Phase 5 is PRD Phase 2. Phase 6 is PRD P
 - Ingestion job runner (queue or scheduled task) for *live* sources — not applicable yet (CSV upload is inherently on-demand, not scheduled); revisit once a live adapter exists. A sync-status view (`SyncRun` history, `DataSourceConnection.lastSyncedAt`) is already in place and works for the CSV path today.
 
 **Exit criteria:** ~~uploading a CSV or connecting the reference POS~~ uploading a CSV populates `Transaction`/`LineItem` rows queryable per branch and per date range. **Met** (verified via automated tests and a live end-to-end run).
+
+---
+
+## 4a. Attendance & Salary Slip module (ad hoc)
+
+Not part of the original PRD phase sequence — added on request, from a separate reference requirements doc. **Backend and frontend both done.**
+
+**Backend:**
+- `StaffMember` (Phase 1) extended with `baseSalary`; `Branch` extended with an opt-in `geofenceRadiusMeters` alongside its existing `latitude`/`longitude`. New `Attendance` and `SalarySlip` tables — see `database-table.md` section 4a for the full column-level rationale (in particular, why Attendance is a model of its own rather than reusing `Shift`).
+- Self-service `POST /attendance/punch-in` / `punch-out`, resolved to the caller's own `StaffMember` via their `userId` — never a client-supplied id. Punches are rejected outside a branch's geofence when one is configured (haversine distance, hand-rolled rather than pulling in `geolib` for one formula).
+- Manager/owner `POST /staff/:staffMemberId/attendance/mark` for days with no punch (absence, approved leave), and monthly/daily read endpoints.
+- `POST /staff/:staffMemberId/salary-slips/generate`: pro-rates `baseSalary` against the month's attendance (`PRESENT`=1, `HALF_DAY`=0.5, `ABSENT`/`LEAVE`=0 — leave is unpaid by default, there's no leave-balance/policy model), minus a manually-entered `deductions` amount. Regenerating overwrites the same slip rather than duplicating it.
+- `GET /salary-slips/:id/pdf` generates the payslip PDF on demand (via `pdfmake`) from the stored numbers — no cloud storage is wired up in this project yet, so there's no persisted `slip_url` the way the reference doc's schema had one.
+- Full Jest coverage in `backend/tests/attendance.test.js` (geofence accept/reject, double-punch guards, RBAC, payroll math, PDF response).
+
+**Frontend:** reachable from Settings → "My attendance" (everyone) and "Staff & payroll" (OWNER/ADMIN/MANAGER only).
+- `AttendanceScreen` — today's punch status, punch in/out (captures device location via `expo-location`, best-effort — proceeds without it if permission is declined, since not every branch requires a geofence), month history with month navigation.
+- `StaffScreen` / `AddStaffScreen` — branch-scoped staff list and a form to register one, optionally linking an existing account by email (resolved server-side, same pattern as the existing membership invite) so that person becomes punch-capable.
+- `StaffDetailScreen` — a staff member's monthly attendance, a manager-override "mark a day" action, payslip generation, and a list of past payslips with a download action (native: `expo-file-system` downloads the PDF straight to a file, then hands it to the share sheet via `expo-sharing` — the same pattern `saveTemplate.ts` already used for the CSV template; web: a straight browser download).
+- Verified live end-to-end against the running app (Playwright): staff list → staff detail → mark absent → generate payslip → PDF download, and separately the punch-in/out cycle with a mocked in-geofence location.
+
+**Known gap found while verifying, not fixed here:** the app has no business-switcher, and every screen (not just this module) picks `user.memberships[0]` as "the" business. Since signup always creates a new business, *any* user invited into a second business ends up with two memberships, and which one is `[0]` is arbitrary — for this module specifically, that can make "My attendance" claim someone "isn't registered as a staff member" even when they are, in the wrong business. Worth a real fix (a business switcher, or at least a sensible tie-break) before staff invites are used for real.
+
+**Deliberately not built:** `runMonthlyPayrollBatch()` (a scheduled job) — there's no cron/queue infrastructure in this project yet, and generation is already available on demand; a branch-update endpoint for setting geofence coordinates after creation (currently branch-creation-time only); auto half-day detection from punch duration (half-day is manager-set only, for now); and a real date picker for the "mark a day" form (plain YYYY-MM-DD text input instead — no date-picker library is installed).
 
 ---
 
@@ -168,16 +192,18 @@ Runs partly in parallel with Phases 4–6, but nothing ships to real businesses 
 
 ## 11. Immediate Next Steps (from current repo state)
 
-Done and verified: Phases 0 and 1's CSV path (schema, migrations, tests, CI, Postman collection); the BizIQ brand (icon, adaptive icon, animated splash); a designed and animated Login/Signup/Home; a four-tab app shell; and Phase 3's UI i18n in four languages.
+Done and verified: Phases 0 and 1's CSV path (schema, migrations, tests, CI, Postman collection); the BizIQ brand (icon, adaptive icon, animated splash); a designed and animated Login/Signup/Home; a four-tab app shell; Phase 3's UI i18n in four languages; the Attendance & Salary Slip module (4a); and Home's stat tiles now reading real sales figures instead of just counting branches.
 
-An onboarding path now exists end to end: register → add a branch → upload sales data. Branch creation and CSV/Excel upload are both reachable from Home as modal screens, so Phase 1's ingestion pipeline is finally usable from the app rather than only from Postman.
+An onboarding path now exists end to end: register → add a branch → upload sales data → invite the team. Branch creation, CSV/Excel upload, and team invites are all reachable from Home/Settings as modal screens, so nothing requires Postman to use.
+
+**Team & permissions**, reachable from Settings (OWNER/ADMIN only): a `GET /memberships` endpoint lists the business's team with each person's role and granted branches; the invite screen creates a `Membership` by email (the invitee must already have a BizIQ account — there's still no self-serve email-invite flow, matching the backend's original "simplified invite" design) and, for MANAGER/STAFF, requires picking at least one branch before it lets you submit, immediately granting `BranchAccess` for each one chosen. `POST /memberships`/`branch-access` already existed and were tested; only the listing endpoint and the screens are new.
 
 What's actually next:
 
-1. **Show the ingested data.** Sales rows now land in `Transaction`/`LineItem`, but nothing reads them back — Home's stat tiles still only count branches. `GET /branches/:branchId/transactions` already exists; wiring it up turns the tiles into real sales figures and makes the ingestion visible to the person who just did it.
-2. **Phase 2 — Core Query Engine.** Still blocked on an LLM provider being wired in (Anthropic API key not yet provided). The Home screen already has the answer surface and the disabled ask bar waiting for it.
-3. **Locale-aware formatting** (Phase 3 leftover) — becomes urgent as soon as step 1 renders currency; see the Hermes `Intl` caveat in Section 6.
-4. **Staff and manager invites.** `POST /memberships` and `branch-access` work and are covered by the tenant-isolation tests, but have no UI, so the whole RBAC model is unreachable from the app.
+1. **Phase 2 — Core Query Engine.** Still blocked on an LLM provider being wired in (Anthropic API key not yet provided). The Home screen already has the answer surface and the disabled ask bar waiting for it.
+2. **Locale-aware formatting** (Phase 3 leftover) — the Home/staff/payroll screens all use a plain thousands-separator placeholder for currency right now; see the Hermes `Intl` caveat in Section 6.
+3. **The multi-membership bug** (found while verifying the Attendance module, not yet fixed): every screen picks `user.memberships[0]` as "the" business. Since signup always creates a new business, anyone invited into a second one — which the new Team screen now makes easy to do — ends up with two memberships and no way to choose between them. Needs a real business-switcher, or at least a sensible tie-break, before invites see real use.
+4. **Editing an existing member's branch access** — the Team screen shows it and the invite flow grants it once, but there's no way yet to add/remove a branch for someone after the fact without re-inviting.
 5. **Live POS adapter** — blocked on either picking a different pull-capable vendor or a Petpooja partner conversation (see Section 12).
 
 **Ingestion contract, for whoever builds on it:** required CSV columns are `occurred_at, product_name, quantity, unit_price, payment_method`; optional `transaction_external_id, sku, unit, tax_amount, discount_amount`. Rows sharing a `transaction_external_id` group into one transaction. A data source is bound to exactly one branch — there is no per-row branch column — so each branch gets its own `CSV_UPLOAD` source. Bad rows are skipped and reported per row rather than failing the file.

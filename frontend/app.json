@@ -46,7 +46,13 @@
         }
       ],
       "./plugins/withReleaseSigning",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "BizIQ uses your location to confirm you're punching in or out from the branch."
+        }
+      ]
     ]
   }
 }

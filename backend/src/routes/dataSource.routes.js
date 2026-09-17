@@ -24,13 +24,25 @@ const router = express.Router();
 
 // Data source management is an OWNER/ADMIN operation (matches the System
 // Administrator role in the PRD who manages data source connections).
+// requireRole is applied per-route, not as a blanket `scoped.use(...)`: this
+// router is mounted at the same '/:businessId' prefix as every other
+// businesses/* resource router, so a blanket gate here would reject any
+// other resource's request that falls through to this router (Express
+// matches mounted routers in registration order, and a non-path-scoped
+// `.use()` middleware runs before route matching gets a chance to say "this
+// isn't even one of my paths").
 const scoped = express.Router({ mergeParams: true });
-scoped.use(requireAuth, resolveTenant, requireRole('OWNER', 'ADMIN'));
+scoped.use(requireAuth, resolveTenant);
 
-scoped.post('/data-sources', dataSourceController.createDataSource);
-scoped.get('/data-sources', dataSourceController.listDataSources);
-scoped.post('/data-sources/:dataSourceId/upload', handleUpload, dataSourceController.uploadFile);
-scoped.get('/data-sources/:dataSourceId/sync-runs', dataSourceController.listSyncRuns);
+scoped.post('/data-sources', requireRole('OWNER', 'ADMIN'), dataSourceController.createDataSource);
+scoped.get('/data-sources', requireRole('OWNER', 'ADMIN'), dataSourceController.listDataSources);
+scoped.post(
+  '/data-sources/:dataSourceId/upload',
+  requireRole('OWNER', 'ADMIN'),
+  handleUpload,
+  dataSourceController.uploadFile
+);
+scoped.get('/data-sources/:dataSourceId/sync-runs', requireRole('OWNER', 'ADMIN'), dataSourceController.listSyncRuns);
 
 router.use('/:businessId', scoped);
 

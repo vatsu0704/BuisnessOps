@@ -48,6 +48,15 @@ async function createMembership(req, res, next) {
   }
 }
 
+async function listMemberships(req, res, next) {
+  try {
+    const memberships = await businessService.listMemberships(req.tenant.businessId);
+    res.json(memberships);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function addBranchAccess(req, res, next) {
   try {
     const errors = validateBranchAccess(req.body);
@@ -76,11 +85,27 @@ async function listTransactions(req, res, next) {
   }
 }
 
+async function getSalesSummary(req, res, next) {
+  try {
+    const rows = await businessService.getSalesSummary(req.tenant.businessId, req.branchAccess);
+    const byCurrency = rows.map((row) => ({
+      currency: row.currency,
+      totalSales: row._sum.totalAmount ?? 0,
+      transactionCount: row._count,
+    }));
+    res.json({ byCurrency });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   createBranch,
   listBranches,
   getBranch,
   createMembership,
+  listMemberships,
   addBranchAccess,
   listTransactions,
+  getSalesSummary,
 };

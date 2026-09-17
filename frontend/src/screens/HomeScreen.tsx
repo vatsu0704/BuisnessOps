@@ -11,6 +11,8 @@ import type { AppStackParamList } from '@/navigation/AppNavigator';
 import type { AppTabParamList } from '@/navigation/TabNavigator';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
+import { useSalesSummary } from '@/hooks/useSalesSummary';
+import { formatAmount } from '@/utils/format';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import BrandMark from '@/components/BrandMark';
 import InfoCard from '@/components/InfoCard';
@@ -36,13 +38,16 @@ export default function HomeScreen({ navigation }: Props) {
   const user = useAuthStore((s) => s.user);
   const business = useAuthStore((s) => s.business);
   const { branches, isLoading, error, refresh, stats } = useBranches();
+  const sales = useSalesSummary();
   const rootNavigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
-  // A branch created in the modal must show up the moment we return to Home.
+  // A branch created, or sales data uploaded, in a modal must show up the
+  // moment we return to Home.
   useFocusEffect(
     useCallback(() => {
       void refresh();
-    }, [refresh])
+      void sales.refresh();
+    }, [refresh, sales.refresh])
   );
 
   const firstName = user?.name?.trim().split(/\s+/)[0] ?? user?.email ?? '';
@@ -80,7 +85,14 @@ export default function HomeScreen({ navigation }: Props) {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={refresh} tintColor={colors.primary} />
+            <RefreshControl
+              refreshing={isLoading || sales.isLoading}
+              onRefresh={() => {
+                void refresh();
+                void sales.refresh();
+              }}
+              tintColor={colors.primary}
+            />
           }
         >
           <AnimatedEntrance delay={step(0)} style={styles.greetingBlock}>
@@ -90,17 +102,22 @@ export default function HomeScreen({ navigation }: Props) {
 
           <AnimatedEntrance delay={step(1)}>
             <View style={styles.statRow}>
+              <StatTile
+                label={t('home.statSales')}
+                value={sales.totalSales}
+                accent={colors.success}
+                formatValue={(v) => formatAmount(v, sales.currency)}
+              />
+              <StatTile label={t('home.statTransactions')} value={sales.transactionCount} />
               <StatTile label={t('home.statBranches')} value={stats.total} />
-              <StatTile label={t('home.statActive')} value={stats.active} accent={colors.success} />
-              <StatTile label={t('home.statCities')} value={stats.cities} />
             </View>
           </AnimatedEntrance>
 
-          {error ? (
+          {error || sales.error ? (
             <AnimatedEntrance delay={step(2)}>
               <View style={styles.errorBanner}>
                 <Ionicons name="alert-circle" size={16} color={colors.error} />
-                <Text style={styles.errorText}>{error}</Text>
+                <Text style={styles.errorText}>{error || sales.error}</Text>
               </View>
             </AnimatedEntrance>
           ) : null}

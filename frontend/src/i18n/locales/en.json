@@ -2,7 +2,8 @@
   "common": {
     "brand": "BizIQ",
     "active": "active",
-    "more": "+{{count}} more"
+    "more": "+{{count}} more",
+    "loading": "Loading…"
   },
   "language": {
     "title": "Language",
@@ -49,6 +50,7 @@
     "fullNamePlaceholder": "Rajesh Patel",
     "email": "Work email",
     "emailPlaceholder": "you@business.com",
+    "emailInvalid": "Enter a valid email address.",
     "createPassword": "Create password",
     "passwordHint": "min 8 characters",
     "passwordPlaceholder": "Enter a password",
@@ -79,6 +81,12 @@
     "FRANCHISE_OTHER": "Franchise / Other",
     "FRANCHISE_OTHER_caption": "Multi-brand"
   },
+  "role": {
+    "OWNER": "Owner",
+    "ADMIN": "Admin",
+    "MANAGER": "Manager",
+    "STAFF": "Staff"
+  },
   "password": {
     "level": "Security level",
     "tooShort": "Too short",
@@ -94,9 +102,9 @@
     "greeting": "Hi {{name}}",
     "branchCount": "{{count}} branch",
     "branchCount_plural": "{{count}} branches",
+    "statSales": "Sales",
+    "statTransactions": "Orders",
     "statBranches": "Branches",
-    "statActive": "Active",
-    "statCities": "Cities",
     "emptyTitle": "No branches yet",
     "emptySubtitle": "Add your first branch to start tracking sales, stock and staff per location.",
     "branchesTitle": "Your branches",
@@ -147,6 +155,12 @@
     "currency": "Currency",
     "timezone": "Timezone",
     "businessId": "Business ID",
+    "attendance": "My attendance",
+    "attendanceSubtitle": "Punch in and out, and see your history",
+    "staff": "Staff & payroll",
+    "staffSubtitle": "Manage staff, attendance and salary slips",
+    "team": "Team & permissions",
+    "teamSubtitle": "Invite people and manage who can access what",
     "logout": "Log out"
   },
   "addBranch": {
@@ -186,5 +200,87 @@
     "noBranchesSubtitle": "Sales data is imported into a specific branch, so you need at least one.",
     "templateTitle": "Download template",
     "templateSubtitle": "A sample CSV with the exact columns this importer expects."
+  },
+  "attendanceStatus": {
+    "PRESENT": "Present",
+    "ABSENT": "Absent",
+    "HALF_DAY": "Half day",
+    "LEAVE": "Leave"
+  },
+  "attendance": {
+    "title": "My Attendance",
+    "notStaff": "You're not registered as a staff member of this business, so there's nothing to punch in to yet.",
+    "today": "Today",
+    "notPunchedIn": "Not punched in yet",
+    "punchedInAt": "Punched in at {{time}}",
+    "doneForToday": "Punched in at {{inTime}} · out at {{outTime}}",
+    "punchIn": "Punch in",
+    "punchOut": "Punch out",
+    "noHistory": "No attendance recorded for this month yet"
+  },
+  "staff": {
+    "title": "Staff",
+    "add": "Add staff",
+    "addSubtitle": "Register someone so their attendance and pay can be tracked",
+    "empty": "No staff added yet",
+    "appAccess": "App access",
+    "hasSalary": "Salary set"
+  },
+  "addStaff": {
+    "title": "Add staff",
+    "subtitle": "Every staff member belongs to one branch. Link an email only if they should be able to punch in themselves.",
+    "branchSection": "Which branch do they work at?",
+    "name": "Name",
+    "namePlaceholder": "e.g. Priya Mehta",
+    "role": "Role",
+    "rolePlaceholder": "e.g. Cashier",
+    "baseSalary": "Monthly salary",
+    "baseSalaryPlaceholder": "e.g. 18000",
+    "optional": "optional",
+    "invalidNumber": "Enter a valid number.",
+    "email": "Account email",
+    "emailHint": "optional — links an existing account",
+    "emailPlaceholder": "their.email@example.com",
+    "emailInvalid": "Enter a valid email address.",
+    "submit": "Add staff member",
+    "submitting": "Adding..."
+  },
+  "staffDetail": {
+    "title": "Staff member",
+    "baseSalary": "{{amount}} / month",
+    "noSalary": "No salary set — payroll can't be generated yet",
+    "noSalaryHint": "Set a monthly salary for this person before generating a payslip.",
+    "markSection": "Mark a day",
+    "date": "Date",
+    "markSubmit": "Save",
+    "payrollSection": "Payroll — {{month}}",
+    "deductions": "Deductions",
+    "invalidNumber": "Enter a valid number.",
+    "generateSlip": "Generate payslip",
+    "pastSlips": "Past payslips"
+  },
+  "team": {
+    "title": "Team",
+    "invite": "Invite a member",
+    "inviteSubtitle": "Give someone access to this business",
+    "empty": "No team members yet",
+    "allBranches": "Access to all branches",
+    "noBranches": "No branch access granted yet"
+  },
+  "inviteMember": {
+    "title": "Invite a member",
+    "subtitle": "They need an existing BizIQ account to be added — invite them by the email they signed up with.",
+    "email": "Email",
+    "emailPlaceholder": "them@example.com",
+    "emailHint": "must already have an account",
+    "emailInvalid": "Enter a valid email address.",
+    "roleSection": "Role",
+    "roleHint_ADMIN": "Full access to every branch and setting, same as an owner except billing.",
+    "roleHint_MANAGER": "Full access to the branches you grant below.",
+    "roleHint_STAFF": "Limited, operational access to the branches you grant below.",
+    "branchSection": "Which branches can they access?",
+    "noBranches": "Add a branch first.",
+    "submit": "Send invite",
+    "submitting": "Inviting..."
   }
 }

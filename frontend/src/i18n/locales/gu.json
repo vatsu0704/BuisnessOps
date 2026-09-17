@@ -2,7 +2,8 @@
   "common": {
     "brand": "BizIQ",
     "active": "સક્રિય",
-    "more": "+{{count}} વધુ"
+    "more": "+{{count}} વધુ",
+    "loading": "લોડ થઈ રહ્યું છે…"
   },
   "language": {
     "title": "ભાષા",
@@ -49,6 +50,7 @@
     "fullNamePlaceholder": "રાજેશ પટેલ",
     "email": "કામનું ઈમેલ",
     "emailPlaceholder": "you@business.com",
+    "emailInvalid": "માન્ય ઈમેલ સરનામું દાખલ કરો.",
     "createPassword": "પાસવર્ડ બનાવો",
     "passwordHint": "ઓછામાં ઓછા 8 અક્ષર",
     "passwordPlaceholder": "પાસવર્ડ દાખલ કરો",
@@ -79,6 +81,12 @@
     "FRANCHISE_OTHER": "ફ્રેન્ચાઇઝી / અન્ય",
     "FRANCHISE_OTHER_caption": "મલ્ટી-બ્રાન્ડ"
   },
+  "role": {
+    "OWNER": "માલિક",
+    "ADMIN": "એડમિન",
+    "MANAGER": "મેનેજર",
+    "STAFF": "સ્ટાફ"
+  },
   "password": {
     "level": "સુરક્ષા સ્તર",
     "tooShort": "ખૂબ ટૂંકો",
@@ -94,9 +102,9 @@
     "greeting": "નમસ્તે {{name}}",
     "branchCount": "{{count}} શાખા",
     "branchCount_plural": "{{count}} શાખાઓ",
+    "statSales": "વેચાણ",
+    "statTransactions": "ઓર્ડર",
     "statBranches": "શાખાઓ",
-    "statActive": "સક્રિય",
-    "statCities": "શહેરો",
     "emptyTitle": "હજી કોઈ શાખા નથી",
     "emptySubtitle": "વેચાણ, સ્ટોક અને સ્ટાફ ટ્રૅક કરવા માટે તમારી પહેલી શાખા ઉમેરો.",
     "branchesTitle": "તમારી શાખાઓ",
@@ -147,6 +155,12 @@
     "currency": "ચલણ",
     "timezone": "સમય ક્ષેત્ર",
     "businessId": "વ્યવસાય આઈડી",
+    "attendance": "મારી હાજરી",
+    "attendanceSubtitle": "પંચ ઇન/આઉટ કરો અને તમારો ઇતિહાસ જુઓ",
+    "staff": "સ્ટાફ અને પગાર",
+    "staffSubtitle": "સ્ટાફ, હાજરી અને સેલેરી સ્લિપ મેનેજ કરો",
+    "team": "ટીમ અને પરવાનગીઓ",
+    "teamSubtitle": "લોકોને આમંત્રિત કરો અને ઍક્સેસ મેનેજ કરો",
     "logout": "લૉગ આઉટ"
   },
   "addBranch": {
@@ -186,5 +200,87 @@
     "noBranchesSubtitle": "વેચાણ ડેટા કોઈ શાખામાં આયાત થાય છે, તેથી ઓછામાં ઓછી એક જરૂરી છે.",
     "templateTitle": "ટેમ્પલેટ ડાઉનલોડ કરો",
     "templateSubtitle": "નમૂના CSV જેમાં આ ઇમ્પોર્ટરને જોઈતા ચોક્કસ કૉલમ છે."
+  },
+  "attendanceStatus": {
+    "PRESENT": "હાજર",
+    "ABSENT": "ગેરહાજર",
+    "HALF_DAY": "અડધો દિવસ",
+    "LEAVE": "રજા"
+  },
+  "attendance": {
+    "title": "મારી હાજરી",
+    "notStaff": "તમે આ બિઝનેસના સ્ટાફ સભ્ય તરીકે નોંધાયેલા નથી, તેથી હમણાં પંચ ઇન કરવા માટે કંઈ નથી.",
+    "today": "આજે",
+    "notPunchedIn": "હજુ પંચ ઇન કર્યું નથી",
+    "punchedInAt": "{{time}} વાગ્યે પંચ ઇન કર્યું",
+    "doneForToday": "{{inTime}} વાગ્યે ઇન · {{outTime}} વાગ્યે આઉટ",
+    "punchIn": "પંચ ઇન",
+    "punchOut": "પંચ આઉટ",
+    "noHistory": "આ મહિના માટે કોઈ હાજરી નોંધાઈ નથી"
+  },
+  "staff": {
+    "title": "સ્ટાફ",
+    "add": "સ્ટાફ ઉમેરો",
+    "addSubtitle": "કોઈને નોંધો જેથી તેમની હાજરી અને પગાર ટ્રેક કરી શકાય",
+    "empty": "હજુ સુધી કોઈ સ્ટાફ ઉમેર્યો નથી",
+    "appAccess": "એપ ઍક્સેસ",
+    "hasSalary": "પગાર સેટ છે"
+  },
+  "addStaff": {
+    "title": "સ્ટાફ ઉમેરો",
+    "subtitle": "દરેક સ્ટાફ સભ્ય એક શાખા સાથે જોડાયેલ છે. ઈમેલ ત્યારે જ ઉમેરો જ્યારે તેમને જાતે પંચ ઇન કરવાનું હોય.",
+    "branchSection": "તેઓ કઈ શાખામાં કામ કરે છે?",
+    "name": "નામ",
+    "namePlaceholder": "દા.ત. પ્રિયા મહેતા",
+    "role": "ભૂમિકા",
+    "rolePlaceholder": "દા.ત. કેશિયર",
+    "baseSalary": "માસિક પગાર",
+    "baseSalaryPlaceholder": "દા.ત. 18000",
+    "optional": "વૈકલ્પિક",
+    "invalidNumber": "માન્ય નંબર દાખલ કરો.",
+    "email": "એકાઉન્ટ ઈમેલ",
+    "emailHint": "વૈકલ્પિક — હાલના એકાઉન્ટ સાથે જોડે છે",
+    "emailPlaceholder": "their.email@example.com",
+    "emailInvalid": "માન્ય ઈમેલ સરનામું દાખલ કરો.",
+    "submit": "સ્ટાફ સભ્ય ઉમેરો",
+    "submitting": "ઉમેરાઈ રહ્યું છે..."
+  },
+  "staffDetail": {
+    "title": "સ્ટાફ સભ્ય",
+    "baseSalary": "{{amount}} / મહિને",
+    "noSalary": "કોઈ પગાર સેટ નથી — પેરોલ હજુ જનરેટ કરી શકાતું નથી",
+    "noSalaryHint": "પેસ્લિપ જનરેટ કરતા પહેલા આ વ્યક્તિ માટે માસિક પગાર સેટ કરો.",
+    "markSection": "દિવસ ચિહ્નિત કરો",
+    "date": "તારીખ",
+    "markSubmit": "સાચવો",
+    "payrollSection": "પેરોલ — {{month}}",
+    "deductions": "કપાત",
+    "invalidNumber": "માન્ય નંબર દાખલ કરો.",
+    "generateSlip": "પેસ્લિપ જનરેટ કરો",
+    "pastSlips": "અગાઉની પેસ્લિપ"
+  },
+  "team": {
+    "title": "ટીમ",
+    "invite": "સભ્યને આમંત્રિત કરો",
+    "inviteSubtitle": "આ વ્યવસાયની ઍક્સેસ આપો",
+    "empty": "હજુ સુધી કોઈ ટીમ સભ્ય નથી",
+    "allBranches": "તમામ શાખાઓની ઍક્સેસ",
+    "noBranches": "હજુ સુધી કોઈ શાખા ઍક્સેસ આપી નથી"
+  },
+  "inviteMember": {
+    "title": "સભ્યને આમંત્રિત કરો",
+    "subtitle": "તેમને ઉમેરવા માટે પહેલેથી BizIQ એકાઉન્ટ હોવું જરૂરી છે — તેમણે સાઇન અપ કરેલા ઈમેલથી આમંત્રિત કરો.",
+    "email": "ઈમેલ",
+    "emailPlaceholder": "them@example.com",
+    "emailHint": "પહેલેથી એકાઉન્ટ હોવું જોઈએ",
+    "emailInvalid": "માન્ય ઈમેલ સરનામું દાખલ કરો.",
+    "roleSection": "ભૂમિકા",
+    "roleHint_ADMIN": "દરેક શાખા અને સેટિંગની સંપૂર્ણ ઍક્સેસ, બિલિંગ સિવાય માલિક જેવી જ.",
+    "roleHint_MANAGER": "તમે નીચે આપેલી શાખાઓની સંપૂર્ણ ઍક્સેસ.",
+    "roleHint_STAFF": "તમે નીચે આપેલી શાખાઓની મર્યાદિત, ઓપરેશનલ ઍક્સેસ.",
+    "branchSection": "તેઓ કઈ શાખાઓની ઍક્સેસ કરી શકે છે?",
+    "noBranches": "પહેલા શાખા ઉમેરો.",
+    "submit": "આમંત્રણ મોકલો",
+    "submitting": "આમંત્રિત કરી રહ્યાં છીએ..."
   }
 }

@@ -5,9 +5,10 @@ type Props = {
   value: number;
   duration?: number;
   style?: StyleProp<TextStyle>;
+  formatValue?: (value: number) => string;
 };
 
-export default function AnimatedCount({ value, duration = 700, style }: Props) {
+export default function AnimatedCount({ value, duration = 700, style, formatValue }: Props) {
   const [display, setDisplay] = useState(0);
   const fromRef = useRef(0);
 
@@ -31,5 +32,5 @@ export default function AnimatedCount({ value, duration = 700, style }: Props) {
     return () => cancelAnimationFrame(frame);
   }, [value, duration]);
 
-  return <Text style={style}>{display}</Text>;
+  return <Text style={style}>{formatValue ? formatValue(display) : display}</Text>;
 }

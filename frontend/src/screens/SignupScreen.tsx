@@ -8,6 +8,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/AuthNavigator';
 import { useAuthStore } from '@/store/authStore';
 import type { Industry } from '@/types/business';
+import { isValidEmail } from '@/utils/validation';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import AuthHeader from '@/components/AuthHeader';
 import FormInput from '@/components/FormInput';
@@ -70,11 +71,14 @@ export default function SignupScreen({ navigation }: Props) {
   const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
 
   const passwordsMatch = confirmPassword.length === 0 || password === confirmPassword;
+  const emailTrimmed = email.trim();
+  const emailInvalid = emailTrimmed.length > 0 && !isValidEmail(emailTrimmed);
 
   const canSubmit =
     name.trim().length > 0 &&
     businessName.trim().length > 0 &&
-    email.trim().length > 0 &&
+    emailTrimmed.length > 0 &&
+    !emailInvalid &&
     password.length >= 8 &&
     password === confirmPassword &&
     country.trim().length > 0 &&
@@ -156,6 +160,7 @@ export default function SignupScreen({ navigation }: Props) {
                   value={email}
                   onChangeText={onFieldChange(setEmail)}
                 />
+                {emailInvalid ? <Text style={styles.mismatch}>{t('signup.emailInvalid')}</Text> : null}
                 <FormInput
                   testID="signup-password"
                   label={t('signup.createPassword')}

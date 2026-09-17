@@ -67,7 +67,8 @@ Top-level tenant. One row per company using the platform.
 | name | String | |
 | code | String | unique per business, matches POS location code where possible |
 | city / region / country | String | region used for grouping in cross-branch comparison (FR-07) |
-| latitude / longitude | Decimal, nullable | needed later for weather correlation (Phase 5) and expansion what-if (Phase 6) — capture at creation, not retrofitted |
+| latitude / longitude | Decimal, nullable | needed later for weather correlation (Phase 5) and expansion what-if (Phase 6) — capture at creation, not retrofitted; also doubles as the Attendance module's punch-in geofence center |
+| geofenceRadiusMeters | Int, nullable | Attendance module: set alongside latitude/longitude to require staff to punch in/out within this radius; unset = no geofence enforced |
 | timezone | String | |
 | currency | String, nullable | overrides Business.defaultCurrency if set |
 | status | Enum: `ACTIVE, INACTIVE, CLOSED` | |
@@ -235,9 +236,12 @@ POS/HR record — distinct from `User`, because most cashiers/cooks never log in
 | name | String | |
 | role | String | e.g. cashier, cook, manager |
 | externalId | String, nullable | POS-native id |
+| baseSalary | Decimal, nullable | Attendance module: monthly salary payroll pro-rates against. Null until an owner sets it — POS-synced staff have no payroll relationship with this app by default |
 | status | Enum: `ACTIVE, INACTIVE` | |
 
 ### `Shift`
+POS/rota concept — can be attributed to a `Transaction`, can be scheduled without ever happening, and a business can run more than one per staff member per day. Kept separate from `Attendance` below, which is the payroll-facing daily record.
+
 | Column | Type | Notes |
 |---|---|---|
 | id | String (uuid) | PK |
@@ -245,6 +249,57 @@ POS/HR record — distinct from `User`, because most cashiers/cooks never log in
 | branchId | String | FK |
 | startedAt / endedAt | DateTime | |
 | scheduledStart / scheduledEnd | DateTime, nullable | actual vs. scheduled feeds staff analytics (Phase 6) |
+
+---
+
+## 4a. Attendance & Salary Slip module
+
+Added outside the original phase sequence, on request. Builds on `StaffMember`
+(Phase 1) rather than introducing a parallel employee table — an employee is
+still one `StaffMember` row, optionally linked to a `User` via `userId`; that
+link is what makes a StaffMember "punch-capable" from the app (self-service
+punch-in/out resolves the caller's own StaffMember by `userId`, never by a
+client-supplied id). Getting a real person into this path is two steps that
+already existed: invite them as a `Membership` (any role) so they can
+authenticate, then have an owner/admin/manager create a `StaffMember` row
+with `userId` set to link the two.
+
+### `Attendance`
+One row per staff member per calendar day — the punch-in/out + status record
+payroll reads. Distinct from `Shift` (above) rather than an extension of it.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId / branchId | String | FK, denormalized from staffMember for fast branch/day roster queries |
+| staffMemberId | String | FK |
+| date | Date | unique with staffMemberId — one attendance record per person per day |
+| status | Enum: `PRESENT, ABSENT, HALF_DAY, LEAVE` | set by punch-in (PRESENT) or a manager override (`POST .../attendance/mark`) |
+| punchInAt / punchOutAt | DateTime, nullable | server time, never trusts a client-supplied timestamp |
+| punchInLat / punchInLng / punchOutLat / punchOutLng | Decimal, nullable | captured per event; validated against the branch's geofence (if configured) before the punch is accepted |
+| notes | String, nullable | free text, set via the manager-override endpoint |
+
+### `SalarySlip`
+One row per staff member per payroll month; regenerating the same
+(staffMemberId, monthYear) overwrites rather than duplicating.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId | String | FK |
+| staffMemberId | String | FK |
+| monthYear | String | e.g. `2026-09` |
+| totalDaysWorked | Decimal | PRESENT = 1, HALF_DAY = 0.5, ABSENT/LEAVE = 0 (leave is unpaid — there's no leave-balance/policy model yet) |
+| grossPay | Decimal | `(baseSalary / daysInMonth) * totalDaysWorked` |
+| deductions | Decimal | manually entered at generation time — no tax/advance subsystem yet |
+| netPay | Decimal | grossPay − deductions |
+| currency | String | copied from `Business.defaultCurrency` at generation time |
+| status | Enum: `DRAFT, FINALIZED` | `FINALIZED` isn't set by any code path yet — reserved for a future "lock the slip" action |
+| generatedAt | DateTime | |
+
+No `slip_url`/cloud storage column: the PDF is generated on demand
+(`GET .../salary-slips/:id/pdf`, via `pdfmake`) straight from these numbers
+rather than persisted to a file store this project doesn't have set up yet.
 
 ---
 
@@ -430,6 +485,7 @@ Two layers, per the NFR (no cross-tenant leakage under any condition):
 |---|---|
 | 0 — Foundations | `Business`, `Branch`, `User`, `Membership`, `BranchAccess` |
 | 1 — Data Ingestion | `DataSourceConnection`, `SyncRun`, `Product`, `ProductBranchDetail`, `Transaction`, `LineItem`, `InventoryItem`, `InventoryUsage`, `StaffMember`, `Shift` |
+| 4a — Attendance & Salary Slip (ad hoc, built out of phase order) | `Attendance`, `SalarySlip` |
 | 2–4 — Query Engine & Reporting | `Conversation`, `QueryLog`, `QueryFeedback` |
 | 5 — Proactive Intelligence | `Alert`, `AlertNotification`, `ExternalSignal` |
 | 6 — Strategic & Franchise | `DemandForecast`, `FranchiseAgreement`, `RoyaltyStatement`, `CandidateLocation` |

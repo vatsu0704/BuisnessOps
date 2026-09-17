@@ -7,13 +7,18 @@ type Props = {
   value: number;
   caption?: string;
   accent?: string;
+  formatValue?: (value: number) => string;
 };
 
-export default function StatTile({ label, value, caption, accent }: Props) {
+export default function StatTile({ label, value, caption, accent, formatValue }: Props) {
   return (
     <View style={styles.tile}>
       <Text style={styles.label}>{label}</Text>
-      <AnimatedCount value={value} style={[styles.value, accent ? { color: accent } : null]} />
+      <AnimatedCount
+        value={value}
+        formatValue={formatValue}
+        style={[styles.value, accent ? { color: accent } : null]}
+      />
       {caption ? <Text style={styles.caption}>{caption}</Text> : null}
     </View>
   );

@@ -1,16 +1,23 @@
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import InfoCard from '@/components/InfoCard';
 import LanguageSelector from '@/components/LanguageSelector';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
+
+const STAFF_MANAGING_ROLES = new Set(['OWNER', 'ADMIN', 'MANAGER']);
+const TEAM_MANAGING_ROLES = new Set(['OWNER', 'ADMIN']);
 
 function initials(name?: string | null, email?: string | null): string {
   const source = name?.trim() || email || '';
@@ -36,8 +43,11 @@ export default function SettingsScreen() {
   const business = useAuthStore((s) => s.business);
   const logout = useAuthStore((s) => s.logout);
   const { stats } = useBranches();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
   const membership = user?.memberships?.[0];
+  const canManageStaff = !!membership && STAFF_MANAGING_ROLES.has(membership.role);
+  const canManageTeam = !!membership && TEAM_MANAGING_ROLES.has(membership.role);
 
   return (
     <View style={styles.container}>
@@ -70,7 +80,7 @@ export default function SettingsScreen() {
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>{t('settings.account')}</Text>
               <Row label={t('settings.email')} value={user?.email ?? '—'} />
-              {membership ? <Row label={t('settings.role')} value={membership.role} /> : null}
+              {membership ? <Row label={t('settings.role')} value={t(`role.${membership.role}`)} /> : null}
             </View>
           </AnimatedEntrance>
 
@@ -90,10 +100,44 @@ export default function SettingsScreen() {
           ) : null}
 
           <AnimatedEntrance delay={step(4)} style={styles.block}>
+            <InfoCard
+              testID="settings-open-attendance"
+              icon="finger-print-outline"
+              title={t('settings.attendance')}
+              subtitle={t('settings.attendanceSubtitle')}
+              onPress={() => navigation.navigate('Attendance')}
+            />
+          </AnimatedEntrance>
+
+          {canManageStaff ? (
+            <AnimatedEntrance delay={step(5)} style={styles.block}>
+              <InfoCard
+                testID="settings-open-staff"
+                icon="people-outline"
+                title={t('settings.staff')}
+                subtitle={t('settings.staffSubtitle')}
+                onPress={() => navigation.navigate('Staff')}
+              />
+            </AnimatedEntrance>
+          ) : null}
+
+          {canManageTeam ? (
+            <AnimatedEntrance delay={step(6)} style={styles.block}>
+              <InfoCard
+                testID="settings-open-team"
+                icon="people-circle-outline"
+                title={t('settings.team')}
+                subtitle={t('settings.teamSubtitle')}
+                onPress={() => navigation.navigate('Team')}
+              />
+            </AnimatedEntrance>
+          ) : null}
+
+          <AnimatedEntrance delay={step(7)} style={styles.block}>
             <LanguageSelector />
           </AnimatedEntrance>
 
-          <AnimatedEntrance delay={step(5)} style={styles.block}>
+          <AnimatedEntrance delay={step(8)} style={styles.block}>
             <PressableScale testID="settings-logout" style={styles.logout} onPress={() => logout()}>
               <Ionicons name="log-out-outline" size={18} color={colors.error} />
               <Text style={styles.logoutText}>{t('settings.logout')}</Text>
