@@ -45,6 +45,7 @@
           "backgroundColor": "#4F46E5"
         }
       ],
+      "./plugins/withReleaseSigning",
       "expo-localization"
     ]
   }
