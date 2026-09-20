@@ -5,6 +5,10 @@
     "more": "+{{count}} more",
     "loading": "Loading…"
   },
+  "errors": {
+    "unreachable": "Cannot reach the BizIQ server at {{url}}. Check that the device is on the same network as the server and that the server is running.",
+    "unexpected": "Something went wrong. Please try again."
+  },
   "language": {
     "title": "Language",
     "subtitle": "Choose the language for the app",
@@ -272,10 +276,10 @@
   },
   "inviteMember": {
     "title": "Invite a member",
-    "subtitle": "They need an existing BizIQ account to be added — invite them by the email they signed up with.",
+    "subtitle": "If they already have a BizIQ account they'll be added right away. If not, they'll join automatically the moment they sign up with this email.",
     "email": "Email",
     "emailPlaceholder": "them@example.com",
-    "emailHint": "must already have an account",
+    "emailHint": "works even before they've signed up",
     "emailInvalid": "Enter a valid email address.",
     "roleSection": "Role",
     "roleHint_ADMIN": "Full access to every branch and setting, same as an owner except billing.",

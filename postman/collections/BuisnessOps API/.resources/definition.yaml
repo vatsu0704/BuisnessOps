@@ -1,6 +1,6 @@
 $kind: collection
 description: |-
-  Phase 0 (Foundations) API surface: auth, tenant/business/branch management, and role-based branch scoping. Backed by the Prisma/PostgreSQL schema in /database-table.md and the build order in /PROJECT_FLOW.md.
+  Phase 0 (Foundations) API surface: auth, tenant/business/branch management, and role-based branch scoping. Backed by the Prisma/PostgreSQL schema in /Docs/database-table.md and the build order in /Docs/PROJECT_FLOW.md.
 
   How to use:
   1. Set the `baseUrl` variable (defaults to http://localhost:4000/api) and start the backend (`cd backend && npm run dev`).

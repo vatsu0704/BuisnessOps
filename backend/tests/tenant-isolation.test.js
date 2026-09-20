@@ -2,7 +2,7 @@ const request = require('supertest');
 const app = require('../src/app');
 const prisma = require('../src/config/db');
 
-// This is the Phase 0 exit-criteria test from PROJECT_FLOW.md: a manager
+// This is the Phase 0 exit-criteria test from Docs/PROJECT_FLOW.md: a manager
 // scoped to one branch must not be able to read another branch's data in
 // the same business, even by guessing its real id. It runs end-to-end over
 // HTTP (signup -> branch creation -> membership invite -> branch scoping ->

@@ -8,7 +8,7 @@ datasource db {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 0 — Foundations (see /database-table.md section 3 for full rationale)
+// Phase 0 — Foundations (see /Docs/database-table.md section 3 for full rationale)
 // ---------------------------------------------------------------------------
 
 enum Industry {
@@ -195,7 +195,7 @@ model BranchAccess {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 1 — Data Ingestion (see /database-table.md section 4 for full rationale)
+// Phase 1 — Data Ingestion (see /Docs/database-table.md section 4 for full rationale)
 // ---------------------------------------------------------------------------
 
 enum DataSourceStatus {

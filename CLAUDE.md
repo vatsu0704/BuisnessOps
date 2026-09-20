@@ -9,9 +9,34 @@ retail and franchise owners. The core loop: an owner asks a question in plain
 language ("What were October sales versus last year?") and receives an answer
 computed from their own sales data, with the underlying numbers traceable.
 
-`PROJECT_FLOW.md` holds the phased delivery plan and the current status of each
-phase; `database-table.md` holds data model notes. Read both before planning
-feature work rather than inferring scope from code alone.
+### Project documents
+
+Every project document lives in `Docs/`. They carry context the code alone
+does not — read them before planning feature work rather than inferring scope
+from code.
+
+| Path | Contents |
+| --- | --- |
+| `Docs/PROJECT_FLOW.md` | The phased delivery plan and the current status of each phase |
+| `Docs/database-table.md` | Data model notes |
+| `Docs/TESTING_GUIDE.md` | Click-by-click manual walkthrough of every user-facing flow that is built, in the order they have to be followed |
+
+A new document of this kind belongs in `Docs/` too. Only `CLAUDE.md` and
+`README.md` stay at the repository root, because Claude Code loads the rule book
+from the root and GitHub renders the root README as the repository's front page.
+
+**Keep all three current as functionality is added.** A feature is not finished
+until the documents describing it match the code:
+
+- a new or re-scoped phase, or a phase whose status changes →
+  `Docs/PROJECT_FLOW.md`
+- a new table, column, relation or enum → `Docs/database-table.md`
+- a new user-facing flow, or a change to the steps, the expected result, or the
+  setup an existing flow assumes → `Docs/TESTING_GUIDE.md`. Its "Known limitations"
+  list is part of this: move an item out of it when the thing gets built, and
+  add one when something ships deliberately incomplete.
+
+Update them in the same change as the code, not as a follow-up.
 
 ### Naming
 
@@ -26,6 +51,7 @@ name `buisnessops`, and git history. Those are not typos to fix.
 | --- | --- |
 | `backend/` | Express API in **JavaScript** (not TypeScript), Prisma + PostgreSQL |
 | `frontend/` | Expo / React Native app in TypeScript |
+| `Docs/` | Project documents — see *Project documents* above |
 | `postman/` | API collection covering auth and data ingestion |
 | `.github/workflows/ci.yml` | Backend tests, migration check, frontend type-check |
 
@@ -124,8 +150,21 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
 
 ## Environment
 
-`frontend/.env` sets `EXPO_PUBLIC_API_URL`. For a physical device this must be the
-development machine's LAN IP, not `localhost`, which on a phone means the phone.
+`frontend/.env` sets `EXPO_PUBLIC_API_URL`. A physical device needs one of two
+setups, and `localhost` on its own means the phone itself:
+
+- **USB** — `adb reverse tcp:4000 tcp:4000` tunnels the API over the cable, the
+  same mechanism Expo already uses for Metro on 8081, and `localhost:4000` then
+  does reach this machine. Works on mobile data and needs no firewall rule, but
+  the forward is lost on replug or an adb restart.
+- **Wi-Fi** — the development machine's LAN IP, with the phone on the same
+  network and Windows Firewall allowing inbound connections for the exact
+  `node.exe` binary running the backend (a rule for a different `node.exe` on
+  disk, e.g. an nvm copy, does not apply to it).
+
+When neither holds, every request fails before reaching the server and the app
+surfaces `errors.unreachable` rather than any auth error — check connectivity
+before suspecting credentials.
 
 Read these values only as `process.env.EXPO_PUBLIC_X` member expressions. Expo's
 Babel transform matches that exact shape; destructuring

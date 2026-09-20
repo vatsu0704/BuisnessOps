@@ -76,8 +76,13 @@ async function signup({ email, password, name, businessName, industry, country, 
 }
 
 async function login({ email, password }) {
+  // Normalized the same way signup stores it. Without this, an address typed
+  // with different casing or a trailing space misses the unique index and comes
+  // back as "Invalid email or password" — indistinguishable from a wrong one.
+  const normalizedEmail = String(email).toLowerCase().trim();
+
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { email: normalizedEmail },
     include: { memberships: { select: MEMBERSHIP_SELECT } },
   });
   if (!user) {

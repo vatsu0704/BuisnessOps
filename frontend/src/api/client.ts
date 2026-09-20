@@ -1,4 +1,5 @@
 import axios from 'axios';
+import i18n from '@/i18n';
 
 // Must stay a `process.env.X` member expression: Babel inlines EXPO_PUBLIC_* at build
 // time by matching that exact shape. The cast is only because React Native's ambient
@@ -8,6 +9,10 @@ const API_BASE_URL =
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  // Without this a request to an unreachable host hangs on the OS-level TCP
+  // timeout (over a minute on Android) with the button stuck in its loading
+  // state, which reads as a frozen app rather than as a failure.
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -29,6 +34,14 @@ export function extractErrorMessage(err: unknown): string {
     const data = err.response?.data as { message?: string; errors?: string[] } | undefined;
     if (data?.errors?.length) return data.errors.join('\n');
     if (data?.message) return data.message;
+
+    // No response at all means the request never reached the API — the device
+    // is off the network, the base URL points somewhere unreachable, or the
+    // server is down. Reporting that as a generic failure sends people hunting
+    // for a wrong password when the real fix is a connection, so name it.
+    if (!err.response) {
+      return i18n.t('errors.unreachable', { url: API_BASE_URL });
+    }
   }
-  return 'Something went wrong. Please try again.';
+  return i18n.t('errors.unexpected');
 }
