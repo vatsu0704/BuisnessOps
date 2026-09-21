@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { fail } = require('../errors');
 const { addBranchAccess } = require('./business.service');
 
 function normalizeEmail(email) {
@@ -9,9 +10,7 @@ async function assertBranchesBelongToBusiness(businessId, branchIds, client = pr
   if (!branchIds.length) return;
   const matching = await client.branch.findMany({ where: { id: { in: branchIds }, businessId } });
   if (matching.length !== branchIds.length) {
-    const err = new Error('One or more branchIds do not belong to this business');
-    err.status = 400;
-    throw err;
+    throw fail('INVITE_BRANCHES_NOT_IN_BUSINESS', 400);
   }
 }
 
@@ -41,10 +40,30 @@ async function inviteMember(businessId, { email, role, branchIds = [] }) {
   const existingMembership = await prisma.membership.findUnique({
     where: { userId_businessId: { userId: user.id, businessId } },
   });
+
+  // A revoked member is re-invitable, and that is the only way back in: there
+  // is no separate "reinstate" endpoint, and without this branch the 409 below
+  // would make every revoke permanent for that person and business. The role
+  // and branches come from this invite, not from whatever they had before —
+  // re-adding someone is a fresh decision about their access, not an undo.
+  if (existingMembership && existingMembership.status === 'REVOKED') {
+    return {
+      pending: false,
+      membership: await prisma.$transaction(async (tx) => {
+        const membership = await tx.membership.update({
+          where: { id: existingMembership.id },
+          data: { role, status: 'ACTIVE', joinedAt: new Date() },
+        });
+        for (const branchId of branchIds) {
+          await addBranchAccess(businessId, membership.id, branchId, tx);
+        }
+        return membership;
+      }),
+    };
+  }
+
   if (existingMembership) {
-    const err = new Error('This user is already a member of this business');
-    err.status = 409;
-    throw err;
+    throw fail('MEMBERSHIP_ALREADY_EXISTS', 409);
   }
 
   const membership = await prisma.$transaction(async (tx) => {
@@ -67,6 +86,28 @@ function listInvites(businessId) {
     where: { businessId, status: 'PENDING' },
     orderBy: { invitedAt: 'desc' },
   });
+}
+
+/**
+ * Withdraw an invite that was never accepted.
+ *
+ * REVOKED rather than deleted, so the row keeps its history — and because the
+ * @@unique([businessId, email]) constraint means inviting the same address
+ * again upserts this very row back to PENDING, which is exactly the behaviour
+ * wanted. Only PENDING invites can be revoked: an ACCEPTED one is now a
+ * Membership, and taking that away is revokeMembership's job, not this one's.
+ */
+async function revokeInvite(businessId, inviteId) {
+  const invite = await prisma.invite.findFirst({ where: { id: inviteId, businessId } });
+  if (!invite) {
+    throw fail('INVITE_NOT_FOUND', 404);
+  }
+  if (invite.status === 'ACCEPTED') {
+    throw fail('INVITE_ALREADY_ACCEPTED', 409);
+  }
+  if (invite.status === 'REVOKED') return invite;
+
+  return prisma.invite.update({ where: { id: inviteId }, data: { status: 'REVOKED' } });
 }
 
 // Public (unauthenticated) lookup used by the signup screen, before an
@@ -106,4 +147,11 @@ async function claimPendingInvites(tx, userId, invites) {
   return memberships;
 }
 
-module.exports = { inviteMember, listInvites, lookupInvite, getPendingInvites, claimPendingInvites };
+module.exports = {
+  inviteMember,
+  listInvites,
+  revokeInvite,
+  lookupInvite,
+  getPendingInvites,
+  claimPendingInvites,
+};

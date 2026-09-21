@@ -1,4 +1,5 @@
-const { isValidEmail } = require('./shared');
+const { isValidEmail, mustBeString, mustBeOneOf, required } = require('./shared');
+const { fieldError } = require('../errors');
 
 const INDUSTRIES = ['RETAIL', 'FOOD_BEVERAGE', 'SERVICES', 'FRANCHISE_OTHER'];
 
@@ -6,10 +7,10 @@ function validateSignup(body) {
   const errors = [];
 
   if (!isValidEmail(body.email)) {
-    errors.push('A valid email is required');
+    errors.push(fieldError('EMAIL_REQUIRED', 'email'));
   }
   if (!body.password || typeof body.password !== 'string' || body.password.length < 8) {
-    errors.push('password must be at least 8 characters');
+    errors.push(fieldError('PASSWORD_TOO_SHORT', 'password', { min: 8 }));
   }
 
   // Business fields are only truly required when this signup isn't claiming
@@ -17,23 +18,23 @@ function validateSignup(body) {
   // function has no DB access to check for one). If given at all, though,
   // they must be well-formed.
   if (body.businessName !== undefined && body.businessName !== null && typeof body.businessName !== 'string') {
-    errors.push('businessName must be a string');
+    errors.push(mustBeString('businessName'));
   }
   if (body.industry !== undefined && body.industry !== null && !INDUSTRIES.includes(body.industry)) {
-    errors.push(`industry must be one of ${INDUSTRIES.join(', ')}`);
+    errors.push(mustBeOneOf('industry', INDUSTRIES));
   }
   if (body.country !== undefined && body.country !== null && typeof body.country !== 'string') {
-    errors.push('country must be a string');
+    errors.push(mustBeString('country'));
   }
   if (
     body.defaultCurrency !== undefined &&
     body.defaultCurrency !== null &&
     typeof body.defaultCurrency !== 'string'
   ) {
-    errors.push('defaultCurrency must be a string');
+    errors.push(mustBeString('defaultCurrency'));
   }
   if (body.timezone !== undefined && body.timezone !== null && typeof body.timezone !== 'string') {
-    errors.push('timezone must be a string');
+    errors.push(mustBeString('timezone'));
   }
 
   return errors;
@@ -41,8 +42,8 @@ function validateSignup(body) {
 
 function validateLogin(body) {
   const errors = [];
-  if (!body.email) errors.push('email is required');
-  if (!body.password) errors.push('password is required');
+  if (!body.email) errors.push(required('email'));
+  if (!body.password) errors.push(required('password'));
   return errors;
 }
 

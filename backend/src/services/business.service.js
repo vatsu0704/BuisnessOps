@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { fail } = require('../errors');
 
 function createBranch(
   businessId,
@@ -34,9 +35,7 @@ function createBranch(
 async function updateBranch(businessId, branchId, patch) {
   const existing = await prisma.branch.findFirst({ where: { id: branchId, businessId } });
   if (!existing) {
-    const err = new Error('Branch not found');
-    err.status = 404;
-    throw err;
+    throw fail('BRANCH_NOT_FOUND', 404);
   }
 
   const data = {};
@@ -65,9 +64,7 @@ async function updateBranch(businessId, branchId, patch) {
   const lat = data.latitude !== undefined ? data.latitude : existing.latitude;
   const radius = data.geofenceRadiusMeters !== undefined ? data.geofenceRadiusMeters : existing.geofenceRadiusMeters;
   if (radius !== null && radius !== undefined && (lat === null || lat === undefined)) {
-    const err = new Error('A geofence radius needs the branch latitude and longitude to be set');
-    err.status = 400;
-    throw err;
+    throw fail('GEOFENCE_NEEDS_COORDINATES', 400);
   }
 
   return prisma.branch.update({ where: { id: branchId }, data });
@@ -106,16 +103,12 @@ function listMemberships(businessId) {
 async function addBranchAccess(businessId, membershipId, branchId, client = prisma) {
   const membership = await client.membership.findFirst({ where: { id: membershipId, businessId } });
   if (!membership) {
-    const err = new Error('Membership not found in this business');
-    err.status = 404;
-    throw err;
+    throw fail('MEMBERSHIP_NOT_FOUND', 404);
   }
 
   const branch = await client.branch.findFirst({ where: { id: branchId, businessId } });
   if (!branch) {
-    const err = new Error('Branch not found in this business');
-    err.status = 404;
-    throw err;
+    throw fail('BRANCH_NOT_FOUND_IN_BUSINESS', 404);
   }
 
   const existing = await client.branchAccess.findUnique({
@@ -155,13 +148,92 @@ function getSalesSummary(businessId, accessibleBranchIds) {
   });
 }
 
+// The business record itself. Needed once a person can belong to more than
+// one: switching businesses has to replace the full Business on the session
+// (industry, currency, timezone — not just the id and name that the
+// membership list carries), and nothing else exposed it.
+function getBusiness(businessId) {
+  return prisma.business.findUnique({ where: { id: businessId } });
+}
+
+/**
+ * Take away someone's access to this business.
+ *
+ * A soft revoke: the row stays and its status becomes REVOKED, which
+ * `resolveTenant` already refuses (it requires status ACTIVE), so access ends
+ * on the revoked person's very next request without any token invalidation.
+ * Deleting the row instead would null out `Attendance.markedByMembershipId`
+ * on every day this person ever marked, erasing who made those calls.
+ *
+ * BranchAccess rows are deliberately left in place so re-inviting someone
+ * restores the scope they had rather than silently starting them at none.
+ *
+ * `actor` is the caller's own membership, and the two guards below are the
+ * whole reason this isn't a one-line status update.
+ */
+async function revokeMembership(businessId, membershipId, actor) {
+  const target = await prisma.membership.findFirst({ where: { id: membershipId, businessId } });
+  if (!target) {
+    throw fail('MEMBERSHIP_NOT_FOUND', 404);
+  }
+
+  // Idempotent rather than a 409: a double tap on a slow connection shouldn't
+  // surface as an error for something that is already true.
+  if (target.status === 'REVOKED') return target;
+
+  // Also what keeps a business from losing its only owner: OWNER is not in
+  // INVITABLE_ROLES, so the one created at signup is the only one there will
+  // ever be, and this is the single path by which they could remove themselves.
+  if (target.id === actor.membershipId) {
+    throw fail('MEMBERSHIP_SELF_REVOKE', 400);
+  }
+
+  // requireRole lets OWNER and ADMIN both reach this route, but an ADMIN
+  // removing the OWNER would be a privilege escalation — the lesser role
+  // seizing the business from the greater one.
+  if (target.role === 'OWNER' && actor.role !== 'OWNER') {
+    throw fail('MEMBERSHIP_OWNER_REVOKE_REQUIRES_OWNER', 403);
+  }
+
+  return prisma.membership.update({ where: { id: membershipId }, data: { status: 'REVOKED' } });
+}
+
+/**
+ * Narrow a MANAGER/STAFF member's scope by one branch — the counterpart to
+ * addBranchAccess, which could previously only ever add.
+ *
+ * Leaving someone with zero branches is allowed: it is a real state the Team
+ * screen already renders a warning for, and it is fully recoverable by
+ * granting again. OWNER/ADMIN have implicit all-branch access and no
+ * BranchAccess rows, so this never applies to them.
+ */
+async function removeBranchAccess(businessId, membershipId, branchId) {
+  const membership = await prisma.membership.findFirst({ where: { id: membershipId, businessId } });
+  if (!membership) {
+    throw fail('MEMBERSHIP_NOT_FOUND', 404);
+  }
+
+  const existing = await prisma.branchAccess.findUnique({
+    where: { membershipId_branchId: { membershipId, branchId } },
+  });
+  if (!existing) {
+    throw fail('MEMBERSHIP_BRANCH_ACCESS_NOT_FOUND', 404);
+  }
+
+  await prisma.branchAccess.delete({ where: { id: existing.id } });
+  return { id: existing.id, membershipId, branchId };
+}
+
 module.exports = {
+  getBusiness,
   createBranch,
   updateBranch,
   listBranches,
   getBranch,
   listMemberships,
   addBranchAccess,
+  removeBranchAccess,
+  revokeMembership,
   listTransactions,
   getSalesSummary,
 };

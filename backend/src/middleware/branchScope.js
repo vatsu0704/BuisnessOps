@@ -1,3 +1,5 @@
+const { fail } = require('../errors');
+
 // Must run after resolveTenant, on any route with a :branchId param.
 // req.branchAccess === null means the role has full, implicit access
 // (OWNER/ADMIN); otherwise it's the explicit list of branch ids the
@@ -9,7 +11,7 @@ function requireBranchAccess(req, res, next) {
     return next();
   }
 
-  return res.status(403).json({ message: 'You do not have access to this branch' });
+  return next(fail('BRANCH_ACCESS_DENIED', 403));
 }
 
 module.exports = { requireBranchAccess };

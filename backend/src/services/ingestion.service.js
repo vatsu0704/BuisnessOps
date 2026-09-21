@@ -1,5 +1,6 @@
 const XLSX = require('xlsx');
 const prisma = require('../config/db');
+const { fieldError, renderMessage } = require('../errors');
 
 // Expected columns in an uploaded CSV/Excel file. One row = one line item;
 // rows sharing the same transaction_external_id are grouped into a single
@@ -18,29 +19,39 @@ function parseFileToRows(buffer) {
 
 // +2: 1 for the header row, 1 to convert a 0-based array index to a 1-based
 // line number a spreadsheet user actually sees.
-function rowLabel(index) {
-  return `Row ${index + 2}`;
+function rowNumber(index) {
+  return index + 2;
 }
 
+// Coded like every other message the API sends, so the upload screen can show
+// them in the reader's language. The row number and the column name travel as
+// parameters; the column name is the literal header in their file and stays
+// as-is in every language, because that is the text they have to go and find.
 function validateRow(row, index) {
   const errors = [];
+  const at = { row: rowNumber(index) };
 
   for (const col of REQUIRED_COLUMNS) {
     if (row[col] === undefined || row[col] === null || String(row[col]).trim() === '') {
-      errors.push(`${rowLabel(index)}: missing ${col}`);
+      errors.push(fieldError('ROW_MISSING_COLUMN', col, { ...at, column: col }));
     }
   }
   if (row.quantity !== undefined && row.quantity !== '' && Number.isNaN(Number(row.quantity))) {
-    errors.push(`${rowLabel(index)}: quantity is not a number`);
+    errors.push(fieldError('ROW_QUANTITY_NOT_A_NUMBER', 'quantity', at));
   }
   if (row.unit_price !== undefined && row.unit_price !== '' && Number.isNaN(Number(row.unit_price))) {
-    errors.push(`${rowLabel(index)}: unit_price is not a number`);
+    errors.push(fieldError('ROW_UNIT_PRICE_NOT_A_NUMBER', 'unit_price', at));
   }
   if (row.payment_method && !VALID_PAYMENT_METHODS.includes(String(row.payment_method).toUpperCase())) {
-    errors.push(`${rowLabel(index)}: payment_method must be one of ${VALID_PAYMENT_METHODS.join(', ')}`);
+    errors.push(
+      fieldError('ROW_PAYMENT_METHOD_INVALID', 'payment_method', {
+        ...at,
+        options: VALID_PAYMENT_METHODS.join(', '),
+      })
+    );
   }
   if (row.occurred_at && Number.isNaN(Date.parse(row.occurred_at))) {
-    errors.push(`${rowLabel(index)}: occurred_at is not a valid date`);
+    errors.push(fieldError('ROW_DATE_INVALID', 'occurred_at', at));
   }
 
   return errors;
@@ -150,7 +161,12 @@ async function ingestRows(rows, { businessId, branchId, currency, dataSourceConn
     recordsFailed: rows.length - validRows.length,
     transactionsCreated,
     transactionsUpdated,
-    errors,
+    // Same split as a validation failure: `errors` stays a plain list of
+    // English strings so an older app build still renders something readable,
+    // and it is rendered FROM errorDetails rather than written separately, so
+    // the two cannot drift apart.
+    errors: errors.map((detail) => renderMessage(detail.code, detail.params)),
+    errorDetails: errors,
   };
 }
 

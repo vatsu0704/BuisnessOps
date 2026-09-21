@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { fail } = require('../errors');
 const { distanceMeters } = require('../utils/geo');
 const { dateOnly, dateKeyOf, todayInZone, todayKeyInZone } = require('../utils/datetime');
 const workCalendar = require('./workCalendar.service');
@@ -9,9 +10,7 @@ const workCalendar = require('./workCalendar.service');
 async function branchOf(businessId, staffMember) {
   const branch = await prisma.branch.findFirst({ where: { id: staffMember.branchId, businessId } });
   if (!branch) {
-    const err = new Error('This staff member is not attached to a branch of this business');
-    err.status = 404;
-    throw err;
+    throw fail('STAFF_HAS_NO_BRANCH', 404);
   }
   return branch;
 }
@@ -20,18 +19,18 @@ function assertWithinGeofence(branch, latitude, longitude) {
   if (!branch.geofenceRadiusMeters || branch.latitude === null || branch.longitude === null) return;
 
   if (latitude === undefined || longitude === undefined) {
-    const err = new Error('This branch requires your location to punch in/out');
-    err.status = 400;
-    throw err;
+    throw fail('PUNCH_LOCATION_REQUIRED', 400);
   }
 
   const distance = distanceMeters(Number(branch.latitude), Number(branch.longitude), latitude, longitude);
   if (distance > branch.geofenceRadiusMeters) {
-    const err = new Error(
-      `You are ${Math.round(distance)}m from the branch, outside the allowed ${branch.geofenceRadiusMeters}m radius`
-    );
-    err.status = 403;
-    throw err;
+    // The two numbers travel as params rather than baked into a sentence:
+    // this is the one geofence message a person reads while standing outside
+    // the shop, so it has to render in their language, with their numbers.
+    throw fail('PUNCH_OUTSIDE_GEOFENCE', 403, {
+      distance: Math.round(distance),
+      radius: branch.geofenceRadiusMeters,
+    });
   }
 }
 
@@ -44,9 +43,7 @@ async function punchIn(businessId, staffMember, { latitude, longitude }) {
     where: { staffMemberId_date: { staffMemberId: staffMember.id, date } },
   });
   if (existing?.punchInAt) {
-    const err = new Error('Already punched in today');
-    err.status = 409;
-    throw err;
+    throw fail('PUNCH_ALREADY_IN', 409);
   }
 
   return prisma.attendance.upsert({
@@ -82,14 +79,10 @@ async function punchOut(businessId, staffMember, { latitude, longitude }) {
     where: { staffMemberId_date: { staffMemberId: staffMember.id, date } },
   });
   if (!existing?.punchInAt) {
-    const err = new Error("You haven't punched in today");
-    err.status = 400;
-    throw err;
+    throw fail('PUNCH_NOT_IN', 400);
   }
   if (existing.punchOutAt) {
-    const err = new Error('Already punched out today');
-    err.status = 409;
-    throw err;
+    throw fail('PUNCH_ALREADY_OUT', 409);
   }
 
   assertWithinGeofence(branch, latitude, longitude);
@@ -109,14 +102,10 @@ async function markAttendance(businessId, staffMember, { date, status, notes }, 
   // this the UI could write arbitrarily far into the future and skew payroll
   // for a month still in progress.
   if (date > todayKeyInZone(branch.timezone)) {
-    const err = new Error('Cannot mark attendance for a future date');
-    err.status = 400;
-    throw err;
+    throw fail('ATTENDANCE_FUTURE_DATE', 400);
   }
   if (staffMember.hiredOn && date < dateKeyOf(staffMember.hiredOn)) {
-    const err = new Error('Cannot mark attendance before this person joined');
-    err.status = 400;
-    throw err;
+    throw fail('ATTENDANCE_BEFORE_HIRED', 400);
   }
 
   const day = dateOnly(date);
@@ -170,9 +159,7 @@ function getMonthlyAttendance(businessId, staffMemberId, month, year) {
  */
 async function getDailyRoster(businessId, branch, dateKey) {
   if (dateKey > todayKeyInZone(branch.timezone)) {
-    const err = new Error('Cannot read a roster for a future date');
-    err.status = 400;
-    throw err;
+    throw fail('ROSTER_FUTURE_DATE', 400);
   }
 
   const business = await prisma.business.findUnique({ where: { id: businessId } });

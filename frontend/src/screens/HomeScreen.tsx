@@ -17,6 +17,7 @@ import AnimatedEntrance from '@/components/AnimatedEntrance';
 import BrandMark from '@/components/BrandMark';
 import InfoCard from '@/components/InfoCard';
 import LanguageToggle from '@/components/LanguageToggle';
+import NoBusinessAccessNotice from '@/components/NoBusinessAccessNotice';
 import PhaseNotice from '@/components/PhaseNotice';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -24,6 +25,7 @@ import TodayPunchCard from '@/components/TodayPunchCard';
 import StatTile from '@/components/StatTile';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
+import { hasNoActiveBusiness } from '@/utils/permissions';
 
 type Props = BottomTabScreenProps<AppTabParamList, 'Home'>;
 
@@ -52,6 +54,10 @@ export default function HomeScreen({ navigation }: Props) {
   );
 
   const firstName = user?.name?.trim().split(/\s+/)[0] ?? user?.email ?? '';
+
+  // Revoked from every business: the tiles below have nothing to count, and
+  // the "add your first branch" card would fail on tap.
+  const noAccess = hasNoActiveBusiness(user);
 
   return (
     <View style={styles.container}>
@@ -101,6 +107,12 @@ export default function HomeScreen({ navigation }: Props) {
             {business ? <Text style={styles.business}>{business.name}</Text> : null}
           </AnimatedEntrance>
 
+          {noAccess ? (
+            <AnimatedEntrance delay={step(1)} style={styles.block}>
+              <NoBusinessAccessNotice />
+            </AnimatedEntrance>
+          ) : null}
+
           <AnimatedEntrance delay={step(1)} style={styles.block}>
             <TodayPunchCard onOpenHistory={() => rootNavigation.navigate('Attendance')} />
           </AnimatedEntrance>
@@ -127,7 +139,7 @@ export default function HomeScreen({ navigation }: Props) {
             </AnimatedEntrance>
           ) : null}
 
-          {!error && stats.total === 0 ? (
+          {!error && !noAccess && stats.total === 0 ? (
             <AnimatedEntrance delay={step(3)} style={styles.block}>
               <InfoCard
                 testID="home-add-first-branch"

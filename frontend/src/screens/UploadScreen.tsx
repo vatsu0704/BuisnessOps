@@ -21,6 +21,7 @@ import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
 import { useBusinessId } from '@/hooks/useBusinessId';
+import { translateDetail } from '@/api/errorMessages';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Upload'>;
 
@@ -44,6 +45,14 @@ export default function UploadScreen({ navigation }: Props) {
 
   const branch = branches.find((b) => b.id === branchId) ?? null;
   const canUpload = !!businessId && !!branch && !!picked && !isUploading;
+
+  // Per-row problems in the reader's language, falling back to the server's
+  // English for a code this build has no wording for — which is what happens
+  // when the server is newer than the app.
+  const rowErrors =
+    result?.errorDetails?.map((detail, index) => translateDetail(detail) ?? result.errors[index]) ??
+    result?.errors ??
+    [];
 
   async function handleTemplate() {
     try {
@@ -211,17 +220,17 @@ export default function UploadScreen({ navigation }: Props) {
                       </View>
                     </View>
 
-                    {result.errors.length ? (
+                    {rowErrors.length ? (
                       <View style={styles.rowErrors}>
                         <Text style={styles.rowErrorsLabel}>{t('upload.rowErrors')}</Text>
-                        {result.errors.slice(0, 5).map((message) => (
+                        {rowErrors.slice(0, 5).map((message) => (
                           <Text key={message} style={styles.rowErrorText}>
                             • {message}
                           </Text>
                         ))}
-                        {result.errors.length > 5 ? (
+                        {rowErrors.length > 5 ? (
                           <Text style={styles.rowErrorMore}>
-                            {t('common.more', { count: result.errors.length - 5 })}
+                            {t('common.more', { count: rowErrors.length - 5 })}
                           </Text>
                         ) : null}
                       </View>

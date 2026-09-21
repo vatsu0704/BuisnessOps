@@ -1,8 +1,9 @@
 const { isValidEmail } = require('./shared');
+const { fieldError } = require('../errors');
 
 function validateLookupQuery(query) {
   const errors = [];
-  if (!isValidEmail(query.email)) errors.push('A valid email is required');
+  if (!isValidEmail(query.email)) errors.push(fieldError('EMAIL_REQUIRED', 'email'));
   return errors;
 }
 

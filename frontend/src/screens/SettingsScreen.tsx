@@ -9,13 +9,16 @@ import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import BusinessSwitcher from '@/components/BusinessSwitcher';
 import InfoCard from '@/components/InfoCard';
 import LanguageSelector from '@/components/LanguageSelector';
+import NoBusinessAccessNotice from '@/components/NoBusinessAccessNotice';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
-import { activeMembership, can } from '@/utils/permissions';
+import { useMembership } from '@/hooks/useBusinessId';
+import { can, hasNoActiveBusiness, switchableMemberships } from '@/utils/permissions';
 
 function initials(name?: string | null, email?: string | null): string {
   const source = name?.trim() || email || '';
@@ -43,9 +46,17 @@ export default function SettingsScreen() {
   const { stats } = useBranches();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
-  const membership = activeMembership(user);
+  // The membership for the business currently switched to, not simply the
+  // first one - a role can differ between businesses, and so can what this
+  // screen is allowed to offer.
+  const membership = useMembership();
   const canManageTeam = can.manageTeam(membership);
   const canManageWorkCalendar = can.manageWorkCalendar(membership);
+  const noAccess = hasNoActiveBusiness(user);
+  // Decided here rather than inside the switcher: AnimatedEntrance carries the
+  // block's top margin, so a switcher that renders null would still leave a
+  // gap on every single-business account.
+  const canSwitchBusiness = switchableMemberships(user).length > 1;
 
   return (
     <View style={styles.container}>
@@ -82,8 +93,20 @@ export default function SettingsScreen() {
             </View>
           </AnimatedEntrance>
 
-          {business ? (
+          {canSwitchBusiness ? (
             <AnimatedEntrance delay={step(3)} style={styles.block}>
+              <BusinessSwitcher />
+            </AnimatedEntrance>
+          ) : null}
+
+          {noAccess ? (
+            <AnimatedEntrance delay={step(3)} style={styles.block}>
+              <NoBusinessAccessNotice />
+            </AnimatedEntrance>
+          ) : null}
+
+          {business ? (
+            <AnimatedEntrance delay={step(4)} style={styles.block}>
               <View style={styles.card}>
                 <Text style={styles.sectionTitle}>{t('settings.business')}</Text>
                 <Row label={t('settings.name')} value={business.name} />
@@ -97,7 +120,7 @@ export default function SettingsScreen() {
             </AnimatedEntrance>
           ) : null}
 
-          <AnimatedEntrance delay={step(4)} style={styles.block}>
+          <AnimatedEntrance delay={step(5)} style={styles.block}>
             <InfoCard
               testID="settings-open-attendance"
               icon="finger-print-outline"
@@ -112,7 +135,7 @@ export default function SettingsScreen() {
               Settings is the thing you set up and forget: the work calendar
               that decides the payroll divisor. */}
           {canManageWorkCalendar ? (
-            <AnimatedEntrance delay={step(5)} style={styles.block}>
+            <AnimatedEntrance delay={step(6)} style={styles.block}>
               <InfoCard
                 testID="settings-open-work-calendar"
                 icon="calendar-outline"
@@ -124,7 +147,7 @@ export default function SettingsScreen() {
           ) : null}
 
           {canManageTeam ? (
-            <AnimatedEntrance delay={step(6)} style={styles.block}>
+            <AnimatedEntrance delay={step(7)} style={styles.block}>
               <InfoCard
                 testID="settings-open-team"
                 icon="people-circle-outline"
@@ -135,11 +158,11 @@ export default function SettingsScreen() {
             </AnimatedEntrance>
           ) : null}
 
-          <AnimatedEntrance delay={step(7)} style={styles.block}>
+          <AnimatedEntrance delay={step(8)} style={styles.block}>
             <LanguageSelector />
           </AnimatedEntrance>
 
-          <AnimatedEntrance delay={step(8)} style={styles.block}>
+          <AnimatedEntrance delay={step(9)} style={styles.block}>
             <PressableScale testID="settings-logout" style={styles.logout} onPress={() => logout()}>
               <Ionicons name="log-out-outline" size={18} color={colors.error} />
               <Text style={styles.logoutText}>{t('settings.logout')}</Text>

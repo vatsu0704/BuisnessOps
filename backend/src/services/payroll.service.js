@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { fail } = require('../errors');
 const attendanceService = require('./attendance.service');
 const workCalendar = require('./workCalendar.service');
 const { dec, money, days, atLeastZero, proRate, D } = require('../utils/money');
@@ -94,9 +95,7 @@ async function summariseMonth(business, branch, staffMember, month, year) {
 
 async function calculatePayroll(businessId, staffMember, { month, year, deductions, deductionNote }) {
   if (staffMember.baseSalary === null || staffMember.baseSalary === undefined) {
-    const err = new Error('This staff member has no baseSalary set — cannot generate a payslip');
-    err.status = 400;
-    throw err;
+    throw fail('PAYSLIP_NO_BASE_SALARY', 400);
   }
 
   const branch = await attendanceService.branchOf(businessId, staffMember);
@@ -105,9 +104,7 @@ async function calculatePayroll(businessId, staffMember, { month, year, deductio
   // A month that hasn't started cannot be paid.
   const todayKey = todayKeyInZone(branch.timezone);
   if (monthKey(month, year) > todayKey.slice(0, 7)) {
-    const err = new Error('Cannot generate a payslip for a future month');
-    err.status = 400;
-    throw err;
+    throw fail('PAYSLIP_FUTURE_MONTH', 400);
   }
 
   const summary = await summariseMonth(business, branch, staffMember, month, year);
@@ -149,9 +146,7 @@ async function generateSalarySlip(businessId, staffMember, { month, year, deduct
   // A finalized slip is a statement already issued to an employee. Regenerating
   // it would silently restate their pay.
   if (existing?.status === 'FINALIZED') {
-    const err = new Error('This payslip is finalized and cannot be regenerated');
-    err.status = 409;
-    throw err;
+    throw fail('PAYSLIP_FINALIZED', 409);
   }
 
   // An omitted `deductions` means "leave it as it was", not "zero it". The
@@ -199,9 +194,7 @@ async function generateSalarySlip(businessId, staffMember, { month, year, deduct
 async function finalizeSalarySlip(businessId, slipId) {
   const slip = await prisma.salarySlip.findFirst({ where: { id: slipId, businessId } });
   if (!slip) {
-    const err = new Error('Payslip not found');
-    err.status = 404;
-    throw err;
+    throw fail('PAYSLIP_NOT_FOUND', 404);
   }
   if (slip.status === 'FINALIZED') return slip;
   return prisma.salarySlip.update({
@@ -236,8 +229,9 @@ async function runPayroll(businessId, { month, year, branchId, staffMemberIds, d
 
   for (const staffMember of staff) {
     if (staffMember.baseSalary === null || staffMember.baseSalary === undefined) {
-      // Machine codes, not prose: the backend has no i18n, and the client
-      // translates these under payrollRun.reason.*.
+      // Machine codes, not prose, so the client can translate them. This
+      // was the first place the API did it; every error now carries a code
+      // the same way (see src/errors/catalog.js).
       skipped.push({ staffMemberId: staffMember.id, name: staffMember.name, reason: 'NO_BASE_SALARY' });
       continue;
     }
@@ -262,9 +256,12 @@ async function runPayroll(businessId, { month, year, branchId, staffMemberIds, d
         currency = currency || slip.currency;
       }
     } catch (err) {
-      if (err.status === 409) {
+      // Matched on the code rather than the HTTP status it happens to carry:
+      // this used to read "any 400 from the calculator means no working days",
+      // which quietly mislabelled every other 400 it could ever grow.
+      if (err.code === 'PAYSLIP_FINALIZED') {
         skipped.push({ staffMemberId: staffMember.id, name: staffMember.name, reason: 'ALREADY_FINALIZED' });
-      } else if (err.status === 400) {
+      } else if (err.code === 'NO_WORKING_DAYS') {
         skipped.push({ staffMemberId: staffMember.id, name: staffMember.name, reason: 'NO_WORKING_DAYS' });
       } else {
         throw err;

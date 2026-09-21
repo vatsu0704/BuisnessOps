@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const { fail } = require('../errors');
 const prisma = require('../config/db');
 const { signToken } = require('../utils/jwt');
 const inviteService = require('./invite.service');
@@ -9,7 +10,17 @@ const SALT_ROUNDS = 10;
 // membership shape, so the client never has to special-case "I got this
 // user from login vs. from /me" — that inconsistency previously meant the
 // app only knew the caller's role right after signup, not after login.
-const MEMBERSHIP_SELECT = { id: true, businessId: true, role: true, status: true };
+// The business name rides along because the client needs it to name each
+// membership in the business switcher. Without it the switcher could only
+// offer a list of uuids, and naming them would cost one request per membership
+// just to render a menu.
+const MEMBERSHIP_SELECT = {
+  id: true,
+  businessId: true,
+  role: true,
+  status: true,
+  business: { select: { id: true, name: true } },
+};
 
 function sanitizeUser(user) {
   const { passwordHash, ...safe } = user;
@@ -30,19 +41,13 @@ async function signup({ email, password, name, businessName, industry, country, 
 
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
-    const err = new Error('An account with this email already exists');
-    err.status = 409;
-    throw err;
+    throw fail('AUTH_EMAIL_TAKEN', 409);
   }
 
   const pendingInvites = await inviteService.getPendingInvites(normalizedEmail);
 
   if (pendingInvites.length === 0 && (!businessName || !industry || !country || !defaultCurrency || !timezone)) {
-    const err = new Error(
-      'businessName, industry, country, defaultCurrency and timezone are required to create a new business'
-    );
-    err.status = 400;
-    throw err;
+    throw fail('AUTH_BUSINESS_DETAILS_REQUIRED', 400);
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
@@ -66,12 +71,14 @@ async function signup({ email, password, name, businessName, industry, country, 
   });
 
   const token = signToken({ sub: user.id });
-  const membershipViews = memberships.map((m) => ({
-    id: m.id,
-    businessId: m.businessId,
-    role: m.role,
-    status: m.status,
-  }));
+  // Re-read through MEMBERSHIP_SELECT rather than hand-mapping the rows the
+  // transaction created: the hand-mapped version silently lacked whatever the
+  // select later gained (the business name, most recently), so signup and
+  // login handed the client two different membership shapes.
+  const membershipViews = await prisma.membership.findMany({
+    where: { id: { in: memberships.map((m) => m.id) } },
+    select: MEMBERSHIP_SELECT,
+  });
   return { token, user: { ...sanitizeUser(user), memberships: membershipViews }, business };
 }
 
@@ -86,16 +93,12 @@ async function login({ email, password }) {
     include: { memberships: { select: MEMBERSHIP_SELECT } },
   });
   if (!user) {
-    const err = new Error('Invalid email or password');
-    err.status = 401;
-    throw err;
+    throw fail('AUTH_CREDENTIALS_INVALID', 401);
   }
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
-    const err = new Error('Invalid email or password');
-    err.status = 401;
-    throw err;
+    throw fail('AUTH_CREDENTIALS_INVALID', 401);
   }
 
   const token = signToken({ sub: user.id });
@@ -107,10 +110,16 @@ async function login({ email, password }) {
 // endpoint the session came from. Returning business only from signup previously
 // meant the app knew the business name right after registering but lost it on the
 // next login or app restart.
+// Which business a session opens on when the client has no stored preference.
+//
+// ACTIVE only, with no fallback to whichever row came back first: a REVOKED
+// membership is a business this person can no longer reach, and naming it here
+// would hand the client a businessId that resolveTenant refuses on every
+// subsequent request. Null is the honest answer, and the app says so.
 async function primaryBusiness(user) {
-  const businessId = user.memberships?.[0]?.businessId;
-  if (!businessId) return null;
-  return prisma.business.findUnique({ where: { id: businessId } });
+  const chosen = (user.memberships ?? []).find((m) => m.status === 'ACTIVE');
+  if (!chosen) return null;
+  return prisma.business.findUnique({ where: { id: chosen.businessId } });
 }
 
 async function getCurrentUser(userId) {

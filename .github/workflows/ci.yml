@@ -87,3 +87,11 @@ jobs:
       # to English at runtime. This is the only mechanical guard there is.
       - name: Check translation parity
         run: npm run lint:i18n
+
+      # The API sends error codes, not prose, and the wording lives in the
+      # locale files. A code with no entry there falls back to the server's
+      # English, which works — and so silently un-translates that message for
+      # every Hindi, Gujarati and Marathi user. The step above cannot see it,
+      # because a code missing from all four locales is perfectly consistent.
+      - name: Check error-code coverage
+        run: npm run lint:errors

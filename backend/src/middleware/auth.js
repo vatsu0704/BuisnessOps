@@ -1,4 +1,5 @@
 const { verifyToken } = require('../utils/jwt');
+const { fail } = require('../errors');
 
 // Authenticates the caller and attaches req.userId. Does not know about
 // businesses/roles — that's resolveTenant's job, layered on top of this.
@@ -7,7 +8,7 @@ function requireAuth(req, res, next) {
   const [scheme, token] = header.split(' ');
 
   if (scheme !== 'Bearer' || !token) {
-    return res.status(401).json({ message: 'Missing or invalid Authorization header' });
+    return next(fail('AUTH_HEADER_MISSING', 401));
   }
 
   try {
@@ -15,7 +16,7 @@ function requireAuth(req, res, next) {
     req.userId = payload.sub;
     next();
   } catch (err) {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    return next(fail('AUTH_TOKEN_INVALID', 401));
   }
 }
 

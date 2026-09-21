@@ -13,18 +13,43 @@ const FULL_ACCESS = new Set<MembershipRole>(['OWNER', 'ADMIN']);
 /**
  * Which membership the app is currently acting under.
  *
- * The app has no business switcher, and eleven files read `memberships[0]` as
- * "the" business. This is NOT that fix — it is a sensible tie-break that
- * prefers the first ACTIVE membership, which is also the first time
- * `membership.status` (INVITED / ACTIVE / REVOKED) is honoured anywhere in the
- * app. Someone genuinely in two businesses still sees one arbitrary one.
+ * `preferredBusinessId` is the switcher's stored choice, honoured only if it
+ * still resolves to an ACTIVE membership — a business someone has since been
+ * revoked from, or a choice left over from a different account on the same
+ * device, falls back rather than locking the app to a business the API will
+ * refuse on every request.
+ *
+ * Returns undefined when no membership is ACTIVE. That is a real state now
+ * that access can be revoked, and it must not silently resolve to a REVOKED
+ * membership: doing so would send a businessId that resolveTenant rejects, and
+ * the app would look broken rather than saying what happened.
  */
-export function activeMembership(user: User | null | undefined): Membership | undefined {
-  return user?.memberships?.find((m) => m.status === 'ACTIVE') ?? user?.memberships?.[0];
+export function activeMembership(
+  user: User | null | undefined,
+  preferredBusinessId?: string | null
+): Membership | undefined {
+  const memberships = user?.memberships ?? [];
+  if (preferredBusinessId) {
+    const preferred = memberships.find(
+      (m) => m.businessId === preferredBusinessId && m.status === 'ACTIVE'
+    );
+    if (preferred) return preferred;
+  }
+  return memberships.find((m) => m.status === 'ACTIVE');
 }
 
-export function activeBusinessId(user: User | null | undefined): string | undefined {
-  return activeMembership(user)?.businessId;
+/** The businesses a switcher may offer: the ones access has not been revoked from. */
+export function switchableMemberships(user: User | null | undefined): Membership[] {
+  return (user?.memberships ?? []).filter((m) => m.status === 'ACTIVE');
+}
+
+/**
+ * Signed in, but with no business left to act under — every membership was
+ * revoked. Distinct from being signed out, and worth saying out loud rather
+ * than rendering an empty dashboard.
+ */
+export function hasNoActiveBusiness(user: User | null | undefined): boolean {
+  return !!user && switchableMemberships(user).length === 0;
 }
 
 function isActive(membership: Membership | undefined): membership is Membership {

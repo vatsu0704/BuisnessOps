@@ -4,6 +4,7 @@ const dataSourceController = require('../controllers/dataSource.controller');
 const { requireAuth } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenant');
 const { requireRole } = require('../middleware/rbac');
+const { fail } = require('../errors');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -13,7 +14,7 @@ const upload = multer({
 function handleUpload(req, res, next) {
   upload.single('file')(req, res, (err) => {
     if (err instanceof multer.MulterError) {
-      return res.status(400).json({ message: `Upload failed: ${err.message}` });
+      return next(fail('UPLOAD_FAILED', 400, { reason: err.message }));
     }
     if (err) return next(err);
     next();

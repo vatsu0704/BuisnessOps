@@ -1,4 +1,5 @@
 const inviteService = require('../services/invite.service');
+const { fail, validationFailure } = require('../errors');
 const { validateLookupQuery } = require('../validations/invite.validation');
 
 // Deliberately unauthenticated: this runs on the signup screen, before an
@@ -8,10 +9,10 @@ const { validateLookupQuery } = require('../validations/invite.validation');
 async function lookup(req, res, next) {
   try {
     const errors = validateLookupQuery(req.query);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const invite = await inviteService.lookupInvite(req.query.email);
-    if (!invite) return res.status(404).json({ message: 'No pending invite for this email' });
+    if (!invite) throw fail('INVITE_NONE_PENDING', 404);
     res.json(invite);
   } catch (err) {
     next(err);

@@ -1,10 +1,11 @@
 const dataSourceService = require('../services/dataSource.service');
+const { fail, validationFailure } = require('../errors');
 const { validateCreateDataSource } = require('../validations/dataSource.validation');
 
 async function createDataSource(req, res, next) {
   try {
     const errors = validateCreateDataSource(req.body);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const dataSource = await dataSourceService.createDataSource(req.tenant.businessId, req.body);
     res.status(201).json(dataSource);
@@ -34,7 +35,7 @@ async function listSyncRuns(req, res, next) {
 async function uploadFile(req, res, next) {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: 'file is required (multipart field name: file)' });
+      throw fail('FILE_REQUIRED', 400);
     }
     const result = await dataSourceService.uploadFile(req.tenant.businessId, req.params.dataSourceId, req.file);
     res.status(201).json(result);

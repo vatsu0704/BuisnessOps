@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { fail } = require('../errors');
 
 // businessId arrives as a route param, but it is never trusted on its own:
 // this middleware always re-verifies it against a real, ACTIVE Membership
@@ -9,7 +10,7 @@ async function resolveTenant(req, res, next) {
   try {
     const { businessId } = req.params;
     if (!businessId) {
-      return res.status(400).json({ message: 'businessId is required in the route' });
+      return next(fail('TENANT_BUSINESS_ID_REQUIRED', 400));
     }
 
     const membership = await prisma.membership.findUnique({
@@ -18,7 +19,7 @@ async function resolveTenant(req, res, next) {
     });
 
     if (!membership || membership.status !== 'ACTIVE') {
-      return res.status(403).json({ message: 'You do not have access to this business' });
+      return next(fail('TENANT_ACCESS_DENIED', 403));
     }
 
     req.tenant = {

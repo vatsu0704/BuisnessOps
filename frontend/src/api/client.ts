@@ -1,5 +1,6 @@
 import axios from 'axios';
 import i18n from '@/i18n';
+import { translateApiError, type ApiErrorBody } from '@/api/errorMessages';
 
 // Must stay a `process.env.X` member expression: Babel inlines EXPO_PUBLIC_* at build
 // time by matching that exact shape. The cast is only because React Native's ambient
@@ -31,7 +32,18 @@ export function setAuthToken(token: string | null) {
 
 export function extractErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
-    const data = err.response?.data as { message?: string; errors?: string[] } | undefined;
+    const data = err.response?.data as ApiErrorBody | undefined;
+
+    // The API sends a machine code; the wording lives in the locale files, so
+    // it comes out in the language this device is set to. Before this, every
+    // API failure reached the screen as the server's hardcoded English no
+    // matter which of the four languages the app was running in.
+    const translated = translateApiError(data);
+    if (translated) return translated;
+
+    // No translation for this code in this build — which is what happens when
+    // the server is newer than the app. The server's own English is still a
+    // specific, true sentence, and beats a generic failure.
     if (data?.errors?.length) return data.errors.join('\n');
     if (data?.message) return data.message;
 

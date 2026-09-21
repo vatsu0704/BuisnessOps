@@ -1,4 +1,5 @@
 const { Prisma } = require('@prisma/client');
+const { fail } = require('../errors');
 
 /**
  * Decimal arithmetic for payroll.
@@ -40,9 +41,7 @@ const atLeastZero = (v) => (dec(v).isNegative() ? new D(0) : dec(v));
 function proRate(baseSalary, workingDays, daysWorked) {
   const divisor = dec(workingDays);
   if (divisor.isZero() || divisor.isNegative()) {
-    const err = new Error('This month has no working days at this branch');
-    err.status = 400;
-    throw err;
+    throw fail('NO_WORKING_DAYS', 400);
   }
   return money(dec(baseSalary).div(divisor).mul(dec(daysWorked)));
 }

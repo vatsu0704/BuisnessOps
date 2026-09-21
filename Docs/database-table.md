@@ -98,7 +98,7 @@ One row per (user, business) — carries the role. Replaces a naive `User.busine
 | userId | String | FK → User |
 | businessId | String | FK → Business |
 | role | Enum: `OWNER, ADMIN, MANAGER, STAFF` | per PRD Section 8 |
-| status | Enum: `INVITED, ACTIVE, REVOKED` | `INVITED` is not currently set by any code path — "invited, no account yet" is modeled by `Invite` below instead, since a Membership row requires a real `userId`. Kept for a future self-serve accept/decline step on an *existing* account being invited to a *new* business, which isn't built yet either. |
+| status | Enum: `INVITED, ACTIVE, REVOKED` | `REVOKED` is what "remove this person" writes (`POST /memberships/:id/revoke`) — a soft revoke, because deleting the row would null `Attendance.markedByMembershipId` on every day they ever marked. `resolveTenant` requires `ACTIVE`, so a revoke takes effect on the person's very next request without any token invalidation. Re-inviting the same email flips the row back to `ACTIVE` with the new invite's role, which is the only way back in. `INVITED` is still set by no code path — "invited, no account yet" is modeled by `Invite` below instead, since a Membership row requires a real `userId`. Kept for a future self-serve accept/decline step on an *existing* account being invited to a *new* business, which isn't built yet either. |
 | invitedAt / joinedAt | DateTime, nullable | |
 | unique | (userId, businessId) | one role per person per business |
 
@@ -122,7 +122,7 @@ A pending invite for an email with no BizIQ account yet — added alongside the 
 | email | String | lowercased before every read/write |
 | role | Enum: `OWNER, ADMIN, MANAGER, STAFF` | never actually `OWNER` in practice — only `ADMIN`/`MANAGER`/`STAFF` are invitable |
 | branchIds | String[] | branches to grant `BranchAccess` for once claimed; empty for `ADMIN` (implicit full access) |
-| status | Enum: `PENDING, ACCEPTED, REVOKED` | `REVOKED` is defined but nothing sets it yet — there's no "cancel an invite" action built |
+| status | Enum: `PENDING, ACCEPTED, REVOKED` | `REVOKED` is set by `DELETE /invites/:id` (withdrawing an invite nobody claimed). Kept rather than deleted, partly for the history and partly because the unique constraint below means re-inviting the same address simply revives this row. An `ACCEPTED` invite cannot be revoked — it is a Membership now, and that is `revokeMembership`'s job |
 | invitedAt / acceptedAt | DateTime, nullable | |
 | unique | (businessId, email) | re-inviting the same email to the same business updates this row rather than creating a second one |
 

@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { fail } = require('../errors');
 const { dateOnly } = require('../utils/datetime');
 
 function getBranchInBusiness(businessId, branchId) {
@@ -14,9 +15,7 @@ function getBranchInBusiness(businessId, branchId) {
 async function assertBranchInBusiness(businessId, branchId) {
   const branch = await getBranchInBusiness(businessId, branchId);
   if (!branch) {
-    const err = new Error('Branch not found');
-    err.status = 404;
-    throw err;
+    throw fail('BRANCH_NOT_FOUND', 404);
   }
   return branch;
 }
@@ -24,9 +23,7 @@ async function assertBranchInBusiness(businessId, branchId) {
 async function resolveUserIdByEmail(email) {
   const user = await prisma.user.findUnique({ where: { email: String(email).toLowerCase().trim() } });
   if (!user) {
-    const err = new Error('No account found for this email — ask them to sign up first');
-    err.status = 404;
-    throw err;
+    throw fail('STAFF_USER_NOT_FOUND', 404);
   }
   return user.id;
 }
@@ -70,9 +67,7 @@ async function createStaffMember(
 async function updateStaffMember(businessId, staffMemberId, patch) {
   const existing = await getStaffMember(businessId, staffMemberId);
   if (!existing) {
-    const err = new Error('Staff member not found');
-    err.status = 404;
-    throw err;
+    throw fail('STAFF_NOT_FOUND', 404);
   }
 
   const data = {};
@@ -103,9 +98,7 @@ async function updateStaffMember(businessId, staffMemberId, patch) {
 async function setStaffStatus(businessId, staffMemberId, status) {
   const existing = await getStaffMember(businessId, staffMemberId);
   if (!existing) {
-    const err = new Error('Staff member not found');
-    err.status = 404;
-    throw err;
+    throw fail('STAFF_NOT_FOUND', 404);
   }
   return prisma.staffMember.update({
     where: { id: staffMemberId },

@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { fail } = require('../errors');
 const { parseFileToRows, ingestRows } = require('./ingestion.service');
 
 function createDataSource(businessId, { branchId, provider, displayName, syncFrequency }) {
@@ -34,14 +35,10 @@ async function uploadFile(businessId, dataSourceConnectionId, file) {
     where: { id: dataSourceConnectionId, businessId },
   });
   if (!dataSource) {
-    const err = new Error('Data source not found in this business');
-    err.status = 404;
-    throw err;
+    throw fail('DATA_SOURCE_NOT_FOUND', 404);
   }
   if (!dataSource.branchId) {
-    const err = new Error('This data source has no branch assigned — set branchId when creating it before uploading');
-    err.status = 400;
-    throw err;
+    throw fail('DATA_SOURCE_NO_BRANCH', 400);
   }
 
   const syncRun = await prisma.syncRun.create({
@@ -51,9 +48,7 @@ async function uploadFile(businessId, dataSourceConnectionId, file) {
   try {
     const rows = parseFileToRows(file.buffer);
     if (rows.length === 0) {
-      const err = new Error('File has no data rows');
-      err.status = 400;
-      throw err;
+      throw fail('FILE_NO_ROWS', 400);
     }
 
     const business = await prisma.business.findUnique({ where: { id: businessId } });

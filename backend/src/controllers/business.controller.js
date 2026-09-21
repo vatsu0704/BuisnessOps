@@ -1,4 +1,5 @@
 const businessService = require('../services/business.service');
+const { fail, validationFailure } = require('../errors');
 const inviteService = require('../services/invite.service');
 const {
   validateCreateBranch,
@@ -10,7 +11,7 @@ const {
 async function createBranch(req, res, next) {
   try {
     const errors = validateCreateBranch(req.body);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const branch = await businessService.createBranch(req.tenant.businessId, req.body);
     res.status(201).json(branch);
@@ -25,7 +26,7 @@ async function createBranch(req, res, next) {
 async function updateBranch(req, res, next) {
   try {
     const errors = validateUpdateBranch(req.body);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const branch = await businessService.updateBranch(
       req.tenant.businessId,
@@ -50,7 +51,7 @@ async function listBranches(req, res, next) {
 async function getBranch(req, res, next) {
   try {
     const branch = await businessService.getBranch(req.tenant.businessId, req.params.branchId);
-    if (!branch) return res.status(404).json({ message: 'Branch not found' });
+    if (!branch) throw fail('BRANCH_NOT_FOUND', 404);
     res.json(branch);
   } catch (err) {
     next(err);
@@ -60,7 +61,7 @@ async function getBranch(req, res, next) {
 async function createMembership(req, res, next) {
   try {
     const errors = validateCreateMembership(req.body);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const result = await inviteService.inviteMember(req.tenant.businessId, req.body);
     res.status(201).json(result.pending ? { pending: true, ...result.invite } : { pending: false, ...result.membership });
@@ -90,7 +91,7 @@ async function listInvites(req, res, next) {
 async function addBranchAccess(req, res, next) {
   try {
     const errors = validateBranchAccess(req.body);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const access = await businessService.addBranchAccess(
       req.tenant.businessId,
@@ -129,7 +130,58 @@ async function getSalesSummary(req, res, next) {
   }
 }
 
+// The business the caller is currently acting under. resolveTenant has
+// already proven they belong to it, so no further check is needed here.
+async function getBusiness(req, res, next) {
+  try {
+    const business = await businessService.getBusiness(req.tenant.businessId);
+    if (!business) throw fail('BUSINESS_NOT_FOUND', 404);
+    res.json(business);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// The actor is taken from req.tenant, never from the body: which membership
+// is doing the revoking decides whether it is allowed at all (self-revoke,
+// admin-revoking-owner, last-owner), so it has to come from the session.
+async function revokeMembership(req, res, next) {
+  try {
+    const membership = await businessService.revokeMembership(
+      req.tenant.businessId,
+      req.params.membershipId,
+      { membershipId: req.tenant.membershipId, role: req.tenant.role }
+    );
+    res.json(membership);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function removeBranchAccess(req, res, next) {
+  try {
+    const removed = await businessService.removeBranchAccess(
+      req.tenant.businessId,
+      req.params.membershipId,
+      req.params.branchId
+    );
+    res.json(removed);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function revokeInvite(req, res, next) {
+  try {
+    const invite = await inviteService.revokeInvite(req.tenant.businessId, req.params.inviteId);
+    res.json(invite);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
+  getBusiness,
   createBranch,
   updateBranch,
   listBranches,
@@ -137,7 +189,10 @@ module.exports = {
   createMembership,
   listMemberships,
   listInvites,
+  revokeInvite,
   addBranchAccess,
+  removeBranchAccess,
+  revokeMembership,
   listTransactions,
   getSalesSummary,
 };

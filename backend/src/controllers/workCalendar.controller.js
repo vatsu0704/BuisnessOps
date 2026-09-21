@@ -1,4 +1,5 @@
 const workCalendarService = require('../services/workCalendar.service');
+const { fieldError, validationFailure } = require('../errors');
 const { validateWorkWeek, validateHoliday } = require('../validations/workCalendar.validation');
 
 async function getWorkWeek(req, res, next) {
@@ -12,7 +13,7 @@ async function getWorkWeek(req, res, next) {
 async function updateWorkWeek(req, res, next) {
   try {
     const errors = validateWorkWeek(req.body);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     res.json(await workCalendarService.updateWorkWeek(req.tenant.businessId, req.body));
   } catch (err) {
@@ -24,7 +25,7 @@ async function listHolidays(req, res, next) {
   try {
     const year = req.query.year ? Number(req.query.year) : undefined;
     if (req.query.year && (!Number.isInteger(year) || year < 2000 || year > 2100)) {
-      return res.status(400).json({ message: 'Validation failed', errors: ['year must be a 4-digit number'] });
+      return res.status(400).json(validationFailure([fieldError('YEAR_REQUIRED', 'year')]));
     }
     const holidays = await workCalendarService.listHolidays(req.tenant.businessId, {
       year,
@@ -40,7 +41,7 @@ async function listHolidays(req, res, next) {
 async function createHoliday(req, res, next) {
   try {
     const errors = validateHoliday(req.body);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const holiday = await workCalendarService.createHoliday(req.tenant.businessId, req.body);
     res.status(201).json(holiday);

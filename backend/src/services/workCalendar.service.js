@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { fail } = require('../errors');
 const { dateOnly, dateKeyOf, eachDayOfMonth, monthKey, safeZone, weekdayOf } = require('../utils/datetime');
 
 /**
@@ -117,9 +118,7 @@ async function createHoliday(businessId, { date, name, branchId = null, isPaid =
   if (branchId) {
     const branch = await prisma.branch.findFirst({ where: { id: branchId, businessId }, select: { id: true } });
     if (!branch) {
-      const err = new Error('Branch not found');
-      err.status = 404;
-      throw err;
+      throw fail('BRANCH_NOT_FOUND', 404);
     }
   }
 
@@ -131,9 +130,7 @@ async function createHoliday(businessId, { date, name, branchId = null, isPaid =
     select: { id: true },
   });
   if (clash) {
-    const err = new Error('A holiday already exists on this date');
-    err.status = 409;
-    throw err;
+    throw fail('HOLIDAY_DUPLICATE', 409);
   }
 
   return prisma.holiday.create({
@@ -145,9 +142,7 @@ async function createHoliday(businessId, { date, name, branchId = null, isPaid =
 async function deleteHoliday(businessId, holidayId) {
   const holiday = await prisma.holiday.findFirst({ where: { id: holidayId, businessId }, select: { id: true } });
   if (!holiday) {
-    const err = new Error('Holiday not found');
-    err.status = 404;
-    throw err;
+    throw fail('HOLIDAY_NOT_FOUND', 404);
   }
   await prisma.holiday.delete({ where: { id: holidayId } });
   return { id: holidayId };

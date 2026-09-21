@@ -1,4 +1,5 @@
 const payrollService = require('../services/payroll.service');
+const { fail, validationFailure } = require('../errors');
 const staffService = require('../services/staff.service');
 const attendanceService = require('../services/attendance.service');
 const prisma = require('../config/db');
@@ -15,10 +16,10 @@ const LOCALE_TO_LANG = { EN: 'en', HI: 'hi', GU: 'gu', MR: 'mr' };
 async function generateSalarySlip(req, res, next) {
   try {
     const errors = validateGeneratePayroll(req.body);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const staffMember = await staffService.getStaffMember(req.tenant.businessId, req.params.staffMemberId);
-    if (!staffMember) return res.status(404).json({ message: 'Staff member not found' });
+    if (!staffMember) throw fail('STAFF_NOT_FOUND', 404);
 
     const slip = await payrollService.generateSalarySlip(req.tenant.businessId, staffMember, {
       month: Number(req.body.month),
@@ -51,13 +52,13 @@ async function listSalarySlips(req, res, next) {
 async function listStaffSalarySlips(req, res, next) {
   try {
     const staffMember = await staffService.getStaffMember(req.tenant.businessId, req.params.staffMemberId);
-    if (!staffMember) return res.status(404).json({ message: 'Staff member not found' });
+    if (!staffMember) throw fail('STAFF_NOT_FOUND', 404);
 
     // Your own payslips, or a manager/owner who can see this person at all.
     const scope = scopeOf(req);
     const isSelf = staffMember.userId && staffMember.userId === req.userId;
     if (!isSelf && !(canViewPayroll(scope) && canViewStaffMember(scope, staffMember))) {
-      return res.status(403).json({ message: 'You do not have access to this staff member' });
+      throw fail('STAFF_ACCESS_DENIED', 403);
     }
 
     const slips = await payrollService.listSalarySlipsForStaff(req.tenant.businessId, staffMember.id);
@@ -79,7 +80,7 @@ async function finalizeSalarySlip(req, res, next) {
 async function previewPayrollRun(req, res, next) {
   try {
     const errors = validatePayrollRun(req.query);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const result = await payrollService.runPayroll(req.tenant.businessId, {
       month: Number(req.query.month),
@@ -96,7 +97,7 @@ async function previewPayrollRun(req, res, next) {
 async function runPayroll(req, res, next) {
   try {
     const errors = validatePayrollRun(req.body);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const result = await payrollService.runPayroll(req.tenant.businessId, {
       month: Number(req.body.month),
@@ -116,12 +117,12 @@ async function runPayroll(req, res, next) {
 async function getStaffMonthSummary(req, res, next) {
   try {
     const errors = validateMonthYearQuery(req.query);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const staffMember = await staffService.getStaffMember(req.tenant.businessId, req.params.staffMemberId);
-    if (!staffMember) return res.status(404).json({ message: 'Staff member not found' });
+    if (!staffMember) throw fail('STAFF_NOT_FOUND', 404);
     if (!canViewStaffMember(scopeOf(req), staffMember)) {
-      return res.status(403).json({ message: 'You do not have access to this staff member' });
+      throw fail('STAFF_ACCESS_DENIED', 403);
     }
 
     const branch = await attendanceService.branchOf(req.tenant.businessId, staffMember);
@@ -153,14 +154,14 @@ async function getStaffMonthSummary(req, res, next) {
 async function getSalarySlipDocument(req, res, next) {
   try {
     const slip = await payrollService.getSalarySlip(req.tenant.businessId, req.params.slipId);
-    if (!slip) return res.status(404).json({ message: 'Salary slip not found' });
+    if (!slip) throw fail('SALARY_SLIP_NOT_FOUND', 404);
 
     const scope = scopeOf(req);
     const isSelf = slip.staffMember.userId && slip.staffMember.userId === req.userId;
     // MANAGER can now be allowed through, because the slip carries branchId.
     const isManager = canViewPayroll(scope) && canViewStaffMember(scope, slip.staffMember);
     if (!isSelf && !isManager) {
-      return res.status(403).json({ message: 'You do not have access to this salary slip' });
+      throw fail('SALARY_SLIP_ACCESS_DENIED', 403);
     }
 
     const requested = String(req.query.lang || '').toLowerCase();
@@ -194,12 +195,12 @@ async function getSalarySlipDocument(req, res, next) {
 async function getSalarySlipPdf(req, res, next) {
   try {
     const slip = await payrollService.getSalarySlip(req.tenant.businessId, req.params.slipId);
-    if (!slip) return res.status(404).json({ message: 'Salary slip not found' });
+    if (!slip) throw fail('SALARY_SLIP_NOT_FOUND', 404);
 
     const scope = scopeOf(req);
     const isSelf = slip.staffMember.userId && slip.staffMember.userId === req.userId;
     if (!isSelf && !(canViewPayroll(scope) && canViewStaffMember(scope, slip.staffMember))) {
-      return res.status(403).json({ message: 'You do not have access to this salary slip' });
+      throw fail('SALARY_SLIP_ACCESS_DENIED', 403);
     }
 
     const pdfBuffer = await payrollService.generateSalarySlipPdf(slip);

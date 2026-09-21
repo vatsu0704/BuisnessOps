@@ -10,6 +10,7 @@
     "lint": "tsc --noEmit",
     "test": "jest",
     "lint:i18n": "node scripts/check-i18n-parity.js",
+  "lint:errors": "node scripts/check-error-parity.js",
     "adb:reverse": "node scripts/adb-reverse.js",
     "prestart": "node scripts/adb-reverse.js",
     "preandroid": "node scripts/adb-reverse.js"

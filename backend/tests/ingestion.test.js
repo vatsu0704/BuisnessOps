@@ -110,6 +110,17 @@ describe('CSV ingestion (Phase 1)', () => {
     expect(res.body.transactionsCreated).toBe(3); // TXN-1 group, TXN-2 group, the standalone row
     expect(res.body.errors).toHaveLength(1);
     expect(res.body.errors[0]).toMatch(/quantity/);
+
+    // The same rejection as a code, so the upload screen can show it in the
+    // reader's language rather than in the server's English. The row number
+    // travels as a parameter because the sentence around it is translated.
+    expect(res.body.errorDetails).toHaveLength(1);
+    expect(res.body.errorDetails[0]).toMatchObject({
+      code: 'ROW_MISSING_COLUMN',
+      field: 'quantity',
+      params: { row: expect.any(Number), column: 'quantity' },
+    });
+
     expect(res.body.syncRun.status).toBe('PARTIAL');
   });
 

@@ -1,10 +1,12 @@
+const { mustBeOneOf } = require('./shared');
+
 const LOCALES = ['EN', 'HI', 'GU', 'MR'];
 
 function validateUpdateLocale(body) {
   const errors = [];
 
   if (!body.preferredLocale || !LOCALES.includes(body.preferredLocale)) {
-    errors.push(`preferredLocale must be one of ${LOCALES.join(', ')}`);
+    errors.push(mustBeOneOf('preferredLocale', LOCALES));
   }
 
   return errors;

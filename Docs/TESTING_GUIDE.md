@@ -5,8 +5,9 @@ them in order the first time — several later flows (Team, Staff & Payroll)
 assume branches and data already exist from earlier steps.
 
 This covers the app as it exists today: Phases 0–1 (auth, branches, CSV
-ingestion), Team & permissions (invites), and Attendance, Payroll & Salary
-Slips. Reports and the "ask a question" bar are intentionally unfinished
+ingestion), Team & permissions (inviting, revoking, and switching between
+businesses), and Attendance, Payroll & Salary Slips. Every message the server
+sends is translated too, which Flow 18 checks. Reports and the "ask a question" bar are intentionally unfinished
 (Phase 2 is blocked on an LLM provider) — you'll see a "planned" notice there,
 not a bug. Alerts (Phase 5) no longer has a tab at all; the Staff tab took its
 slot.
@@ -150,6 +151,9 @@ you'll get a clean "already exists" error, not a crash.
    - **Account** card — email, role (`Owner`)
    - **Business** card — name, industry, branch count, country, currency,
      timezone, and the business's internal ID
+
+   There is *no* business switcher here, and that is correct: it only appears
+   for an account that belongs to more than one business — see Flow 17.
    - **"My attendance"** card (everyone sees this)
    - **"Workweek & holidays"** card (owners/admins only) — see Flow 11
    - **"Team & permissions"** card (owners/admins only)
@@ -457,20 +461,118 @@ the empty Alerts placeholder.
 
 ---
 
+## Flow 16 — Take access away again
+
+Everything up to here only ever *granted* access. This is the other direction.
+Do it as the OWNER, from **Settings → Team & permissions**.
+
+1. Invite an email that has no BizIQ account (as in Flow 7), then, on the
+   pending card, tap **Withdraw invite** and confirm.
+   - ✅ **Expected:** the card disappears from the list.
+2. Now sign up with that same email, supplying business details.
+   - ✅ **Expected:** they create their **own** business rather than joining
+     yours. A withdrawn invite is genuinely gone, not merely hidden.
+3. Back on the Team screen, find the MANAGER from Flow 6. Tap one of their
+   branch chips and confirm.
+   - ✅ **Expected:** the chip disappears. Log in as that manager: they still
+     have access to the business, but that branch is gone from their list.
+4. As the OWNER, tap **Remove access** on the manager's card and confirm.
+   - ✅ **Expected:** the card stays in the list, struck through and marked
+     **Removed**. The row is kept on purpose — it carries the record of every
+     attendance day that person marked.
+5. Without logging that manager out first, pull to refresh on their device (or
+   just navigate).
+   - ✅ **Expected:** requests now fail. Access ends on the next request, not
+     when their session expires.
+6. Check what the app will *not* let you do:
+   - ✅ **Expected:** your own card has no **Remove access** action. Nobody can
+     revoke themselves, which is also what stops a business losing its only owner.
+   - ✅ **Expected:** logged in as an ADMIN, the OWNER's card has no **Remove
+     access** action either.
+7. Invite the removed manager again, by the same email, as a **STAFF** member.
+   - ✅ **Expected:** they are active again immediately, now with the STAFF
+     role — not the MANAGER role they had before. Re-adding someone is a fresh
+     decision about their access, and re-inviting is the only way back.
+
+---
+
+## Flow 17 — Switch between two businesses
+
+Needs an account that belongs to more than one business. The quickest way to
+get one: sign up a fresh account with its own business (Flow 1), then, as the
+OWNER from Flow 1, invite that same email into your business (Flow 6).
+
+1. Log in as that second account and open **Settings**.
+   - ✅ **Expected:** a **Business** card listing both businesses by name, with
+     the role held in each, and a tick on the current one.
+2. Tap the other business.
+   - ✅ **Expected:** the tick moves. The Business details below it — name,
+     industry, currency, timezone — change to the other business.
+3. Go to **Home** and to the **Staff** tab.
+   - ✅ **Expected:** branches, sales figures and staff are those of the newly
+     selected business. Your role may differ between the two, so what Settings
+     and the Staff tab offer can differ as well.
+4. Force-close the app and reopen it.
+   - ✅ **Expected:** it opens on the business you switched to, not the other one.
+5. Log out and log in as an owner who belongs to only one business.
+   - ✅ **Expected:** no Business card in Settings at all. The switcher does not
+     appear when there is nothing to switch to.
+6. As the other business's owner, remove this account's access (Flow 16), then
+   return to this device and reopen the app.
+   - ✅ **Expected:** it falls back to the business they still belong to rather
+     than getting stuck on the one they were removed from.
+
+---
+
+## Flow 18 — Errors in your own language
+
+The app has always been translated; the *messages from the server* were not, so
+a wrong password read "Invalid email or password" no matter which language was
+selected. Switch to Hindi, Gujarati or Marathi first (Settings → language), then
+provoke each of these and read what comes back.
+
+1. **Log out and log in with the wrong password.**
+   - ✅ **Expected:** the message is in the selected language, not English.
+2. **Sign up with an email that already has an account.**
+   - ✅ **Expected:** translated, and it names the actual problem rather than a
+     generic failure.
+3. **Add a branch with the name left blank.**
+   - ✅ **Expected:** the field error is translated, *and it names the field by
+     its label* ("Name", "नाम") rather than the API's internal field name.
+4. **Upload a CSV with a bad row** (the template's own sample, with one
+   quantity emptied out — Flow 4).
+   - ✅ **Expected:** the row problems under the result are translated. The
+     column name inside them (`quantity`, `occurred_at`) stays in English on
+     purpose — it is the literal heading in your file, which is what you have to
+     go and fix.
+5. **Try to remove your own access** from Team & permissions.
+   - ✅ **Expected:** the app does not offer the button at all. If you call the
+     API directly, the refusal comes back with a code the app can translate.
+6. **Punch in from outside a branch's geofence** (Flow 8, needs a radius set).
+   - ✅ **Expected:** the distance and the allowed radius appear as numbers
+     inside a translated sentence — not an English sentence with numbers in it.
+
+**If a message comes back in English** in a non-English language, that is the
+one real bug this flow is looking for: it means the code has no entry in that
+locale file. `cd frontend && npm run lint:errors` finds it mechanically, and CI
+runs the same check.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
 - **No overtime, leave balances or statutory deductions**: hours from
   punch-in/out are stored but do not affect pay; `LEAVE` is unpaid with no
   entitlement tracking; and deductions are one manually-entered amount — there
   is no PF/ESI/TDS breakdown and no salary advances.
-- **Multi-membership**: if someone already has their *own* business (from
-  signing up independently) and is *separately* invited into a second one
-  later, the app has no way to switch between the two. It now prefers the first
-  **active** membership rather than whichever came back first, but there is
-  still no switcher. Signing up *directly from* an invite (Flow 7) avoids this
-  entirely, since no extra business gets created in that case.
-- **No revoke**: once you invite someone or grant branch access, there's no
-  UI yet to take it back — only to add more.
+- **No reinstate button**: removing someone's access is undone by inviting the
+  same email again (Flow 16), not by a button on the removed row. That is
+  deliberate — re-adding someone means choosing their role and branches afresh —
+  but it does mean the Team screen accumulates struck-through rows with no way
+  to hide them.
+- **Removed rows are never cleaned up**: a membership revoked years ago still
+  appears in the team list, because the row carries the audit trail of the
+  attendance days that person marked.
 - **No geofence UI at branch creation**: the Add Branch form still doesn't
   capture GPS coordinates, so a new branch has no geofence until one is set.
   Branch settings *can* now be changed after creation via the API
@@ -482,3 +584,7 @@ the empty Alerts placeholder.
   for a past month will therefore use the new salary — finalize a slip to lock it.
 - **The "ask a question" bar on Home** is intentionally inactive — Phase 2
   (the query engine) is blocked on an LLM provider being connected.
+- **Some text from the server stays English by design**: CSV column names
+  inside upload row errors (they are the literal headings in your file), the
+  payslip document's own labels, and the occasional message that comes from a
+  third-party library rather than from BizIQ.

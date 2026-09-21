@@ -28,6 +28,7 @@
     { "key": "businessId", "value": "", "type": "string" },
     { "key": "branchAId", "value": "", "type": "string" },
     { "key": "branchBId", "value": "", "type": "string" },
+    { "key": "ownerMembershipId", "value": "", "type": "string" },
     { "key": "membershipId", "value": "", "type": "string" },
     { "key": "dataSourceId", "value": "", "type": "string" }
   ],
@@ -243,8 +244,16 @@
                   "  pm.response.to.have.status(200);",
                   "});",
                   "pm.test('Password hash is never returned', function () {",
-                  "  pm.expect(pm.response.json()).to.not.have.property('passwordHash');",
-                  "});"
+                  "  pm.expect(pm.response.json().user).to.not.have.property('passwordHash');",
+                  "});",
+                  "pm.test('Every membership names its business, for the switcher', function () {",
+                  "  const memberships = pm.response.json().user.memberships || [];",
+                  "  memberships.forEach(function (m) { pm.expect(m.business).to.have.property('name'); });",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  const active = (pm.response.json().user.memberships || []).find(function (m) { return m.status === 'ACTIVE'; });",
+                  "  if (active) { pm.collectionVariables.set('ownerMembershipId', active.id); }",
+                  "}"
                 ]
               }
             }
@@ -425,7 +434,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["businesses", "{{businessId}}", "memberships"]
             },
-            "description": "Requires the target email to already have an account (run 'Signup (Manager Candidate)' first) — there's no invite-by-email flow yet, membership is created ACTIVE immediately. Requires OWNER or ADMIN."
+            "description": "One call covers both cases: an email that already has an account joins immediately as ACTIVE (what happens here, since 'Signup (Manager Candidate)' ran first), and an email with no account gets a PENDING Invite claimed automatically when it signs up. Requires OWNER or ADMIN."
           },
           "event": [
             {
@@ -605,6 +614,207 @@
                 "exec": [
                   "pm.test('Status is 401 - no Authorization header', function () {",
                   "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Revoking Access (Owner/Admin)",
+      "item": [
+        {
+          "name": "Remove Branch Access from Manager (Branch A)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/memberships/{{membershipId}}/branch-access/{{branchAId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "memberships", "{{membershipId}}", "branch-access", "{{branchAId}}"]
+            },
+            "description": "Narrows a MANAGER/STAFF member's scope by one branch — the counterpart to granting, which was the only direction that existed. Leaving someone with zero branches is allowed and recoverable. 404 if they never had that branch."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Branch access removed (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Manager No Longer Sees Branch A",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/branches",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "branches"]
+            },
+            "description": "Still a member of the business — the branch is simply gone from their scope."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Branch A is gone from the scoped list', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ids = pm.response.json().map(function (b) { return b.id; });",
+                  "  pm.expect(ids).to.not.include(pm.collectionVariables.get('branchAId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Revoke Own Membership (Blocked - 400)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/memberships/{{ownerMembershipId}}/revoke",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "memberships", "{{ownerMembershipId}}", "revoke"]
+            },
+            "description": "Nobody may revoke themselves. That guard is also what stops a business losing its only owner: OWNER is not an invitable role, so the membership created at signup is the only one there will ever be. Expect 400."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Self-revoke refused (400)', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Revoke Manager Membership",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/memberships/{{membershipId}}/revoke",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "memberships", "{{membershipId}}", "revoke"]
+            },
+            "description": "A soft revoke: the row stays and its status becomes REVOKED, so the record of every attendance day this person marked survives. Idempotent — revoking twice is not an error."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Membership revoked (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('REVOKED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Manager Access Ends Immediately (Blocked - 403)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{managerToken}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/branches",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "branches"]
+            },
+            "description": "The same token that worked two requests ago. Revocation bites on the next request rather than when the token expires, because tenant resolution re-checks membership status every single time. Expect 403."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Revoked member is refused (403)', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Re-invite the Revoked Manager (as STAFF)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }]
+            },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"manager.{{runId}}@test.buisnessops.dev\",\n  \"role\": \"STAFF\",\n  \"branchIds\": [\"{{branchBId}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/businesses/{{businessId}}/memberships",
+              "host": ["{{baseUrl}}"],
+              "path": ["businesses", "{{businessId}}", "memberships"]
+            },
+            "description": "The only way back in — there is no reinstate endpoint. The role and branches come from this invite rather than from whatever they held before, because re-adding someone is a fresh decision about their access, not an undo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Reactivated with the new role (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('ACTIVE');",
+                  "  pm.expect(pm.response.json().role).to.eql('STAFF');",
                   "});"
                 ]
               }

@@ -1,4 +1,5 @@
 const attendanceService = require('../services/attendance.service');
+const { fail, validationFailure } = require('../errors');
 const staffService = require('../services/staff.service');
 const { canViewStaffMember, canManageStaffMember, scopeOf } = require('../middleware/staffScope');
 const {
@@ -10,22 +11,18 @@ const {
 
 // Every self-service action first resolves "which StaffMember row is me" —
 // there is no punching in on someone else's behalf via this path.
-async function requireOwnStaffMember(req, res) {
+async function requireOwnStaffMember(req) {
   const staffMember = await staffService.getStaffMemberByUserId(req.tenant.businessId, req.userId);
-  if (!staffMember) {
-    res.status(404).json({ message: 'You are not registered as a staff member of this business' });
-    return null;
-  }
+  if (!staffMember) throw fail('NOT_A_STAFF_MEMBER', 404);
   return staffMember;
 }
 
 async function punchIn(req, res, next) {
   try {
     const errors = validatePunch(req.body);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
-    const staffMember = await requireOwnStaffMember(req, res);
-    if (!staffMember) return;
+    const staffMember = await requireOwnStaffMember(req);
 
     const attendance = await attendanceService.punchIn(req.tenant.businessId, staffMember, req.body);
     res.status(201).json(attendance);
@@ -37,10 +34,9 @@ async function punchIn(req, res, next) {
 async function punchOut(req, res, next) {
   try {
     const errors = validatePunch(req.body);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
-    const staffMember = await requireOwnStaffMember(req, res);
-    if (!staffMember) return;
+    const staffMember = await requireOwnStaffMember(req);
 
     const attendance = await attendanceService.punchOut(req.tenant.businessId, staffMember, req.body);
     res.json(attendance);
@@ -52,10 +48,9 @@ async function punchOut(req, res, next) {
 async function getMyAttendance(req, res, next) {
   try {
     const errors = validateMonthYearQuery(req.query);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
-    const staffMember = await requireOwnStaffMember(req, res);
-    if (!staffMember) return;
+    const staffMember = await requireOwnStaffMember(req);
 
     const records = await attendanceService.getMonthlyAttendance(
       req.tenant.businessId,
@@ -74,13 +69,13 @@ async function getMyAttendance(req, res, next) {
 async function getStaffAttendance(req, res, next) {
   try {
     const errors = validateMonthYearQuery(req.query);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const staffMember = await staffService.getStaffMember(req.tenant.businessId, req.params.staffMemberId);
-    if (!staffMember) return res.status(404).json({ message: 'Staff member not found' });
+    if (!staffMember) throw fail('STAFF_NOT_FOUND', 404);
 
     if (!canViewStaffMember(scopeOf(req), staffMember)) {
-      return res.status(403).json({ message: 'You do not have access to this staff member' });
+      throw fail('STAFF_ACCESS_DENIED', 403);
     }
 
     const records = await attendanceService.getMonthlyAttendance(
@@ -98,12 +93,12 @@ async function getStaffAttendance(req, res, next) {
 async function markAttendance(req, res, next) {
   try {
     const errors = validateMarkAttendance(req.body);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const staffMember = await staffService.getStaffMember(req.tenant.businessId, req.params.staffMemberId);
-    if (!staffMember) return res.status(404).json({ message: 'Staff member not found' });
+    if (!staffMember) throw fail('STAFF_NOT_FOUND', 404);
     if (!canManageStaffMember(scopeOf(req), staffMember)) {
-      return res.status(403).json({ message: 'You do not have access to this branch' });
+      throw fail('BRANCH_ACCESS_DENIED', 403);
     }
 
     const attendance = await attendanceService.markAttendance(
@@ -122,10 +117,10 @@ async function markAttendance(req, res, next) {
 async function getDailyRoster(req, res, next) {
   try {
     const errors = validateRosterQuery(req.query);
-    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+    if (errors.length) return res.status(400).json(validationFailure(errors));
 
     const branch = await staffService.getBranchInBusiness(req.tenant.businessId, req.params.branchId);
-    if (!branch) return res.status(404).json({ message: 'Branch not found' });
+    if (!branch) throw fail('BRANCH_NOT_FOUND', 404);
 
     const roster = await attendanceService.getDailyRoster(req.tenant.businessId, branch, req.query.date);
     res.json(roster);

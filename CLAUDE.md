@@ -113,10 +113,11 @@ access is impossible by construction rather than by convention.
 
 ## Translations
 
-The app ships in English, Hindi and Gujarati. **Never hardcode a user-facing
-string** — render it with `t('section.key')` from `useTranslation()`.
+The app ships in English, Hindi, Gujarati and Marathi. **Never hardcode a
+user-facing string** — render it with `t('section.key')` from
+`useTranslation()`.
 
-- Strings live in `src/i18n/locales/{en,hi,gu}.json`. `en.json` is the source of
+- Strings live in `src/i18n/locales/{en,hi,gu,mr}.json`. `en.json` is the source of
   truth: `src/i18n/i18next.d.ts` types `t()` against it, so a key missing from
   `en.json` is a compile error rather than text that renders as the raw key.
 - Adding a language means adding a JSON file and one row in `LANGUAGES`
@@ -126,8 +127,23 @@ string** — render it with `t('section.key')` from `useTranslation()`.
   persists locally and PATCHes `/auth/me/locale` so other devices follow.
 - i18next runs with `compatibilityJSON: 'v3'` because React Native has no
   dependable `Intl.PluralRules`; plurals therefore use `key` / `key_plural`.
-- The Hindi and Gujarati files were written without a native-speaker review. Treat
-  wording fixes from a speaker as expected, not as defects.
+- The Hindi, Gujarati and Marathi files were written without a native-speaker
+  review. Treat wording fixes from a speaker as expected, not as defects.
+
+**This applies to the backend too, which does not translate and must not try.**
+It cannot know the reader's language — the choice lives on the device and may
+differ from the account's `preferredLocale`. So never write a message as prose
+at the point you throw it:
+
+- Add a code to `backend/src/errors/catalog.js` and throw `fail('CODE', status)`
+  (or `fieldError('CODE', field, params)` from a validator). The English in the
+  catalog is the *fallback* — what curl, the logs, and an app too old to know
+  the code will show — not the translation.
+- Add the wording to `errors.api.<CODE>` or `errors.validation.<CODE>` in all
+  four locale files. `npm run lint:errors` (in CI) fails if you forget; `tsc`
+  cannot catch it, because the key is assembled at runtime.
+- Anything that varies travels in `params`, never baked into the sentence — a
+  translated sentence puts its numbers in a different place.
 
 ## Native Android builds
 

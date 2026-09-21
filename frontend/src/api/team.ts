@@ -34,6 +34,35 @@ export async function inviteMember(businessId: string, payload: InviteMemberPayl
   return data;
 }
 
+/**
+ * Withdraw an invite that was never accepted. The row is kept as REVOKED
+ * rather than deleted, so inviting the same address again simply revives it.
+ */
+export async function revokeInvite(businessId: string, inviteId: string): Promise<void> {
+  await apiClient.delete(`/businesses/${businessId}/invites/${inviteId}`);
+}
+
+/**
+ * End someone's access to this business. A soft revoke server-side: the
+ * membership row stays (it carries the audit trail of every attendance day
+ * they marked) and its status becomes REVOKED, which the API refuses on the
+ * revoked person's very next request.
+ *
+ * Re-inviting the same email is the way back — there is no separate reinstate.
+ */
+export async function revokeMembership(businessId: string, membershipId: string): Promise<void> {
+  await apiClient.post(`/businesses/${businessId}/memberships/${membershipId}/revoke`);
+}
+
+/** Narrow a MANAGER/STAFF member's scope by one branch. */
+export async function removeBranchAccess(
+  businessId: string,
+  membershipId: string,
+  branchId: string
+): Promise<void> {
+  await apiClient.delete(`/businesses/${businessId}/memberships/${membershipId}/branch-access/${branchId}`);
+}
+
 /** Public — no auth — used by the signup screen before an account exists. */
 export async function lookupInvite(email: string): Promise<InviteLookupResult | null> {
   try {

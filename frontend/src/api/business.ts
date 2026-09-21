@@ -1,5 +1,16 @@
 import { apiClient } from '@/api/client';
 import type { Branch } from '@/types/branch';
+import type { Business } from '@/types/business';
+
+/**
+ * The full record for one business the caller belongs to. Switching business
+ * has to replace industry, currency and timezone on the session, not just the
+ * id and name that the membership list already carries.
+ */
+export async function getBusiness(businessId: string): Promise<Business> {
+  const { data } = await apiClient.get<Business>(`/businesses/${businessId}`);
+  return data;
+}
 
 export async function listBranches(businessId: string): Promise<Branch[]> {
   const { data } = await apiClient.get<Branch[]>(`/businesses/${businessId}/branches`);

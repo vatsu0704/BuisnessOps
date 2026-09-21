@@ -1,4 +1,5 @@
 const userService = require('../services/user.service');
+const { fail } = require('../errors');
 
 async function listUsers(req, res, next) {
   try {
@@ -13,7 +14,7 @@ async function getUser(req, res, next) {
   try {
     const user = await userService.getUserById(req.params.id);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      throw fail('USER_NOT_FOUND', 404);
     }
     res.json(user);
   } catch (err) {

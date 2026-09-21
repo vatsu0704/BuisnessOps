@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { apiClient } from '@/api/client';
+import type { ApiErrorDetail } from '@/api/errorMessages';
 
 export interface DataSource {
   id: string;
@@ -18,7 +19,10 @@ export interface UploadResult {
   recordsFailed: number;
   transactionsCreated: number;
   transactionsUpdated: number;
+  /** English, rendered by the server. The fallback when a code has no translation. */
   errors: string[];
+  /** The same rejections as codes, so they can be shown in the reader's language. */
+  errorDetails?: ApiErrorDetail[];
 }
 
 export interface PickedFile {

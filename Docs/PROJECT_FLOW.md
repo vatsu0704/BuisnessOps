@@ -27,7 +27,7 @@ These decisions shape every phase and shouldn't be revisited per-feature:
 | 0 | Foundations: multi-tenant data model, auth, RBAC | prerequisite to Phase 1 | ✅ done |
 | 1 | Data ingestion: unified schema, CSV/Excel upload, first POS adapter | FR-04, FR-05 | ✅ CSV path done; live POS adapter deferred |
 | 2 | Core query engine: metrics catalog + NL → answer pipeline (English first) | FR-01, FR-06 | ⛔ blocked on an LLM provider |
-| 3 | Multi-language + voice | FR-02, FR-03 | 🟡 UI i18n done (en/hi/gu/mr); voice and query-language work outstanding |
+| 3 | Multi-language + voice | FR-02, FR-03 | 🟡 UI **and API message** i18n done (en/hi/gu/mr); voice and query-language work outstanding |
 | 4 | Reporting & cross-branch comparison | FR-06, FR-07 | ⏳ not started (tab exists, shows a planned notice) |
 | 5 | Proactive intelligence: alerts, benchmarking, wastage, cash-mix, seasonal correlation | FR-08–FR-12 | ⏳ not started (tab exists, shows a planned notice) |
 | 6 | Strategic & franchise: staff analytics, royalty automation, expansion what-if, forecasting | FR-13–FR-16 | ⏳ not started |
@@ -114,13 +114,54 @@ Week-offs and holidays are **paid by construction**: they are in neither the div
 - Sharing a payslip fetches HTML and prints it with `expo-print`, then hands the PDF to `expo-sharing`. This also removed a real bug: `FileSystem.downloadAsync` does not reject on an HTTP error status, so a 403 used to write the JSON error body into a `.pdf` and share a corrupt file.
 - Supporting cleanups: `utils/permissions.ts` replaces three separately-declared role Sets and finally honours `membership.status`; `utils/date.ts` replaces two copies of a UTC-based `todayISO()`; `useMonthCursor` uses translated month names (Hindi used to render "पेरोल — September 2026") and gained the missing upper clamp; `formatAmount` groups INR the Indian way; and `scripts/check-i18n-parity.js` guards translation parity, which `tsc` cannot catch.
 
-**Known gap, narrowed but not closed:** the app still has no business switcher. `activeMembership()` now prefers the first **ACTIVE** membership, which is a sensible tie-break and the first time `membership.status` is honoured anywhere — but anyone genuinely in two businesses still sees one arbitrary one. A real switcher is still worth doing.
+**Known gap, now closed:** the app had no business switcher, so anyone genuinely in two businesses saw one arbitrary one. Settings now carries a real switcher (see *Access control* below), and `activeMembership()` resolves the stored choice rather than guessing.
 
 **Deliberately not built:** overtime from punch duration (`punchInAt`/`punchOutAt` are stored but hours still have no effect on pay); leave balances, entitlement and approvals (`LEAVE` remains unpaid and is only a status); statutory deductions — PF, ESI, TDS, PT (`deductions` is still one manually-entered amount with a free-text note); salary advances and loan recovery; salary revision history, so changing someone's pay overwrites and regenerating an *unfinalized* slip for a past month uses the new figure — finalizing is what locks it; a scheduled payroll job (the run is request-time, since there is still no cron/queue); and auto half-day detection from punch duration.
 
-Also still open, and worth recording: **the backend has no i18n**. Every validation message and API error reaches the UI as hardcoded English through `extractErrorMessage`. The payslip label dictionary (`backend/src/documents/payslip.labels.js`) is scoped to the document only; the payroll-run reason codes are the pattern to follow when this is done properly.
+This was also where the app’s one remaining English-only surface was recorded — every validation message and API error reached the UI as hardcoded English. **That is now done**, following the payroll-run reason codes as the pattern; see *Backend i18n* below.
 
 **On the quotes that prompted this:** the module now covers what Saral HRM lists as *Core HR + Payroll + ESS + Leave* minus leave balances, and *Advance Time & Attendance* minus overtime. It does not need the eSSL devices — geofenced punch-in covers the same job from a phone. If those are bought anyway, the integration path is an attendance CSV import reusing the existing `xlsx` ingestion pattern, not a device driver.
+
+---
+
+## 4b. Backend i18n (ad hoc)
+
+Not part of the phase sequence. The app shipped in four languages while **every
+message from the API arrived in English** — a Gujarati-speaking owner typing a
+wrong password read "Invalid email or password", and a manager punching in
+outside the geofence read the distance in English. 180-odd messages across 33
+files, each one written as prose at the point it was thrown.
+
+**The backend does not translate, and deliberately so.** It cannot know which
+language to use: the choice lives on the device and may differ from the
+account's `preferredLocale`. So the wire carries a stable **code** plus the
+parameters the sentence needs, and the wording lives in the locale files beside
+every other string in the app. This is the payroll-run reason codes
+(`NO_BASE_SALARY` …) generalised to the whole API, which is what this document
+said to do.
+
+**The contract.** Every error response now looks the same:
+
+```json
+{ "code": "PUNCH_OUTSIDE_GEOFENCE", "message": "You are 120m from the branch, outside the allowed 50m radius",
+  "params": { "distance": 120, "radius": 50 } }
+```
+
+- `code` is the contract. The client renders `t('errors.api.<CODE>')` with `params`.
+- `message` is English, rendered by the server from `backend/src/errors/catalog.js`. It is the **fallback**, not the translation — what a client that has never heard of a code shows, and what curl, Postman and the logs show. An app older than the server therefore degrades to correct English rather than to a blank.
+- A 400 from a failed validation adds `details`, one `{ code, field, params }` per rejected field, and keeps `errors` as the plain array of English strings it has always been so an older app build renders text rather than `[object Object]`. `errors` is *rendered from* `details`, so the two cannot drift.
+- CSV/Excel upload row problems ("Row 7: quantity is empty") travel the same way, as `errorDetails` alongside the existing `errors`.
+
+**What it replaced:** `const err = new Error('...'); err.status = 404; throw err;`, written out 41 times, plus 42 hand-built `res.status(...).json({ message })` responses and 76 validation strings. Those 76 turned out to be about 30 shapes — `{{field}} is required`, `{{field}} must be one of {{options}}` — so the validators now return `{ code, field, params }` and `validations/shared.js` carries the shorthands (`required('name')`). Translating 30 sentences is work someone finishes; translating 76 near-duplicates is work nobody does.
+
+**Two gates, because neither the type system nor the existing one can see this:**
+
+- `frontend/scripts/check-error-parity.js` (`npm run lint:errors`, in CI) reads the backend catalog and fails if a code has no entry in `en.json`, or if a translation uses a placeholder nothing supplies. `tsc` cannot catch it — the key is built at runtime — and `check-i18n-parity.js` cannot either, because a code missing from **all four** locales is perfectly consistent.
+- It also reports placeholders the app copy deliberately drops. Three do: a URL path and two lists of database column names, none of which help a shop owner.
+
+**Incidental fixes this made possible:** the payroll run's skip reasons were matched on HTTP status (`err.status === 400` meant "no working days"), which would have mislabelled every other 400 the calculator ever grew; they now match on the code. And an unplanned 500 no longer returns `err.message` to the client — it goes to the server log instead, where stack paths and query internals belong.
+
+**Deliberately left in English:** the payslip document has its own label dictionary (`backend/src/documents/payslip.labels.js`) and is unaffected; CSV column names (`occurred_at`, `unit_price`) stay untranslated inside row messages, because they are the literal headers in the person's own file; and a library's own error text (multer's upload limits) passes through under `REQUEST_FAILED`, which says plainly that this codebase did not author it.
 
 ---
 
@@ -144,10 +185,11 @@ Also still open, and worth recording: **the backend has no i18n**. Every validat
 
 **Objective:** FR-02, FR-03 — the same query engine in Hindi and Gujarati, by text and by voice.
 
-**Status: UI i18n done (and extended to Marathi). Everything that depends on the query engine is blocked behind Phase 2; voice is not started.**
+**Status: UI i18n done (and extended to Marathi), and every message the API sends is now translated too (see 4b). Everything that depends on the query engine is blocked behind Phase 2; voice is not started.**
 
 **Deliverables**
 - ✅ UI i18n: every static string renders through `t()`, with translations in **en / hi / gu / mr**. Strings live in `frontend/src/i18n/locales/*.json`; `en.json` is the source of truth and `t()` is typed against it, so a missing key is a compile error rather than text that renders as the raw key. Language resolution is device choice → account `preferredLocale` → device language → English, persisted locally and to the account via `PATCH /auth/me/locale`.
+- ✅ API messages: the backend sends a stable code plus parameters, never prose, and the app renders it from the same locale files. See section 4b for the contract and the two gates that keep it honest.
 - ⚠️ "A fourth language is a translation file, not a code change" holds for the **UI** — a JSON file plus one row in `LANGUAGES`. It does **not** hold for account persistence: `preferredLocale` is a Postgres enum, so a new language also needs a schema change, a migration, the backend validation list and the frontend `Locale` union. Marathi needed five files, not two. Budget for that when adding the next language.
 - ⏳ Intent parser extended to accept hi/gu input — reuses the same language-agnostic intent schema from Phase 2, so only the parsing prompt/model changes per language. **Blocked on Phase 2.**
 - ⏳ Answer composer extended to phrase results in the query's language. **Blocked on Phase 2.**
@@ -227,13 +269,25 @@ An onboarding path now exists end to end: register → add a branch → upload s
 
 **Team & permissions**, reachable from Settings (OWNER/ADMIN only): `GET /memberships` lists the business's team with each person's role and granted branches. The invite screen (`POST /memberships`) now handles both cases in one call — if the email already has a BizIQ account, they join immediately; if not, it creates a `PENDING Invite` (own model, not a `Membership` — see `database-table.md`) that's claimed automatically the moment that email signs up, via a public `GET /invites/lookup` the signup screen checks as you type. An invited signup joins the inviting business with the role/branches already chosen instead of creating a new business of their own, which is also what fixes the multi-membership bug below for this path. For MANAGER/STAFF invites, the screen requires picking at least one branch before it lets you submit, granted immediately (existing account) or stored on the invite (pending, granted at claim time).
 
+**Access control now goes both ways.** Granting was the only direction that existed: an invite could be sent but never withdrawn, and a branch grant never narrowed.
+
+- `DELETE /invites/:inviteId` withdraws a pending invite. The row is kept as `REVOKED` rather than deleted, which also means re-inviting the same address revives it through the existing `(businessId, email)` upsert.
+- `POST /memberships/:membershipId/revoke` ends someone's access. Soft, for the audit trail: `Attendance.markedByMembershipId` points at memberships, so a hard delete would erase who marked each day. `resolveTenant` already demanded `ACTIVE`, so the revoke bites on the revoked person's very next request rather than when their token expires. Two guards, both mirrored in the UI so no button is offered that the API will refuse: **nobody can revoke themselves** (which is also what stops a business losing its only owner, since `OWNER` is not invitable and there is therefore exactly one), and **an ADMIN cannot revoke the OWNER**.
+- `DELETE /memberships/:membershipId/branch-access/:branchId` narrows a MANAGER/STAFF member's scope. Leaving someone with zero branches is allowed — it is a state the Team screen already warns about, and it is recoverable.
+- Re-inviting a revoked email reactivates the membership with the **new** invite's role and branches. Re-adding someone is a fresh decision about their access, not an undo, and it is the only way back in — there is no separate reinstate endpoint.
+
+**The business switcher.** Memberships returned by signup/login/`/auth/me` now carry their business's name, so the client can name every business someone belongs to without a request per membership. Settings renders a switcher when there is more than one **ACTIVE** membership and nothing at all when there is one. The choice is stored per device and reconciled on every launch against the memberships the session actually has, so a stale choice — a business since revoked, or one left by whoever used the device last — falls back instead of pinning the app to a businessId the API refuses. `GET /businesses/:businessId` was added because switching has to replace the full record (industry, currency, timezone), not just the id and name.
+
+One consequence worth stating: being revoked from *every* business is now a real state. `primaryBusiness` returns null rather than naming a revoked business, `activeMembership()` returns undefined rather than falling back to a revoked row, and Home and Settings both say so plainly instead of rendering a dashboard of zeros with an "add your first branch" button that would fail on tap.
+
 What's actually next:
 
 1. **Phase 2 — Core Query Engine.** Still blocked on an LLM provider being wired in (Anthropic API key not yet provided). The Home screen already has the answer surface and the disabled ask bar waiting for it.
 2. **Locale-aware formatting** (Phase 3 leftover) — partly done: `formatAmount` now groups INR the Indian way (₹3,40,000) and month, weekday and date labels come from the translation files rather than a hardcoded English array. Still open: locale-aware number and date formatting driven by the business's region rather than the app language, and the Hermes `Intl` caveat in Section 6 still stands.
-3. **The multi-membership bug, narrowed again but still not eliminated:** `activeMembership()` now prefers the first ACTIVE membership instead of blindly taking `memberships[0]`, and that is applied consistently through `useBusinessId()`. But someone genuinely in two businesses still has no way to choose between them. A real business switcher remains the fix.
-4. **Revoking an invite or a member's access** — you can invite and grant branches, but there's no way yet to revoke a pending invite or an existing member's access once granted.
-5. **Live POS adapter** — blocked on either picking a different pull-capable vendor or a Petpooja partner conversation (see Section 12).
+3. **Live POS adapter** — blocked on either picking a different pull-capable vendor or a Petpooja partner conversation (see Section 12).
+4. **Geofence UI at branch creation** — `PATCH /branches/:branchId` can set coordinates and a radius, but the Add Branch form still doesn't capture them, so a new branch has no geofence until someone calls the API.
+
+*Done since this list was last written: the business switcher, revoking access (both under 4a above) and backend i18n (below).*
 
 **Ingestion contract, for whoever builds on it:** required CSV columns are `occurred_at, product_name, quantity, unit_price, payment_method`; optional `transaction_external_id, sku, unit, tax_amount, discount_amount`. Rows sharing a `transaction_external_id` group into one transaction. A data source is bound to exactly one branch — there is no per-row branch column — so each branch gets its own `CSV_UPLOAD` source. Bad rows are skipped and reported per row rather than failing the file.
 

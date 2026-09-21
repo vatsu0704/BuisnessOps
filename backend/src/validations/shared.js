@@ -1,4 +1,5 @@
 const { isRealDateKey, isValidTimeZone } = require('../utils/datetime');
+const { fieldError } = require('../errors');
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
@@ -33,6 +34,30 @@ function isOptionalNonNegativeNumber(value) {
   return Number.isFinite(value) && value >= 0;
 }
 
+/**
+ * Shorthands for the field rejections that recur across every validator.
+ *
+ * A validator now returns `{ code, field, params }` objects rather than English
+ * sentences, because the sentence has to be written in the reader's language
+ * and this process does not know it. These keep the call sites as short as the
+ * strings they replace — `errors.push(required('name'))` — so the shape change
+ * costs no readability.
+ */
+const required = (field) => fieldError('FIELD_REQUIRED', field);
+const mustBeString = (field) => fieldError('FIELD_MUST_BE_STRING', field);
+const mustBeNonEmptyString = (field) => fieldError('FIELD_MUST_BE_NON_EMPTY_STRING', field);
+const cannotBeEmpty = (field) => fieldError('FIELD_CANNOT_BE_EMPTY', field);
+const mustBeBoolean = (field) => fieldError('FIELD_MUST_BE_BOOLEAN', field);
+const mustBeNonNegative = (field) => fieldError('FIELD_MUST_BE_NON_NEGATIVE', field);
+const mustBeDate = (field) => fieldError('FIELD_MUST_BE_DATE', field);
+const mustBeStringArray = (field) => fieldError('FIELD_MUST_BE_STRING_ARRAY', field);
+const maxLength = (field, max) => fieldError('FIELD_MAX_LENGTH', field, { max });
+const stringMaxLength = (field, max) => fieldError('FIELD_STRING_MAX_LENGTH', field, { max });
+// `options` is pre-joined so the rendered sentence reads the same in every
+// language without each one having to know how to join a list.
+const mustBeOneOf = (field, options) => fieldError('FIELD_MUST_BE_ONE_OF', field, { options: options.join(', ') });
+const provideAtLeastOne = (fields) => fieldError('PROVIDE_AT_LEAST_ONE', null, { fields: fields.join(', ') });
+
 module.exports = {
   isValidEmail,
   isIsoDate,
@@ -40,4 +65,16 @@ module.exports = {
   isWeekdayList,
   isOptionalString,
   isOptionalNonNegativeNumber,
+  required,
+  mustBeString,
+  mustBeNonEmptyString,
+  cannotBeEmpty,
+  mustBeBoolean,
+  mustBeNonNegative,
+  mustBeDate,
+  mustBeStringArray,
+  maxLength,
+  stringMaxLength,
+  mustBeOneOf,
+  provideAtLeastOne,
 };

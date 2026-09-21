@@ -1,4 +1,16 @@
-const { isValidEmail, isValidTimeZone, isWeekdayList } = require('./shared');
+const {
+  isValidEmail,
+  isValidTimeZone,
+  isWeekdayList,
+  cannotBeEmpty,
+  mustBeBoolean,
+  mustBeOneOf,
+  mustBeString,
+  mustBeStringArray,
+  provideAtLeastOne,
+  required,
+} = require('./shared');
+const { fieldError } = require('../errors');
 
 const INVITABLE_ROLES = ['ADMIN', 'MANAGER', 'STAFF'];
 const BRANCH_STATUSES = ['ACTIVE', 'INACTIVE', 'CLOSED'];
@@ -10,32 +22,32 @@ const BRANCH_STATUSES = ['ACTIVE', 'INACTIVE', 'CLOSED'];
 function validateGeofenceFields(body, errors, { requireRadiusCoordinates = true } = {}) {
   const hasLat = body.latitude !== undefined && body.latitude !== null;
   const hasLng = body.longitude !== undefined && body.longitude !== null;
-  if (hasLat !== hasLng) errors.push('latitude and longitude must be provided together');
+  if (hasLat !== hasLng) errors.push(fieldError('LAT_LNG_TOGETHER', 'latitude'));
   if (hasLat && (!Number.isFinite(body.latitude) || body.latitude < -90 || body.latitude > 90)) {
-    errors.push('latitude must be a number between -90 and 90');
+    errors.push(fieldError('LATITUDE_RANGE', 'latitude'));
   }
   if (hasLng && (!Number.isFinite(body.longitude) || body.longitude < -180 || body.longitude > 180)) {
-    errors.push('longitude must be a number between -180 and 180');
+    errors.push(fieldError('LONGITUDE_RANGE', 'longitude'));
   }
   // null is meaningful on update: it clears the geofence.
   if (body.geofenceRadiusMeters !== undefined && body.geofenceRadiusMeters !== null) {
     if (!Number.isFinite(body.geofenceRadiusMeters) || body.geofenceRadiusMeters <= 0) {
-      errors.push('geofenceRadiusMeters must be a positive number');
+      errors.push(fieldError('GEOFENCE_RADIUS_POSITIVE', 'geofenceRadiusMeters'));
     }
     if (requireRadiusCoordinates && !hasLat) {
-      errors.push('geofenceRadiusMeters requires latitude/longitude to be set');
+      errors.push(fieldError('GEOFENCE_RADIUS_NEEDS_COORDS', 'geofenceRadiusMeters'));
     }
   }
 }
 
 function validateCreateBranch(body) {
   const errors = [];
-  if (!body.name || typeof body.name !== 'string') errors.push('name is required');
-  if (!body.code || typeof body.code !== 'string') errors.push('code is required');
-  if (!body.timezone || typeof body.timezone !== 'string') errors.push('timezone is required');
+  if (!body.name || typeof body.name !== 'string') errors.push(required('name'));
+  if (!body.code || typeof body.code !== 'string') errors.push(required('code'));
+  if (!body.timezone || typeof body.timezone !== 'string') errors.push(required('timezone'));
   // Unvalidated before, which is why utils/datetime.js has to fall back rather
   // than trust Branch.timezone.
-  else if (!isValidTimeZone(body.timezone)) errors.push('timezone must be a valid IANA timezone');
+  else if (!isValidTimeZone(body.timezone)) errors.push(fieldError('TIMEZONE_INVALID', 'timezone'));
 
   validateGeofenceFields(body, errors);
   return errors;
@@ -63,27 +75,27 @@ function validateUpdateBranch(body) {
     'weeklyOffDays',
   ];
   if (!allowed.some((field) => body[field] !== undefined)) {
-    errors.push(`provide at least one of: ${allowed.join(', ')}`);
+    errors.push(provideAtLeastOne(allowed));
   }
   if (body.name !== undefined && (typeof body.name !== 'string' || !body.name.trim())) {
-    errors.push('name cannot be empty');
+    errors.push(cannotBeEmpty('name'));
   }
   for (const field of ['city', 'region', 'country', 'currency']) {
     if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'string') {
-      errors.push(`${field} must be a string`);
+      errors.push(mustBeString(field));
     }
   }
   if (body.status !== undefined && !BRANCH_STATUSES.includes(body.status)) {
-    errors.push(`status must be one of ${BRANCH_STATUSES.join(', ')}`);
+    errors.push(mustBeOneOf('status', BRANCH_STATUSES));
   }
   if (body.timezone !== undefined && !isValidTimeZone(body.timezone)) {
-    errors.push('timezone must be a valid IANA timezone');
+    errors.push(fieldError('TIMEZONE_INVALID', 'timezone'));
   }
   if (body.weeklyOffOverride !== undefined && typeof body.weeklyOffOverride !== 'boolean') {
-    errors.push('weeklyOffOverride must be a boolean');
+    errors.push(mustBeBoolean('weeklyOffOverride'));
   }
   if (body.weeklyOffDays !== undefined && !isWeekdayList(body.weeklyOffDays)) {
-    errors.push('weeklyOffDays must be unique integers 0-6 (0 = Sunday), and cannot cover all seven days');
+    errors.push(fieldError('WEEKLY_OFF_DAYS_INVALID', 'weeklyOffDays'));
   }
   validateGeofenceFields(body, errors, { requireRadiusCoordinates: false });
   return errors;
@@ -91,13 +103,13 @@ function validateUpdateBranch(body) {
 
 function validateCreateMembership(body) {
   const errors = [];
-  if (!isValidEmail(body.email)) errors.push('A valid email is required');
+  if (!isValidEmail(body.email)) errors.push(fieldError('EMAIL_REQUIRED', 'email'));
   if (!body.role || !INVITABLE_ROLES.includes(body.role)) {
-    errors.push(`role must be one of ${INVITABLE_ROLES.join(', ')}`);
+    errors.push(mustBeOneOf('role', INVITABLE_ROLES));
   }
   if (body.branchIds !== undefined) {
     if (!Array.isArray(body.branchIds) || body.branchIds.some((id) => typeof id !== 'string')) {
-      errors.push('branchIds must be an array of strings');
+      errors.push(mustBeStringArray('branchIds'));
     }
   }
   return errors;
@@ -105,7 +117,7 @@ function validateCreateMembership(body) {
 
 function validateBranchAccess(body) {
   const errors = [];
-  if (!body.branchId || typeof body.branchId !== 'string') errors.push('branchId is required');
+  if (!body.branchId || typeof body.branchId !== 'string') errors.push(required('branchId'));
   return errors;
 }
 
