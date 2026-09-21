@@ -113,11 +113,14 @@ export default function HomeScreen({ navigation }: Props) {
             </AnimatedEntrance>
           ) : null}
 
-          <AnimatedEntrance delay={step(1)} style={styles.block}>
-            <TodayPunchCard onOpenHistory={() => rootNavigation.navigate('Attendance')} />
+          <AnimatedEntrance delay={step(1)}>
+            <TodayPunchCard
+              style={styles.block}
+              onOpenHistory={() => rootNavigation.navigate('Attendance')}
+            />
           </AnimatedEntrance>
 
-          <AnimatedEntrance delay={step(2)}>
+          <AnimatedEntrance delay={step(2)} style={styles.block}>
             <View style={styles.statRow}>
               <StatTile
                 label={t('home.statSales')}
@@ -166,7 +169,13 @@ export default function HomeScreen({ navigation }: Props) {
                   </PressableScale>
                 </View>
                 {branches.slice(0, 5).map((branch, index) => (
-                  <View key={branch.id} style={[styles.branchRow, index > 0 && styles.branchRowDivided]}>
+                  <PressableScale
+                    key={branch.id}
+                    testID={`home-branch-${branch.id}`}
+                    scaleTo={0.99}
+                    style={[styles.branchRow, index > 0 && styles.branchRowDivided]}
+                    onPress={() => rootNavigation.navigate('BranchSettings', { branchId: branch.id })}
+                  >
                     <View
                       style={[
                         styles.statusDot,
@@ -179,7 +188,14 @@ export default function HomeScreen({ navigation }: Props) {
                         {[branch.code, branch.city, branch.region].filter(Boolean).join(' · ')}
                       </Text>
                     </View>
-                  </View>
+                    {/* Says out loud that a branch with no radius set enforces
+                        none, which is otherwise invisible until someone
+                        punches in from the wrong place. */}
+                    {branch.geofenceRadiusMeters !== null ? (
+                      <Ionicons name="location" size={14} color={colors.primary} />
+                    ) : null}
+                    <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                  </PressableScale>
                 ))}
                 {branches.length > 5 ? (
                   <Text style={styles.more}>{t('common.more', { count: branches.length - 5 })}</Text>

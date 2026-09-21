@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
-import { getMyAttendance, punchIn, punchOut, type Coordinates } from '@/api/attendance';
+import { coordsForPunch } from '@/utils/location';
+import { getMyAttendance, punchIn, punchOut } from '@/api/attendance';
 import { getWorkWeek } from '@/api/workCalendar';
 import { extractErrorMessage } from '@/api/client';
 import { useBusinessId } from '@/hooks/useBusinessId';
@@ -18,6 +18,14 @@ import type { AttendanceRecord } from '@/types/staffing';
 
 interface Props {
   onOpenHistory: () => void;
+  /**
+   * Outer spacing, applied to the card itself rather than to a wrapper.
+   *
+   * This component renders nothing for someone who does not punch, and a
+   * wrapper carrying the margin would leave that margin behind as a gap with
+   * no card in it. Holding it here means the spacing disappears with the card.
+   */
+  style?: StyleProp<ViewStyle>;
 }
 
 function timeOf(iso: string): string {
@@ -38,7 +46,7 @@ function timeOf(iso: string): string {
  * who doesn't punch) or while that is still unknown, so Home never flashes an
  * empty card.
  */
-export default function TodayPunchCard({ onOpenHistory }: Props) {
+export default function TodayPunchCard({ onOpenHistory, style }: Props) {
   const { t } = useTranslation();
   const businessId = useBusinessId();
   const { staffMember, isStaff, isLoading: isResolving } = useMyStaffMember();
@@ -76,26 +84,13 @@ export default function TodayPunchCard({ onOpenHistory }: Props) {
     }, [load])
   );
 
-  async function currentCoordinates(): Promise<Coordinates> {
-    // Best-effort: a punch succeeds without location when the branch has no
-    // geofence configured. The backend is the authority on whether it's needed.
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return {};
-      const position = await Location.getCurrentPositionAsync({});
-      return { latitude: position.coords.latitude, longitude: position.coords.longitude };
-    } catch {
-      return {};
-    }
-  }
-
   async function handlePunch(direction: 'in' | 'out') {
     if (!businessId) return;
     haptics.tap();
     setIsBusy(true);
     setError(null);
     try {
-      const coords = await currentCoordinates();
+      const coords = await coordsForPunch();
       const next = direction === 'in' ? await punchIn(businessId, coords) : await punchOut(businessId, coords);
       setRecord(next);
       haptics.success();
@@ -127,7 +122,7 @@ export default function TodayPunchCard({ onOpenHistory }: Props) {
   }
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, style]}>
       <PressableScale scaleTo={0.99} onPress={onOpenHistory} style={styles.head}>
         <View style={styles.headText}>
           <Text style={styles.label}>{t('today.title')}</Text>
@@ -158,7 +153,10 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
-    padding: spacing.lg,
+    // spacing.xl, like every other radius.xl card in the app (Home's own
+    // branches card sits directly below this one, and at spacing.lg this read
+    // as visibly tighter than its neighbour).
+    padding: spacing.xl,
     ...shadow.sm,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -174,5 +172,7 @@ const styles = StyleSheet.create({
   status: { fontSize: 13.5, color: colors.textSecondary, marginTop: spacing.sm },
   statusMuted: { color: colors.textTertiary },
   error: { fontSize: 12.5, color: colors.error, marginTop: spacing.xs },
-  button: { marginTop: spacing.md },
+  // Matches the padding step the card now sits at, so the action does not
+  // crowd the status line above it.
+  button: { marginTop: spacing.lg },
 });

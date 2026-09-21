@@ -25,6 +25,37 @@ export interface CreateBranchPayload {
   region?: string;
   country?: string;
   currency?: string;
+  // Optional at creation: a branch with no coordinates simply enforces no
+  // punch-in radius, which is the default and a perfectly normal branch.
+  latitude?: number;
+  longitude?: number;
+  geofenceRadiusMeters?: number;
+}
+
+/**
+ * Partial update. `geofenceRadiusMeters: null` explicitly clears the geofence,
+ * while omitting the key leaves it alone — the backend distinguishes the two,
+ * so this type has to as well.
+ */
+export interface UpdateBranchPayload {
+  name?: string;
+  city?: string | null;
+  region?: string | null;
+  currency?: string | null;
+  timezone?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  geofenceRadiusMeters?: number | null;
+  status?: Branch['status'];
+}
+
+export async function updateBranch(
+  businessId: string,
+  branchId: string,
+  payload: UpdateBranchPayload
+): Promise<Branch> {
+  const { data } = await apiClient.patch<Branch>(`/businesses/${businessId}/branches/${branchId}`, payload);
+  return data;
 }
 
 export async function createBranch(businessId: string, payload: CreateBranchPayload): Promise<Branch> {

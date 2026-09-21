@@ -559,6 +559,45 @@ runs the same check.
 
 ---
 
+## Flow 19 — Branch settings and the punch-in geofence
+
+Until now a branch's timezone and geofence were write-once: the Add Branch form
+never captured coordinates, and nothing in the app called the endpoint that
+could change them afterwards. Both are now reachable.
+
+1. On **Home**, tap any branch in the list.
+   - ✅ **Expected:** a Branch settings sheet opens. Branches with a radius set
+     show a small location pin in the list; ones without do not.
+2. Tap **Use my current location** and allow the permission.
+   - ✅ **Expected:** latitude and longitude fill in to six decimal places.
+   - If you decline the permission, ✅ **Expected:** a message saying so —
+     not a button that silently does nothing.
+3. Enter a radius of, say, `75` and save.
+   - ✅ **Expected:** the sheet closes and the pin appears against that branch.
+4. Reopen it and tap **Turn off geofencing**, then save.
+   - ✅ **Expected:** the radius clears, *and the coordinates stay*. The branch
+     still knows where it is; it has just stopped enforcing a distance.
+5. Try setting a radius on a branch that has no location yet.
+   - ✅ **Expected:** the Save button stays disabled and the form says to set
+     the location first. A radius with nothing to measure from would never
+     enforce anything.
+6. Set a deliberately wrong **timezone** (e.g. `Mars/Olympus_Mons`) and save.
+   - ✅ **Expected:** refused. This one matters more than it looks: the
+     timezone decides which calendar day a punch near midnight belongs to, and
+     therefore which month it is paid in.
+7. Now create a **new** branch (Home → Add branch). Below the branch details
+   there is an optional geofence section.
+   - ✅ **Expected:** you can set the location and radius during creation, and
+     leaving them empty is fine — that is an ordinary branch with no geofence.
+8. Log in as a MANAGER who has access to that branch and open it from Home.
+   - ✅ **Expected:** saving is refused. Branch settings are owner/admin only,
+     because the radius and timezone feed payroll.
+
+With a geofence set, Flow 8's punch-in is worth re-running from outside the
+radius — see Flow 18 step 6 for what that message should look like.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
 - **No overtime, leave balances or statutory deductions**: hours from
@@ -573,10 +612,6 @@ runs the same check.
 - **Removed rows are never cleaned up**: a membership revoked years ago still
   appears in the team list, because the row carries the audit trail of the
   attendance days that person marked.
-- **No geofence UI at branch creation**: the Add Branch form still doesn't
-  capture GPS coordinates, so a new branch has no geofence until one is set.
-  Branch settings *can* now be changed after creation via the API
-  (`PATCH /branches/:branchId`), which was impossible before.
 - **Reports and Alerts tabs** intentionally show a "planned" notice — they're
   Phase 4/5 work, not started yet.
 - **Salary changes overwrite with no history**: editing a staff member's monthly

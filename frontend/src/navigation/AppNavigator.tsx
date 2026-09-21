@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AddBranchScreen from '@/screens/AddBranchScreen';
+import BranchSettingsScreen from '@/screens/BranchSettingsScreen';
 import UploadScreen from '@/screens/UploadScreen';
 import AttendanceScreen from '@/screens/AttendanceScreen';
 import AddStaffScreen from '@/screens/AddStaffScreen';
@@ -14,6 +15,7 @@ import TabNavigator from './TabNavigator';
 export type AppStackParamList = {
   Tabs: undefined;
   AddBranch: undefined;
+  BranchSettings: { branchId: string };
   Upload: undefined;
   Attendance: undefined;
   AddStaff: undefined;
@@ -38,6 +40,11 @@ export default function AppNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs" component={TabNavigator} />
       <Stack.Screen name="AddBranch" component={AddBranchScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen
+        name="BranchSettings"
+        component={BranchSettingsScreen}
+        options={{ presentation: 'modal' }}
+      />
       <Stack.Screen name="Upload" component={UploadScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Attendance" component={AttendanceScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="AddStaff" component={AddStaffScreen} options={{ presentation: 'modal' }} />

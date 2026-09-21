@@ -329,7 +329,8 @@
     "currency": "Currency",
     "timezone": "Timezone",
     "submit": "Create branch",
-    "submitting": "Creating..."
+    "submitting": "Creating...",
+    "geofenceHint": "Optional. Set the shop location and a radius to require staff to be at the branch to punch in. You can add this later."
   },
   "upload": {
     "title": "Upload sales data",
@@ -622,7 +623,12 @@
     "clearGeofence": "Turn off geofencing",
     "coordinates": "Branch location",
     "save": "Save",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "locating": "Finding your location…",
+    "locationUnavailable": "Could not get your location. Check that location is on and that BizIQ is allowed to use it.",
+    "radiusNeedsLocation": "Set the branch location first — a radius needs a point to measure from.",
+    "geofenceOff": "Geofencing is off. Staff can punch in from anywhere.",
+    "notFound": "That branch no longer exists."
   },
   "businessSwitcher": {
     "title": "Business",

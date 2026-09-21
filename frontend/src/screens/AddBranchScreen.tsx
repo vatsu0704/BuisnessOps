@@ -17,6 +17,7 @@ import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
 import { useBusinessId } from '@/hooks/useBusinessId';
+import { getCurrentCoords } from '@/utils/location';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AddBranch'>;
 
@@ -32,15 +33,49 @@ export default function AddBranchScreen({ navigation }: Props) {
   const [timezone, setTimezone] = useState(business?.timezone ?? 'Asia/Kolkata');
   const [currency, setCurrency] = useState(business?.defaultCurrency ?? 'INR');
 
+  // Optional, and the form says so: a branch with no coordinates enforces no
+  // punch-in radius, which is the default and a perfectly ordinary branch.
+  // Capturing them here is what lets a geofence exist at all without an API
+  // call by hand; Branch settings can add or change them later either way.
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
+  const [radius, setRadius] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const parsedRadius = radius.trim() === '' ? null : Number(radius);
+  const hasCoordinates = latitude.trim() !== '' && longitude.trim() !== '';
+  // The same rule the server enforces: a radius with no coordinates could
+  // never be checked against anything.
+  const radiusNeedsCoordinates = parsedRadius !== null && !hasCoordinates;
+  const radiusIsValid = parsedRadius === null || (Number.isFinite(parsedRadius) && parsedRadius > 0);
 
   const canSubmit =
     !!businessId &&
     name.trim().length > 0 &&
     code.trim().length > 0 &&
     timezone.trim().length > 0 &&
+    radiusIsValid &&
+    !radiusNeedsCoordinates &&
     !isSubmitting;
+
+  async function handleUseCurrentLocation() {
+    haptics.tap();
+    setIsLocating(true);
+    setError(null);
+    const coords = await getCurrentCoords();
+    setIsLocating(false);
+    if (!coords) {
+      haptics.error();
+      setError(t('branchSettings.locationUnavailable'));
+      return;
+    }
+    setLatitude(coords.latitude.toFixed(6));
+    setLongitude(coords.longitude.toFixed(6));
+    haptics.success();
+  }
 
   async function handleSubmit() {
     if (!canSubmit || !businessId) return;
@@ -55,6 +90,9 @@ export default function AddBranchScreen({ navigation }: Props) {
         region: region.trim() || undefined,
         country: business?.country,
         currency: currency.trim() || undefined,
+        latitude: hasCoordinates ? Number(latitude) : undefined,
+        longitude: hasCoordinates ? Number(longitude) : undefined,
+        geofenceRadiusMeters: parsedRadius ?? undefined,
       });
       haptics.success();
       navigation.goBack();
@@ -154,7 +192,66 @@ export default function AddBranchScreen({ navigation }: Props) {
               </View>
             </AnimatedEntrance>
 
-            <AnimatedEntrance delay={step(2)} style={styles.submitWrap}>
+            <AnimatedEntrance delay={step(2)} style={styles.optionalWrap}>
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>{t('branchSettings.geofence')}</Text>
+                <Text style={styles.sectionHint}>{t('addBranch.geofenceHint')}</Text>
+
+                <PressableScale
+                  testID="add-branch-use-location"
+                  style={styles.secondaryAction}
+                  scaleTo={0.98}
+                  disabled={isLocating}
+                  onPress={() => void handleUseCurrentLocation()}
+                >
+                  <Ionicons name="locate-outline" size={16} color={colors.primary} />
+                  <Text style={styles.secondaryActionText}>
+                    {isLocating ? t('branchSettings.locating') : t('branchSettings.useCurrentLocation')}
+                  </Text>
+                </PressableScale>
+
+                <View style={styles.row}>
+                  <View style={styles.rowItem}>
+                    <FormInput
+                      testID="add-branch-latitude"
+                      label={t('errors.field.latitude')}
+                      icon="navigate-outline"
+                      value={latitude}
+                      onChangeText={setLatitude}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.rowItem}>
+                    <FormInput
+                      testID="add-branch-longitude"
+                      label={t('errors.field.longitude')}
+                      icon="navigate-outline"
+                      value={longitude}
+                      onChangeText={setLongitude}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                <FormInput
+                  testID="add-branch-radius"
+                  label={t('branchSettings.geofenceRadius')}
+                  icon="resize-outline"
+                  value={radius}
+                  onChangeText={setRadius}
+                  keyboardType="number-pad"
+                />
+
+                {radiusNeedsCoordinates ? (
+                  <Text style={styles.warn}>{t('branchSettings.radiusNeedsLocation')}</Text>
+                ) : null}
+                {!radiusIsValid ? (
+                  <Text style={styles.warn}>{t('errors.validation.GEOFENCE_RADIUS_POSITIVE')}</Text>
+                ) : null}
+              </View>
+            </AnimatedEntrance>
+
+            <AnimatedEntrance delay={step(3)} style={styles.submitWrap}>
               <PrimaryButton
                 testID="branch-submit"
                 title={isSubmitting ? t('addBranch.submitting') : t('addBranch.submit')}
@@ -196,6 +293,25 @@ const styles = StyleSheet.create({
   },
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl },
   subtitle: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.lg },
+  optionalWrap: { marginTop: spacing.lg },
+  sectionTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
+  sectionHint: {
+    fontSize: 12.5,
+    color: colors.textTertiary,
+    marginTop: 4,
+    marginBottom: spacing.sm,
+    lineHeight: 17,
+  },
+  warn: { fontSize: 12.5, color: colors.warning, marginTop: spacing.xs },
+  secondaryAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs + 2,
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  secondaryActionText: { fontSize: 13.5, fontWeight: '700', color: colors.primary },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,

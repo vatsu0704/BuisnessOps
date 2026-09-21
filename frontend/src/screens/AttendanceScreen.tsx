@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
+import { coordsForPunch } from '@/utils/location';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { getMyAttendance, punchIn, punchOut } from '@/api/attendance';
@@ -28,20 +28,6 @@ type Props = NativeStackScreenProps<AppStackParamList, 'Attendance'>;
 function formatTime(iso: string | null): string | null {
   if (!iso) return null;
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-// Best-effort: a punch always succeeds without location if the branch has no
-// geofence configured, or if the user declines the permission — the backend
-// is the actual authority on whether coordinates were required.
-async function currentCoordinates(): Promise<{ latitude?: number; longitude?: number }> {
-  try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') return {};
-    const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-    return { latitude: position.coords.latitude, longitude: position.coords.longitude };
-  } catch {
-    return {};
-  }
 }
 
 export default function AttendanceScreen({ navigation }: Props) {
@@ -90,7 +76,7 @@ export default function AttendanceScreen({ navigation }: Props) {
     setIsPunching(true);
     setError(null);
     try {
-      const coords = await currentCoordinates();
+      const coords = await coordsForPunch();
       if (hasPunchedIn) {
         await punchOut(businessId, coords);
       } else {
