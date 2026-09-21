@@ -20,6 +20,7 @@ import LanguageToggle from '@/components/LanguageToggle';
 import PhaseNotice from '@/components/PhaseNotice';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
+import TodayPunchCard from '@/components/TodayPunchCard';
 import StatTile from '@/components/StatTile';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
@@ -100,7 +101,11 @@ export default function HomeScreen({ navigation }: Props) {
             {business ? <Text style={styles.business}>{business.name}</Text> : null}
           </AnimatedEntrance>
 
-          <AnimatedEntrance delay={step(1)}>
+          <AnimatedEntrance delay={step(1)} style={styles.block}>
+            <TodayPunchCard onOpenHistory={() => rootNavigation.navigate('Attendance')} />
+          </AnimatedEntrance>
+
+          <AnimatedEntrance delay={step(2)}>
             <View style={styles.statRow}>
               <StatTile
                 label={t('home.statSales')}
@@ -114,7 +119,7 @@ export default function HomeScreen({ navigation }: Props) {
           </AnimatedEntrance>
 
           {error || sales.error ? (
-            <AnimatedEntrance delay={step(2)}>
+            <AnimatedEntrance delay={step(3)}>
               <View style={styles.errorBanner}>
                 <Ionicons name="alert-circle" size={16} color={colors.error} />
                 <Text style={styles.errorText}>{error || sales.error}</Text>
@@ -123,7 +128,7 @@ export default function HomeScreen({ navigation }: Props) {
           ) : null}
 
           {!error && stats.total === 0 ? (
-            <AnimatedEntrance delay={step(2)} style={styles.block}>
+            <AnimatedEntrance delay={step(3)} style={styles.block}>
               <InfoCard
                 testID="home-add-first-branch"
                 icon="storefront-outline"
@@ -135,7 +140,7 @@ export default function HomeScreen({ navigation }: Props) {
           ) : null}
 
           {stats.total > 0 ? (
-            <AnimatedEntrance delay={step(2)} style={styles.block}>
+            <AnimatedEntrance delay={step(3)} style={styles.block}>
               <View style={styles.card}>
                 <View style={styles.cardHead}>
                   <Text style={styles.cardTitle}>{t('home.branchesTitle')}</Text>
@@ -171,7 +176,7 @@ export default function HomeScreen({ navigation }: Props) {
             </AnimatedEntrance>
           ) : null}
 
-          <AnimatedEntrance delay={step(3)} style={styles.block}>
+          <AnimatedEntrance delay={step(4)} style={styles.block}>
             <PhaseNotice
               icon="sparkles-outline"
               badge={t('home.queryBadge')}
@@ -181,7 +186,7 @@ export default function HomeScreen({ navigation }: Props) {
             />
           </AnimatedEntrance>
 
-          <AnimatedEntrance delay={step(4)} style={styles.block}>
+          <AnimatedEntrance delay={step(5)} style={styles.block}>
             <InfoCard
               testID="home-open-upload"
               icon="cloud-upload-outline"
@@ -192,7 +197,7 @@ export default function HomeScreen({ navigation }: Props) {
           </AnimatedEntrance>
         </ScrollView>
 
-        <AnimatedEntrance delay={step(5)}>
+        <AnimatedEntrance delay={step(6)}>
           <View style={styles.askBar}>
             <View style={styles.askInput}>
               <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.textTertiary} />

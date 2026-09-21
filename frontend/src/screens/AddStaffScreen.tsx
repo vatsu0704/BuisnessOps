@@ -19,12 +19,13 @@ import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
+import { useBusinessId } from '@/hooks/useBusinessId';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AddStaff'>;
 
 export default function AddStaffScreen({ navigation }: Props) {
   const { t } = useTranslation();
-  const businessId = useAuthStore((s) => s.user?.memberships?.[0]?.businessId);
+  const businessId = useBusinessId();
   const { branches } = useBranches();
 
   const [branchId, setBranchId] = useState<string | null>(null);

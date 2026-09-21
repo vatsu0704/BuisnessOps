@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { getSalesSummary } from '@/api/business';
 import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
+import { useBusinessId } from '@/hooks/useBusinessId';
 
 export function useSalesSummary() {
-  const businessId = useAuthStore((s) => s.user?.memberships?.[0]?.businessId);
+  const businessId = useBusinessId();
 
   const [totalSales, setTotalSales] = useState(0);
   const [transactionCount, setTransactionCount] = useState(0);

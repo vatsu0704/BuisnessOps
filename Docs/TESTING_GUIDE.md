@@ -5,10 +5,11 @@ them in order the first time — several later flows (Team, Staff & Payroll)
 assume branches and data already exist from earlier steps.
 
 This covers the app as it exists today: Phases 0–1 (auth, branches, CSV
-ingestion), Team & permissions (invites), and the Attendance & Salary Slip
-module. Reports, Alerts and the "ask a question" bar are intentionally
-unfinished (Phase 2 is blocked on an LLM provider) — you'll see a "planned"
-notice there, not a bug.
+ingestion), Team & permissions (invites), and Attendance, Payroll & Salary
+Slips. Reports and the "ask a question" bar are intentionally unfinished
+(Phase 2 is blocked on an LLM provider) — you'll see a "planned" notice there,
+not a bug. Alerts (Phase 5) no longer has a tab at all; the Staff tab took its
+slot.
 
 ---
 
@@ -18,6 +19,12 @@ You run both servers yourself — nothing here starts them for you.
 
 1. **Backend**: `cd backend`, then `npm run dev`. Confirm it printed
    `Server running on port 4000`.
+
+   The automated suite (`npm test`) runs against a **separate** database and
+   cannot touch the one you click through here. Once after cloning, and again
+   whenever a new migration lands, run `npm run test:setup` to create and
+   migrate it. If `.env.test` is missing, `npm test` refuses to run rather than
+   falling back to your development database.
 2. **Frontend**: `cd frontend`, then `npm run web` (fastest for clicking
    through in a browser) or `npm run android` if you want to test on a
    device/emulator.
@@ -26,9 +33,13 @@ You run both servers yourself — nothing here starts them for you.
    Pick whichever matches how the phone is connected, and make sure
    `frontend/.env`'s `EXPO_PUBLIC_API_URL` agrees:
    - **USB cable** (works even on mobile data, and needs no firewall rule):
-     run `adb reverse tcp:4000 tcp:4000` and set the URL to
-     `http://localhost:4000/api`. Re-run the command after replugging the
-     device or restarting adb.
+     set the URL to `http://localhost:4000/api`. `npm start` and
+     `npm run android` set the forward up for you. If the app loads fine but
+     every request fails with "Cannot reach the BizIQ server", the forward was
+     lost — replugging the device or restarting adb drops it, and Expo only
+     restores its own Metro forward, not this one. Fix it with
+     **`npm run adb:reverse`** (no restart needed; it is an OS-level port
+     forward, not a JS change).
    - **Same Wi-Fi as this PC**: set the URL to this PC's LAN IP, e.g.
      `http://192.168.1.98:4000/api`. Windows Firewall must allow inbound
      connections for the exact `node.exe` running the backend.
@@ -140,8 +151,11 @@ you'll get a clean "already exists" error, not a crash.
    - **Business** card — name, industry, branch count, country, currency,
      timezone, and the business's internal ID
    - **"My attendance"** card (everyone sees this)
-   - **"Staff & payroll"** card (owners/admins/managers only)
+   - **"Workweek & holidays"** card (owners/admins only) — see Flow 11
    - **"Team & permissions"** card (owners/admins only)
+
+   Staff & payroll used to live here too. It is now its own **Staff tab**,
+   because it is used daily rather than configured once — see Flow 13.
    - A language selector (English / Hindi / Gujarati / Marathi)
    - **"Log out"**
 3. Tap a different language in the language selector.
@@ -322,24 +336,149 @@ number" message and the button should refuse to submit, not crash.
 
 ---
 
+## Flow 11 — Set up the workweek and holidays
+
+Do this **before** Flow 12–14: it decides the payroll divisor, and nothing
+about pay makes sense until it is right.
+
+1. **Settings → "Workweek & holidays"** (owner/admin only).
+2. The weekday chips show which days are the weekly off. **Sunday is on by
+   default.** Tap Saturday as well if the business closes both days.
+   - ✅ **Expected:** the change saves immediately — there is no Save button.
+   - Try turning all seven on: the last one refuses. A business with no working
+     days would leave payroll dividing by zero.
+3. Under **"Days with no record"**, leave it on **"Count as present"** unless
+   you genuinely punch every day. This is what makes payroll exception-based:
+   you mark absences, and silence means the person worked.
+4. **Add a holiday** — pick a date, name it (e.g. `Ganesh Chaturthi`), tap Add.
+   - ✅ **Expected:** it appears in the list below with an "All branches" chip.
+   - Add the same date twice: the second is refused.
+
+**Why this matters:** working days = calendar days − week-offs − holidays.
+Week-offs and holidays are **paid** — they are excluded from the divisor, so
+missing one costs nothing, and someone present every working day earns exactly
+their salary. Before this existed, pay was divided by calendar days and a
+person with Sundays off could only ever earn about 87% of their salary.
+
+---
+
+## Flow 12 — Punch in from the Home screen
+
+1. Open the app as someone who **is** a staff member (Flow 7's invited person,
+   once an owner has created a `StaffMember` row linked to their email).
+2. ✅ **Expected:** a **Today** card sits directly under the greeting, showing
+   today's date and "Not punched in yet", with a **Punch in** button.
+   - An owner with no staff record sees **no card at all** — not an empty one.
+3. Tap **Punch in**. Allow location if asked.
+   - ✅ **Expected:** the card flips to "Punched in at HH:MM" and the button
+     becomes **Punch out**.
+   - If the branch has a geofence and you are outside it, the punch is refused
+     with the distance in the message.
+4. Tap **Punch out**. The button disappears; the card reads "In at … · out at …".
+5. **On a weekly off day**, the card says "Weekly off — enjoy your day" rather
+   than nagging you to punch. The button is still there if you do work.
+6. Tap the card body → the full **My attendance** history opens.
+
+---
+
+## Flow 13 — The Staff tab (owner/manager)
+
+The bottom tabs are now **Home · Staff · Reports · Settings** — Staff replaced
+the empty Alerts placeholder.
+
+1. Open the **Staff** tab as the owner.
+2. **Today's attendance** — ✅ **Expected:** *every* active staff member of the
+   branch is listed, including anyone who has not punched, shown as "Not
+   marked". The summary strip counts Present / Absent / Unmarked.
+   - This is the fix for the old roster, which returned only people who already
+     had a record — so "who hasn't punched in yet?" was unanswerable.
+3. **Tap a person's row** → status chips appear inline. Tap **Half day**.
+   - ✅ **Expected:** the row's pill updates without leaving the tab. Marking a
+     day used to take four taps into the detail screen.
+4. On a weekly off or a holiday, the section shows a calm one-line notice
+   instead of a wall of "Not marked".
+5. Scroll to **Staff** → tap a person → their detail screen opens, now with a
+   **This month** summary (working days, present, absent, half days) above the
+   day list.
+6. Tap the **pencil** icon → **Edit staff member**. Change the phone number,
+   Save. Then try **Deactivate** — it asks first, and explains that attendance
+   and past payslips are kept.
+   - Before this there was no way to change *anything* about a staff member
+     after creating them.
+7. Back on the detail screen, **Mark a day** now opens a real date picker. Check
+   that it will not let you pick a future date, and that changing the month at
+   the top moves the date with it.
+
+---
+
+## Flow 14 — Run payroll and share a payslip
+
+**This is the acceptance test for the document rewrite.** Do all of it.
+
+1. **Staff tab → Payroll → "Run payroll for {month}"**.
+2. ✅ **Expected:** a preview listing every eligible person with gross,
+   deductions and net, plus totals across the top. Anyone without a salary set
+   is listed under **skipped** with the reason "No salary set".
+   - If the month is still running, a notice says so — remaining days are
+     excluded rather than counted as absences.
+3. Tap **Generate N payslips**. ✅ **Expected:** the same list, now generated.
+4. Open a payslip and tap **share**.
+   - ✅ **Expected:** the PDF opens, and **the amounts show a ₹ sign**. The old
+     PDF could not render `₹` at all — it printed a blank or a box.
+   - ✅ **Expected:** under "Basic salary (pro-rated)" there is a line showing
+     the arithmetic, e.g. `₹31,000.00 ÷ 26 working days × 22.5 = ₹26,826.92`.
+     Check it by hand — that is the point of it.
+   - ✅ **Expected:** the attendance table shows week-offs and holidays as
+     **paid**, listed separately from days worked.
+5. **Switch the app to Hindi** (Settings → language), then share the same
+   payslip again.
+   - ✅ **Expected:** the payslip labels render in Devanagari. Repeat in
+     Gujarati and Marathi if you like. This is the whole reason the payslip is
+     HTML printed by the device rather than a server-generated PDF.
+6. Regenerate the same month **without** entering a deduction.
+   - ✅ **Expected:** a deduction you entered earlier is still there. It used to
+     be silently reset to zero.
+7. **Finalize** a payslip, then try to regenerate it. ✅ **Expected:** refused.
+
+---
+
+## Flow 15 — What a STAFF-role person can and cannot see
+
+1. Log in as the STAFF-role user from Flow 7.
+2. Open the **Staff** tab.
+   - ✅ **Expected:** *their own* attendance and payslips only. No roster, no
+     staff list, no "Run payroll".
+3. They can share their own payslip.
+4. ✅ **Expected:** they cannot reach a colleague's attendance. If you have the
+   API to hand, `GET /businesses/:id/staff/<someone else>/attendance` returns
+   **403** — even if that person has branch access. This was a real hole: branch
+   access is scope over a branch's *data*, not permission to read a colleague's
+   HR record.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
-- **Currency formatting** is a plain thousands-separator (`₹12,345`), not
-  proper Indian lakh/crore grouping or full locale-aware formatting yet.
+- **No overtime, leave balances or statutory deductions**: hours from
+  punch-in/out are stored but do not affect pay; `LEAVE` is unpaid with no
+  entitlement tracking; and deductions are one manually-entered amount — there
+  is no PF/ESI/TDS breakdown and no salary advances.
 - **Multi-membership**: if someone already has their *own* business (from
   signing up independently) and is *separately* invited into a second one
-  later, the app has no way to switch between the two — it always shows the
-  first one. Signing up *directly from* an invite (Flow 7) avoids this
+  later, the app has no way to switch between the two. It now prefers the first
+  **active** membership rather than whichever came back first, but there is
+  still no switcher. Signing up *directly from* an invite (Flow 7) avoids this
   entirely, since no extra business gets created in that case.
 - **No revoke**: once you invite someone or grant branch access, there's no
   UI yet to take it back — only to add more.
-- **No geofence UI**: branches created through the app never get GPS
-  coordinates, so punch-in geofencing (an API-only capability right now)
-  never actually triggers in manual testing.
+- **No geofence UI at branch creation**: the Add Branch form still doesn't
+  capture GPS coordinates, so a new branch has no geofence until one is set.
+  Branch settings *can* now be changed after creation via the API
+  (`PATCH /branches/:branchId`), which was impossible before.
 - **Reports and Alerts tabs** intentionally show a "planned" notice — they're
   Phase 4/5 work, not started yet.
-- **Backend tests share the dev database**: `npm test` in `backend/` reads the
-  same `DATABASE_URL` as `npm run dev`, so a test run leaves its fixture
-  businesses and users in the database you are clicking through.
+- **Salary changes overwrite with no history**: editing a staff member's monthly
+  salary replaces the old figure outright. Regenerating an *unfinalized* payslip
+  for a past month will therefore use the new salary — finalize a slip to lock it.
 - **The "ask a question" bar on Home** is intentionally inactive — Phase 2
   (the query engine) is blocked on an LLM provider being connected.

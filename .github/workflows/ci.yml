@@ -81,3 +81,9 @@ jobs:
       # the one real, currently-passing check available.
       - name: Type-check
         run: npm run lint
+
+      # tsc does NOT catch this: i18next.d.ts types t() against en.json alone,
+      # so a key missing from hi/gu/mr compiles cleanly and silently falls back
+      # to English at runtime. This is the only mechanical guard there is.
+      - name: Check translation parity
+        run: npm run lint:i18n

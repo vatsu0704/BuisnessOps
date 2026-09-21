@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
@@ -8,14 +8,14 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { getStaffAttendance, markAttendance } from '@/api/attendance';
 import { getStaffMember } from '@/api/staff';
-import { downloadSalarySlipPdf, generateSalarySlip, listStaffSalarySlips } from '@/api/payroll';
+import { generateSalarySlip, getStaffMonthSummary, listStaffSalarySlips, shareSalarySlip } from '@/api/payroll';
 import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import { useMonthCursor } from '@/hooks/useMonthCursor';
-import { formatAmount } from '@/utils/format';
+import { formatAmount, formatAmountPrecise } from '@/utils/format';
 import { parseOptionalNumber } from '@/utils/validation';
-import type { AttendanceRecord, AttendanceStatus, SalarySlip, StaffMember } from '@/types/staffing';
+import type { AttendanceRecord, AttendanceStatus, MonthSummary, SalarySlip, StaffMember } from '@/types/staffing';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import AttendanceStatusPill from '@/components/AttendanceStatusPill';
 import FormInput from '@/components/FormInput';
@@ -23,25 +23,29 @@ import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
 import SegmentedOption from '@/components/SegmentedOption';
+import DateField from '@/components/DateField';
+import MonthSummaryStrip from '@/components/MonthSummaryStrip';
+import Pill from '@/components/Pill';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
+import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
+import { can } from '@/utils/permissions';
+import { dateKeyFromApi, formatDate, fromISODate, daysInMonth, todayISO } from '@/utils/date';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StaffDetail'>;
 
 const MARKABLE: AttendanceStatus[] = ['PRESENT', 'ABSENT', 'HALF_DAY', 'LEAVE'];
 
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export default function StaffDetailScreen({ route, navigation }: Props) {
   const { staffMemberId } = route.params;
   const { t } = useTranslation();
-  const businessId = useAuthStore((s) => s.user?.memberships?.[0]?.businessId);
+  const businessId = useBusinessId();
   const business = useAuthStore((s) => s.business);
   const { branches } = useBranches();
-  const { month, year, label, goPrev, goNext } = useMonthCursor();
+  const { month, year, label, goPrev, goNext, canGoNext } = useMonthCursor();
+  const membership = useMembership();
+  const canManagePayroll = can.managePayroll(membership);
 
   const [staffMember, setStaffMember] = useState<StaffMember | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -49,27 +53,32 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [summary, setSummary] = useState<MonthSummary | null>(null);
   const [markDate, setMarkDate] = useState(todayISO());
-  const [markStatus, setMarkStatus] = useState<AttendanceStatus>('ABSENT');
+  // Starts unset rather than 'ABSENT'. A destructive default one tap away from
+  // Save is how someone gets marked absent by accident.
+  const [markStatus, setMarkStatus] = useState<AttendanceStatus | null>(null);
   const [isMarking, setIsMarking] = useState(false);
 
   const [deductions, setDeductions] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [downloadingSlipId, setDownloadingSlipId] = useState<string | null>(null);
+  const [sharingSlipId, setSharingSlipId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!businessId) return;
     setIsLoading(true);
     setError(null);
     try {
-      const [member, attendance, salarySlips] = await Promise.all([
+      const [member, attendance, salarySlips, monthSummary] = await Promise.all([
         getStaffMember(businessId, staffMemberId),
         getStaffAttendance(businessId, staffMemberId, month, year),
         listStaffSalarySlips(businessId, staffMemberId),
+        getStaffMonthSummary(businessId, staffMemberId, month, year),
       ]);
       setStaffMember(member);
       setRecords(attendance);
       setSlips(salarySlips);
+      setSummary(monthSummary);
     } catch (err) {
       setError(extractErrorMessage(err));
     } finally {
@@ -84,12 +93,13 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
   );
 
   async function handleMark() {
-    if (!businessId) return;
+    if (!businessId || !markStatus) return;
     haptics.tap();
     setIsMarking(true);
     setError(null);
     try {
       await markAttendance(businessId, staffMemberId, { date: markDate, status: markStatus });
+      setMarkStatus(null);
       haptics.success();
       await load();
     } catch (err) {
@@ -121,25 +131,42 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
     }
   }
 
-  async function handleDownload(slip: SalarySlip) {
+  async function handleShare(slip: SalarySlip) {
     if (!businessId) return;
     haptics.tap();
-    setDownloadingSlipId(slip.id);
+    setSharingSlipId(slip.id);
     setError(null);
     try {
-      await downloadSalarySlipPdf(businessId, slip);
+      // Fetches the payslip as HTML in the app's current language and lets the
+      // device print it to PDF — which is what makes the rupee sign and
+      // Devanagari/Gujarati render at all.
+      await shareSalarySlip(businessId, slip);
     } catch (err) {
       haptics.error();
       setError(extractErrorMessage(err));
     } finally {
-      setDownloadingSlipId(null);
+      setSharingSlipId(null);
     }
   }
 
   const branchName = staffMember ? branches.find((b) => b.id === staffMember.branchId)?.name : undefined;
   const deductionsParsed = parseOptionalNumber(deductions);
   const deductionsInvalid = deductionsParsed === null;
-  const canGenerate = !!staffMember?.baseSalary && !deductionsInvalid && !isGenerating;
+  const canGenerate = !!staffMember?.baseSalary && !deductionsInvalid && !isGenerating && canManagePayroll;
+
+  // The mark-a-day field used to be entirely decoupled from the month cursor,
+  // so you could be looking at March while writing into September — and the
+  // list you refreshed afterwards would not contain what you just marked.
+  const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+  const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(daysInMonth(month, year)).padStart(2, '0')}`;
+  const today = todayISO();
+  const markMax = monthEnd < today ? monthEnd : today;
+  useEffect(() => {
+    // Clamp into the visible month: today when it falls inside, else the 1st.
+    setMarkDate((current) =>
+      current >= monthStart && current <= monthEnd ? current : today >= monthStart && today <= monthEnd ? today : monthStart
+    );
+  }, [monthStart, monthEnd, today]);
 
   return (
     <View style={styles.container}>
@@ -167,8 +194,20 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
           {staffMember ? (
             <AnimatedEntrance delay={step(0)}>
               <View style={styles.card}>
-                <Text style={styles.meta}>{staffMember.role}</Text>
-                <Text style={styles.meta}>{branchName ?? staffMember.branchId}</Text>
+                <View style={styles.identityHead}>
+                  <View style={styles.identityText}>
+                    <Text style={styles.meta}>{staffMember.role}</Text>
+                    <Text style={styles.meta}>{branchName ?? staffMember.branchId}</Text>
+                  </View>
+                  {staffMember.status === 'INACTIVE' ? <Pill label={t('editStaff.inactive')} tone="muted" /> : null}
+                  <PressableScale
+                    testID="staff-detail-edit"
+                    style={styles.iconButton}
+                    onPress={() => navigation.navigate('EditStaff', { staffMemberId })}
+                  >
+                    <Ionicons name="create-outline" size={18} color={colors.primary} />
+                  </PressableScale>
+                </View>
                 {staffMember.baseSalary ? (
                   <Text style={styles.meta}>
                     {t('staffDetail.baseSalary', {
@@ -188,13 +227,27 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
                 <Ionicons name="chevron-back" size={18} color={colors.text} />
               </PressableScale>
               <Text style={styles.monthLabel}>{label}</Text>
-              <PressableScale testID="staff-detail-next-month" onPress={goNext} style={styles.monthNavButton}>
-                <Ionicons name="chevron-forward" size={18} color={colors.text} />
+              <PressableScale
+                testID="staff-detail-next-month"
+                onPress={goNext}
+                disabled={!canGoNext}
+                style={[styles.monthNavButton, !canGoNext && styles.monthNavDisabled]}
+              >
+                <Ionicons name="chevron-forward" size={18} color={canGoNext ? colors.text : colors.textTertiary} />
               </PressableScale>
             </View>
           </AnimatedEntrance>
 
-          <AnimatedEntrance delay={step(2)} style={styles.block}>
+          {summary ? (
+            <AnimatedEntrance delay={step(2)} style={styles.block}>
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>{t('monthSummary.title')}</Text>
+                <MonthSummaryStrip summary={summary} />
+              </View>
+            </AnimatedEntrance>
+          ) : null}
+
+          <AnimatedEntrance delay={step(3)} style={styles.block}>
             <View style={styles.card}>
               {isLoading ? (
                 <Text style={styles.emptyText}>{t('common.loading')}</Text>
@@ -203,7 +256,7 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
               ) : (
                 records.map((record, index) => (
                   <View key={record.id} style={[styles.dayRow, index > 0 && styles.dayRowDivided]}>
-                    <Text style={styles.dayDate}>{record.date.slice(0, 10)}</Text>
+                    <Text style={styles.dayDate}>{formatDate(dateKeyFromApi(record.date), t)}</Text>
                     <AttendanceStatusPill status={record.status} />
                   </View>
                 ))
@@ -211,16 +264,16 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
             </View>
           </AnimatedEntrance>
 
-          <AnimatedEntrance delay={step(3)} style={styles.block}>
+          <AnimatedEntrance delay={step(4)} style={styles.block}>
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>{t('staffDetail.markSection')}</Text>
-              <FormInput
+              <DateField
                 testID="staff-detail-mark-date"
                 label={t('staffDetail.date')}
-                hint="YYYY-MM-DD"
-                icon="calendar-outline"
                 value={markDate}
-                onChangeText={setMarkDate}
+                onChange={setMarkDate}
+                minimumDate={fromISODate(monthStart)}
+                maximumDate={fromISODate(markMax)}
               />
               <View style={styles.chipRow}>
                 {MARKABLE.map((s) => (
@@ -237,13 +290,15 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
                 testID="staff-detail-mark-submit"
                 title={t('staffDetail.markSubmit')}
                 loading={isMarking}
+                disabled={!markStatus}
                 onPress={handleMark}
                 style={styles.markButton}
               />
             </View>
           </AnimatedEntrance>
 
-          <AnimatedEntrance delay={step(4)} style={styles.block}>
+          {canManagePayroll ? (
+          <AnimatedEntrance delay={step(5)} style={styles.block}>
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>{t('staffDetail.payrollSection', { month: label })}</Text>
               {!staffMember?.baseSalary ? <Text style={styles.metaWarn}>{t('staffDetail.noSalaryHint')}</Text> : null}
@@ -268,26 +323,33 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
               />
             </View>
           </AnimatedEntrance>
+          ) : null}
 
           {slips.length > 0 ? (
-            <AnimatedEntrance delay={step(5)} style={styles.block}>
+            <AnimatedEntrance delay={step(6)} style={styles.block}>
               <View style={styles.card}>
                 <Text style={styles.sectionTitle}>{t('staffDetail.pastSlips')}</Text>
                 {slips.map((slip, index) => (
                   <View key={slip.id} style={[styles.slipRow, index > 0 && styles.dayRowDivided]}>
                     <View style={styles.slipText}>
-                      <Text style={styles.dayDate}>{slip.monthYear}</Text>
-                      <Text style={styles.meta}>{formatAmount(Number(slip.netPay), slip.currency)}</Text>
+                      <View style={styles.slipHead}>
+                        <Text style={styles.dayDate}>{slip.monthYear}</Text>
+                        <Pill
+                          label={slip.status === 'FINALIZED' ? t('staffDetail.finalized') : t('staffDetail.draft')}
+                          tone={slip.status === 'FINALIZED' ? 'brand' : 'muted'}
+                        />
+                      </View>
+                      <Text style={styles.meta}>{formatAmountPrecise(slip.netPay, slip.currency)}</Text>
                     </View>
                     <PressableScale
-                      testID={`staff-detail-download-${slip.id}`}
+                      testID={`staff-detail-share-${slip.id}`}
                       style={styles.downloadButton}
-                      onPress={() => handleDownload(slip)}
+                      onPress={() => handleShare(slip)}
                     >
-                      {downloadingSlipId === slip.id ? (
-                        <Text style={styles.downloadText}>…</Text>
+                      {sharingSlipId === slip.id ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
                       ) : (
-                        <Ionicons name="download-outline" size={16} color={colors.primary} />
+                        <Ionicons name="share-outline" size={16} color={colors.primary} />
                       )}
                     </PressableScale>
                   </View>
@@ -303,6 +365,19 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  identityHead: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  identityText: { flex: 1 },
+  iconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthNavDisabled: { opacity: 0.4 },
+  slipHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',

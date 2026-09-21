@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/client';
-import type { AttendanceRecord, AttendanceStatus } from '@/types/staffing';
+import type { AttendanceRecord, AttendanceStatus, DailyRoster } from '@/types/staffing';
 
 export interface Coordinates {
   latitude?: number;
@@ -48,6 +48,24 @@ export async function markAttendance(
   const { data } = await apiClient.post<AttendanceRecord>(
     `/businesses/${businessId}/staff/${staffMemberId}/attendance/mark`,
     payload
+  );
+  return data;
+}
+
+/**
+ * Every ACTIVE staff member of a branch for a day, with their attendance row
+ * or null. Previously this endpoint returned only rows that existed, so anyone
+ * who hadn't punched was invisible and "who hasn't punched in yet?" could not
+ * be answered.
+ */
+export async function getDailyRoster(
+  businessId: string,
+  branchId: string,
+  date: string
+): Promise<DailyRoster> {
+  const { data } = await apiClient.get<DailyRoster>(
+    `/businesses/${businessId}/branches/${branchId}/attendance`,
+    { params: { date } }
   );
   return data;
 }

@@ -3,9 +3,10 @@ import { listBranches } from '@/api/business';
 import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import type { Branch } from '@/types/branch';
+import { useBusinessId } from '@/hooks/useBusinessId';
 
 export function useBranches() {
-  const businessId = useAuthStore((s) => s.user?.memberships?.[0]?.businessId);
+  const businessId = useBusinessId();
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);

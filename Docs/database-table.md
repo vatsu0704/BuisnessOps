@@ -266,7 +266,7 @@ POS/rota concept — can be attributed to a `Transaction`, can be scheduled with
 
 ---
 
-## 4a. Attendance & Salary Slip module
+## 4a. Attendance, Payroll & Salary Slips
 
 Added outside the original phase sequence, on request. Builds on `StaffMember`
 (Phase 1) rather than introducing a parallel employee table — an employee is
@@ -278,9 +278,47 @@ already existed: invite them as a `Membership` (any role) so they can
 authenticate, then have an owner/admin/manager create a `StaffMember` row
 with `userId` set to link the two.
 
+### The work calendar — `Business.weeklyOffDays`, `Branch.weeklyOffDays`, `Holiday`
+
+Payroll divides by **working** days, not calendar days:
+
+```
+workingDays = calendar days − week-offs − holidays     (per branch, per month)
+```
+
+Week-offs and holidays are **paid by construction** — they appear in neither
+the divisor nor the numerator — so missing one costs nothing, and someone
+present on every working day earns exactly their salary. The first version
+divided by calendar days, which paid a person with Sundays off about 87% of
+their salary.
+
+| Column | Type | Notes |
+|---|---|---|
+| `Business.weeklyOffDays` | Int[] default `[0]` | 0 = Sunday … 6 = Saturday, matching JS `getUTCDay()`. `[]` means the business works every day |
+| `Business.unmarkedWorkingDayStatus` | Enum: `PRESENT, ABSENT` default `PRESENT` | what a working day with no record means at payroll time. `PRESENT` makes payroll exception-based (mark absences; silence means worked) — the safe default, because under `ABSENT` a business that doesn't punch daily would see every salary zeroed |
+| `Branch.weeklyOffOverride` | Boolean default `false` | Prisma has no nullable scalar list, and `[]` is a legitimate value ("this branch works seven days"), so the override is an explicit flag rather than a sentinel |
+| `Branch.weeklyOffDays` | Int[] default `[]` | used only when `weeklyOffOverride` is true; wins **whole**, never merged with the business list |
+
+#### `Holiday`
+Paid non-working days. `branchId` null applies to the whole business; a branch
+row overrides a business-wide row for that branch on that date.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId | String | FK |
+| branchId | String, nullable | null = every branch |
+| date | Date | unique with (businessId, branchId) — but Postgres treats NULL `branchId` as distinct, so that unique does **not** stop two business-wide rows on one date. Prisma 5 cannot emit `NULLS NOT DISTINCT`, so `workCalendar.service.js` pre-checks on create and its calculator dedupes into a Map keyed by date, making a duplicate harmless to the maths |
+| name | String | shown on the payslip |
+| isPaid | Boolean default true | `false` is the rare unpaid-shutdown case. It only affects how the payslip labels the day — a holiday is excluded from working days either way |
+
 ### `Attendance`
 One row per staff member per calendar day — the punch-in/out + status record
-payroll reads. Distinct from `Shift` (above) rather than an extension of it.
+payroll reads.
+
+The date is the **branch's** calendar day, resolved through `Branch.timezone`.
+It was previously the server's UTC day, which for IST filed every punch before
+05:30 local against the previous date.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -292,6 +330,10 @@ payroll reads. Distinct from `Shift` (above) rather than an extension of it.
 | punchInAt / punchOutAt | DateTime, nullable | server time, never trusts a client-supplied timestamp |
 | punchInLat / punchInLng / punchOutLat / punchOutLng | Decimal, nullable | captured per event; validated against the branch's geofence (if configured) before the punch is accepted |
 | notes | String, nullable | free text, set via the manager-override endpoint |
+| markedByMembershipId | String, nullable | FK → `Membership`, `onDelete: SetNull`. Who overrode this day when it wasn't a punch, so a disputed absence is traceable. Cheap to record, impossible to backfill later |
+
+Marking someone `ABSENT`/`LEAVE` clears the punch timestamps — the row used to
+be able to claim both "absent" and "punched in at 09:02" at once.
 
 ### `SalarySlip`
 One row per staff member per payroll month; regenerating the same
@@ -301,19 +343,50 @@ One row per staff member per payroll month; regenerating the same
 |---|---|---|
 | id | String (uuid) | PK |
 | businessId | String | FK |
+| branchId | String | FK. Added so slips can be branch-filtered — without it the list endpoint had to be OWNER/ADMIN-only for want of a scope |
 | staffMemberId | String | FK |
 | monthYear | String | e.g. `2026-09` |
-| totalDaysWorked | Decimal | PRESENT = 1, HALF_DAY = 0.5, ABSENT/LEAVE = 0 (leave is unpaid — there's no leave-balance/policy model yet) |
-| grossPay | Decimal | `(baseSalary / daysInMonth) * totalDaysWorked` |
-| deductions | Decimal | manually entered at generation time — no tax/advance subsystem yet |
-| netPay | Decimal | grossPay − deductions |
+| baseSalary | Decimal | **snapshot** of the person's salary at generation time |
+| workingDays | Decimal | **snapshot** of the divisor actually used |
+| daysPresent / daysHalfDay / daysAbsent / daysLeave / daysPending | Decimal default 0 | working days only. `daysPending` is working days still in the future when a mid-month slip was generated — pending, not absent |
+| daysWeeklyOff / daysHoliday | Decimal default 0 | paid, and outside the divisor. Listed so the employee can see they were paid for them |
+| totalDaysWorked | Decimal | `daysPresent + 0.5 × daysHalfDay`. LEAVE is unpaid (weight 0) but counted separately from ABSENT so the payslip tells the truth |
+| grossPay | Decimal | `baseSalary ÷ workingDays × totalDaysWorked`, computed with `Prisma.Decimal` — never floats |
+| deductions | Decimal | manually entered — no tax/advance subsystem yet. An omitted value on regeneration now means "leave it as it was"; it used to silently reset to 0 |
+| deductionNote | String, nullable | why money came off, printed on the payslip |
+| netPay | Decimal | `max(0, grossPay − deductions)` — floored, because it could previously go negative |
 | currency | String | copied from `Business.defaultCurrency` at generation time |
-| status | Enum: `DRAFT, FINALIZED` | `FINALIZED` isn't set by any code path yet — reserved for a future "lock the slip" action |
-| generatedAt | DateTime | |
+| status | Enum: `DRAFT, FINALIZED` | a FINALIZED slip refuses regeneration with a 409 — the enum finally means something |
+| generatedAt / finalizedAt | DateTime | |
 
-No `slip_url`/cloud storage column: the PDF is generated on demand
-(`GET .../salary-slips/:id/pdf`, via `pdfmake`) straight from these numbers
-rather than persisted to a file store this project doesn't have set up yet.
+The basis is snapshotted (`baseSalary`, `workingDays`, the day buckets) so that
+a later change to the weekly off, the holiday calendar or the person's salary
+can never silently restate a payslip an employee has already been shown.
+Finalizing is what locks it against regeneration.
+
+No `slip_url`/cloud storage column: the payslip is rendered on demand as HTML
+(`GET .../salary-slips/:id/document?lang=`, from `backend/src/documents/`) and
+printed to PDF by the device, rather than persisted to a file store this
+project doesn't have set up. The old `pdfmake` PDF route could not render `₹`
+or any Indic script — it used base-14 Helvetica with no embedded font — which
+is why the document is HTML now.
+
+### `StaffMember` additions
+
+| Column | Type | Notes |
+|---|---|---|
+| phone | String, nullable | printed on the payslip |
+| employeeCode | String, nullable | human-facing payroll id. Distinct from `externalId`, which is a POS id. Deliberately not unique — unique-with-NULLs in Postgres would still allow any number of staff with no code |
+| hiredOn / exitedOn | Date, nullable | shrink the **numerator** only: days outside employment leave the divisor untouched, so a joiner on the 15th earns roughly half a month. Shrinking the divisor instead would pay them a full month |
+| deactivatedAt | DateTime, nullable | pairs with `status`, making a deactivation auditable rather than just a flag |
+| notes | String, nullable | free text on the edit form |
+
+### `Shift` — removed
+
+`Shift` was declared in Phase 1 and never written to by any code path. It was
+dropped in the working-days migration (verified 0 rows first). `Attendance` was
+always the payroll record; a real rota feature would reintroduce `Shift`
+properly rather than overloading `Attendance`.
 
 ---
 
@@ -499,7 +572,7 @@ Two layers, per the NFR (no cross-tenant leakage under any condition):
 |---|---|
 | 0 — Foundations | `Business`, `Branch`, `User`, `Membership`, `BranchAccess`, `Invite` (added later, alongside the Team screen) |
 | 1 — Data Ingestion | `DataSourceConnection`, `SyncRun`, `Product`, `ProductBranchDetail`, `Transaction`, `LineItem`, `InventoryItem`, `InventoryUsage`, `StaffMember`, `Shift` |
-| 4a — Attendance & Salary Slip (ad hoc, built out of phase order) | `Attendance`, `SalarySlip` |
+| 4a — Attendance, Payroll & Salary Slips (ad hoc, built out of phase order) | `Attendance`, `SalarySlip`, `Holiday` |
 | 2–4 — Query Engine & Reporting | `Conversation`, `QueryLog`, `QueryFeedback` |
 | 5 — Proactive Intelligence | `Alert`, `AlertNotification`, `ExternalSignal` |
 | 6 — Strategic & Franchise | `DemandForecast`, `FranchiseAgreement`, `RoyaltyStatement`, `CandidateLocation` |

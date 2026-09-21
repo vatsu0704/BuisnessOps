@@ -20,6 +20,7 @@ import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
+import { useBusinessId } from '@/hooks/useBusinessId';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Upload'>;
 
@@ -32,7 +33,7 @@ const ACCEPTED = [
 
 export default function UploadScreen({ navigation }: Props) {
   const { t } = useTranslation();
-  const businessId = useAuthStore((s) => s.user?.memberships?.[0]?.businessId);
+  const businessId = useBusinessId();
   const { branches, isLoading } = useBranches();
 
   const [branchId, setBranchId] = useState<string | null>(null);

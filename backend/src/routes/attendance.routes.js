@@ -23,7 +23,15 @@ scoped.post(
   requireRole('OWNER', 'ADMIN', 'MANAGER'),
   attendanceController.markAttendance
 );
-scoped.get('/branches/:branchId/attendance', requireBranchAccess, attendanceController.getDailyRoster);
+// requireBranchAccess alone WAS the hole: a STAFF-role membership that happens
+// to carry BranchAccess rows would pass it and read the whole branch's roster.
+// BranchAccess scopes branch *data*; it is not permission to read colleagues.
+scoped.get(
+  '/branches/:branchId/attendance',
+  requireRole('OWNER', 'ADMIN', 'MANAGER'),
+  requireBranchAccess,
+  attendanceController.getDailyRoster
+);
 
 router.use('/:businessId', scoped);
 

@@ -155,8 +155,12 @@ setups, and `localhost` on its own means the phone itself:
 
 - **USB** — `adb reverse tcp:4000 tcp:4000` tunnels the API over the cable, the
   same mechanism Expo already uses for Metro on 8081, and `localhost:4000` then
-  does reach this machine. Works on mobile data and needs no firewall rule, but
-  the forward is lost on replug or an adb restart.
+  does reach this machine. Works on mobile data and needs no firewall rule.
+  `frontend/scripts/adb-reverse.js` runs from `prestart`/`preandroid` so it is
+  re-established whenever Metro starts. **Expo re-creates its own 8081 forward
+  but not this one**, so after a mid-session replug or an adb restart the app
+  still loads while every request fails with `errors.unreachable` — rerun
+  `npm run adb:reverse` (or the raw `adb reverse`) rather than restarting Metro.
 - **Wi-Fi** — the development machine's LAN IP, with the phone on the same
   network and Windows Firewall allowing inbound connections for the exact
   `node.exe` binary running the backend (a rule for a different `node.exe` on

@@ -15,6 +15,7 @@ scoped.use(requireAuth, resolveTenant);
 
 scoped.post('/branches', requireRole('OWNER', 'ADMIN'), businessController.createBranch);
 scoped.get('/branches', businessController.listBranches);
+scoped.patch('/branches/:branchId', requireRole('OWNER', 'ADMIN'), businessController.updateBranch);
 scoped.get('/branches/:branchId', requireBranchAccess, businessController.getBranch);
 scoped.get('/branches/:branchId/transactions', requireBranchAccess, businessController.listTransactions);
 scoped.get('/sales-summary', businessController.getSalesSummary);

@@ -21,6 +21,58 @@ function createBranch(
   });
 }
 
+/**
+ * Partial update of a branch. Branch settings used to be write-once at
+ * creation — there was no PATCH at all — so a geofence could never be
+ * corrected or removed, and a wrong timezone silently mis-filed every punch
+ * near local midnight.
+ *
+ * `geofenceRadiusMeters: null` explicitly clears the geofence; omitting the key
+ * leaves it alone. That distinction is why this walks the keys rather than
+ * spreading the body.
+ */
+async function updateBranch(businessId, branchId, patch) {
+  const existing = await prisma.branch.findFirst({ where: { id: branchId, businessId } });
+  if (!existing) {
+    const err = new Error('Branch not found');
+    err.status = 404;
+    throw err;
+  }
+
+  const data = {};
+  const fields = [
+    'name',
+    'city',
+    'region',
+    'country',
+    'currency',
+    'status',
+    'timezone',
+    'latitude',
+    'longitude',
+    'geofenceRadiusMeters',
+    'weeklyOffOverride',
+    'weeklyOffDays',
+  ];
+  for (const field of fields) {
+    if (patch[field] !== undefined) data[field] = patch[field];
+  }
+
+  // A radius without coordinates would silently never enforce, since
+  // assertWithinGeofence needs all three. Reject it against the merged result
+  // rather than the body alone, so setting a radius on a branch that already
+  // has coordinates still works.
+  const lat = data.latitude !== undefined ? data.latitude : existing.latitude;
+  const radius = data.geofenceRadiusMeters !== undefined ? data.geofenceRadiusMeters : existing.geofenceRadiusMeters;
+  if (radius !== null && radius !== undefined && (lat === null || lat === undefined)) {
+    const err = new Error('A geofence radius needs the branch latitude and longitude to be set');
+    err.status = 400;
+    throw err;
+  }
+
+  return prisma.branch.update({ where: { id: branchId }, data });
+}
+
 // accessibleBranchIds === null means the caller has full access (OWNER/ADMIN);
 // otherwise it's the explicit branch list from their BranchAccess rows.
 function listBranches(businessId, accessibleBranchIds) {
@@ -105,6 +157,7 @@ function getSalesSummary(businessId, accessibleBranchIds) {
 
 module.exports = {
   createBranch,
+  updateBranch,
   listBranches,
   getBranch,
   listMemberships,

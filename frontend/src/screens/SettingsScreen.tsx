@@ -15,9 +15,7 @@ import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
-
-const STAFF_MANAGING_ROLES = new Set(['OWNER', 'ADMIN', 'MANAGER']);
-const TEAM_MANAGING_ROLES = new Set(['OWNER', 'ADMIN']);
+import { activeMembership, can } from '@/utils/permissions';
 
 function initials(name?: string | null, email?: string | null): string {
   const source = name?.trim() || email || '';
@@ -45,9 +43,9 @@ export default function SettingsScreen() {
   const { stats } = useBranches();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
-  const membership = user?.memberships?.[0];
-  const canManageStaff = !!membership && STAFF_MANAGING_ROLES.has(membership.role);
-  const canManageTeam = !!membership && TEAM_MANAGING_ROLES.has(membership.role);
+  const membership = activeMembership(user);
+  const canManageTeam = can.manageTeam(membership);
+  const canManageWorkCalendar = can.manageWorkCalendar(membership);
 
   return (
     <View style={styles.container}>
@@ -109,14 +107,18 @@ export default function SettingsScreen() {
             />
           </AnimatedEntrance>
 
-          {canManageStaff ? (
+          {/* Staff & payroll used to live here. It is now its own tab, because
+              it is used daily rather than configured once. What stays in
+              Settings is the thing you set up and forget: the work calendar
+              that decides the payroll divisor. */}
+          {canManageWorkCalendar ? (
             <AnimatedEntrance delay={step(5)} style={styles.block}>
               <InfoCard
-                testID="settings-open-staff"
-                icon="people-outline"
-                title={t('settings.staff')}
-                subtitle={t('settings.staffSubtitle')}
-                onPress={() => navigation.navigate('Staff')}
+                testID="settings-open-work-calendar"
+                icon="calendar-outline"
+                title={t('workCalendar.title')}
+                subtitle={t('workCalendar.weeklyOffHint')}
+                onPress={() => navigation.navigate('WorkCalendar')}
               />
             </AnimatedEntrance>
           ) : null}

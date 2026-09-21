@@ -71,27 +71,56 @@ Phases 0–4 are the MVP (PRD Phase 1). Phase 5 is PRD Phase 2. Phase 6 is PRD P
 
 ---
 
-## 4a. Attendance & Salary Slip module (ad hoc)
+## 4a. Attendance, Payroll & Salary Slips (ad hoc)
 
 Not part of the original PRD phase sequence — added on request, from a separate reference requirements doc. **Backend and frontend both done.**
 
+Rebuilt in a second pass (2026-09-20) after a Saral HRM quote (₹46,020/yr for 50 employees) and an eSSL biometric-device quote (₹80,500) raised the question of whether BizIQ should do this job itself. That pass fixed three defects that made the first version unfit for a real business, and moved the feature out of Settings into the places it is actually used.
+
+**The three defects the second pass fixed:**
+
+1. **Pay was divided by calendar days.** `(baseSalary / daysInMonth) * daysWorked` meant someone with Sundays off could never reach their full salary — about 87% of it — and an unmarked day silently paid ₹0. Replaced by a real work calendar (below).
+2. **The payslip could not render `₹` or any Indian language.** `pdfmake` was configured with base-14 Helvetica, which is WinAnsi-only, and embedded no font — in an app that ships in English, Hindi, Gujarati and Marathi. Replaced by an HTML document the device prints (below).
+3. **"Today" was the server's UTC date.** For IST every punch before 05:30 local was filed against the previous day. Now computed in the branch's own timezone via `Branch.timezone`.
+
+**The work calendar — how pay is computed now:**
+
+```
+workingDays     = calendar days − week-offs − holidays        (per branch, per month)
+totalDaysWorked = daysPresent + 0.5 × daysHalfDay             (working days only)
+gross           = baseSalary ÷ workingDays × totalDaysWorked   (Decimal, 2dp, half-up)
+net             = max(0, gross − deductions)
+```
+
+Week-offs and holidays are **paid by construction**: they are in neither the divisor nor the numerator, so missing one costs nothing and someone present on every working day earns exactly their salary. That identity is a test. `Business.weeklyOffDays` defaults to Sunday and a branch may override it whole (an override of `[]` legitimately means a seven-day week); `Holiday` rows are business-wide or branch-specific. `Business.unmarkedWorkingDayStatus` decides what a working day with no record means — `PRESENT` by default, making payroll exception-based, because under `ABSENT` any business that doesn't punch daily would see every salary zeroed.
+
 **Backend:**
-- `StaffMember` (Phase 1) extended with `baseSalary`; `Branch` extended with an opt-in `geofenceRadiusMeters` alongside its existing `latitude`/`longitude`. New `Attendance` and `SalarySlip` tables — see `database-table.md` section 4a for the full column-level rationale (in particular, why Attendance is a model of its own rather than reusing `Shift`).
+- `StaffMember` (Phase 1) extended with `baseSalary`, and in the second pass with `phone`, `employeeCode`, `hiredOn`, `exitedOn`, `deactivatedAt` and `notes`. `hiredOn`/`exitedOn` shrink the *numerator* only, so a mid-month joiner is paid a part month rather than a full one. `Branch` carries an opt-in `geofenceRadiusMeters` alongside `latitude`/`longitude`, plus `weeklyOffOverride`/`weeklyOffDays`. New `Holiday` table. `SalarySlip` now snapshots its own basis (`baseSalary`, `workingDays`) and itemises day buckets, so a later policy change or a raise can never silently restate a payslip someone has already been shown. The dead `Shift` model was dropped — nothing had ever written to it. See `database-table.md` section 4a.
+- All payroll arithmetic uses `Prisma.Decimal` (`backend/src/utils/money.js`), never floats. `Number()` is banned inside the calculation.
 - Self-service `POST /attendance/punch-in` / `punch-out`, resolved to the caller's own `StaffMember` via their `userId` — never a client-supplied id. Punches are rejected outside a branch's geofence when one is configured (haversine distance, hand-rolled rather than pulling in `geolib` for one formula).
-- Manager/owner `POST /staff/:staffMemberId/attendance/mark` for days with no punch (absence, approved leave), and monthly/daily read endpoints.
-- `POST /staff/:staffMemberId/salary-slips/generate`: pro-rates `baseSalary` against the month's attendance (`PRESENT`=1, `HALF_DAY`=0.5, `ABSENT`/`LEAVE`=0 — leave is unpaid by default, there's no leave-balance/policy model), minus a manually-entered `deductions` amount. Regenerating overwrites the same slip rather than duplicating it.
-- `GET /salary-slips/:id/pdf` generates the payslip PDF on demand (via `pdfmake`) from the stored numbers — no cloud storage is wired up in this project yet, so there's no persisted `slip_url` the way the reference doc's schema had one.
-- Full Jest coverage in `backend/tests/attendance.test.js` (geofence accept/reject, double-punch guards, RBAC, payroll math, PDF response).
+- Manager/owner `POST /staff/:staffMemberId/attendance/mark`, which now rejects future dates, refuses days before the person joined, and clears the punch timestamps when marking someone away (the row used to claim both "absent" and "punched in at 09:02"). Every override records `markedByMembershipId`.
+- `GET /branches/:branchId/attendance` is now a real roster: it left-joins all ACTIVE staff, so someone who hasn't punched appears with `attendance: null`. It previously returned only the rows that existed, which made "who hasn't punched in yet?" unanswerable.
+- `POST /staff/:staffMemberId/salary-slips/generate`, plus `GET /payroll/preview` and `POST /payroll/run` for a whole month in one call — payroll was one HTTP call per person, unusable at the 50 employees the HRM quote was priced for. Run and preview return the same shape, and skips carry machine codes (`NO_BASE_SALARY` …) the client translates. `POST /salary-slips/:id/finalize` finally gives `SalarySlipStatus` meaning: a finalized slip refuses regeneration with a 409.
+- `PATCH /staff/:id`, `POST /staff/:id/deactivate|reactivate`, `GET /staff/me`, `PATCH /branches/:branchId`, and work-week/holiday CRUD. Before this there was **no way to change anything about a staff member after creation**, and branch timezone and geofence were write-once.
+- `GET /salary-slips/:id/document?lang=` renders the payslip as styled HTML (`backend/src/documents/`), which the device prints to PDF. The `/pdf` route and `pdfmake` remain for now so a phone running the previous build still works; both go once the app update has rolled out.
+- **Security fix:** `GET /staff/:id/attendance` and the branch roster gated on `req.branchAccess` alone, so a STAFF-role member who happened to carry `BranchAccess` rows could read every colleague's attendance. `backend/src/middleware/staffScope.js` now separates "may see this branch's data" from "may see this person's record". The existing tests missed it because their STAFF fixture had no branch access at all.
+- Jest coverage in `backend/tests/attendance.test.js` — geofence accept/reject, double-punch guards, RBAC including a regression test for the hole above, the working-days pay maths, roster completeness, finalize immutability, and the HTML document including an escaping test.
 
-**Frontend:** reachable from Settings → "My attendance" (everyone) and "Staff & payroll" (OWNER/ADMIN/MANAGER only).
-- `AttendanceScreen` — today's punch status, punch in/out (captures device location via `expo-location`, best-effort — proceeds without it if permission is declined, since not every branch requires a geofence), month history with month navigation.
-- `StaffScreen` / `AddStaffScreen` — branch-scoped staff list and a form to register one, optionally linking an existing account by email (resolved server-side, same pattern as the existing membership invite) so that person becomes punch-capable.
-- `StaffDetailScreen` — a staff member's monthly attendance, a manager-override "mark a day" action, payslip generation, and a list of past payslips with a download action (native: `expo-file-system` downloads the PDF straight to a file, then hands it to the share sheet via `expo-sharing` — the same pattern `saveTemplate.ts` already used for the CSV template; web: a straight browser download).
-- Verified live end-to-end against the running app (Playwright): staff list → staff detail → mark absent → generate payslip → PDF download, and separately the punch-in/out cycle with a mocked in-geofence location.
+**Frontend:** the feature moved out of Settings, where a payslip was four taps deep.
+- **Home** carries a `TodayPunchCard` — punch in/out is one tap from opening the app, which is where a daily action belongs. It renders nothing for someone with no `StaffMember` row, and shows a calm week-off state instead of nagging someone on their day off.
+- **A `Staff` tab replaces the empty `Alerts` placeholder** (Phase 5, not started; `AlertsScreen` and its translations are kept on disk so Phase 5 reinstates a tab rather than rewriting a screen). `StaffHubScreen` is role-aware: an owner or manager gets today's roster with inline marking, the staff list and payroll; everyone else gets their own attendance and payslips. The backend enforces the same split.
+- `StaffDetailScreen` — month summary, attendance, a manager-override "mark a day" using a real date picker (`@react-native-community/datetimepicker`, wrapped in `DateField` with an `<input type="date">` branch so `npm run web` keeps working), payslip generation, and past payslips with a share action. The mark-a-day field was previously free text with no validation, and was decoupled from the month cursor so you could write into a month you weren't looking at; its status also defaulted to `ABSENT`, one tap from Save.
+- `EditStaffScreen`, `PayrollRunScreen`, `WorkCalendarScreen` — editing and deactivating a staff member, running a month's payroll, and configuring the weekly off and holidays. Without the last one the working-days model would be invisible and stuck at its default.
+- Sharing a payslip fetches HTML and prints it with `expo-print`, then hands the PDF to `expo-sharing`. This also removed a real bug: `FileSystem.downloadAsync` does not reject on an HTTP error status, so a 403 used to write the JSON error body into a `.pdf` and share a corrupt file.
+- Supporting cleanups: `utils/permissions.ts` replaces three separately-declared role Sets and finally honours `membership.status`; `utils/date.ts` replaces two copies of a UTC-based `todayISO()`; `useMonthCursor` uses translated month names (Hindi used to render "पेरोल — September 2026") and gained the missing upper clamp; `formatAmount` groups INR the Indian way; and `scripts/check-i18n-parity.js` guards translation parity, which `tsc` cannot catch.
 
-**Known gap found while verifying, not fixed here:** the app has no business-switcher, and every screen (not just this module) picks `user.memberships[0]` as "the" business. Since signup always creates a new business, *any* user invited into a second business ends up with two memberships, and which one is `[0]` is arbitrary — for this module specifically, that can make "My attendance" claim someone "isn't registered as a staff member" even when they are, in the wrong business. Worth a real fix (a business switcher, or at least a sensible tie-break) before staff invites are used for real.
+**Known gap, narrowed but not closed:** the app still has no business switcher. `activeMembership()` now prefers the first **ACTIVE** membership, which is a sensible tie-break and the first time `membership.status` is honoured anywhere — but anyone genuinely in two businesses still sees one arbitrary one. A real switcher is still worth doing.
 
-**Deliberately not built:** `runMonthlyPayrollBatch()` (a scheduled job) — there's no cron/queue infrastructure in this project yet, and generation is already available on demand; a branch-update endpoint for setting geofence coordinates after creation (currently branch-creation-time only); auto half-day detection from punch duration (half-day is manager-set only, for now); and a real date picker for the "mark a day" form (plain YYYY-MM-DD text input instead — no date-picker library is installed).
+**Deliberately not built:** overtime from punch duration (`punchInAt`/`punchOutAt` are stored but hours still have no effect on pay); leave balances, entitlement and approvals (`LEAVE` remains unpaid and is only a status); statutory deductions — PF, ESI, TDS, PT (`deductions` is still one manually-entered amount with a free-text note); salary advances and loan recovery; salary revision history, so changing someone's pay overwrites and regenerating an *unfinalized* slip for a past month uses the new figure — finalizing is what locks it; a scheduled payroll job (the run is request-time, since there is still no cron/queue); and auto half-day detection from punch duration.
+
+Also still open, and worth recording: **the backend has no i18n**. Every validation message and API error reaches the UI as hardcoded English through `extractErrorMessage`. The payslip label dictionary (`backend/src/documents/payslip.labels.js`) is scoped to the document only; the payroll-run reason codes are the pattern to follow when this is done properly.
+
+**On the quotes that prompted this:** the module now covers what Saral HRM lists as *Core HR + Payroll + ESS + Leave* minus leave balances, and *Advance Time & Attendance* minus overtime. It does not need the eSSL devices — geofenced punch-in covers the same job from a phone. If those are bought anyway, the integration path is an attendance CSV import reusing the existing `xlsx` ingestion pattern, not a device driver.
 
 ---
 
@@ -201,14 +230,14 @@ An onboarding path now exists end to end: register → add a branch → upload s
 What's actually next:
 
 1. **Phase 2 — Core Query Engine.** Still blocked on an LLM provider being wired in (Anthropic API key not yet provided). The Home screen already has the answer surface and the disabled ask bar waiting for it.
-2. **Locale-aware formatting** (Phase 3 leftover) — the Home/staff/payroll screens all use a plain thousands-separator placeholder for currency right now; see the Hermes `Intl` caveat in Section 6.
-3. **The multi-membership bug, narrowed but not eliminated:** every screen still picks `user.memberships[0]` as "the" business. Signing up via a pending invite no longer creates a redundant extra business (the main way this happened), but someone who signed up independently *and separately* gets invited elsewhere later still ends up with two memberships and no way to choose between them. A real business-switcher is still worth doing eventually.
+2. **Locale-aware formatting** (Phase 3 leftover) — partly done: `formatAmount` now groups INR the Indian way (₹3,40,000) and month, weekday and date labels come from the translation files rather than a hardcoded English array. Still open: locale-aware number and date formatting driven by the business's region rather than the app language, and the Hermes `Intl` caveat in Section 6 still stands.
+3. **The multi-membership bug, narrowed again but still not eliminated:** `activeMembership()` now prefers the first ACTIVE membership instead of blindly taking `memberships[0]`, and that is applied consistently through `useBusinessId()`. But someone genuinely in two businesses still has no way to choose between them. A real business switcher remains the fix.
 4. **Revoking an invite or a member's access** — you can invite and grant branches, but there's no way yet to revoke a pending invite or an existing member's access once granted.
 5. **Live POS adapter** — blocked on either picking a different pull-capable vendor or a Petpooja partner conversation (see Section 12).
 
 **Ingestion contract, for whoever builds on it:** required CSV columns are `occurred_at, product_name, quantity, unit_price, payment_method`; optional `transaction_external_id, sku, unit, tax_amount, discount_amount`. Rows sharing a `transaction_external_id` group into one transaction. A data source is bound to exactly one branch — there is no per-row branch column — so each branch gets its own `CSV_UPLOAD` source. Bad rows are skipped and reported per row rather than failing the file.
 
-**Screens that exist but are deliberately hollow:** Reports (Phase 4) and Alerts (Phase 5) render an honest "planned" notice rather than mock data, and Home's ask bar is visibly inactive. Replace each with the real thing as its phase lands; none of them are stubs that were forgotten.
+**Screens that exist but are deliberately hollow:** Reports (Phase 4) renders an honest "planned" notice rather than mock data, and Home's ask bar is visibly inactive. `AlertsScreen` (Phase 5) is the same, but no longer has a tab — the Staff tab took its slot, since attendance and payroll are used daily while alerts are not built at all. The screen and its `alerts.*` translations stay on disk so Phase 5 puts a tab back rather than rewriting it. None of these are stubs that were forgotten.
 
 ---
 

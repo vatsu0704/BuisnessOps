@@ -14,4 +14,12 @@ export interface Branch {
   openedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  // The API has always returned these; the type simply omitted them.
+  latitude: string | null;
+  longitude: string | null;
+  /** Punch-in geofencing is opt-in: null means this branch enforces no radius. */
+  geofenceRadiusMeters: number | null;
+  /** When true, this branch's weeklyOffDays replace the business default whole. */
+  weeklyOffOverride: boolean;
+  weeklyOffDays: number[];
 }

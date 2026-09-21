@@ -61,6 +61,19 @@ model Business {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  // Standing weekly off, 0 = Sunday … 6 = Saturday, matching JS getUTCDay().
+  // [] means the business works every day. Week-offs are PAID by construction:
+  // they are excluded from the payroll divisor, so missing one costs nothing —
+  // see workCalendar.service.js.
+  weeklyOffDays Int[] @default([0])
+
+  // What a working day with no Attendance row means at payroll time.
+  // PRESENT makes payroll exception-based: managers mark absences and leave,
+  // and silence means the person worked. ABSENT makes attendance mandatory.
+  // PRESENT is the default because under ABSENT any business that doesn't
+  // punch every single day would see every salary silently zeroed.
+  unmarkedWorkingDayStatus AttendanceStatus @default(PRESENT)
+
   branches              Branch[]
   memberships           Membership[]
   dataSourceConnections DataSourceConnection[]
@@ -72,6 +85,7 @@ model Business {
   attendanceRecords     Attendance[]
   salarySlips           SalarySlip[]
   invites               Invite[]
+  holidays              Holiday[]
 
   @@map("businesses")
 }
@@ -128,18 +142,55 @@ model Branch {
   // suddenly start rejecting punches.
   geofenceRadiusMeters Int?
 
+  // Per-branch weekly off, overriding the business default. Prisma has no
+  // nullable scalar list, and an empty array is a legitimate value ("this
+  // branch works seven days"), so the override is an explicit flag plus a list
+  // rather than a sentinel. The override wins whole, never merged.
+  weeklyOffOverride Boolean @default(false)
+  weeklyOffDays     Int[]   @default([])
+
   branchAccess          BranchAccess[]
   dataSourceConnections DataSourceConnection[]
   productDetails        ProductBranchDetail[]
   transactions          Transaction[]
   inventoryUsages       InventoryUsage[]
   staffMembers          StaffMember[]
-  shifts                Shift[]
   attendanceRecords     Attendance[]
+  salarySlips           SalarySlip[]
+  holidays              Holiday[]
 
   @@unique([businessId, code])
   @@index([businessId])
   @@map("branches")
+}
+
+// Paid non-working days. branchId null applies to the whole business; a branch
+// row overrides a business-wide row for that branch on that date.
+//
+// Postgres treats NULL as distinct in a unique index, so @@unique below does
+// NOT prevent two business-wide rows on the same date. Prisma 5 cannot emit
+// NULLS NOT DISTINCT, and hand-adding a partial index would leave permanent
+// drift against this file. workCalendar.service.js pre-checks on create, and
+// its calculator dedupes into a Map keyed by date, so a duplicate that slips
+// through can never skew the payroll maths — only the admin list would show
+// the row twice.
+model Holiday {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId   String?
+  branch     Branch?  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  date       DateTime @db.Date
+  name       String
+  // false is the rare unpaid-shutdown case: still not a working day, but not
+  // paid either. isPaid only affects how the payslip labels the day, never the
+  // divisor — a holiday is excluded from working days regardless.
+  isPaid     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@unique([businessId, branchId, date])
+  @@index([businessId, date])
+  @@map("holidays")
 }
 
 model User {
@@ -172,7 +223,8 @@ model Membership {
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
 
-  branchAccess BranchAccess[]
+  branchAccess    BranchAccess[]
+  attendanceMarks Attendance[]
 
   @@unique([userId, businessId])
   @@index([businessId])
@@ -417,39 +469,44 @@ model StaffMember {
   baseSalary Decimal?    @db.Decimal(12, 2)
   status     StaffStatus @default(ACTIVE)
 
-  shifts            Shift[]
+  phone String?
+  // Human-facing payroll id, printed on the payslip. Distinct from externalId,
+  // which is the id this person carries in a POS system. Deliberately not
+  // @unique: unique-with-NULLs in Postgres would still allow any number of
+  // staff with no code, so it buys nothing here.
+  employeeCode String?
+  // Pro-rate a mid-month joiner or leaver. These shrink the NUMERATOR only —
+  // days outside employment are excluded from present/absent but stay in
+  // workingDays, so someone joining on the 15th earns roughly half a month.
+  // Shrinking the divisor instead would pay them a full month, which is wrong.
+  hiredOn  DateTime? @db.Date
+  exitedOn DateTime? @db.Date
+  // Pairs with status, so a deactivation is auditable rather than just a flag.
+  deactivatedAt DateTime?
+  notes         String?
+
   transactions      Transaction[]
   attendanceRecords Attendance[]
   salarySlips       SalarySlip[]
 
   @@index([businessId, branchId])
+  @@index([businessId, status])
   @@map("staff_members")
-}
-
-model Shift {
-  id             String      @id @default(uuid())
-  staffMemberId  String
-  staffMember    StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
-  branchId       String
-  branch         Branch      @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  startedAt      DateTime
-  endedAt        DateTime?
-  scheduledStart DateTime?
-  scheduledEnd   DateTime?
-
-  @@index([staffMemberId])
-  @@map("shifts")
 }
 
 // ---------------------------------------------------------------------------
 // Attendance & Salary Slip module
 // ---------------------------------------------------------------------------
-// Deliberately a model of its own rather than reusing Shift: Shift is a
-// POS/rota concept (can be attributed to a Transaction, can be scheduled
-// without ever happening, and a business can run more than one per staff
-// member per day). Attendance is the payroll-facing daily record - exactly
-// one row per staff member per calendar day - with the punch geolocation
-// and the status payroll actually reads.
+// Attendance is the payroll-facing daily record - exactly one row per staff
+// member per calendar day - with the punch geolocation and the status payroll
+// actually reads.
+//
+// It was deliberately never folded into the old `Shift` model, which was a
+// POS/rota concept: schedulable without ever happening, attributable to a
+// Transaction, and more than one per staff member per day. `Shift` was dropped
+// in the working-days payroll migration having never been written to by any
+// code path; a real rota feature would reintroduce it rather than overload
+// this table.
 
 enum AttendanceStatus {
   PRESENT
@@ -483,6 +540,12 @@ model Attendance {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
+  // Who overrode this day, when it wasn't a punch. A nullable FK rather than a
+  // bare id string so the row survives the membership being deleted. Cheap to
+  // record now and impossible to backfill later.
+  markedByMembershipId String?
+  markedBy             Membership? @relation(fields: [markedByMembershipId], references: [id], onDelete: SetNull)
+
   // Doubles as the "no double-punching" guard the reference doc calls for.
   @@unique([staffMemberId, date])
   @@index([businessId, branchId, date])
@@ -491,23 +554,48 @@ model Attendance {
 
 // One row per staff member per payroll month. Regenerating for the same
 // (staffMemberId, monthYear) overwrites the previous DRAFT rather than
-// accumulating duplicates - see payroll.service.js.
+// accumulating duplicates - see payroll.service.js. A FINALIZED slip is
+// immutable and regeneration is refused.
 model SalarySlip {
-  id              String           @id @default(uuid())
-  businessId      String
-  business        Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  staffMemberId   String
-  staffMember     StaffMember      @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
-  monthYear       String
+  id            String      @id @default(uuid())
+  businessId    String
+  business      Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId      String
+  branch        Branch      @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  staffMemberId String
+  staffMember   StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  monthYear     String
+
+  // The basis, snapshotted at generation. Without these a later change to the
+  // weekly off, the holiday calendar or the person's salary would silently
+  // restate a payslip the employee has already been shown.
+  baseSalary  Decimal @db.Decimal(12, 2)
+  workingDays Decimal @db.Decimal(5, 2)
+
+  // Itemised day buckets, so the payslip can show its own arithmetic.
+  // The first four count working days only; weeklyOff and holiday are outside
+  // the divisor entirely and are listed so the employee sees they were paid.
+  daysPresent   Decimal @default(0) @db.Decimal(5, 2)
+  daysHalfDay   Decimal @default(0) @db.Decimal(5, 2)
+  daysAbsent    Decimal @default(0) @db.Decimal(5, 2)
+  daysLeave     Decimal @default(0) @db.Decimal(5, 2)
+  // Working days still in the future when the slip was generated mid-month.
+  daysPending   Decimal @default(0) @db.Decimal(5, 2)
+  daysWeeklyOff Decimal @default(0) @db.Decimal(5, 2)
+  daysHoliday   Decimal @default(0) @db.Decimal(5, 2)
+
   totalDaysWorked Decimal          @db.Decimal(5, 2)
   grossPay        Decimal          @db.Decimal(12, 2)
   deductions      Decimal          @default(0) @db.Decimal(12, 2)
+  deductionNote   String?
   netPay          Decimal          @db.Decimal(12, 2)
   currency        String
   status          SalarySlipStatus @default(DRAFT)
   generatedAt     DateTime         @default(now())
+  finalizedAt     DateTime?
 
   @@unique([staffMemberId, monthYear])
   @@index([businessId, monthYear])
+  @@index([businessId, branchId, monthYear])
   @@map("salary_slips")
 }

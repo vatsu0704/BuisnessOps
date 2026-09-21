@@ -10,6 +10,7 @@ import { listInvites, listMemberships } from '@/api/team';
 import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import type { PendingInvite, TeamMember } from '@/types/team';
+import type { MembershipRole } from '@/types/user';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import InfoCard from '@/components/InfoCard';
 import Pill from '@/components/Pill';
@@ -17,14 +18,18 @@ import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
+import { useBusinessId } from '@/hooks/useBusinessId';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Team'>;
 
-const FULL_ACCESS_ROLES = new Set(['OWNER', 'ADMIN']);
+// Describes the LISTED member's role — do they implicitly reach every branch?
+// This is a property of the row being rendered, not a permission check on the
+// viewer, so it stays here rather than moving into utils/permissions.
+const FULL_ACCESS_ROLES = new Set<MembershipRole>(['OWNER', 'ADMIN']);
 
 export default function TeamScreen({ navigation }: Props) {
   const { t } = useTranslation();
-  const businessId = useAuthStore((s) => s.user?.memberships?.[0]?.businessId);
+  const businessId = useBusinessId();
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [invites, setInvites] = useState<PendingInvite[]>([]);

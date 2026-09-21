@@ -1,9 +1,11 @@
 const attendanceService = require('../services/attendance.service');
 const staffService = require('../services/staff.service');
+const { canViewStaffMember, canManageStaffMember, scopeOf } = require('../middleware/staffScope');
 const {
   validatePunch,
   validateMarkAttendance,
   validateMonthYearQuery,
+  validateRosterQuery,
 } = require('../validations/attendance.validation');
 
 // Every self-service action first resolves "which StaffMember row is me" —
@@ -77,9 +79,7 @@ async function getStaffAttendance(req, res, next) {
     const staffMember = await staffService.getStaffMember(req.tenant.businessId, req.params.staffMemberId);
     if (!staffMember) return res.status(404).json({ message: 'Staff member not found' });
 
-    const isSelf = staffMember.userId === req.userId;
-    const isManagerOfBranch = req.branchAccess === null || req.branchAccess.includes(staffMember.branchId);
-    if (!isSelf && !isManagerOfBranch) {
+    if (!canViewStaffMember(scopeOf(req), staffMember)) {
       return res.status(403).json({ message: 'You do not have access to this staff member' });
     }
 
@@ -102,11 +102,17 @@ async function markAttendance(req, res, next) {
 
     const staffMember = await staffService.getStaffMember(req.tenant.businessId, req.params.staffMemberId);
     if (!staffMember) return res.status(404).json({ message: 'Staff member not found' });
-    if (req.branchAccess !== null && !req.branchAccess.includes(staffMember.branchId)) {
+    if (!canManageStaffMember(scopeOf(req), staffMember)) {
       return res.status(403).json({ message: 'You do not have access to this branch' });
     }
 
-    const attendance = await attendanceService.markAttendance(req.tenant.businessId, staffMember, req.body);
+    const attendance = await attendanceService.markAttendance(
+      req.tenant.businessId,
+      staffMember,
+      req.body,
+      // Records who overrode the day, so a disputed absence is traceable.
+      req.tenant.membershipId
+    );
     res.status(201).json(attendance);
   } catch (err) {
     next(err);
@@ -115,11 +121,13 @@ async function markAttendance(req, res, next) {
 
 async function getDailyRoster(req, res, next) {
   try {
-    const date = req.query.date;
-    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return res.status(400).json({ message: 'Validation failed', errors: ['date is required as YYYY-MM-DD'] });
-    }
-    const roster = await attendanceService.getDailyRoster(req.tenant.businessId, req.params.branchId, date);
+    const errors = validateRosterQuery(req.query);
+    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+
+    const branch = await staffService.getBranchInBusiness(req.tenant.businessId, req.params.branchId);
+    if (!branch) return res.status(404).json({ message: 'Branch not found' });
+
+    const roster = await attendanceService.getDailyRoster(req.tenant.businessId, branch, req.query.date);
     res.json(roster);
   } catch (err) {
     next(err);

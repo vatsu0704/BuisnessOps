@@ -2,6 +2,7 @@ const businessService = require('../services/business.service');
 const inviteService = require('../services/invite.service');
 const {
   validateCreateBranch,
+  validateUpdateBranch,
   validateCreateMembership,
   validateBranchAccess,
 } = require('../validations/business.validation');
@@ -13,6 +14,25 @@ async function createBranch(req, res, next) {
 
     const branch = await businessService.createBranch(req.tenant.businessId, req.body);
     res.status(201).json(branch);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Makes timezone and the geofence editable after creation. Both were
+// write-once, and a wrong timezone silently files punches against the wrong
+// calendar day near local midnight.
+async function updateBranch(req, res, next) {
+  try {
+    const errors = validateUpdateBranch(req.body);
+    if (errors.length) return res.status(400).json({ message: 'Validation failed', errors });
+
+    const branch = await businessService.updateBranch(
+      req.tenant.businessId,
+      req.params.branchId,
+      req.body
+    );
+    res.json(branch);
   } catch (err) {
     next(err);
   }
@@ -111,6 +131,7 @@ async function getSalesSummary(req, res, next) {
 
 module.exports = {
   createBranch,
+  updateBranch,
   listBranches,
   getBranch,
   createMembership,

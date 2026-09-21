@@ -1,18 +1,23 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import TabBarIcon from '@/components/TabBarIcon';
-import AlertsScreen from '@/screens/AlertsScreen';
 import HomeScreen from '@/screens/HomeScreen';
 import ReportsScreen from '@/screens/ReportsScreen';
+import StaffHubScreen from '@/screens/StaffHubScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
 import { colors } from '@/theme';
 
 export type AppTabParamList = {
   Home: undefined;
+  Staff: undefined;
   Reports: undefined;
-  Alerts: undefined;
   Settings: undefined;
 };
+
+// Staff replaces the Alerts placeholder. Alerts is Phase 5 and not started,
+// while attendance and payroll are used every day and were four taps deep
+// under Settings. AlertsScreen and its alerts.* translations are deliberately
+// kept on disk so Phase 5 reinstates a tab rather than rewriting a screen.
 
 const Tab = createBottomTabNavigator<AppTabParamList>();
 
@@ -45,19 +50,19 @@ export default function TabNavigator() {
         }}
       />
       <Tab.Screen
+        name="Staff"
+        component={StaffHubScreen}
+        options={{
+          tabBarLabel: t('tabs.staff'),
+          tabBarIcon: (props) => <TabBarIcon {...props} name="people-outline" />,
+        }}
+      />
+      <Tab.Screen
         name="Reports"
         component={ReportsScreen}
         options={{
           tabBarLabel: t('tabs.reports'),
           tabBarIcon: (props) => <TabBarIcon {...props} name="bar-chart-outline" />,
-        }}
-      />
-      <Tab.Screen
-        name="Alerts"
-        component={AlertsScreen}
-        options={{
-          tabBarLabel: t('tabs.alerts'),
-          tabBarIcon: (props) => <TabBarIcon {...props} name="notifications-outline" />,
         }}
       />
       <Tab.Screen

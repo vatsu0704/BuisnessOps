@@ -1,5 +1,8 @@
 node_modules/
 .env
+# jest.setup.js loads this instead of .env when NODE_ENV=test, so the suite
+# never runs against the development database.
+.env.test
 *.log
 dist/
 coverage/

@@ -20,12 +20,10 @@ import ScreenBackground from '@/components/ScreenBackground';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
+import { useBusinessId } from '@/hooks/useBusinessId';
+import { dateKeyFromApi, formatDate, todayISO } from '@/utils/date';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Attendance'>;
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatTime(iso: string | null): string | null {
   if (!iso) return null;
@@ -48,7 +46,7 @@ async function currentCoordinates(): Promise<{ latitude?: number; longitude?: nu
 
 export default function AttendanceScreen({ navigation }: Props) {
   const { t } = useTranslation();
-  const businessId = useAuthStore((s) => s.user?.memberships?.[0]?.businessId);
+  const businessId = useBusinessId();
   const { month, year, label, goPrev, goNext } = useMonthCursor();
 
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -108,7 +106,7 @@ export default function AttendanceScreen({ navigation }: Props) {
     }
   }
 
-  const otherDays = records.filter((r) => r.date.slice(0, 10) !== todayISO());
+  const otherDays = records.filter((r) => dateKeyFromApi(r.date) !== todayISO());
 
   return (
     <View style={styles.container}>
@@ -192,7 +190,7 @@ export default function AttendanceScreen({ navigation }: Props) {
                   ) : (
                     otherDays.map((record, index) => (
                       <View key={record.id} style={[styles.dayRow, index > 0 && styles.dayRowDivided]}>
-                        <Text style={styles.dayDate}>{record.date.slice(0, 10)}</Text>
+                        <Text style={styles.dayDate}>{formatDate(dateKeyFromApi(record.date), t)}</Text>
                         <AttendanceStatusPill status={record.status} />
                       </View>
                     ))

@@ -16,13 +16,14 @@ import ScreenBackground from '@/components/ScreenBackground';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
+import { useBusinessId } from '@/hooks/useBusinessId';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AddBranch'>;
 
 export default function AddBranchScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const business = useAuthStore((s) => s.business);
-  const businessId = useAuthStore((s) => s.user?.memberships?.[0]?.businessId);
+  const businessId = useBusinessId();
 
   const [name, setName] = useState('');
   const [code, setCode] = useState('');

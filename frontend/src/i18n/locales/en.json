@@ -3,11 +3,16 @@
     "brand": "BizIQ",
     "active": "active",
     "more": "+{{count}} more",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "none": "None"
   },
   "errors": {
     "unreachable": "Cannot reach the BizIQ server at {{url}}. Check that the device is on the same network as the server and that the server is running.",
-    "unexpected": "Something went wrong. Please try again."
+    "unexpected": "Something went wrong. Please try again.",
+    "sharingUnavailable": "Sharing is not available on this device.",
+    "printUnavailable": "Could not open the print view. Check that pop-ups and printing are allowed."
   },
   "language": {
     "title": "Language",
@@ -21,7 +26,8 @@
     "home": "Home",
     "reports": "Reports",
     "alerts": "Alerts",
-    "settings": "Settings"
+    "settings": "Settings",
+    "staff": "Staff"
   },
   "splash": {
     "tagline": "Ask your business anything"
@@ -263,7 +269,13 @@
     "deductions": "Deductions",
     "invalidNumber": "Enter a valid number.",
     "generateSlip": "Generate payslip",
-    "pastSlips": "Past payslips"
+    "pastSlips": "Past payslips",
+    "edit": "Edit",
+    "draft": "Draft",
+    "finalized": "Final",
+    "finalize": "Finalize",
+    "sharePayslip": "Share payslip",
+    "summarySection": "This month"
   },
   "team": {
     "title": "Team",
@@ -289,5 +301,173 @@
     "noBranches": "Add a branch first.",
     "submit": "Send invite",
     "submitting": "Inviting..."
+  },
+  "month": {
+    "1": "January",
+    "2": "February",
+    "3": "March",
+    "4": "April",
+    "5": "May",
+    "6": "June",
+    "7": "July",
+    "8": "August",
+    "9": "September",
+    "10": "October",
+    "11": "November",
+    "12": "December",
+    "short": {
+      "1": "Jan",
+      "2": "Feb",
+      "3": "Mar",
+      "4": "Apr",
+      "5": "May",
+      "6": "Jun",
+      "7": "Jul",
+      "8": "Aug",
+      "9": "Sep",
+      "10": "Oct",
+      "11": "Nov",
+      "12": "Dec"
+    }
+  },
+  "weekday": {
+    "0": "Sun",
+    "1": "Mon",
+    "2": "Tue",
+    "3": "Wed",
+    "4": "Thu",
+    "5": "Fri",
+    "6": "Sat"
+  },
+  "weekdayLong": {
+    "0": "Sunday",
+    "1": "Monday",
+    "2": "Tuesday",
+    "3": "Wednesday",
+    "4": "Thursday",
+    "5": "Friday",
+    "6": "Saturday"
+  },
+  "dateField": {
+    "pick": "Choose a date"
+  },
+  "today": {
+    "title": "Today",
+    "weekOff": "Weekly off — enjoy your day",
+    "holiday": "{{name}} — holiday",
+    "notPunchedIn": "Not punched in yet",
+    "punchedInAt": "Punched in at {{time}}",
+    "done": "In at {{inTime}} · out at {{outTime}}",
+    "punchIn": "Punch in",
+    "punchOut": "Punch out",
+    "viewHistory": "View my attendance"
+  },
+  "monthSummary": {
+    "title": "This month",
+    "workingDays": "Working days",
+    "present": "Present",
+    "halfDays": "Half days",
+    "absent": "Absent",
+    "leave": "Leave",
+    "pending": "Remaining",
+    "weekOffs": "Week-offs",
+    "holidays": "Holidays",
+    "paidNote": "Week-offs and holidays are paid — they are excluded from the working-day divisor."
+  },
+  "roster": {
+    "title": "Today's attendance",
+    "unmarked": "Not marked",
+    "noStaff": "No staff at this branch yet",
+    "weekOffDay": "Weekly off — no attendance expected",
+    "holidayDay": "{{name}} — holiday",
+    "summaryPresent": "Present",
+    "summaryAbsent": "Absent",
+    "summaryHalfDay": "Half",
+    "summaryUnmarked": "Unmarked",
+    "markFor": "Mark {{name}}"
+  },
+  "staffHub": {
+    "title": "Staff",
+    "todaySection": "Today",
+    "staffSection": "Staff",
+    "payrollSection": "Payroll",
+    "mySection": "My attendance",
+    "mySlips": "My payslips",
+    "noSlips": "No payslips yet",
+    "notStaff": "You are not registered as a staff member of this business.",
+    "runPayroll": "Run payroll for {{month}}",
+    "allBranches": "All branches"
+  },
+  "editStaff": {
+    "title": "Edit staff member",
+    "save": "Save changes",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "inactive": "Inactive",
+    "deactivateTitle": "Deactivate this person?",
+    "deactivateBody": "They will drop off the roster and out of payroll runs. Their attendance and past payslips are kept.",
+    "salaryOwnerOnly": "Only an owner or admin can change pay.",
+    "hiredOn": "Date of joining",
+    "exitedOn": "Last working day",
+    "phone": "Phone",
+    "employeeCode": "Employee code",
+    "notes": "Notes",
+    "branch": "Branch"
+  },
+  "payrollRun": {
+    "title": "Run payroll",
+    "preview": "Preview",
+    "ready": "{{count}} ready",
+    "skipped": "{{count}} skipped",
+    "run": "Generate {{count}} payslips",
+    "running": "Generating...",
+    "done": "Generated {{count}} payslips",
+    "totalGross": "Gross",
+    "totalDeductions": "Deductions",
+    "totalNet": "Net",
+    "monthInProgress": "This month is still in progress — figures will change.",
+    "nothingToRun": "Nobody at this branch has a salary set yet.",
+    "reason": {
+      "NO_BASE_SALARY": "No salary set",
+      "INACTIVE": "Inactive",
+      "ALREADY_FINALIZED": "Already finalized",
+      "NO_WORKING_DAYS": "No working days"
+    }
+  },
+  "workCalendar": {
+    "title": "Workweek & holidays",
+    "weeklyOff": "Weekly off",
+    "weeklyOffHint": "Days off every week. These are paid — they are excluded from the working-day divisor, so missing one costs nothing.",
+    "unmarkedTitle": "Days with no record",
+    "unmarkedPresent": "Count as present",
+    "unmarkedAbsent": "Count as absent",
+    "unmarkedHint": "What a working day with no punch and no manual mark means when payroll runs.",
+    "branchOverride": "Branch overrides",
+    "inherit": "Follows the business",
+    "overrides": "Own weekly off",
+    "holidays": "Holidays",
+    "addHoliday": "Add holiday",
+    "holidayName": "Holiday name",
+    "holidayDate": "Date",
+    "allBranches": "All branches",
+    "noHolidays": "No holidays added for {{year}}",
+    "deleteHoliday": "Remove",
+    "paid": "Paid",
+    "unpaid": "Unpaid"
+  },
+  "branchSettings": {
+    "title": "Branch settings",
+    "timezone": "Timezone",
+    "timezoneHint": "Attendance is filed against this branch's calendar day.",
+    "geofence": "Punch-in geofence",
+    "geofenceRadius": "Allowed radius (metres)",
+    "geofenceHint": "Staff must be within this distance of the branch to punch in. Leave empty to allow punching from anywhere.",
+    "useCurrentLocation": "Use my current location",
+    "clearGeofence": "Turn off geofencing",
+    "coordinates": "Branch location",
+    "save": "Save",
+    "saving": "Saving..."
   }
 }
