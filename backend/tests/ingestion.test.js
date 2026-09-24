@@ -7,7 +7,7 @@ jest.setTimeout(20000);
 const RUN_ID = Date.now();
 const password = 'TestPass123!';
 const ownerEmail = `ingest-owner.${RUN_ID}@test.buisnessops.dev`;
-const managerEmail = `ingest-manager.${RUN_ID}@test.buisnessops.dev`;
+const cashierEmail = `ingest-cashier.${RUN_ID}@test.buisnessops.dev`;
 
 const VALID_CSV = [
   'transaction_external_id,occurred_at,product_name,sku,quantity,unit_price,payment_method,tax_amount,discount_amount',
@@ -20,7 +20,7 @@ const VALID_CSV = [
 
 describe('CSV ingestion (Phase 1)', () => {
   let ownerToken;
-  let managerToken;
+  let cashierToken;
   let businessId;
   let branchId;
   let dataSourceId;
@@ -44,18 +44,18 @@ describe('CSV ingestion (Phase 1)', () => {
     businessIdsToClean.push(businessId);
     userIdsToClean.push(ownerSignup.body.user.id);
 
-    const managerSignup = await request(app).post('/api/auth/signup').send({
-      email: managerEmail,
+    const cashierSignup = await request(app).post('/api/auth/signup').send({
+      email: cashierEmail,
       password,
-      name: 'Ingest Manager',
-      businessName: `Ingest Manager Solo ${RUN_ID}`,
+      name: 'Ingest Cashier',
+      businessName: `Ingest Cashier Solo ${RUN_ID}`,
       industry: 'FOOD_BEVERAGE',
       country: 'IN',
       defaultCurrency: 'INR',
       timezone: 'Asia/Kolkata',
     });
-    businessIdsToClean.push(managerSignup.body.business.id);
-    userIdsToClean.push(managerSignup.body.user.id);
+    businessIdsToClean.push(cashierSignup.body.business.id);
+    userIdsToClean.push(cashierSignup.body.user.id);
 
     const branch = await request(app)
       .post(`/api/businesses/${businessId}/branches`)
@@ -67,13 +67,13 @@ describe('CSV ingestion (Phase 1)', () => {
     const membership = await request(app)
       .post(`/api/businesses/${businessId}/memberships`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ email: managerEmail, role: 'MANAGER' });
+      .send({ email: cashierEmail, role: 'CASHIER' });
     await request(app)
       .post(`/api/businesses/${businessId}/memberships/${membership.body.id}/branch-access`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ branchId });
-    const managerLogin = await request(app).post('/api/auth/login').send({ email: managerEmail, password });
-    managerToken = managerLogin.body.token;
+    const cashierLogin = await request(app).post('/api/auth/login').send({ email: cashierEmail, password });
+    cashierToken = cashierLogin.body.token;
 
     const dataSource = await request(app)
       .post(`/api/businesses/${businessId}/data-sources`)
@@ -89,10 +89,10 @@ describe('CSV ingestion (Phase 1)', () => {
     await prisma.$disconnect();
   });
 
-  it('rejects data source creation from a non-owner/admin role', async () => {
+  it('rejects data source creation from a branch-scoped role without dataSource:manage', async () => {
     const res = await request(app)
       .post(`/api/businesses/${businessId}/data-sources`)
-      .set('Authorization', `Bearer ${managerToken}`)
+      .set('Authorization', `Bearer ${cashierToken}`)
       .send({ provider: 'CSV_UPLOAD', displayName: 'Should be blocked', branchId });
     expect(res.statusCode).toBe(403);
   });
@@ -184,12 +184,12 @@ describe('CSV ingestion (Phase 1)', () => {
     expect(Number(inr.totalSales)).toBeCloseTo(260); // 65 + 75 + 60 + 60 across the 4 transactions
     expect(inr.transactionCount).toBe(4);
 
-    // The manager's BranchAccess covers this same (only) branch, so they see the same totals.
-    const managerRes = await request(app)
+    // The cashier's BranchAccess covers this same (only) branch, so they see the same totals.
+    const cashierRes = await request(app)
       .get(`/api/businesses/${businessId}/sales-summary`)
-      .set('Authorization', `Bearer ${managerToken}`);
-    expect(managerRes.statusCode).toBe(200);
-    expect(managerRes.body.byCurrency).toEqual(ownerRes.body.byCurrency);
+      .set('Authorization', `Bearer ${cashierToken}`);
+    expect(cashierRes.statusCode).toBe(200);
+    expect(cashierRes.body.byCurrency).toEqual(ownerRes.body.byCurrency);
   });
 
   it('lists the sync run history for the data source', async () => {

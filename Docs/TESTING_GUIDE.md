@@ -461,6 +461,38 @@ the empty Alerts placeholder.
 
 ---
 
+## Flow 15a — The operations roles (CASHIER, WAREHOUSE, DELIVERY_AGENT)
+
+Three roles were added for the Branch Operations track. Most of what they *do*
+is not built yet (Tasks 2–9 in [REQUIREMENTS.md](REQUIREMENTS.md)) — what you
+can check today is that each one can be created and that its boundaries hold.
+
+**Setup.** As the owner, Settings → Team → Invite, three times. Note that the
+branch picker appears for **CASHIER** and **DELIVERY_AGENT** but **not** for
+MANAGER or WAREHOUSE, because those two reach every branch.
+
+1. **A cashier sets salary, which used to be owner/admin-only.**
+   Log in as the cashier → Staff tab → pick someone at *their* branch → Edit.
+   - ✅ **Expected:** the monthly salary field is there and saves.
+   - ✅ **Expected:** the same person at a branch the cashier was *not* granted
+     is not reachable at all.
+2. **A cashier cannot run payroll.** No "Run payroll" card on the Staff tab.
+3. **The warehouse desk sees branches but not people.**
+   Log in as the warehouse user.
+   - ✅ **Expected:** Home lists **every** branch, even though you granted it
+     none.
+   - ✅ **Expected:** it cannot open anyone's staff record or attendance. Via
+     the API, `GET /businesses/:id/branches/<any>/attendance` returns **403**,
+     not 500. (A 500 here would mean the guard added for this case is missing.)
+4. **A delivery agent sees only themselves.** Staff tab shows their own
+   attendance and nothing else — no roster, no colleague.
+5. **A manager now reaches every branch.** This *changed*: a manager used to be
+   limited to granted branches.
+   - ✅ **Expected:** Home lists every branch, and Settings shows the Team and
+     Work Calendar cards that used to be owner/admin-only.
+
+---
+
 ## Flow 16 — Take access away again
 
 Everything up to here only ever *granted* access. This is the other direction.
@@ -614,6 +646,19 @@ radius — see Flow 18 step 6 for what that message should look like.
   attendance days that person marked.
 - **Reports and Alerts tabs** intentionally show a "planned" notice — they're
   Phase 4/5 work, not started yet.
+- **The three new roles have their permissions but not their screens yet.**
+  CASHIER, WAREHOUSE and DELIVERY_AGENT can be invited and are correctly scoped
+  (Flow 15a), but counter billing, supply orders, expenses and the notification
+  centre are Tasks 2–9 of the Branch Operations track and are not built. A
+  cashier logging in today sees the ordinary app with staff and pay access for
+  their own branch; a delivery agent sees little more than their own attendance.
+  The tab bar is still the same four tabs for everyone — role-aware navigation
+  arrives with Task 3.
+- **A manager's branch grants no longer do anything.** Requirement 14 made the
+  role business-wide. The Team screen still lets you remove a manager's branch
+  access and the request succeeds, but it changes nothing about what they can
+  reach. The invite screen already stops asking for branches for that role; the
+  Team screen's removal affordance is the remaining loose end.
 - **Salary changes overwrite with no history**: editing a staff member's monthly
   salary replaces the old figure outright. Regenerating an *unfinalized* payslip
   for a past month will therefore use the new salary — finalize a slip to lock it.

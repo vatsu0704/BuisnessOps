@@ -45,7 +45,10 @@ export default function EditStaffScreen({ route, navigation }: Props) {
   const membership = useMembership();
   const { branches } = useBranches();
 
-  const canEditPay = can.managePayroll(membership);
+  // staff:setPay, not payroll:run — requirement 14 gives a cashier the first
+  // and not the second, so gating the pay field on "can run payroll" would hide
+  // it from exactly the person meant to use it.
+  const canEditPay = can.setPay(membership);
 
   const [staffMember, setStaffMember] = useState<StaffMember | null>(null);
   const [isLoading, setIsLoading] = useState(true);

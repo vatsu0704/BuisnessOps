@@ -97,13 +97,20 @@ One row per (user, business) — carries the role. Replaces a naive `User.busine
 | id | String (uuid) | PK |
 | userId | String | FK → User |
 | businessId | String | FK → Business |
-| role | Enum: `OWNER, ADMIN, MANAGER, STAFF` | per PRD Section 8 |
+| role | Enum: `OWNER, ADMIN, MANAGER, STAFF, WAREHOUSE, CASHIER, DELIVERY_AGENT` | The vocabulary only — **what each role may do is not in the database.** It lives in `backend/src/permissions/catalog.js`, mirrored to `frontend/src/permissions/matrix.json` and gated by `npm run lint:permissions` in CI. The last three arrived with the Branch Operations track; see section 11. |
 | status | Enum: `INVITED, ACTIVE, REVOKED` | `REVOKED` is what "remove this person" writes (`POST /memberships/:id/revoke`) — a soft revoke, because deleting the row would null `Attendance.markedByMembershipId` on every day they ever marked. `resolveTenant` requires `ACTIVE`, so a revoke takes effect on the person's very next request without any token invalidation. Re-inviting the same email flips the row back to `ACTIVE` with the new invite's role, which is the only way back in. `INVITED` is still set by no code path — "invited, no account yet" is modeled by `Invite` below instead, since a Membership row requires a real `userId`. Kept for a future self-serve accept/decline step on an *existing* account being invited to a *new* business, which isn't built yet either. |
 | invitedAt / joinedAt | DateTime, nullable | |
 | unique | (userId, businessId) | one role per person per business |
 
 ### `BranchAccess`
-Explicit branch scoping for `MANAGER`/`STAFF` roles (a manager can cover more than one branch). `OWNER`/`ADMIN` roles ignore this table — they have implicit all-branch access within the business.
+Explicit branch scoping for the branch-scoped roles — `CASHIER`, `DELIVERY_AGENT` and `STAFF` — any of which can cover more than one branch.
+
+Which roles ignore this table is **not a hardcoded list**: it is whoever holds the `branch:allAccess` capability, read by `resolveTenant` to decide the `req.branchAccess === null` sentinel. Today that is `OWNER`, `ADMIN`, `MANAGER` and `WAREHOUSE`.
+
+Two things worth knowing:
+
+- **`MANAGER` left this table's audience in requirement 14.** A manager's rows still exist and can still be removed, but they no longer bound what that person reaches. The invite screen stops asking for branches for that role.
+- **`branch:allAccess` is not authority over people.** `WAREHOUSE` holds it — the order desk ships to every branch — and deliberately does not hold `staff:viewAllBranches`, so it cannot read any branch's staff records or attendance. The sentinel used to conflate the two, which was safe only while the set was {OWNER, ADMIN}.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -196,7 +203,7 @@ The core sales fact table. Every metric in the catalog (Phase 2) ultimately aggr
 | staffMemberId | String, nullable | FK → StaffMember |
 | totalAmount / taxAmount / discountAmount | Decimal | |
 | currency | String | |
-| paymentMethod | Enum: `CASH, CARD, UPI, WALLET, OTHER, MIXED` | drives cash/digital mix anomaly detection (FR-12) from day one, even though nothing reads it until Phase 5 |
+| paymentMethod | Enum: `CASH, CARD, UPI, WALLET, OTHER, MIXED, UNSPECIFIED` | drives cash/digital mix anomaly detection (FR-12) from day one, even though nothing reads it until Phase 5. `UNSPECIFIED` exists because a counter order (Branch Operations Task 4) has no payment step while this column is required — writing `OTHER` instead would put a permanent lie into the very metric the column exists for |
 | status | Enum: `COMPLETED, REFUNDED, VOIDED` | never hard-deleted |
 | createdAt | DateTime | |
 | unique | (branchId, externalId) | idempotent re-sync |
@@ -576,4 +583,63 @@ Two layers, per the NFR (no cross-tenant leakage under any condition):
 | 2–4 — Query Engine & Reporting | `Conversation`, `QueryLog`, `QueryFeedback` |
 | 5 — Proactive Intelligence | `Alert`, `AlertNotification`, `ExternalSignal` |
 | 6 — Strategic & Franchise | `DemandForecast`, `FranchiseAgreement`, `RoyaltyStatement`, `CandidateLocation` |
+| Branch Operations (a separate track — see section 11) | `CounterOrder`, `CounterOrderItem`, `BranchTokenCounter`, `DayClose`, `SupplyOrder`, `SupplyOrderItem`, `SupplyOrderEvent`, `Expense`, `ExpenseCategory`, `DeviceToken`, `Notification` |
 | Cross-cutting | `AuditLog` (from Phase 0) |
+
+---
+
+## 11. Branch Operations — planned tables
+
+A second track running alongside the phase sequence, driven by
+[REQUIREMENTS.md](REQUIREMENTS.md), which turns BizIQ from a product that
+analyses a business into one that runs it. **None of these tables exist yet** —
+they are listed here so the tables that do exist are designed not to need
+breaking changes when they arrive, which is the same reason sections 5–7 are
+written ahead of their phases.
+
+Task 1 of that track (roles and the capability matrix) has landed, and its two
+schema changes are recorded in place above: the three new `MembershipRole`
+values on `Membership`, and `PaymentMethod.UNSPECIFIED` on `Transaction`.
+
+**Counter billing (R1).** `CounterOrder` + `CounterOrderItem` hold a token
+number, a running total and an open/closed/void state. They are **not** a second
+sales fact table: every mutation projects into `Transaction`/`LineItem` inside
+the same Prisma transaction, so `getSalesSummary` and every future metric keep
+reading one table — Architecture Principle 4 in
+[PROJECT_FLOW.md](PROJECT_FLOW.md), applied to an in-app source rather than a
+POS file. `Transaction` gains a `TransactionSource` discriminator
+(`POS_IMPORT | COUNTER`) so imported and counter sales can be told apart.
+
+`BranchTokenCounter` (`@@id([branchId, tokenDate])`) allocates the per-branch,
+per-day token number in one atomic `INSERT … ON CONFLICT DO UPDATE` — a
+`MAX+1`-and-retry would contend exactly when the counter is busiest.
+`tokenDate` is the **branch's** local date, via `todayKeyInZone`, or numbering
+restarts at 05:30 IST. `DayClose` is the floor on editing: once a day is
+exported, changing one of its orders would restate a number someone has already
+been shown, which is the failure `SalarySlip`'s FINALIZED rule already exists to
+prevent.
+
+**Supply orders (R3, R5, R9, R11, R12).** `SupplyOrder` carries the status
+machine (`DRAFT → PLACED → ACCEPTED → PACKED → DISPATCHED → DELIVERED`, with
+`CANCELLED` before dispatch), the payment mode and its reference string, and the
+promised arrival. `DRAFT` **is** the cart, so it survives closing the app.
+`SupplyOrderEvent` is append-only and covers order tracking, material tracking,
+the dispatch record, the "+30 minutes, traffic" delays from both the warehouse
+and the delivery agent, and the audit trail — one table rather than four
+half-overlapping ones. The raw-material catalog reuses `InventoryItem`, which
+has been in the schema since Phase 1 with no API on it.
+
+**Expenses (R10).** `Expense` + `ExpenseCategory`, per branch per day.
+"Which branches haven't logged today" needs no table — it is a left join
+computed when someone opens the screen, and therefore exact, where a nightly
+snapshot would be wrong minutes after it ran.
+
+**Notifications (R2, R8).** `DeviceToken` is per device per **user**, not per
+membership: a phone belongs to a person, and one person acts under several
+businesses. Its `token` is unique so that re-registering after a logout *moves*
+the row rather than leaving the previous user receiving pushes on a phone they
+signed out of. It also carries the **device's** locale, which is what lets the
+push sender render text in the right language without violating the rule that
+the backend does not translate — see the notification section of
+[REQUIREMENTS.md](REQUIREMENTS.md). `Notification` stores `code` + `params`,
+never prose, exactly as the error catalog does.

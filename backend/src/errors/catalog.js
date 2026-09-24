@@ -39,8 +39,12 @@ const API_MESSAGES = {
   BRANCH_ACCESS_DENIED_DESTINATION: 'You do not have access to the destination branch',
   STAFF_ACCESS_DENIED: 'You do not have access to this staff member',
   SALARY_SLIP_ACCESS_DENIED: 'You do not have access to this salary slip',
-  PAY_SET_REQUIRES_OWNER_ADMIN: 'Only an owner or admin can set pay',
-  PAY_CHANGE_REQUIRES_OWNER_ADMIN: 'Only an owner or admin can change pay',
+  // Renamed from PAY_{SET,CHANGE}_REQUIRES_OWNER_ADMIN: a cashier sets their
+  // own branch's salaries now, so naming two roles in the code was a statement
+  // that had stopped being true.
+  PAY_SET_NOT_PERMITTED: 'You are not allowed to set pay',
+  PAY_CHANGE_NOT_PERMITTED: 'You are not allowed to change pay',
+  MEMBERSHIP_REVOKE_OUTRANKED: 'You cannot remove someone with equal or greater access than your own',
 
   // --- Business and branches ----------------------------------------------
   BUSINESS_NOT_FOUND: 'Business not found',

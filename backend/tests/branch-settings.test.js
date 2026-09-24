@@ -7,7 +7,7 @@ jest.setTimeout(20000);
 const RUN_ID = Date.now();
 const password = 'TestPass123!';
 const ownerEmail = `bset-owner.${RUN_ID}@test.buisnessops.dev`;
-const managerEmail = `bset-manager.${RUN_ID}@test.buisnessops.dev`;
+const cashierEmail = `bset-cashier.${RUN_ID}@test.buisnessops.dev`;
 
 // PATCH /branches/:branchId had no test at all. It was written during the
 // payroll rebuild and then never called by anything — the app captured no
@@ -16,7 +16,7 @@ const managerEmail = `bset-manager.${RUN_ID}@test.buisnessops.dev`;
 // are now built, which makes this endpoint load-bearing.
 describe('Branch settings', () => {
   let ownerToken;
-  let managerToken;
+  let cashierToken;
   let businessId;
   let branchId;
   let otherBusinessBranchId;
@@ -53,18 +53,18 @@ describe('Branch settings', () => {
       .send({ name: 'Settings Branch', code: 'BSET', timezone: 'Asia/Kolkata' });
     branchId = branch.body.id;
 
-    const manager = await signUp(managerEmail, `Manager Solo ${RUN_ID}`);
-    managerToken = manager.token;
+    const cashier = await signUp(cashierEmail, `Cashier Solo ${RUN_ID}`);
+    cashierToken = cashier.token;
     const otherBranch = await request(app)
-      .post(`/api/businesses/${manager.business.id}/branches`)
-      .set(auth(managerToken))
+      .post(`/api/businesses/${cashier.business.id}/branches`)
+      .set(auth(cashierToken))
       .send({ name: 'Other Business Branch', code: 'OTHR', timezone: 'Asia/Kolkata' });
     otherBusinessBranchId = otherBranch.body.id;
 
     await request(app)
       .post(`/api/businesses/${businessId}/memberships`)
       .set(auth(ownerToken))
-      .send({ email: managerEmail, role: 'MANAGER', branchIds: [branchId] });
+      .send({ email: cashierEmail, role: 'CASHIER', branchIds: [branchId] });
   });
 
   afterAll(async () => {
@@ -166,10 +166,10 @@ describe('Branch settings', () => {
     expect(res.body.details.map((d) => d.code)).toContain('PROVIDE_AT_LEAST_ONE');
   });
 
-  it('is owner/admin only — a manager with access to the branch still cannot change it', async () => {
+  it('refuses a branch-scoped role that has access to the branch but not branch:update', async () => {
     const res = await request(app)
       .patch(`/api/businesses/${businessId}/branches/${branchId}`)
-      .set(auth(managerToken))
+      .set(auth(cashierToken))
       .send({ geofenceRadiusMeters: null });
 
     expect(res.statusCode).toBe(403);

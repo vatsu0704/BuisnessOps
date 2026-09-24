@@ -1,5 +1,6 @@
 const prisma = require('../config/db');
 const { fail } = require('../errors');
+const { roleHas } = require('../permissions');
 const { dateOnly } = require('../utils/datetime');
 
 function getBranchInBusiness(businessId, branchId) {
@@ -114,9 +115,15 @@ function listStaffMembers(businessId, accessibleBranchIds, { role, userId } = {}
   if (accessibleBranchIds !== null) {
     where.branchId = { in: accessibleBranchIds };
   }
-  // A STAFF-role member sees only their own row, which is what lets the staff
-  // view of the Staff tab reuse this endpoint instead of needing its own.
-  if (role === 'STAFF') {
+  // Someone who may not read colleagues sees only their own row, which is what
+  // lets the personal view of the Staff tab reuse this endpoint instead of
+  // needing its own.
+  //
+  // This used to be `role === 'STAFF'` — a deny-list, so every role added later
+  // would have fallen through and been handed the whole branch roster. Asking
+  // for the capability instead means a role sees colleagues only by holding
+  // `staff:viewOthers`.
+  if (!roleHas(role, 'staff:viewOthers')) {
     where.userId = userId;
   }
   return prisma.staffMember.findMany({ where, orderBy: { name: 'asc' } });

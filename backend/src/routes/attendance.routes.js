@@ -2,7 +2,7 @@ const express = require('express');
 const attendanceController = require('../controllers/attendance.controller');
 const { requireAuth } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenant');
-const { requireRole } = require('../middleware/rbac');
+const { requirePermission } = require('../middleware/rbac');
 const { requireBranchAccess } = require('../middleware/branchScope');
 
 const router = express.Router();
@@ -20,7 +20,7 @@ scoped.get('/attendance/me', attendanceController.getMyAttendance);
 scoped.get('/staff/:staffMemberId/attendance', attendanceController.getStaffAttendance);
 scoped.post(
   '/staff/:staffMemberId/attendance/mark',
-  requireRole('OWNER', 'ADMIN', 'MANAGER'),
+  requirePermission('attendance:markOthers'),
   attendanceController.markAttendance
 );
 // requireBranchAccess alone WAS the hole: a STAFF-role membership that happens
@@ -28,7 +28,7 @@ scoped.post(
 // BranchAccess scopes branch *data*; it is not permission to read colleagues.
 scoped.get(
   '/branches/:branchId/attendance',
-  requireRole('OWNER', 'ADMIN', 'MANAGER'),
+  requirePermission('attendance:viewRoster'),
   requireBranchAccess,
   attendanceController.getDailyRoster
 );

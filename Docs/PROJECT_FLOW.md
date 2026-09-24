@@ -4,7 +4,13 @@ This document translates the product requirements (PRD) into a buildable enginee
 
 The product is named **BizIQ** (Android package `com.biziq.app`), renamed from the earlier "BuisnessOps". The old name deliberately survives where changing it would be disruptive — the repository folder and the Postgres database name `buisnessops` — and those are not typos to fix.
 
-**Where the repo actually is:** Phases 0 and 1 (CSV path) are done. The app ships as an Expo **development build** rather than Expo Go, with its own icon, animated splash and a four-tab shell (Home, Reports, Alerts, Settings). Phase 3's UI i18n is done ahead of order; the rest of Phase 3 and all of Phase 2 are not started. An **Attendance & Salary Slip module** was also added outside the phase sequence, on request — backend and frontend both done (see 4a below).
+**Where the repo actually is:** Phases 0 and 1 (CSV path) are done. The app ships as an Expo **development build** rather than Expo Go, with its own icon, animated splash and a four-tab shell (Home, Staff, Reports, Settings). Phase 3's UI i18n is done ahead of order; the rest of Phase 3 and all of Phase 2 are not started. An **Attendance & Salary Slip module** was also added outside the phase sequence, on request — backend and frontend both done (see 4a below).
+
+**A second track is now running alongside this one.** *Branch Operations*
+(Section 13, driven by [REQUIREMENTS.md](REQUIREMENTS.md)) turns BizIQ from a
+product that analyses a business into one that runs it — counter billing,
+supply orders, expenses, net profit. Task 1 of that track has landed and it
+amends Phase 0: see the note under the Phase 0 exit criterion.
 
 ---
 
@@ -45,12 +51,25 @@ Phases 0–4 are the MVP (PRD Phase 1). Phase 5 is PRD Phase 2. Phase 6 is PRD P
 
 **Deliverables**
 - Prisma schema: `Business`, `Branch`, `Membership` (user ↔ business ↔ branch ↔ role), replacing the standalone `User` model's implicit single-tenant assumption.
-- Roles per Section 8 of the PRD: `OWNER`, `MANAGER` (branch-scoped), `STAFF` (alerts-only), `ADMIN` (config-only).
+- Roles per Section 8 of the PRD: `OWNER`, `MANAGER` (branch-scoped), `STAFF` (alerts-only), `ADMIN` (config-only). **Superseded by Section 13** — there are now seven roles, and what each may do lives in a capability matrix rather than in role-name checks at each route.
 - Auth: JWT-based login/session (already have `jsonwebtoken` installed), password hashing, business signup flow that creates the first `Business` + `OWNER` membership.
 - Middleware: tenant-resolution (derive `businessId` from the authenticated session, never from client input) + role guard.
 - Environment/config split for dev/staging/prod; CI running `npm test` + Prisma migration check on both backend and frontend.
 
-**Exit criteria:** a manager account, scoped to one branch, cannot read another branch's data even if it guesses an ID — verified by a test, not just by inspection.
+**Exit criteria:** a branch-scoped account cannot read another branch's data even if it guesses an ID — verified by a test, not just by inspection.
+
+> **Amended 2026-09-23.** This criterion used to name the *manager* as the
+> branch-scoped role, and `tests/tenant-isolation.test.js` demonstrated it with
+> one. Requirement 14 of the Branch Operations track (Section 13) makes MANAGER
+> admin-equivalent and business-wide, so the role no longer carries the
+> property. **The property itself is unchanged and still enforced** — it is now
+> demonstrated with a `CASHIER`, and the same test file additionally asserts the
+> manager's new reach, so the widening is a decision on record rather than an
+> absence of coverage.
+>
+> A `MANAGER`'s `BranchAccess` rows still exist and can still be removed; they
+> simply no longer bound what that person can reach. The invite screen therefore
+> stops asking for branches when the role is MANAGER.
 
 ---
 
@@ -307,3 +326,87 @@ What's actually next:
 - **Data privacy regulation differs by market** — no market launch without its own compliance review (Phase 7).
 - **Pricing model** — undefined; validate during Phase 4–5 user testing, not assumed upfront.
 - **PRD not yet validated with external owners** — treat Section 6 priorities (and thus this phase order) as provisional until early user interviews confirm them, especially the Phase 2/3 ordering of query-engine vs. voice.
+
+---
+
+## 13. Branch Operations (a separate track, started 2026-09-23)
+
+A second track, running alongside the phase sequence above rather than inside
+it. Where Phases 0–7 make BizIQ *analyse* a business, this track makes it *run*
+one: counter billing with tokens, branch-to-warehouse supply orders with
+payment and dispatch, branch expense logging, and net profit per branch per
+month across several businesses in one account.
+
+The requirements and the full task breakdown are in
+**[REQUIREMENTS.md](REQUIREMENTS.md)** — that document is the source of truth
+for what is being built and why. This section tracks only where each task has
+got to.
+
+| Task | Focus | Requirements | Status |
+|---|---|---|---|
+| 1 | Roles and the permission matrix | R14 | ✅ done |
+| 2 | One account, many businesses | R16 | ⏳ not started |
+| 3 | Product catalog, new Home, hide AI | R4, R7 | ⏳ not started |
+| 4 | Counter billing and tokens | R1, R17 | ⏳ not started |
+| 5 | Supply orders end to end | R3, R5, R9, R11, R12 | ⏳ not started |
+| 6 | Expenses and the daily log | R10 | ⏳ not started |
+| 7 | Firebase notifications | R2, R8 | ⏳ not started |
+| 8 | Analytics and net profit | R13, R15 | ⏳ not started |
+| 9 | Day-end and month-end export | R17 | ⏳ not started |
+
+### Task 1 — Roles and the permission matrix ✅
+
+**Why it had to come first.** Six of these requirements name a role that did not
+exist, and the role code could not carry them. Authorization was 27 duplicated
+`requireRole('OWNER','ADMIN')` lists plus four hand-written checks written as
+**deny-lists** — `if (role === 'STAFF') return false`. An allow-list fails
+*closed* when a new role appears, which is safe. A deny-list fails **open**:
+adding `DELIVERY_AGENT` would have handed it every colleague's HR record through
+`staffScope.js`, and `CASHIER` the ability to create staff in branches it cannot
+reach. Those four were inverted *before* the enum grew, so no window existed
+where the values were addable and the checks were wrong.
+
+**What landed:**
+
+- Seven roles: the existing `OWNER`, `ADMIN`, `MANAGER`, `STAFF` plus
+  `WAREHOUSE`, `CASHIER` and `DELIVERY_AGENT`.
+- A capability matrix — `backend/src/permissions/catalog.js` (pure data,
+  requires nothing) mirrored to `frontend/src/permissions/matrix.json`, with
+  `requirePermission('staff:create')` replacing `requireRole(...)` across all
+  seven business routers. Default-deny; `OWNER: '*'` is the one wildcard.
+- **MANAGER derives from ADMIN** minus an explicit (currently empty) exclusion
+  list, so R14's "all the access that admin has" cannot silently drift.
+- **`branch:allAccess` split from `staff:viewAllBranches`.** The
+  `req.branchAccess === null` sentinel used to mean both "every branch's data"
+  and "business-wide authority over people". Those were the same set while the
+  set was {OWNER, ADMIN}; `WAREHOUSE` needs the first and must not have the
+  second. Splitting them is what keeps the order desk out of HR records — and
+  the newly-reachable `.includes(null)` path needed a guard to return 403 rather
+  than crash with a 500.
+- `npm run lint:permissions` (`frontend/scripts/check-permission-parity.js`) in
+  CI, comparing the two matrices and the `MembershipRole` enum. `tsc` cannot see
+  this: it checks the mirror against itself, and a wrong mirror is still
+  internally consistent.
+- `MembershipRole` on the frontend is now *derived* from the matrix rather than
+  hand-written, which is how a new role used to arrive as a string the app
+  silently treated as having no permissions.
+- `INVITABLE_ROLES` derives from the matrix on both ends. Hand-listing it is the
+  trap that makes a whole feature look built and be unreachable — the role
+  exists, holds capabilities, and can be given to nobody.
+- The revoke guard generalised from "an ADMIN cannot revoke the OWNER" to a rank
+  comparison, so a manager cannot remove the admin who issued their account.
+  Existing outcomes are unchanged; peers can still remove each other.
+- `backend/tests/permissions.test.js` — 20 tests covering the matrix itself and
+  each new role over HTTP, including the two regressions the deny-lists would
+  have caused.
+
+**Migration:** `20260923171027_operations_roles` adds the three roles and
+`PaymentMethod.UNSPECIFIED`. Nothing in it *uses* the new values, deliberately:
+Postgres refuses a new enum value in the transaction that added it, and Prisma
+wraps each migration file in one — so any later data work writing `'CASHIER'`
+into a row needs its own migration directory.
+
+**Two error codes were renamed.** `PAY_SET_REQUIRES_OWNER_ADMIN` and
+`PAY_CHANGE_REQUIRES_OWNER_ADMIN` became `PAY_SET_NOT_PERMITTED` and
+`PAY_CHANGE_NOT_PERMITTED`, because a cashier sets pay now and naming two roles
+in the code was a statement that had stopped being true.

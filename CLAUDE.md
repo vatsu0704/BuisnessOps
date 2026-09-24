@@ -17,6 +17,7 @@ from code.
 
 | Path | Contents |
 | --- | --- |
+| `Docs/REQUIREMENTS.md` | What the Branch Operations track is building and why — the numbered requirements, their acceptance criteria, and the task breakdown |
 | `Docs/PROJECT_FLOW.md` | The phased delivery plan and the current status of each phase |
 | `Docs/database-table.md` | Data model notes |
 | `Docs/TESTING_GUIDE.md` | Click-by-click manual walkthrough of every user-facing flow that is built, in the order they have to be followed |
@@ -28,7 +29,9 @@ from the root and GitHub renders the root README as the repository's front page.
 **Keep all three current as functionality is added.** A feature is not finished
 until the documents describing it match the code:
 
-- a new or re-scoped phase, or a phase whose status changes →
+- a new or re-scoped requirement, or a decision about one →
+  `Docs/REQUIREMENTS.md`
+- a new or re-scoped phase or task, or one whose status changes →
   `Docs/PROJECT_FLOW.md`
 - a new table, column, relation or enum → `Docs/database-table.md`
 - a new user-facing flow, or a change to the steps, the expected result, or the
@@ -93,6 +96,78 @@ layering; do not query Prisma directly from a controller.
 Every table holding business data carries a `businessId`. Resolve the tenant
 from the authenticated session, never from client-supplied input, so cross-tenant
 access is impossible by construction rather than by convention.
+
+## Roles and permissions
+
+There are seven roles — `OWNER`, `ADMIN`, `MANAGER`, `STAFF`, `WAREHOUSE`,
+`CASHIER`, `DELIVERY_AGENT` — but **never check a role name.** Ask for a
+capability:
+
+```js
+scoped.post('/staff', requirePermission('staff:create'), staffController.createStaffMember);
+```
+
+- The matrix is `backend/src/permissions/catalog.js` — **pure data, requiring
+  nothing.** `frontend/scripts/check-permission-parity.js` loads it from the
+  frontend's node process, so a single `require` added there breaks CI with an
+  error that looks nothing like its cause.
+- `frontend/src/permissions/matrix.json` is a generated mirror. Change the
+  backend catalog, then regenerate it; `npm run lint:permissions` (in CI) fails
+  if the two drift. `tsc` cannot catch this — it checks the mirror against
+  itself, and a wrong mirror is internally consistent.
+- The frontend uses the **same capability strings** the backend guards the
+  matching endpoint with, so a control that renders is a control whose request
+  will succeed. `MembershipRole` and the invitable-role list are both *derived*
+  from the matrix rather than written out.
+- **Never write a deny-list** (`if (role === 'STAFF') return false`). It fails
+  *open* for every role added later, which is how a delivery agent would end up
+  reading colleagues' HR records. Allow-lists off the matrix only.
+- `req.branchAccess === null` means "every branch, for **data**", driven by
+  `branch:allAccess`. Authority over *people* is a separate capability,
+  `staff:viewAllBranches`. `WAREHOUSE` holds the first and not the second —
+  don't recombine them, and keep the `branchAccess !== null` guards that stop a
+  null reaching `.includes` and turning a 403 into a 500.
+- Two routes in `business.routes.js` are deliberately unguarded — `GET /` and
+  `GET /branches`. The business switcher calls them for every member, including
+  STAFF. Adding a `requirePermission` there looks like tidying and silently
+  breaks switching for everyone who is not an admin.
+- Adding a role means a Postgres enum change, and `ALTER TYPE … ADD VALUE`
+  cannot be *used* in the transaction that added it — Prisma wraps each
+  migration file in one, so data work using a new value needs its own migration
+  directory after it.
+
+## Finishing a design change
+
+**For every task: if it changes the design, finish the design properly, with
+clean code.** A task is done when the screen it touched still looks right — not
+when the logic works and the gates pass.
+
+Nothing in CI can see this. `tsc`, `lint:i18n`, `lint:errors` and
+`lint:permissions` all pass happily on a screen that renders as a column of
+single letters. **Looking at the screen is the only check there is**, so build it
+into the task rather than waiting to be sent a screenshot.
+
+- **Adding items to a fixed-layout control is a design change**, even when no
+  style file is touched. A row of chips, a segmented control, a tab bar, a
+  fixed-width grid — growing the list from three to six changes the design.
+  This is not hypothetical: the invite screen's role picker used
+  `SegmentedOption`, which sets `flex: 1` so a row divides the width evenly.
+  At six roles each chip got about 40px and every label wrapped one character
+  per line.
+- **Prefer a layout that scales** with the number of items — a stacked list, a
+  wrap, a grid — over one that silently degrades as items are added.
+- **Fix the layout, not the symptom.** Shrinking the font or truncating labels
+  to make six chips fit is not a fix.
+- **Reuse `src/components` and the theme tokens** so the result stays
+  consistent, and add a shared component when the pattern will recur rather
+  than styling it inline. `OptionRow` (single-select list with a description)
+  and `SegmentedOption` (compact chip for two or three side-by-side options)
+  are the two choice controls; pick by the number of options and whether each
+  needs a sentence to explain it.
+- **Let the type system carry the design step where it can.** `ROLE_ICONS` in
+  `InviteMemberScreen` is a `Record` over every invitable role, so adding a role
+  fails `tsc` until someone picks its icon — rather than rendering one row with
+  a hole in it.
 
 ## Frontend conventions
 

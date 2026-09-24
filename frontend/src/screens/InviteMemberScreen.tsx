@@ -10,9 +10,11 @@ import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import { isValidEmail } from '@/utils/validation';
+import { ROLES, roleHas } from '@/permissions';
 import type { MembershipRole } from '@/types/user';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import FormInput from '@/components/FormInput';
+import OptionRow from '@/components/OptionRow';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -28,8 +30,37 @@ type Props = NativeStackScreenProps<AppStackParamList, 'InviteMember'>;
 // one, created at signup) — narrowing the type here, not just the runtime
 // list below, is what keeps roleHint_OWNER from needing to exist at all.
 type InvitableRole = Exclude<MembershipRole, 'OWNER'>;
-const INVITABLE_ROLES: InvitableRole[] = ['ADMIN', 'MANAGER', 'STAFF'];
-const BRANCH_SCOPED_ROLES = new Set<InvitableRole>(['MANAGER', 'STAFF']);
+
+// Derived from the permission matrix, and deliberately: a hand-written list
+// here is how a role ends up existing in the database, holding capabilities in
+// the matrix, and being impossible to actually give anyone. The backend's
+// validator derives the same list from the same matrix.
+const INVITABLE_ROLES = ROLES.filter((r): r is InvitableRole => r !== 'OWNER');
+
+// Which roles a branch selection is required for.
+//
+// MANAGER left this set in requirement 14: the role is business-wide now, so
+// its BranchAccess rows have no effect and asking for them would be theatre.
+// These are the roles whose reach `branch:allAccess` does NOT cover.
+const BRANCH_SCOPED_ROLES = new Set<InvitableRole>(
+  INVITABLE_ROLES.filter((r) => !roleHas(r, 'branch:allAccess'))
+);
+
+// Six roles is past the point where a name alone identifies one at a glance,
+// so each gets a glyph.
+//
+// A Record over InvitableRole rather than a partial map, deliberately: adding a
+// role to the permission matrix now fails `tsc` here until someone chooses its
+// icon. The alternative is a lookup that silently returns undefined and renders
+// a row with a hole where every other row has a symbol.
+const ROLE_ICONS: Record<InvitableRole, keyof typeof Ionicons.glyphMap> = {
+  ADMIN: 'shield-checkmark-outline',
+  MANAGER: 'briefcase-outline',
+  WAREHOUSE: 'cube-outline',
+  CASHIER: 'receipt-outline',
+  DELIVERY_AGENT: 'bicycle-outline',
+  STAFF: 'person-outline',
+};
 
 export default function InviteMemberScreen({ navigation }: Props) {
   const { t } = useTranslation();
@@ -125,18 +156,23 @@ export default function InviteMemberScreen({ navigation }: Props) {
                 {emailInvalid ? <Text style={styles.fieldError}>{t('inviteMember.emailInvalid')}</Text> : null}
 
                 <Text style={styles.sectionTitle}>{t('inviteMember.roleSection')}</Text>
-                <View style={styles.chipRow}>
+                {/* A list rather than a row of chips: six roles cannot share a
+                    line, and the hint belongs beside the role it describes
+                    rather than under the group, where it only ever described
+                    whichever one happened to be selected. */}
+                <View style={styles.roleList} accessibilityRole="radiogroup">
                   {INVITABLE_ROLES.map((r) => (
-                    <SegmentedOption
+                    <OptionRow
                       key={r}
                       testID={`invite-member-role-${r}`}
+                      icon={ROLE_ICONS[r]}
                       title={t(`role.${r}`)}
+                      description={t(`inviteMember.roleHint_${r}`)}
                       selected={role === r}
                       onPress={() => setRole(r)}
                     />
                   ))}
                 </View>
-                <Text style={styles.roleHint}>{t(`inviteMember.roleHint_${role}`)}</Text>
               </View>
             </AnimatedEntrance>
 
@@ -220,8 +256,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.md,
   },
-  chipRow: { flexDirection: 'row', gap: spacing.sm },
-  roleHint: { fontSize: 12.5, color: colors.textTertiary, marginTop: spacing.sm, lineHeight: 17 },
+  roleList: { gap: spacing.sm },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   gridItem: { width: '48%' },
   emptyText: { fontSize: 13.5, color: colors.textTertiary, textAlign: 'center', paddingVertical: spacing.sm },

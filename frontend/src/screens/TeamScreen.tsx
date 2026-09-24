@@ -15,6 +15,7 @@ import {
 } from '@/api/team';
 import { extractErrorMessage } from '@/api/client';
 import type { PendingInvite, TeamMember } from '@/types/team';
+import { roleHas } from '@/permissions';
 import type { MembershipRole } from '@/types/user';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import InfoCard from '@/components/InfoCard';
@@ -30,8 +31,15 @@ type Props = NativeStackScreenProps<AppStackParamList, 'Team'>;
 
 // Describes the LISTED member's role — do they implicitly reach every branch?
 // This is a property of the row being rendered, not a permission check on the
-// viewer, so it stays here rather than moving into utils/permissions.
-const FULL_ACCESS_ROLES = new Set<MembershipRole>(['OWNER', 'ADMIN']);
+// viewer, which is why it asks roleHas directly rather than going through
+// utils/permissions, whose helpers all take the viewer's membership.
+//
+// It was a hardcoded {OWNER, ADMIN} set. MANAGER joined them in requirement 14
+// and WAREHOUSE arrived with the order desk, and both would otherwise have been
+// rendered with branch pills — or with the "no branches yet" warning — while
+// actually reaching every branch. The warning in particular would have been an
+// invitation to fix something that was not broken.
+const reachesEveryBranch = (role: MembershipRole) => roleHas(role, 'branch:allAccess');
 
 export default function TeamScreen({ navigation }: Props) {
   const { t } = useTranslation();
@@ -141,14 +149,26 @@ export default function TeamScreen({ navigation }: Props) {
   /**
    * Mirrors the two server-side guards, so the app never offers a button that
    * is going to come back 400 or 403: nobody may revoke themselves (which is
-   * also what stops a business losing its only owner), and an ADMIN may not
-   * take the business from the OWNER.
+   * also what stops a business losing its only owner), and nobody may remove
+   * someone who outranks them.
+   *
+   * The rank is the mirror of REVOKE_RANK in backend/src/services/
+   * business.service.js — change one and change the other. It is not in the
+   * capability matrix on purpose: "who outranks whom" is a rule about two
+   * specific memberships, not a permission a role holds on its own.
+   *
+   * It was `member.role === 'OWNER' && viewer.role !== 'OWNER'`, which was the
+   * whole rule while only OWNER and ADMIN could reach this screen. Requirement
+   * 14 put MANAGER here too, and a manager removing the admin who issued their
+   * account is the same escalation one rung down.
    */
+  const rankOf = (role: MembershipRole) => ({ OWNER: 3, ADMIN: 2, MANAGER: 1 }[role as string] ?? 0);
+
   const canRemove = (member: TeamMember) =>
     !!viewer &&
     member.status === 'ACTIVE' &&
     member.id !== viewer.id &&
-    !(member.role === 'OWNER' && viewer.role !== 'OWNER');
+    rankOf(member.role) <= rankOf(viewer.role);
 
   return (
     <View style={styles.container}>
@@ -231,7 +251,7 @@ export default function TeamScreen({ navigation }: Props) {
 
                   {revoked ? (
                     <Text style={styles.branchNote}>{t('team.revokedNote')}</Text>
-                  ) : FULL_ACCESS_ROLES.has(member.role) ? (
+                  ) : reachesEveryBranch(member.role) ? (
                     <Text style={styles.branchNote}>{t('team.allBranches')}</Text>
                   ) : member.branchAccess.length === 0 ? (
                     <Text style={styles.branchNoteWarn}>{t('team.noBranches')}</Text>

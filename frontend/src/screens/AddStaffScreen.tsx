@@ -19,14 +19,17 @@ import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
-import { useBusinessId } from '@/hooks/useBusinessId';
+import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
+import { can } from '@/utils/permissions';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AddStaff'>;
 
 export default function AddStaffScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const businessId = useBusinessId();
+  const membership = useMembership();
   const { branches } = useBranches();
+  const canSetPay = can.setPay(membership);
 
   const [branchId, setBranchId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -60,7 +63,7 @@ export default function AddStaffScreen({ navigation }: Props) {
         branchId,
         name: name.trim(),
         role: role.trim(),
-        baseSalary: baseSalaryParsed ?? undefined,
+        ...(canSetPay ? { baseSalary: baseSalaryParsed ?? undefined } : {}),
         email: emailTrimmed || undefined,
       });
       haptics.success();
@@ -136,17 +139,27 @@ export default function AddStaffScreen({ navigation }: Props) {
                   value={role}
                   onChangeText={setRole}
                 />
-                <FormInput
-                  testID="add-staff-salary"
-                  label={t('addStaff.baseSalary')}
-                  hint={t('addStaff.optional')}
-                  icon="cash-outline"
-                  placeholder={t('addStaff.baseSalaryPlaceholder')}
-                  keyboardType="numeric"
-                  value={baseSalary}
-                  onChangeText={setBaseSalary}
-                />
-                {baseSalaryInvalid ? <Text style={styles.fieldError}>{t('addStaff.invalidNumber')}</Text> : null}
+                {/* Hidden for anyone without staff:setPay, the same way
+                    EditStaffScreen hides it — the server 403s the whole
+                    request if the field is sent, so offering it would break
+                    creating the staff member at all, not just the pay. */}
+                {canSetPay ? (
+                  <>
+                    <FormInput
+                      testID="add-staff-salary"
+                      label={t('addStaff.baseSalary')}
+                      hint={t('addStaff.optional')}
+                      icon="cash-outline"
+                      placeholder={t('addStaff.baseSalaryPlaceholder')}
+                      keyboardType="numeric"
+                      value={baseSalary}
+                      onChangeText={setBaseSalary}
+                    />
+                    {baseSalaryInvalid ? (
+                      <Text style={styles.fieldError}>{t('addStaff.invalidNumber')}</Text>
+                    ) : null}
+                  </>
+                ) : null}
                 <FormInput
                   testID="add-staff-email"
                   label={t('addStaff.email')}

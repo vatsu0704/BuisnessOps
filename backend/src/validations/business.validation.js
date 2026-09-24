@@ -11,8 +11,17 @@ const {
   required,
 } = require('./shared');
 const { fieldError } = require('../errors');
+const { ROLES } = require('../permissions');
 
-const INVITABLE_ROLES = ['ADMIN', 'MANAGER', 'STAFF'];
+// Derived from the capability matrix rather than hand-listed, so a role added
+// there is invitable on the same commit. A hand-written list is the trap that
+// makes a whole feature look built and be unreachable: the role exists in the
+// database and in the matrix, and nobody can ever be given it.
+//
+// OWNER stays excluded deliberately, and business.service.js depends on that —
+// "OWNER is not in INVITABLE_ROLES, so the one created at signup is the only
+// one there will ever be" is what keeps a business from losing its only owner.
+const INVITABLE_ROLES = ROLES.filter((role) => role !== 'OWNER');
 const BRANCH_STATUSES = ['ACTIVE', 'INACTIVE', 'CLOSED'];
 
 // Shared by create and update rather than copied, so the two can't drift.

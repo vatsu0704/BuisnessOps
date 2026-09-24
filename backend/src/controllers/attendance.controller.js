@@ -1,7 +1,7 @@
 const attendanceService = require('../services/attendance.service');
 const { fail, validationFailure } = require('../errors');
 const staffService = require('../services/staff.service');
-const { canViewStaffMember, canManageStaffMember, scopeOf } = require('../middleware/staffScope');
+const { canViewStaffMember, canMarkAttendanceFor, scopeOf } = require('../middleware/staffScope');
 const {
   validatePunch,
   validateMarkAttendance,
@@ -97,7 +97,7 @@ async function markAttendance(req, res, next) {
 
     const staffMember = await staffService.getStaffMember(req.tenant.businessId, req.params.staffMemberId);
     if (!staffMember) throw fail('STAFF_NOT_FOUND', 404);
-    if (!canManageStaffMember(scopeOf(req), staffMember)) {
+    if (!canMarkAttendanceFor(scopeOf(req), staffMember)) {
       throw fail('BRANCH_ACCESS_DENIED', 403);
     }
 

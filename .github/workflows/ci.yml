@@ -95,3 +95,11 @@ jobs:
       # because a code missing from all four locales is perfectly consistent.
       - name: Check error-code coverage
         run: npm run lint:errors
+
+      # Authorization is decided twice — the server decides whether a request is
+      # allowed, the app decides whether to render the control that makes it.
+      # tsc type-checks the frontend mirror against itself, so a mirror that
+      # disagrees with the backend is still internally consistent and compiles
+      # fine. The symptom is a button that 403s, or a feature nobody can find.
+      - name: Check permission-matrix parity
+        run: npm run lint:permissions

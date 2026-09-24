@@ -3,7 +3,7 @@ const multer = require('multer');
 const dataSourceController = require('../controllers/dataSource.controller');
 const { requireAuth } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenant');
-const { requireRole } = require('../middleware/rbac');
+const { requirePermission } = require('../middleware/rbac');
 const { fail } = require('../errors');
 
 const upload = multer({
@@ -25,7 +25,7 @@ const router = express.Router();
 
 // Data source management is an OWNER/ADMIN operation (matches the System
 // Administrator role in the PRD who manages data source connections).
-// requireRole is applied per-route, not as a blanket `scoped.use(...)`: this
+// requirePermission is applied per-route, not as a blanket `scoped.use(...)`: this
 // router is mounted at the same '/:businessId' prefix as every other
 // businesses/* resource router, so a blanket gate here would reject any
 // other resource's request that falls through to this router (Express
@@ -35,15 +35,15 @@ const router = express.Router();
 const scoped = express.Router({ mergeParams: true });
 scoped.use(requireAuth, resolveTenant);
 
-scoped.post('/data-sources', requireRole('OWNER', 'ADMIN'), dataSourceController.createDataSource);
-scoped.get('/data-sources', requireRole('OWNER', 'ADMIN'), dataSourceController.listDataSources);
+scoped.post('/data-sources', requirePermission('dataSource:manage'), dataSourceController.createDataSource);
+scoped.get('/data-sources', requirePermission('dataSource:manage'), dataSourceController.listDataSources);
 scoped.post(
   '/data-sources/:dataSourceId/upload',
-  requireRole('OWNER', 'ADMIN'),
+  requirePermission('dataSource:manage'),
   handleUpload,
   dataSourceController.uploadFile
 );
-scoped.get('/data-sources/:dataSourceId/sync-runs', requireRole('OWNER', 'ADMIN'), dataSourceController.listSyncRuns);
+scoped.get('/data-sources/:dataSourceId/sync-runs', requirePermission('dataSource:manage'), dataSourceController.listSyncRuns);
 
 router.use('/:businessId', scoped);
 

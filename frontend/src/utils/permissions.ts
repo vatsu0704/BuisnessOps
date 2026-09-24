@@ -1,4 +1,5 @@
-import type { Membership, MembershipRole, User } from '@/types/user';
+import { roleHas, type Capability } from '@/permissions';
+import type { Membership, User } from '@/types/user';
 
 /**
  * One place for "who is allowed to do what".
@@ -6,9 +7,13 @@ import type { Membership, MembershipRole, User } from '@/types/user';
  * Replaces three separately-declared role Sets — SettingsScreen, TeamScreen and
  * InviteMemberScreen each had their own, typed as plain strings rather than
  * MembershipRole, so a typo would have compiled fine.
+ *
+ * Those Sets have now gone one step further and become capability lookups
+ * against `@/permissions`, whose matrix is a generated mirror of the backend's.
+ * A role list written here could agree with the backend on the day it was
+ * written and quietly stop agreeing later; a capability name cannot, because
+ * `npm run lint:permissions` compares the two files in CI.
  */
-const MANAGE_STAFF = new Set<MembershipRole>(['OWNER', 'ADMIN', 'MANAGER']);
-const FULL_ACCESS = new Set<MembershipRole>(['OWNER', 'ADMIN']);
 
 /**
  * Which membership the app is currently acting under.
@@ -56,13 +61,33 @@ function isActive(membership: Membership | undefined): membership is Membership 
   return !!membership && membership.status === 'ACTIVE';
 }
 
+/**
+ * The one check every screen should use.
+ *
+ * A revoked membership holds nothing, whatever its role says — that check lived
+ * inside each `can.*` entry before and is now in exactly one place.
+ */
+export function hasCapability(m: Membership | undefined, capability: Capability): boolean {
+  return isActive(m) && roleHas(m.role, capability);
+}
+
+/**
+ * Named shorthands for the checks screens actually make.
+ *
+ * Kept as a facade over `hasCapability` so call sites read as intentions
+ * ("can this person manage staff?") rather than as capability strings, and so
+ * a change of underlying capability is one edit here rather than a search
+ * across screens.
+ */
 export const can = {
-  /** Add, edit and deactivate staff; mark attendance. Not pay. */
-  manageStaff: (m: Membership | undefined) => isActive(m) && MANAGE_STAFF.has(m.role),
-  /** See and generate pay. A MANAGER runs attendance, not payroll. */
-  managePayroll: (m: Membership | undefined) => isActive(m) && FULL_ACCESS.has(m.role),
-  manageTeam: (m: Membership | undefined) => isActive(m) && FULL_ACCESS.has(m.role),
+  /** Add, edit and deactivate staff. Not pay — that is its own capability. */
+  manageStaff: (m: Membership | undefined) => hasCapability(m, 'staff:create'),
+  /** Generate and view payslips. */
+  managePayroll: (m: Membership | undefined) => hasCapability(m, 'payroll:run'),
+  /** Set or change a base salary. A CASHIER does this for their own branch. */
+  setPay: (m: Membership | undefined) => hasCapability(m, 'staff:setPay'),
+  manageTeam: (m: Membership | undefined) => hasCapability(m, 'team:view'),
   /** Weekly off, holidays, branch timezone and geofence — these set the payroll divisor. */
-  manageWorkCalendar: (m: Membership | undefined) => isActive(m) && FULL_ACCESS.has(m.role),
-  markAttendance: (m: Membership | undefined) => isActive(m) && MANAGE_STAFF.has(m.role),
+  manageWorkCalendar: (m: Membership | undefined) => hasCapability(m, 'workCalendar:manage'),
+  markAttendance: (m: Membership | undefined) => hasCapability(m, 'attendance:markOthers'),
 };

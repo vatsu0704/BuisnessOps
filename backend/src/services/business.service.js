@@ -171,6 +171,18 @@ function getBusiness(businessId) {
  * `actor` is the caller's own membership, and the two guards below are the
  * whole reason this isn't a one-line status update.
  */
+/**
+ * Privilege ranking, used only by revokeMembership.
+ *
+ * Not in the capability matrix, because "who outranks whom" is a record-level
+ * rule about two specific memberships, not a permission a role holds — the same
+ * reason canViewStaffMember lives beside the route rather than in the matrix.
+ * Anything unlisted ranks 0: a cashier, a delivery agent and a staff member can
+ * all be removed by anyone holding `team:revoke`.
+ */
+const REVOKE_RANK = { OWNER: 3, ADMIN: 2, MANAGER: 1 };
+const revokeRank = (role) => REVOKE_RANK[role] ?? 0;
+
 async function revokeMembership(businessId, membershipId, actor) {
   const target = await prisma.membership.findFirst({ where: { id: membershipId, businessId } });
   if (!target) {
@@ -188,11 +200,24 @@ async function revokeMembership(businessId, membershipId, actor) {
     throw fail('MEMBERSHIP_SELF_REVOKE', 400);
   }
 
-  // requireRole lets OWNER and ADMIN both reach this route, but an ADMIN
-  // removing the OWNER would be a privilege escalation — the lesser role
-  // seizing the business from the greater one.
-  if (target.role === 'OWNER' && actor.role !== 'OWNER') {
-    throw fail('MEMBERSHIP_OWNER_REVOKE_REQUIRES_OWNER', 403);
+  // Nobody may remove someone who outranks them — the lesser role seizing the
+  // business from the greater one.
+  //
+  // This was `target.role === 'OWNER' && actor.role !== 'OWNER'`, which was
+  // enough while only OWNER and ADMIN could reach the route. Requirement 14
+  // makes MANAGER admin-equivalent, and a manager removing the admin who issued
+  // their account is the same escalation one rung down. Expressed as a rank, it
+  // holds for whatever roles gain `team:revoke` later.
+  //
+  // Peers can still remove each other, exactly as an ADMIN could already remove
+  // another ADMIN — this deliberately changes no existing outcome.
+  if (revokeRank(target.role) > revokeRank(actor.role)) {
+    throw fail(
+      // The owner-specific message says more than the general one, so the case
+      // that already had its own code keeps it.
+      target.role === 'OWNER' ? 'MEMBERSHIP_OWNER_REVOKE_REQUIRES_OWNER' : 'MEMBERSHIP_REVOKE_OUTRANKED',
+      403
+    );
   }
 
   return prisma.membership.update({ where: { id: membershipId }, data: { status: 'REVOKED' } });

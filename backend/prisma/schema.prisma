@@ -37,11 +37,24 @@ enum UserStatus {
   DISABLED
 }
 
+// What a role is ALLOWED to do lives in src/permissions/catalog.js, not here.
+// This enum is only the vocabulary; the capability matrix is the authority.
+//
+// Appended rather than ordered by seniority: nothing sorts by this column, and
+// relying on enum declaration order is a trap worth never setting.
 enum MembershipRole {
   OWNER
   ADMIN
   MANAGER
   STAFF
+  // The central order desk. Sees every branch's supply orders and none of their
+  // staff records — see branch:allAccess vs staff:viewAllBranches.
+  WAREHOUSE
+  // The branch operator: counter billing, supply orders, expenses, and their
+  // own branch's staff including pay.
+  CASHIER
+  // Carries supply orders, marks them delivered, posts delays with a reason.
+  DELIVERY_AGENT
 }
 
 enum MembershipStatus {
@@ -277,6 +290,11 @@ enum PaymentMethod {
   WALLET
   OTHER
   MIXED
+  // A counter order has no payment step (requirement 1), but Transaction
+  // requires a payment method. Writing OTHER instead would put a permanent lie
+  // into the cash-vs-digital mix metric that Phase 5 is meant to compute, so
+  // "we did not ask" gets to say so.
+  UNSPECIFIED
 }
 
 enum TransactionStatus {

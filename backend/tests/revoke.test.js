@@ -9,6 +9,10 @@ const password = 'TestPass123!';
 const ownerEmail = `rev-owner.${RUN_ID}@test.buisnessops.dev`;
 const adminEmail = `rev-admin.${RUN_ID}@test.buisnessops.dev`;
 const managerEmail = `rev-manager.${RUN_ID}@test.buisnessops.dev`;
+// Branch grants are exercised through a CASHIER, not the MANAGER: requirement
+// 14 made MANAGER business-wide, so narrowing a manager's BranchAccess rows no
+// longer narrows anything. CASHIER is the branch-scoped role now.
+const cashierEmail = `rev-cashier.${RUN_ID}@test.buisnessops.dev`;
 const neverSignedUpEmail = `rev-pending.${RUN_ID}@test.buisnessops.dev`;
 
 // Access could only ever be granted before this: an invite could be sent but
@@ -19,11 +23,13 @@ describe('Revoking access', () => {
   let ownerToken;
   let adminToken;
   let managerToken;
+  let cashierToken;
   let businessId;
   let branchAId;
   let branchBId;
   let adminMembershipId;
   let managerMembershipId;
+  let cashierMembershipId;
   let ownerMembershipId;
   const businessIdsToClean = [];
   const userIdsToClean = [];
@@ -76,6 +82,8 @@ describe('Revoking access', () => {
     adminToken = admin.token;
     const manager = await signUpOwnBusiness(managerEmail, 'Revoke Manager', `Manager Solo ${RUN_ID}`);
     managerToken = manager.token;
+    const cashier = await signUpOwnBusiness(cashierEmail, 'Revoke Cashier', `Cashier Solo ${RUN_ID}`);
+    cashierToken = cashier.token;
 
     await request(app)
       .post(`/api/businesses/${businessId}/memberships`)
@@ -85,9 +93,14 @@ describe('Revoking access', () => {
       .post(`/api/businesses/${businessId}/memberships`)
       .set(auth(ownerToken))
       .send({ email: managerEmail, role: 'MANAGER', branchIds: [branchAId, branchBId] });
+    await request(app)
+      .post(`/api/businesses/${businessId}/memberships`)
+      .set(auth(ownerToken))
+      .send({ email: cashierEmail, role: 'CASHIER', branchIds: [branchAId, branchBId] });
 
     adminMembershipId = await membershipIdFor(adminEmail);
     managerMembershipId = await membershipIdFor(managerEmail);
+    cashierMembershipId = await membershipIdFor(cashierEmail);
   });
 
   afterAll(async () => {
@@ -147,25 +160,40 @@ describe('Revoking access', () => {
     it('can be narrowed without touching the rest of the membership', async () => {
       const before = await request(app)
         .get(`/api/businesses/${businessId}/branches`)
-        .set(auth(managerToken));
+        .set(auth(cashierToken));
       expect(before.body.map((b) => b.id).sort()).toEqual([branchAId, branchBId].sort());
 
       const res = await request(app)
-        .delete(`/api/businesses/${businessId}/memberships/${managerMembershipId}/branch-access/${branchBId}`)
+        .delete(`/api/businesses/${businessId}/memberships/${cashierMembershipId}/branch-access/${branchBId}`)
         .set(auth(ownerToken));
       expect(res.statusCode).toBe(200);
 
       // Still a member of the business - they just see one branch now.
-      const after = await request(app).get(`/api/businesses/${businessId}/branches`).set(auth(managerToken));
+      const after = await request(app).get(`/api/businesses/${businessId}/branches`).set(auth(cashierToken));
       expect(after.statusCode).toBe(200);
       expect(after.body.map((b) => b.id)).toEqual([branchAId]);
     });
 
     it('404s when that member never had access to the branch', async () => {
       const res = await request(app)
-        .delete(`/api/businesses/${businessId}/memberships/${managerMembershipId}/branch-access/${branchBId}`)
+        .delete(`/api/businesses/${businessId}/memberships/${cashierMembershipId}/branch-access/${branchBId}`)
         .set(auth(ownerToken));
       expect(res.statusCode).toBe(404);
+    });
+
+    // The flip side of requirement 14, asserted so it is a decision on record
+    // rather than a surprise: a manager's BranchAccess rows still exist and can
+    // still be removed, but they no longer bound what the manager can reach.
+    // The Team screen should therefore stop offering branch scoping for MANAGER.
+    it('no longer narrows a MANAGER, whose reach is business-wide', async () => {
+      const res = await request(app)
+        .delete(`/api/businesses/${businessId}/memberships/${managerMembershipId}/branch-access/${branchBId}`)
+        .set(auth(ownerToken));
+      expect(res.statusCode).toBe(200);
+
+      const after = await request(app).get(`/api/businesses/${businessId}/branches`).set(auth(managerToken));
+      expect(after.statusCode).toBe(200);
+      expect(after.body.map((b) => b.id).sort()).toEqual([branchAId, branchBId].sort());
     });
   });
 
