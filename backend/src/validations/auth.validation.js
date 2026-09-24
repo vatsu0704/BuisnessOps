@@ -1,7 +1,5 @@
-const { isValidEmail, mustBeString, mustBeOneOf, required } = require('./shared');
+const { INDUSTRIES, isValidEmail, mustBeString, mustBeOneOf, required } = require('./shared');
 const { fieldError } = require('../errors');
-
-const INDUSTRIES = ['RETAIL', 'FOOD_BEVERAGE', 'SERVICES', 'FRANCHISE_OTHER'];
 
 function validateSignup(body) {
   const errors = [];

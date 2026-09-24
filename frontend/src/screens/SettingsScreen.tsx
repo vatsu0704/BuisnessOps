@@ -99,6 +99,20 @@ export default function SettingsScreen() {
             </AnimatedEntrance>
           ) : null}
 
+          {/* Deliberately outside the switcher's condition. BusinessSwitcher
+              renders nothing until there are two businesses, so putting the
+              "add" entry inside it would mean the only people who could add a
+              second business are the ones who already have one. */}
+          <AnimatedEntrance delay={step(3)} style={styles.block}>
+            <InfoCard
+              testID="settings-add-business"
+              icon="add-circle-outline"
+              title={t('settings.addBusiness')}
+              subtitle={t('settings.addBusinessSubtitle')}
+              onPress={() => navigation.navigate('AddBusiness')}
+            />
+          </AnimatedEntrance>
+
           {noAccess ? (
             <AnimatedEntrance delay={step(3)} style={styles.block}>
               <NoBusinessAccessNotice />

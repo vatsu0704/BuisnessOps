@@ -8,6 +8,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/AuthNavigator';
 import { useAuthStore } from '@/store/authStore';
 import type { Industry } from '@/types/business';
+import { INDUSTRY_OPTIONS } from '@/constants/industries';
 import { lookupInvite } from '@/api/team';
 import type { InviteLookupResult } from '@/types/team';
 import { isValidEmail } from '@/utils/validation';
@@ -26,14 +27,6 @@ import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Signup'>;
-
-// Labels and captions come from the translation files, keyed by `value`.
-const INDUSTRIES: { value: Industry; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'RETAIL', icon: 'storefront-outline' },
-  { value: 'FOOD_BEVERAGE', icon: 'restaurant-outline' },
-  { value: 'SERVICES', icon: 'construct-outline' },
-  { value: 'FRANCHISE_OTHER', icon: 'business-outline' },
-];
 
 export default function SignupScreen({ navigation }: Props) {
   const { t } = useTranslation();
@@ -245,7 +238,7 @@ export default function SignupScreen({ navigation }: Props) {
 
                 <Text style={styles.fieldLabel}>{t('signup.industry')}</Text>
                 <View style={styles.grid}>
-                  {INDUSTRIES.map((opt) => (
+                  {INDUSTRY_OPTIONS.map((opt) => (
                     <View key={opt.value} style={styles.gridItem}>
                       <SegmentedOption
                         testID={`signup-industry-${opt.value}`}

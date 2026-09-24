@@ -2,11 +2,34 @@ const businessService = require('../services/business.service');
 const { fail, validationFailure } = require('../errors');
 const inviteService = require('../services/invite.service');
 const {
+  validateCreateBusiness,
   validateCreateBranch,
   validateUpdateBranch,
   validateCreateMembership,
   validateBranchAccess,
 } = require('../validations/business.validation');
+
+/**
+ * Requirement 16 — one account holds many businesses.
+ *
+ * The only controller in this file with no `req.tenant`: it runs before the
+ * business it creates exists, so it is gated on `requireAuth` alone and takes
+ * the owner from `req.userId`. There is deliberately no capability check —
+ * anyone with an account may start a business of their own, exactly as signup
+ * already allows, and gating it would mean someone's ability to start a
+ * business depended on a role they hold in someone else's.
+ */
+async function createBusiness(req, res, next) {
+  try {
+    const errors = validateCreateBusiness(req.body);
+    if (errors.length) return res.status(400).json(validationFailure(errors));
+
+    const { business, membership } = await businessService.createBusiness(req.userId, req.body);
+    res.status(201).json({ business, membership });
+  } catch (err) {
+    next(err);
+  }
+}
 
 async function createBranch(req, res, next) {
   try {
@@ -181,6 +204,7 @@ async function revokeInvite(req, res, next) {
 }
 
 module.exports = {
+  createBusiness,
   getBusiness,
   createBranch,
   updateBranch,

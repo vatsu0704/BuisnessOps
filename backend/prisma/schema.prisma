@@ -165,6 +165,9 @@ model Branch {
   branchAccess          BranchAccess[]
   dataSourceConnections DataSourceConnection[]
   productDetails        ProductBranchDetail[]
+  // Products that exist only at this branch (requirement 4). Business-wide
+  // products carry no branchId and are not in here.
+  ownProducts           Product[]
   transactions          Transaction[]
   inventoryUsages       InventoryUsage[]
   staffMembers          StaffMember[]
@@ -303,6 +306,25 @@ enum TransactionStatus {
   VOIDED
 }
 
+enum TransactionSource {
+  // Came in through a CSV/Excel upload from someone's POS.
+  POS_IMPORT
+  // Rung up at the counter in this app (requirement 1).
+  COUNTER
+}
+
+enum CounterOrderStatus {
+  // Being rung up. Still editable, and the token is already issued so the
+  // customer can be called.
+  OPEN
+  // Handed over. Still editable until the day is closed, because requirement 1
+  // asks for exactly that.
+  CLOSED
+  // Cancelled. Projects as TransactionStatus.VOIDED, which the existing
+  // `status: 'COMPLETED'` filter in getSalesSummary already excludes.
+  VOID
+}
+
 enum InventoryUsageSource {
   SYSTEM_CALCULATED
   MANUAL_ENTRY
@@ -361,17 +383,45 @@ model Product {
   id         String   @id @default(uuid())
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  name       String
-  sku        String?
-  category   String?
-  unit       String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+
+  // Requirement 4: "every branch can also add their own separate products".
+  // NULL means the product belongs to the whole business and every branch sees
+  // it; a branchId means only that branch does. Nullable rather than a separate
+  // table because the two are the same thing at different scopes — a join table
+  // would make "show me this branch's catalog" a union instead of one filter.
+  //
+  // SetNull rather than Cascade: deleting a branch should not silently delete
+  // products, and a branch-only product whose branch is gone becoming
+  // business-wide is a state someone can see and fix. Branches are closed via
+  // BranchStatus rather than deleted in practice, so this is a backstop.
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  name     String
+  sku      String?
+  category String?
+  unit     String
+
+  // The business-wide default price. ProductBranchDetail overrides it per
+  // branch, so a product priced the same everywhere needs one row rather than
+  // one row per branch. Nullable because products created by CSV ingestion are
+  // discovered from sales rows, which carry a unit price per line but no
+  // catalog price — see ingestion.service.js.
+  costPrice Decimal? @db.Decimal(12, 2)
+  sellPrice Decimal? @db.Decimal(12, 2)
+
+  // Withdraw a product from sale without deleting it. Deleting is not an option
+  // once LineItem rows point at it: past sales must keep naming what was sold.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   branchDetails ProductBranchDetail[]
   lineItems     LineItem[]
 
   @@index([businessId])
+  @@index([businessId, branchId])
   @@map("products")
 }
 
@@ -409,9 +459,18 @@ model Transaction {
   currency               String
   paymentMethod          PaymentMethod
   status                 TransactionStatus     @default(COMPLETED)
-  createdAt              DateTime              @default(now())
 
-  lineItems LineItem[]
+  // Where this sale came from. Both sources write through
+  // salesProjection.service.js into this one table (Architecture Principle 4),
+  // so without a discriminator "counter sales vs imported sales" would be
+  // unanswerable — and the day-end export and the analytics grid both want to
+  // ask it. @default backfills every existing row, all of which are imports.
+  source TransactionSource @default(POS_IMPORT)
+
+  createdAt DateTime @default(now())
+
+  lineItems    LineItem[]
+  counterOrder CounterOrder?
 
   @@unique([branchId, externalId])
   @@index([businessId, branchId, occurredAt])

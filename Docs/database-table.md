@@ -167,27 +167,34 @@ Append-only ingestion job log — needed to show "last synced: 2 hours ago" and 
 | sourceFileName | String, nullable | for CSV/manual uploads |
 
 ### `Product`
-Business-level catalog (shared across branches; price/availability varies per branch via `ProductBranchDetail`).
+The catalog. Two scopes in one table, per requirement 4 — see section 11.
 
 | Column | Type | Notes |
 |---|---|---|
 | id | String (uuid) | PK |
 | businessId | String | FK → Business |
+| branchId | String, nullable | **NULL = the whole business sells it**; a value = only that branch does ("every branch can add their own separate products"). One nullable column rather than a join table, so "this branch's catalog" is one filter instead of a union. `ON DELETE SET NULL`: deleting a branch must not silently delete products |
 | name | String | |
 | sku / externalId | String, nullable | POS-native identifier, used for de-dup on re-sync |
-| category | String, nullable | |
+| category | String, nullable | groups the catalog on screen |
 | unit | String | e.g. `piece`, `kg`, `litre` |
+| costPrice / sellPrice | Decimal, nullable | the **business-wide default**, overridden per branch by `ProductBranchDetail`. Nullable because CSV ingestion discovers products from sales rows, which carry a line's unit price but no catalog price |
+| isActive | Boolean, default true | withdraw from sale without deleting. Deleting is not available once `LineItem` rows reference it — a past sale must keep naming what was sold |
 | createdAt / updatedAt | DateTime | |
 
 ### `ProductBranchDetail`
+One branch's **override** of the business-wide price, not the only place a price can live. A product priced the same everywhere therefore needs no rows here at all, which is what stops this table growing to products × branches for no reason.
+
 | Column | Type | Notes |
 |---|---|---|
 | id | String (uuid) | PK |
 | productId | String | FK → Product |
 | branchId | String | FK → Branch |
-| costPrice / sellPrice | Decimal | for margin/wastage-cost calculations |
-| isActive | Boolean | |
-| unique | (productId, branchId) | |
+| costPrice / sellPrice | Decimal | required here, unlike on `Product`: an override exists precisely to state a price, and a half-stated one would silently fall back for the other half — which reads as the override not working |
+| isActive | Boolean | **AND-ed** with `Product.isActive`, never an override of it. A branch may withdraw something others still sell; it cannot re-activate something the business has switched off |
+| unique | (productId, branchId) | one override per branch, which is also what lets the upsert be race-free |
+
+`product.service.js`'s `withEffectivePricing` resolves the fallback in one place — the catalog screen, the counter order (Task 4) and the day-end export (Task 9) all need the same answer, and disagreeing about a price is the kind of bug nobody notices until the till is short.
 
 ### `Transaction`
 The core sales fact table. Every metric in the catalog (Phase 2) ultimately aggregates this.

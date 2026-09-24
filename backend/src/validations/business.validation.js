@@ -1,4 +1,5 @@
 const {
+  INDUSTRIES,
   isValidEmail,
   isValidTimeZone,
   isWeekdayList,
@@ -47,6 +48,29 @@ function validateGeofenceFields(body, errors, { requireRadiusCoordinates = true 
       errors.push(fieldError('GEOFENCE_RADIUS_NEEDS_COORDS', 'geofenceRadiusMeters'));
     }
   }
+}
+
+/**
+ * Requirement 16 — adding a second business to an existing account.
+ *
+ * Stricter than signup's equivalent fields, deliberately. `validateSignup`
+ * treats these as optional-if-present, because a signup claiming a pending
+ * invite legitimately sends none of them and only the service can tell (it is
+ * the half with database access). There is no such case here: someone is
+ * explicitly creating a business, so every field it needs is required, and a
+ * bad timezone is caught before it becomes permanent.
+ */
+function validateCreateBusiness(body) {
+  const errors = [];
+  if (!body.name || typeof body.name !== 'string') errors.push(required('name'));
+  if (!body.industry || !INDUSTRIES.includes(body.industry)) errors.push(mustBeOneOf('industry', INDUSTRIES));
+  if (!body.country || typeof body.country !== 'string') errors.push(required('country'));
+  if (!body.defaultCurrency || typeof body.defaultCurrency !== 'string') {
+    errors.push(required('defaultCurrency'));
+  }
+  if (!body.timezone || typeof body.timezone !== 'string') errors.push(required('timezone'));
+  else if (!isValidTimeZone(body.timezone)) errors.push(fieldError('TIMEZONE_INVALID', 'timezone'));
+  return errors;
 }
 
 function validateCreateBranch(body) {
@@ -131,6 +155,7 @@ function validateBranchAccess(body) {
 }
 
 module.exports = {
+  validateCreateBusiness,
   validateCreateBranch,
   validateUpdateBranch,
   validateCreateMembership,

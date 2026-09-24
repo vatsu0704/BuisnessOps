@@ -12,6 +12,32 @@ export async function getBusiness(businessId: string): Promise<Business> {
   return data;
 }
 
+export interface CreateBusinessPayload {
+  name: string;
+  industry: Business['industry'];
+  country: string;
+  defaultCurrency: string;
+  timezone: string;
+}
+
+/**
+ * Add another business to the account you already have.
+ *
+ * Unscoped — there is no businessId yet — and the caller becomes its OWNER.
+ * Before this, a business could only come into existence through signup, so a
+ * second business meant a second account.
+ *
+ * The membership comes back alongside it, but the caller should still refresh
+ * the session: the switcher reads `user.memberships`, and that list has to grow
+ * before the new business can be switched to.
+ */
+export async function createBusiness(
+  payload: CreateBusinessPayload
+): Promise<{ business: Business; membership: { id: string; role: string; status: string } }> {
+  const { data } = await apiClient.post('/businesses', payload);
+  return data;
+}
+
 export async function listBranches(businessId: string): Promise<Branch[]> {
   const { data } = await apiClient.get<Branch[]>(`/businesses/${businessId}/branches`);
   return data;

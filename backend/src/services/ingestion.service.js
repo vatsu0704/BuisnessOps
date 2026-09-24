@@ -1,6 +1,7 @@
 const XLSX = require('xlsx');
 const prisma = require('../config/db');
 const { fieldError, renderMessage } = require('../errors');
+const { writeTransaction } = require('./salesProjection.service');
 
 // Expected columns in an uploaded CSV/Excel file. One row = one line item;
 // rows sharing the same transaction_external_id are grouped into a single
@@ -113,46 +114,43 @@ async function ingestRows(rows, { businessId, branchId, currency, dataSourceConn
     const taxAmount = groupRows.reduce((sum, r) => sum + Number(r.tax_amount || 0), 0);
     const discountAmount = groupRows.reduce((sum, r) => sum + Number(r.discount_amount || 0), 0);
 
-    let transaction = externalId
-      ? await prisma.transaction.findUnique({ where: { branchId_externalId: { branchId, externalId } } })
-      : null;
-
-    const transactionData = {
-      businessId,
-      branchId,
-      dataSourceConnectionId,
-      externalId,
-      occurredAt: new Date(first.occurred_at),
-      totalAmount,
-      taxAmount,
-      discountAmount,
-      currency: first.currency ? String(first.currency).trim() : currency,
-      paymentMethod: String(first.payment_method).toUpperCase(),
-      status: 'COMPLETED',
-    };
-
-    if (transaction) {
-      await prisma.lineItem.deleteMany({ where: { transactionId: transaction.id } });
-      transaction = await prisma.transaction.update({ where: { id: transaction.id }, data: transactionData });
-      transactionsUpdated += 1;
-    } else {
-      transaction = await prisma.transaction.create({ data: transactionData });
-      transactionsCreated += 1;
-    }
-
+    // Products are resolved before the projection, because resolving one may
+    // create it and writeTransaction deals only in line data.
+    const items = [];
     for (const row of groupRows) {
       const product = await resolveProduct(businessId, row);
-      await prisma.lineItem.create({
-        data: {
-          transactionId: transaction.id,
-          productId: product.id,
-          productNameSnapshot: product.name,
-          quantity: Number(row.quantity),
-          unitPrice: Number(row.unit_price),
-          lineTotal: Number(row.quantity) * Number(row.unit_price),
-        },
+      items.push({
+        productId: product.id,
+        productNameSnapshot: product.name,
+        quantity: Number(row.quantity),
+        unitPrice: Number(row.unit_price),
+        lineTotal: Number(row.quantity) * Number(row.unit_price),
       });
     }
+
+    // Shared with the counter (requirement 1) so both write a sale the same
+    // way. No `client` argument: a file with some bad rows must still commit
+    // its good ones, which is what SyncRunStatus.PARTIAL means.
+    const { created } = await writeTransaction({
+      branchId,
+      externalId,
+      header: {
+        businessId,
+        dataSourceConnectionId,
+        occurredAt: new Date(first.occurred_at),
+        totalAmount,
+        taxAmount,
+        discountAmount,
+        currency: first.currency ? String(first.currency).trim() : currency,
+        paymentMethod: String(first.payment_method).toUpperCase(),
+        status: 'COMPLETED',
+        source: 'POS_IMPORT',
+      },
+      items,
+    });
+
+    if (created) transactionsCreated += 1;
+    else transactionsUpdated += 1;
   }
 
   return {

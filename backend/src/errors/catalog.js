@@ -46,6 +46,13 @@ const API_MESSAGES = {
   PAY_CHANGE_NOT_PERMITTED: 'You are not allowed to change pay',
   MEMBERSHIP_REVOKE_OUTRANKED: 'You cannot remove someone with equal or greater access than your own',
 
+  // --- Products -------------------------------------------------------------
+  PRODUCT_NOT_FOUND: 'Product not found',
+  PRODUCT_NOT_SOLD_AT_BRANCH: 'This product belongs to a different branch, so it cannot be priced here',
+  PRODUCT_BRANCH_PRICING_NOT_FOUND: 'This product has no price set for that branch',
+  PRODUCT_BUSINESS_WIDE_NOT_PERMITTED:
+    'Only someone with access to every branch can add or change a product the whole business sells',
+
   // --- Business and branches ----------------------------------------------
   BUSINESS_NOT_FOUND: 'Business not found',
   BRANCH_NOT_FOUND: 'Branch not found',

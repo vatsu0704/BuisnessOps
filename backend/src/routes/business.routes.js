@@ -7,6 +7,16 @@ const { requireBranchAccess } = require('../middleware/branchScope');
 
 const router = express.Router();
 
+// Requirement 16: add a business to the account you already have, instead of
+// making a second account for it.
+//
+// Unscoped on purpose. It creates the business, so there is no businessId to
+// resolve a tenant from, and it carries `requireAuth` alone — the caller
+// becomes its OWNER. Declared before `router.use('/:businessId', ...)` so the
+// reading order matches the matching order, though POST /businesses has no
+// path segment for that mount to match anyway.
+router.post('/', requireAuth, businessController.createBusiness);
+
 // Everything under /:businessId requires a verified membership in that
 // business first (requireAuth resolves *who*, resolveTenant resolves
 // *which business, with what role/branch scope*).

@@ -87,6 +87,10 @@ export const can = {
   /** Set or change a base salary. A CASHIER does this for their own branch. */
   setPay: (m: Membership | undefined) => hasCapability(m, 'staff:setPay'),
   manageTeam: (m: Membership | undefined) => hasCapability(m, 'team:view'),
+  /** See the catalog. Everyone who can sell or price something needs this. */
+  viewProducts: (m: Membership | undefined) => hasCapability(m, 'product:view'),
+  /** Add, edit and price products — including a branch's own (requirement 4). */
+  manageProducts: (m: Membership | undefined) => hasCapability(m, 'product:manage'),
   /** Weekly off, holidays, branch timezone and geofence — these set the payroll divisor. */
   manageWorkCalendar: (m: Membership | undefined) => hasCapability(m, 'workCalendar:manage'),
   markAttendance: (m: Membership | undefined) => hasCapability(m, 'attendance:markOthers'),

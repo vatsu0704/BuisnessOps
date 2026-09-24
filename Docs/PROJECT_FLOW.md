@@ -345,8 +345,8 @@ got to.
 | Task | Focus | Requirements | Status |
 |---|---|---|---|
 | 1 | Roles and the permission matrix | R14 | ✅ done |
-| 2 | One account, many businesses | R16 | ⏳ not started |
-| 3 | Product catalog, new Home, hide AI | R4, R7 | ⏳ not started |
+| 2 | One account, many businesses | R16 | ✅ done |
+| 3 | Product catalog, new Home, hide AI | R4, R7 | ✅ done |
 | 4 | Counter billing and tokens | R1, R17 | ⏳ not started |
 | 5 | Supply orders end to end | R3, R5, R9, R11, R12 | ⏳ not started |
 | 6 | Expenses and the daily log | R10 | ⏳ not started |
@@ -410,3 +410,120 @@ into a row needs its own migration directory.
 `PAY_CHANGE_REQUIRES_OWNER_ADMIN` became `PAY_SET_NOT_PERMITTED` and
 `PAY_CHANGE_NOT_PERMITTED`, because a cashier sets pay now and naming two roles
 in the code was a statement that had stopped being true.
+
+### Task 2 — One account, many businesses ✅
+
+Most of this requirement was already built and unreachable. A `User` has always
+been able to hold memberships in several businesses, `Membership` has always
+been the join, and Settings has had a working switcher since the access-control
+pass. The one missing piece was any way to create the **second** business: a
+business could only come into existence through signup, so a second business
+meant a second account — exactly what R16 asks to stop.
+
+- `POST /api/businesses` — the only route in `business.routes.js` with no
+  tenant, because it creates the business there is no id for yet. Gated on
+  `requireAuth` alone and **deliberately on no capability**: the caller has no
+  role in a business that does not exist, and someone's ability to start their
+  own must not depend on a role they hold in somebody else's.
+- The creation itself is `businessService.createBusinessForUser`, **extracted
+  from signup rather than copied**, and both callers run it inside a
+  transaction. R16 is precisely that a second business should be the same
+  operation as the first; a copy is what lets the two drift.
+- `validateCreateBusiness` is stricter than signup's equivalent fields, which
+  are optional-if-present because a signup claiming a pending invite sends none
+  of them and only the service can tell. There is no such case here.
+- `authStore.addBusiness` creates, **re-reads the session**, then switches. The
+  session re-read matters: `user.memberships` is what the switcher renders and
+  what `switchBusiness` validates an id against, so appending the new membership
+  locally would be a second place that has to match the server's shape.
+- `AddBusinessScreen`, reached from Settings. Its entry sits **outside** the
+  switcher's render condition — `BusinessSwitcher` returns null below two
+  businesses, so putting it inside would have meant only people who already have
+  two could add a third. Fields default from the business being acted under,
+  since a second shop in the same country is the common case.
+- `INDUSTRY_OPTIONS` moved to `frontend/src/constants/industries.ts` and
+  `INDUSTRIES` to `backend/src/validations/shared.js`, each of which had been
+  about to become a second copy.
+- `backend/tests/multi-business.test.js` — 7 tests, including that the two
+  businesses stay isolated (a branch in one is invisible from the other, and
+  owning both does not make one reachable through the other's id) and that a
+  rejected request leaves no orphan business behind.
+
+### Task 3 — Product catalog, new Home, role-aware navigation, hide AI ✅
+
+**The catalog (R4).** Two scopes in one table: a `Product` with no `branchId`
+belongs to the whole business and every branch sells it; one with a `branchId`
+exists only there. So "this branch's catalog" is a single filter rather than a
+union. Price works the same way — `Product.costPrice`/`sellPrice` are the
+business default and a `ProductBranchDetail` row overrides them for one branch,
+so a product priced the same everywhere needs no per-branch rows at all.
+
+- `withEffectivePricing` resolves "what does this cost *here*" in one place,
+  because three callers will need the same answer and disagreeing about a price
+  is the kind of bug nobody notices until the till is short: the catalog, the
+  counter order (Task 4) and the day-end export (Task 9).
+- `isActive` is an **AND**, not an override. A product withdrawn business-wide
+  is withdrawn everywhere; a branch may additionally withdraw one that others
+  still sell. There is deliberately no way for a branch to re-activate something
+  the business switched off.
+- Products are withdrawn, never deleted — `LineItem` rows point at them and a
+  past sale has to keep naming what was sold.
+- Scope changes are all-branch acts: a cashier can create and price their own
+  branch's products, and is refused both creating a business-wide one and
+  promoting theirs to the whole business. Otherwise one branch could push a
+  product into every other branch's catalog.
+- `ProductBranchDetail` finally has an API — it had been in the schema since
+  Phase 1 with nothing reading or writing it.
+- `backend/tests/product.test.js` — 17 tests, most of them about a scope
+  leaking: a branch seeing another branch's private products, or a cashier
+  quietly adding one everywhere.
+
+**Role-aware navigation.** The app had none — every tab and every route was
+reachable by every role, with gating only as conditional JSX inside four
+screens. Three tables now drive it, all keyed on the **same capability strings
+the backend guards the matching endpoints with**, so a control that renders is
+one whose request will succeed:
+
+- `TAB_CATALOGUE` in `TabNavigator` — a role mounts three to five of five tabs.
+- `ROUTE_CAPABILITY` in `navigation/routeAccess.ts` — `AppNavigator` registers
+  only the modal routes this person may open, so a stale deep link cannot open a
+  screen whose every request would 403.
+- `SECTIONS` in `HomeScreen` — Home is now fixed chrome plus a capability-
+  filtered, ordered list of section components, each fetching its own data.
+  **Adding a role adds zero screens**; Tasks 5 and 6 add the warehouse queue,
+  the delivery list and the expense-gap list as rows in that table.
+
+`AppStackParamList` stays complete and un-narrowed on purpose. Making the
+*type* depend on the role would force a generic param list onto every shared
+screen and every component that navigates — a far worse explosion, and in the
+type system where it hurts most. The type says what the app can do; the tables
+say what this person can do.
+
+Three interactions that are easy to miss, all handled:
+
+- **Role changes mid-session.** `useMembership` derives from the store, which
+  only refreshed on bootstrap and login — so demoting a cashier left them
+  holding the cashier's app until they force-closed it. `RootNavigator` now
+  refetches the session when the app returns to the foreground.
+- **Switching business changes the role.** One person can be ADMIN in one
+  business and CASHIER in another, which R16 makes normal. `<AppNavigator
+  key={membership?.role}>` forces a clean remount rather than changing the
+  screen list under a focused tab. The cost is in-flight form state, which is
+  business-scoped anyway.
+- **Navigating somewhere unregistered** is a red box in development and
+  **silence** in production. `onUnhandledAction` on `NavigationContainer` at
+  least logs it, and `resolveDeepLink` catches the case that genuinely arrives
+  from outside — a push for a screen the recipient has since lost (Task 7).
+
+**Hiding the AI surface (R7).** There is no AI to switch off; what existed was
+three pieces of static teaser UI promising one — Home's decorative ask bar
+(never even tappable), the "Ask your business anything" notice, and the
+chat-bubble icon the Home tab had borrowed from it. All three now sit behind
+`AI_CHAT_ENABLED` in `frontend/src/config/features.ts`. **Nothing is deleted**:
+the components and every `home.query*` string stay on disk, exactly as
+`AlertsScreen` is kept for Phase 5, so Phase 2 flips one constant rather than
+rebuilding the surface from screenshots.
+
+A role whose screens are not built yet — WAREHOUSE and DELIVERY_AGENT until
+Task 5 — would otherwise land on a blank Home and reasonably conclude the app
+is broken. Home says so instead.

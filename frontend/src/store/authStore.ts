@@ -3,7 +3,8 @@ import * as secureStorage from '@/utils/secureStorage';
 import { setAuthToken, extractErrorMessage } from '@/api/client';
 import { signup as signupRequest, login as loginRequest, fetchSession } from '@/api/auth';
 import type { SignupPayload, LoginPayload } from '@/api/auth';
-import { getBusiness } from '@/api/business';
+import { getBusiness, createBusiness as createBusinessRequest } from '@/api/business';
+import type { CreateBusinessPayload } from '@/api/business';
 import { activeMembership } from '@/utils/permissions';
 import type { User } from '@/types/user';
 import type { Business } from '@/types/business';
@@ -55,6 +56,16 @@ interface AuthState {
   logout: () => Promise<void>;
   /** Act under a different business. Rejects any id that is not an ACTIVE membership. */
   switchBusiness: (businessId: string) => Promise<void>;
+  /**
+   * Requirement 16: add another business to this account and start acting under
+   * it. Resolves with the new business so the caller can name it.
+   */
+  addBusiness: (payload: CreateBusinessPayload) => Promise<Business>;
+  /**
+   * Re-read the session without disturbing anything else. Called when the app
+   * returns to the foreground, because role now decides which tabs exist.
+   */
+  refreshSession: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -167,6 +178,57 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     } catch (err) {
       set({ isSwitchingBusiness: false });
       throw err;
+    }
+  },
+
+  /**
+   * Create a business and switch to it in one step.
+   *
+   * The session is re-read from the server rather than having the new
+   * membership appended locally. `user.memberships` is what the switcher
+   * renders and what `switchBusiness` validates an id against, so a
+   * hand-appended row would be a second place that has to match the server's
+   * membership shape — and the switcher would break the moment it drifted.
+   *
+   * Switching is done here rather than by calling switchBusiness, which would
+   * re-fetch a business this call already has.
+   */
+  addBusiness: async (payload) => {
+    set({ isSubmitting: true, error: null });
+    try {
+      const { business } = await createBusinessRequest(payload);
+      const { user } = await fetchSession();
+      await secureStorage.setItem(BUSINESS_KEY, business.id);
+      set({ user, business, activeBusinessId: business.id, isSubmitting: false });
+      return business;
+    } catch (err) {
+      set({ isSubmitting: false, error: extractErrorMessage(err) });
+      throw err;
+    }
+  },
+
+  /**
+   * Silent refresh. Deliberately forgiving: a failure here means the phone was
+   * offline or the server was briefly unreachable, which must not sign anyone
+   * out or surface an error over whatever they were looking at. The stale
+   * session simply stays until the next attempt.
+   *
+   * It does re-run the stale-choice reconciliation, so access revoked while the
+   * app was backgrounded falls back to a business they still belong to rather
+   * than leaving them on one the API now refuses.
+   */
+  refreshSession: async () => {
+    try {
+      const { user } = await fetchSession();
+      const activeBusinessId = await resolveActiveBusinessId(user);
+      const current = get().activeBusinessId;
+      const business =
+        activeBusinessId && activeBusinessId !== current
+          ? await getBusiness(activeBusinessId).catch(() => get().business)
+          : get().business;
+      set({ user, business, activeBusinessId });
+    } catch {
+      // Offline or a blip — keep what we have.
     }
   },
 

@@ -3,6 +3,7 @@ const { fail } = require('../errors');
 const prisma = require('../config/db');
 const { signToken } = require('../utils/jwt');
 const inviteService = require('./invite.service');
+const businessService = require('./business.service');
 
 const SALT_ROUNDS = 10;
 
@@ -61,12 +62,14 @@ async function signup({ email, password, name, businessName, industry, country, 
       return { user, business, memberships };
     }
 
-    const business = await tx.business.create({
-      data: { name: businessName, industry, country, defaultCurrency, timezone },
-    });
-    const membership = await tx.membership.create({
-      data: { userId: user.id, businessId: business.id, role: 'OWNER', status: 'ACTIVE', joinedAt: new Date() },
-    });
+    // Shared with POST /businesses, which is how someone adds their second
+    // business (requirement 16). Creating a business has to mean exactly the
+    // same thing whichever door it came through.
+    const { business, membership } = await businessService.createBusinessForUser(
+      user.id,
+      { name: businessName, industry, country, defaultCurrency, timezone },
+      tx
+    );
     return { user, business, memberships: [membership] };
   });
 

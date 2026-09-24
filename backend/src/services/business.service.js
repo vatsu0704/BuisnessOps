@@ -249,8 +249,61 @@ async function removeBranchAccess(businessId, membershipId, branchId) {
   return { id: existing.id, membershipId, branchId };
 }
 
+/**
+ * Create a business and make `userId` its OWNER.
+ *
+ * Takes a transaction client because both callers need it inside one: signup
+ * creates the user in the same transaction, and this endpoint must not leave a
+ * business with no owner if the membership insert fails. `client = prisma` is
+ * the same convention `addBranchAccess` already uses.
+ *
+ * Extracted from auth.service.js's signup rather than written twice.
+ * Requirement 16 is precisely that a second business should be the *same*
+ * operation as the first — a copy would be the thing that lets the two drift,
+ * and the first sign of that is a business created through one path missing a
+ * default the other path sets.
+ */
+async function createBusinessForUser(userId, data, client = prisma) {
+  const business = await client.business.create({
+    data: {
+      name: data.name,
+      industry: data.industry,
+      country: data.country,
+      defaultCurrency: data.defaultCurrency,
+      timezone: data.timezone,
+    },
+  });
+  const membership = await client.membership.create({
+    data: {
+      userId,
+      businessId: business.id,
+      role: 'OWNER',
+      status: 'ACTIVE',
+      joinedAt: new Date(),
+    },
+  });
+  return { business, membership };
+}
+
+/**
+ * Requirement 16: one account holds many businesses, rather than one account
+ * per business.
+ *
+ * Most of this already existed and was unreachable — a User has always been
+ * able to hold memberships in several businesses, and Settings has had a
+ * working switcher. What was missing was any way to create the *second* one:
+ * a business could only ever come into existence through signup, so a second
+ * business meant a second account, which is the exact thing the requirement
+ * asks to stop.
+ */
+async function createBusiness(userId, data) {
+  return prisma.$transaction((tx) => createBusinessForUser(userId, data, tx));
+}
+
 module.exports = {
   getBusiness,
+  createBusiness,
+  createBusinessForUser,
   createBranch,
   updateBranch,
   listBranches,

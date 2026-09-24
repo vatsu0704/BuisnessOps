@@ -7,9 +7,10 @@ assume branches and data already exist from earlier steps.
 This covers the app as it exists today: Phases 0–1 (auth, branches, CSV
 ingestion), Team & permissions (inviting, revoking, and switching between
 businesses), and Attendance, Payroll & Salary Slips. Every message the server
-sends is translated too, which Flow 18 checks. Reports and the "ask a question" bar are intentionally unfinished
-(Phase 2 is blocked on an LLM provider) — you'll see a "planned" notice there,
-not a bug. Alerts (Phase 5) no longer has a tab at all; the Staff tab took its
+sends is translated too, which Flow 18 checks. Reports is intentionally
+unfinished — you'll see a "planned" notice there, not a bug. The AI "ask a
+question" bar is gone from Home entirely (requirement 7), hidden behind a flag
+until Phase 2's query engine exists. Alerts (Phase 5) has no tab at all; the Staff tab took its
 slot.
 
 ---
@@ -531,8 +532,9 @@ Do it as the OWNER, from **Settings → Team & permissions**.
 ## Flow 17 — Switch between two businesses
 
 Needs an account that belongs to more than one business. The quickest way to
-get one: sign up a fresh account with its own business (Flow 1), then, as the
-OWNER from Flow 1, invite that same email into your business (Flow 6).
+get one is now Flow 17a below — add a second business to the account you are
+already signed in as. (The older route still works: sign up a fresh account
+with its own business, then invite that email into your first business.)
 
 1. Log in as that second account and open **Settings**.
    - ✅ **Expected:** a **Business** card listing both businesses by name, with
@@ -553,6 +555,98 @@ OWNER from Flow 1, invite that same email into your business (Flow 6).
    return to this device and reopen the app.
    - ✅ **Expected:** it falls back to the business they still belong to rather
      than getting stuck on the one they were removed from.
+
+---
+
+## Flow 17a — Add a second business to the same account
+
+Requirement 16: one account, several businesses, rather than one account each.
+
+1. Signed in as an owner, open **Settings**.
+   - ✅ **Expected:** an **Add another business** row. It is there even if you
+     own only one business — that is the point of it.
+2. Tap it.
+   - ✅ **Expected:** a form with the same fields signup asked for, already
+     filled in with the current business's industry, country, currency and
+     timezone. Only the name is blank.
+3. Enter a name and tap **Create business**.
+   - ✅ **Expected:** the sheet closes and the app is now acting under the new
+     business. Settings shows its name, and Home shows **no branches** — it is
+     brand new, not a copy of the first.
+4. Open **Settings** again.
+   - ✅ **Expected:** the **Business** card has appeared, listing both, with the
+     tick on the new one. You are OWNER of both.
+5. Switch back to the first business.
+   - ✅ **Expected:** its branches, sales and staff return. Nothing you did in
+     the new business is visible here.
+6. Add a branch to one of them, then switch to the other.
+   - ✅ **Expected:** the branch belongs only to the business it was created in.
+7. Try to create a business with a blank name, or type a nonsense timezone like
+   `Mars/Olympus`.
+   - ✅ **Expected:** it is refused with a message naming the field, and no
+     half-made business appears in the switcher.
+
+---
+
+## Flow 17b — Products, and what each branch charges
+
+Requirement 4: the catalog on Home after login, and each branch able to add its
+own products and set its own prices. Needs at least two branches.
+
+1. As an owner, open the app.
+   - ✅ **Expected:** **Your products** appears on Home, above the branch list.
+     With nothing added yet it offers to add the first one.
+   - ✅ **Expected:** the Home tab's icon is a house, not a speech bubble, and
+     there is no "ask" bar at the bottom of the screen (requirement 7).
+2. Open the **Products** tab → **Add**.
+   - ✅ **Expected:** a scope choice — *The whole business* or *One branch only* —
+     each explaining what it means.
+3. Add a product to **the whole business** (say Masala Chai, sold by `cup`,
+   sells for 20).
+   - ✅ **Expected:** it appears in the Products tab, and on Home.
+4. Switch the Products tab to your other branch.
+   - ✅ **Expected:** Masala Chai is there too, at the same 20.
+5. Open Masala Chai → **Price at one branch**. Set 25 for the first branch and
+   save.
+   - ✅ **Expected:** the Products tab shows **25** with a *Branch price* label
+     at that branch, and still **20** at the other. This is the whole point of
+     the override.
+6. Open it again, clear both price fields and save.
+   - ✅ **Expected:** back to 20 at both.
+7. Add a product with **One branch only**, pointed at your first branch.
+   - ✅ **Expected:** it is labelled **Branch only**, appears at that branch, and
+     does **not** appear when you switch the Products tab to the other branch.
+8. Open any product → **Withdraw from sale**.
+   - ✅ **Expected:** it disappears from the catalog at every branch, and is not
+     deleted — putting it back on sale restores it.
+
+---
+
+## Flow 17c — What each role's app actually looks like
+
+The tab bar and the screens behind it are now decided by role. Use the accounts
+from Flow 15a.
+
+1. Log in as the **cashier**.
+   - ✅ **Expected:** tabs **Home · Products · Staff · Settings**. No Reports.
+   - ✅ **Expected:** Home leads with the catalog for their branch.
+   - ✅ **Expected:** in Products they can add a product for *their* branch, and
+     the whole-business option is not offered at all — not offered-and-refused.
+2. Log in as the **warehouse** user or the **delivery agent**.
+   - ✅ **Expected:** tabs **Home · Staff · Settings** — no Products, no Reports.
+   - ✅ **Expected:** Home says plainly that their screens are still being
+     built, rather than showing an empty page. Their tools arrive in Task 5.
+3. Log in as an **owner or manager**.
+   - ✅ **Expected:** all five tabs, and Home shows punch, catalog, the sales
+     tiles, the branch list and the upload card.
+4. With an account in two businesses (Flow 17a), switch business in Settings
+   where your role differs between the two.
+   - ✅ **Expected:** the tab bar changes to match the role in the business you
+     switched to. Anything half-typed in a form is discarded — that is
+     deliberate, since forms belong to the business you were in.
+5. Have an owner change that person's role on another device, then background
+   this app and bring it back.
+   - ✅ **Expected:** the tabs update to the new role without a force-close.
 
 ---
 
@@ -646,14 +740,15 @@ radius — see Flow 18 step 6 for what that message should look like.
   attendance days that person marked.
 - **Reports and Alerts tabs** intentionally show a "planned" notice — they're
   Phase 4/5 work, not started yet.
-- **The three new roles have their permissions but not their screens yet.**
-  CASHIER, WAREHOUSE and DELIVERY_AGENT can be invited and are correctly scoped
-  (Flow 15a), but counter billing, supply orders, expenses and the notification
-  centre are Tasks 2–9 of the Branch Operations track and are not built. A
-  cashier logging in today sees the ordinary app with staff and pay access for
-  their own branch; a delivery agent sees little more than their own attendance.
-  The tab bar is still the same four tabs for everyone — role-aware navigation
-  arrives with Task 3.
+- **WAREHOUSE and DELIVERY_AGENT have their permissions but not their screens.**
+  Both can be invited and are correctly scoped (Flow 15a), but the warehouse
+  order queue and the delivery list are Task 5 and not built. Home says so
+  rather than showing them a blank page. CASHIER is further along — the catalog
+  and their branch's staff and pay work today; counter billing (Task 4) and
+  expenses (Task 6) are still to come.
+- **The "ask a question" bar and the AI notice are gone from Home**, along with
+  the chat-bubble Home tab icon — requirement 7. They are hidden behind a flag,
+  not deleted, and come back when the query engine does (Phase 2).
 - **A manager's branch grants no longer do anything.** Requirement 14 made the
   role business-wide. The Team screen still lets you remove a manager's branch
   access and the request succeeds, but it changes nothing about what they can
@@ -662,8 +757,6 @@ radius — see Flow 18 step 6 for what that message should look like.
 - **Salary changes overwrite with no history**: editing a staff member's monthly
   salary replaces the old figure outright. Regenerating an *unfinalized* payslip
   for a past month will therefore use the new salary — finalize a slip to lock it.
-- **The "ask a question" bar on Home** is intentionally inactive — Phase 2
-  (the query engine) is blocked on an LLM provider being connected.
 - **Some text from the server stays English by design**: CSV column names
   inside upload row errors (they are the literal headings in your file), the
   payslip document's own labels, and the occasional message that comes from a
