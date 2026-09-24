@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { ComponentType } from 'react';
 import type { Ionicons } from '@expo/vector-icons';
 import TabBarIcon from '@/components/TabBarIcon';
+import CounterScreen from '@/screens/CounterScreen';
 import HomeScreen from '@/screens/HomeScreen';
 import ProductsScreen from '@/screens/ProductsScreen';
 import ReportsScreen from '@/screens/ReportsScreen';
@@ -15,6 +16,7 @@ import { colors } from '@/theme';
 
 export type AppTabParamList = {
   Home: undefined;
+  Counter: undefined;
   Products: undefined;
   Staff: undefined;
   Reports: undefined;
@@ -43,13 +45,38 @@ const TAB_CATALOGUE: {
   name: keyof AppTabParamList;
   component: ComponentType<any>;
   icon: keyof typeof Ionicons.glyphMap;
-  labelKey: 'tabs.home' | 'tabs.products' | 'tabs.staff' | 'tabs.reports' | 'tabs.settings';
+  labelKey: 'tabs.home' | 'tabs.counter' | 'tabs.products' | 'tabs.staff' | 'tabs.reports' | 'tabs.settings';
   capability: Capability | null;
+  /**
+   * Give up the tab slot when the viewer also holds this, because the surface
+   * is not their daily work. It stays reachable as a stack route and from Home.
+   *
+   * This exists for one reason: **five tabs is the budget.** At six, a 320dp
+   * phone gives each tab about 53dp, and the labels do not fit — "ઉત્પાદનો",
+   * "કાઉન્ટર" and their Hindi and Marathi equivalents truncate before the
+   * English ones do, so the languages most likely to be used are the ones that
+   * break first. A tab bar is not the place to discover that.
+   */
+  demoteWhen?: Capability;
 }[] = [
   // The icon was `chatbubble-ellipses-outline`, borrowed from the AI ask bar
   // that requirement 7 hides. A chat bubble on a tab that now opens a product
   // catalog would promise the one thing this release deliberately removed.
   { name: 'Home', component: HomeScreen, icon: 'home-outline', labelKey: 'tabs.home', capability: null },
+  // The till. Sits immediately after Home because for a cashier it is the job.
+  //
+  // An owner or manager may ring up too (requirement 1 names the manager), but
+  // it is not what their day is — so for them it comes off the tab bar and
+  // stays on Home and as a route. That is what keeps everyone inside the
+  // five-tab budget above.
+  {
+    name: 'Counter',
+    component: CounterScreen,
+    icon: 'calculator-outline',
+    labelKey: 'tabs.counter',
+    capability: 'counterOrder:create',
+    demoteWhen: 'analytics:viewBusiness',
+  },
   {
     name: 'Products',
     component: ProductsScreen,
@@ -83,7 +110,22 @@ export default function TabNavigator() {
   // restructuring above it.
   const membership = useMembership();
 
-  const tabs = TAB_CATALOGUE.filter((tab) => !tab.capability || hasCapability(membership, tab.capability));
+  const tabs = TAB_CATALOGUE.filter(
+    (tab) =>
+      (!tab.capability || hasCapability(membership, tab.capability)) &&
+      !(tab.demoteWhen && hasCapability(membership, tab.demoteWhen))
+  );
+
+  // The budget is a rule, not a hope. If a later task adds a sixth tab for some
+  // role, this is where that gets noticed — in development, immediately —
+  // rather than in a screenshot of truncated Gujarati labels.
+  if (__DEV__ && tabs.length > 5) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[tabs] ${tabs.length} tabs for role ${membership?.role}: ${tabs.map((t) => t.name).join(', ')}. ` +
+        `Five is the budget — labels truncate at six on a narrow phone. Give one a demoteWhen.`
+    );
+  }
 
   return (
     <Tab.Navigator

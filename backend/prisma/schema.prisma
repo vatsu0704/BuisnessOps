@@ -99,6 +99,8 @@ model Business {
   salarySlips           SalarySlip[]
   invites               Invite[]
   holidays              Holiday[]
+  counterOrders         CounterOrder[]
+  dayCloses             DayClose[]
 
   @@map("businesses")
 }
@@ -174,6 +176,9 @@ model Branch {
   attendanceRecords     Attendance[]
   salarySlips           SalarySlip[]
   holidays              Holiday[]
+  counterOrders         CounterOrder[]
+  tokenCounters         BranchTokenCounter[]
+  dayCloses             DayClose[]
 
   @@unique([businessId, code])
   @@index([businessId])
@@ -241,6 +246,8 @@ model Membership {
 
   branchAccess    BranchAccess[]
   attendanceMarks Attendance[]
+  counterOrders   CounterOrder[]
+  dayCloses       DayClose[]
 
   @@unique([userId, businessId])
   @@index([businessId])
@@ -417,8 +424,9 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  branchDetails ProductBranchDetail[]
-  lineItems     LineItem[]
+  branchDetails     ProductBranchDetail[]
+  lineItems         LineItem[]
+  counterOrderItems CounterOrderItem[]
 
   @@index([businessId])
   @@index([businessId, branchId])
@@ -675,4 +683,133 @@ model SalarySlip {
   @@index([businessId, monthYear])
   @@index([businessId, branchId, monthYear])
   @@map("salary_slips")
+}
+
+// ---------------------------------------------------------------------------
+// Counter billing — requirement 1
+//
+// "As orders come in the cashier adds them, issues a token, and the money keeps
+// counting. Once an order is taken they can also edit it."
+//
+// Explicitly NOT a purchase flow like the supply order: no cart, no payment
+// step, no fulfilment. It counts items, issues a token and shows a total.
+//
+// A CounterOrder is not a second sales fact table. Every mutation projects it
+// into Transaction/LineItem through salesProjection.service.js, so
+// getSalesSummary and every future metric keep reading one table — and because
+// that projection is idempotent, "editable after placing" costs nothing.
+// ---------------------------------------------------------------------------
+
+model CounterOrder {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  // What the customer is called by. Unique per branch per DAY, and restarting
+  // each day is the point — a token is shouted across a counter, so it has to
+  // stay small.
+  tokenNumber Int
+  // The branch's own local date, never UTC: a branch in Asia/Kolkata keyed on
+  // UTC would restart its numbering at 05:30 local, mid-breakfast.
+  tokenDate   DateTime @db.Date
+
+  status CounterOrderStatus @default(OPEN)
+
+  // Recomputed from the items on every mutation rather than adjusted, so it
+  // cannot drift from the lines it is meant to total.
+  totalAmount Decimal @db.Decimal(12, 2)
+  currency    String
+
+  // Optional. Requirement 1 has no payment step, so this defaults to
+  // UNSPECIFIED rather than being guessed at — writing OTHER would put a
+  // permanent lie into the cash-vs-digital mix metric Phase 5 computes.
+  paymentMethod PaymentMethod @default(UNSPECIFIED)
+
+  // Who rang it up, for the audit trail and for per-cashier figures later.
+  placedByMembershipId String?
+  placedByMembership   Membership? @relation(fields: [placedByMembershipId], references: [id], onDelete: SetNull)
+
+  // The projection. SetNull rather than Cascade so deleting a transaction could
+  // never silently orphan the order that explains it.
+  transactionId String?      @unique
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  openedAt  DateTime  @default(now())
+  closedAt  DateTime?
+  updatedAt DateTime  @updatedAt
+
+  items CounterOrderItem[]
+
+  // Not the allocator — BranchTokenCounter is. This is the assertion that the
+  // allocator is correct, the same posture Attendance takes with its
+  // no-double-punch unique key.
+  @@unique([branchId, tokenDate, tokenNumber])
+  @@index([businessId, branchId, tokenDate])
+  @@index([businessId, branchId, status])
+  @@map("counter_orders")
+}
+
+model CounterOrderItem {
+  id             String       @id @default(uuid())
+  counterOrderId String
+  counterOrder   CounterOrder @relation(fields: [counterOrderId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  // Snapshotted at the moment it was rung up. A product renamed or repriced
+  // next week must not rewrite what this receipt said.
+  productNameSnapshot String
+  quantity            Decimal @db.Decimal(12, 3)
+  unitPrice           Decimal @db.Decimal(12, 2)
+  lineTotal           Decimal @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now())
+
+  @@index([counterOrderId])
+  @@map("counter_order_items")
+}
+
+// The token allocator. One row per branch per day, incremented by a single
+// atomic `INSERT ... ON CONFLICT DO UPDATE ... RETURNING`.
+//
+// A MAX+1-and-retry would scan an index on every allocation and contend exactly
+// when the counter is busiest — the failure mode being a 500 while a customer
+// stands there. A Postgres sequence is the wrong shape: sequences are not
+// per-branch-per-day, would need runtime DDL, and never reset.
+model BranchTokenCounter {
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  tokenDate  DateTime @db.Date
+  lastNumber Int      @default(0)
+
+  @@id([branchId, tokenDate])
+  @@map("branch_token_counters")
+}
+
+// The floor on editing (requirement 17's day-end export).
+//
+// Requirement 1 asks for orders to stay editable after they are placed, but
+// editability needs a floor: once a day has been closed and exported, changing
+// one of its orders silently restates a number someone has already been shown.
+// That is exactly the failure SalarySlip's FINALIZED rule exists to prevent.
+model DayClose {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  // The branch's own local date, matching CounterOrder.tokenDate.
+  date DateTime @db.Date
+
+  closedAt             DateTime    @default(now())
+  closedByMembershipId String?
+  closedByMembership   Membership? @relation(fields: [closedByMembershipId], references: [id], onDelete: SetNull)
+
+  @@unique([branchId, date])
+  @@index([businessId, date])
+  @@map("day_closes")
 }

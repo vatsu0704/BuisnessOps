@@ -15,6 +15,7 @@ import WorkCalendarScreen from '@/screens/WorkCalendarScreen';
 import TeamScreen from '@/screens/TeamScreen';
 import InviteMemberScreen from '@/screens/InviteMemberScreen';
 import ProductsScreen from '@/screens/ProductsScreen';
+import CounterScreen from '@/screens/CounterScreen';
 import { useMembership } from '@/hooks/useBusinessId';
 import TabNavigator from './TabNavigator';
 import { canOpenRoute } from './routeAccess';
@@ -36,6 +37,7 @@ export type AppStackParamList = {
   Products: { branchId?: string } | undefined;
   AddProduct: { branchId?: string } | undefined;
   EditProduct: { productId: string };
+  Counter: undefined;
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -62,6 +64,9 @@ const MODAL_SCREENS: { name: keyof AppStackParamList; component: ComponentType<a
   { name: 'Products', component: ProductsScreen },
   { name: 'AddProduct', component: AddProductScreen },
   { name: 'EditProduct', component: EditProductScreen },
+  // Also a tab for a cashier. Registered here as well so an owner or manager,
+  // who trades the tab slot for Reports, can still reach the till from Home.
+  { name: 'Counter', component: CounterScreen },
 ];
 
 /**

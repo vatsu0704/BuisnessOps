@@ -46,6 +46,19 @@ const API_MESSAGES = {
   PAY_CHANGE_NOT_PERMITTED: 'You are not allowed to change pay',
   MEMBERSHIP_REVOKE_OUTRANKED: 'You cannot remove someone with equal or greater access than your own',
 
+  // --- Counter billing ------------------------------------------------------
+  COUNTER_ORDER_NOT_FOUND: 'Order not found',
+  COUNTER_ORDER_VOIDED: 'This order was voided and can no longer be changed',
+  COUNTER_ORDER_DAY_CLOSED:
+    'This day has been closed, so its orders can no longer be changed',
+  COUNTER_ITEM_NOT_FOUND: 'That item is not on this order',
+  COUNTER_ITEM_NEEDS_PRODUCT_OR_PRICE:
+    'Choose a product, or give the item a name and a price',
+  PRODUCT_HAS_NO_PRICE: 'This product has no price set, so it cannot be rung up',
+  DAY_ALREADY_CLOSED: 'This day is already closed',
+  DAY_NOT_CLOSED: 'This day is not closed',
+  DAY_HAS_OPEN_ORDERS: 'Close or void the {{count}} open order(s) before closing the day',
+
   // --- Products -------------------------------------------------------------
   PRODUCT_NOT_FOUND: 'Product not found',
   PRODUCT_NOT_SOLD_AT_BRANCH: 'This product belongs to a different branch, so it cannot be priced here',
@@ -139,6 +152,7 @@ const FIELD_MESSAGES = {
   FIELD_CANNOT_BE_EMPTY: '{{field}} cannot be empty',
   FIELD_MUST_BE_BOOLEAN: '{{field}} must be a boolean',
   FIELD_MUST_BE_ONE_OF: '{{field}} must be one of {{options}}',
+  QUANTITY_MUST_BE_POSITIVE: 'quantity must be more than zero',
   FIELD_MUST_BE_NON_NEGATIVE: '{{field}} must be a non-negative number',
   FIELD_MUST_BE_DATE: '{{field}} must be a real calendar date in YYYY-MM-DD form',
   FIELD_MAX_LENGTH: '{{field}} must be {{max}} characters or fewer',

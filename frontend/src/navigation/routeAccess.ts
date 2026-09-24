@@ -35,6 +35,7 @@ export const ROUTE_CAPABILITY: Partial<Record<keyof AppStackParamList, Capabilit
   Products: 'product:view',
   AddProduct: 'product:manage',
   EditProduct: 'product:manage',
+  Counter: 'counterOrder:create',
 };
 
 /** Is this route one the current membership may open? */

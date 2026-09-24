@@ -58,6 +58,9 @@ const SECTIONS: { key: string; capability: Capability | null; Component: Compone
   // TodayPunchCard renders nothing for someone with no staff record, so it
   // needs no capability of its own.
   { key: 'punch', capability: null, Component: PunchSection },
+  // The till (requirement 1). A cashier has it as a tab as well; an owner or
+  // manager trades that tab slot for Reports, so for them this is the way in.
+  { key: 'counter', capability: 'counterOrder:create', Component: CounterSection },
   // Requirement 4 — the default post-login surface.
   { key: 'catalog', capability: 'product:view', Component: BranchCatalogSection },
   { key: 'sales', capability: 'analytics:viewBranch', Component: SalesTilesSection },
@@ -68,6 +71,20 @@ const SECTIONS: { key: string; capability: Capability | null; Component: Compone
 function PunchSection() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   return <TodayPunchCard onOpenHistory={() => navigation.navigate('Attendance')} />;
+}
+
+function CounterSection() {
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  return (
+    <InfoCard
+      testID="home-open-counter"
+      icon="calculator-outline"
+      title={t('home.counterTitle')}
+      subtitle={t('home.counterSubtitle')}
+      onPress={() => navigation.navigate('Counter')}
+    />
+  );
 }
 
 function UploadSection() {

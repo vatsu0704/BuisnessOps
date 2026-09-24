@@ -31,6 +31,15 @@
       "PAY_SET_NOT_PERMITTED": "તમને પગાર નક્કી કરવાની પરવાનગી નથી.",
       "PAY_CHANGE_NOT_PERMITTED": "તમને પગાર બદલવાની પરવાનગી નથી.",
       "MEMBERSHIP_REVOKE_OUTRANKED": "તમારા જેટલી કે તેથી વધુ પહોંચ ધરાવતી વ્યક્તિને તમે દૂર કરી શકતા નથી.",
+      "COUNTER_ORDER_NOT_FOUND": "ઓર્ડર મળ્યો નથી.",
+      "COUNTER_ORDER_VOIDED": "આ ઓર્ડર રદ થઈ ચૂક્યો છે, હવે બદલી શકાતો નથી.",
+      "COUNTER_ORDER_DAY_CLOSED": "આ દિવસ બંધ થઈ ગયો છે, તેથી તેના ઓર્ડર હવે બદલી શકાતા નથી.",
+      "COUNTER_ITEM_NOT_FOUND": "આ વસ્તુ આ ઓર્ડરમાં નથી.",
+      "COUNTER_ITEM_NEEDS_PRODUCT_OR_PRICE": "કોઈ ઉત્પાદન પસંદ કરો, અથવા વસ્તુનું નામ અને ભાવ લખો.",
+      "PRODUCT_HAS_NO_PRICE": "આ ઉત્પાદનનો ભાવ નક્કી નથી, તેથી તે બિલમાં ઉમેરી શકાતું નથી.",
+      "DAY_ALREADY_CLOSED": "આ દિવસ પહેલેથી બંધ છે.",
+      "DAY_NOT_CLOSED": "આ દિવસ બંધ નથી.",
+      "DAY_HAS_OPEN_ORDERS": "દિવસ બંધ કરતા પહેલાં {{count}} ખુલ્લા ઓર્ડર પૂરા કરો અથવા રદ કરો.",
       "PRODUCT_NOT_FOUND": "ઉત્પાદન મળ્યું નથી.",
       "PRODUCT_NOT_SOLD_AT_BRANCH": "આ ઉત્પાદન બીજી શાખાનું છે, તેથી અહીં તેનો ભાવ નક્કી કરી શકાતો નથી.",
       "PRODUCT_BRANCH_PRICING_NOT_FOUND": "આ ઉત્પાદનનો તે શાખા માટે અલગ ભાવ નક્કી કરેલો નથી.",
@@ -89,6 +98,7 @@
       "FIELD_MUST_BE_BOOLEAN": "{{field}} હા કે ના હોવું જોઈએ",
       "FIELD_MUST_BE_ONE_OF": "{{field}} આમાંથી એક હોવું જોઈએ: {{options}}",
       "FIELD_MUST_BE_NON_NEGATIVE": "{{field}} ઋણ હોઈ શકે નહીં",
+      "QUANTITY_MUST_BE_POSITIVE": "જથ્થો શૂન્યથી વધારે હોવો જોઈએ",
       "FIELD_MUST_BE_DATE": "{{field}} સાચી તારીખ હોવી જોઈએ",
       "FIELD_MAX_LENGTH": "{{field}} {{max}} અક્ષર કે ઓછા હોવા જોઈએ",
       "FIELD_STRING_MAX_LENGTH": "{{field}} {{max}} અક્ષર કે ઓછા હોવા જોઈએ",
@@ -172,7 +182,8 @@
     "alerts": "અલર્ટ",
     "settings": "સેટિંગ્સ",
     "staff": "સ્ટાફ",
-    "products": "ઉત્પાદનો"
+    "products": "ઉત્પાદનો",
+    "counter": "કાઉન્ટર"
   },
   "splash": {
     "tagline": "તમારા વ્યવસાય વિશે કંઈ પણ પૂછો"
@@ -286,7 +297,9 @@
     "catalogEmptyReadOnly": "આ શાખા માટે હજી કોઈ ઉત્પાદન ઉમેરાયું નથી",
     "roleEmptyBadge": "ટૂંક સમયમાં",
     "roleEmptyTitle": "તમારા માટેની સ્ક્રીન હજી બની રહી છે",
-    "roleEmptyBody": "તમારી ભૂમિકા અને પહોંચ સાચી છે, પણ તેની સ્ક્રીન હજી પૂરી થઈ નથી. તૈયાર થતાં અહીં દેખાશે."
+    "roleEmptyBody": "તમારી ભૂમિકા અને પહોંચ સાચી છે, પણ તેની સ્ક્રીન હજી પૂરી થઈ નથી. તૈયાર થતાં અહીં દેખાશે.",
+    "counterTitle": "કાઉન્ટર ખોલો",
+    "counterSubtitle": "ઓર્ડર બનાવો અને ટોકન આપો"
   },
   "phase": {
     "examplesLabel": "તમે શું પૂછી શકશો"
@@ -418,6 +431,30 @@
     "withdraw": "વેચાણમાંથી હટાવો",
     "restore": "ફરી વેચાણમાં મૂકો",
     "withdrawHint": "હટાવવાથી તે દરેક યાદીમાંથી છુપાય છે, ભૂંસાતું નથી — જૂના વેચાણમાં નામ રહે છે."
+  },
+  "counter": {
+    "title": "કાઉન્ટર",
+    "dayClosed": "દિવસ બંધ",
+    "dayTotal": "આજની કમાણી",
+    "dayOrders": "ટોકન",
+    "dayOpen": "હજી ખુલ્લા",
+    "tapToAdd": "ઉમેરવા દબાવો",
+    "noProducts": "આ શાખા માટે હજી કોઈ ઉત્પાદનનો ભાવ નક્કી નથી",
+    "todayTokens": "આજના ટોકન",
+    "itemCount": "{{count}} વસ્તુ",
+    "itemCount_plural": "{{count}} વસ્તુઓ",
+    "longPressHint": "બદલવા ટોકન દબાવો. રદ કરવા દબાવી રાખો.",
+    "newOrder": "નવો ઓર્ડર",
+    "handOver": "આપી દો",
+    "trayEmpty": "શરૂ કરવા ઉપરથી કોઈ ઉત્પાદન દબાવો",
+    "voidTitle": "ટોકન {{token}} રદ કરવું?",
+    "voidBody": "તે દિવસની કમાણીમાં ગણાશે નહીં, અને આ નંબર ફરી અપાશે નહીં.",
+    "void": "રદ કરો"
+  },
+  "counterStatus": {
+    "OPEN": "ખુલ્લું",
+    "CLOSED": "આપી દીધું",
+    "VOID": "રદ"
   },
   "upload": {
     "title": "વેચાણ ડેટા અપલોડ કરો",

@@ -31,6 +31,15 @@
       "PAY_SET_NOT_PERMITTED": "आपको वेतन तय करने की अनुमति नहीं है।",
       "PAY_CHANGE_NOT_PERMITTED": "आपको वेतन बदलने की अनुमति नहीं है।",
       "MEMBERSHIP_REVOKE_OUTRANKED": "आप अपने बराबर या अधिक पहुँच वाले व्यक्ति को नहीं हटा सकते।",
+      "COUNTER_ORDER_NOT_FOUND": "ऑर्डर नहीं मिला।",
+      "COUNTER_ORDER_VOIDED": "यह ऑर्डर रद्द किया जा चुका है, अब बदला नहीं जा सकता।",
+      "COUNTER_ORDER_DAY_CLOSED": "यह दिन बंद हो चुका है, इसलिए इसके ऑर्डर अब नहीं बदले जा सकते।",
+      "COUNTER_ITEM_NOT_FOUND": "यह चीज़ इस ऑर्डर में नहीं है।",
+      "COUNTER_ITEM_NEEDS_PRODUCT_OR_PRICE": "कोई उत्पाद चुनें, या चीज़ का नाम और दाम लिखें।",
+      "PRODUCT_HAS_NO_PRICE": "इस उत्पाद का दाम तय नहीं है, इसलिए यह बिल में नहीं जुड़ सकता।",
+      "DAY_ALREADY_CLOSED": "यह दिन पहले से बंद है।",
+      "DAY_NOT_CLOSED": "यह दिन बंद नहीं है।",
+      "DAY_HAS_OPEN_ORDERS": "दिन बंद करने से पहले {{count}} खुले ऑर्डर पूरे करें या रद्द करें।",
       "PRODUCT_NOT_FOUND": "उत्पाद नहीं मिला।",
       "PRODUCT_NOT_SOLD_AT_BRANCH": "यह उत्पाद दूसरी ब्रांच का है, इसलिए यहाँ इसका दाम तय नहीं हो सकता।",
       "PRODUCT_BRANCH_PRICING_NOT_FOUND": "इस उत्पाद का उस ब्रांच के लिए अलग दाम तय नहीं है।",
@@ -89,6 +98,7 @@
       "FIELD_MUST_BE_BOOLEAN": "{{field}} हां या ना होना चाहिए",
       "FIELD_MUST_BE_ONE_OF": "{{field}} इनमें से एक होना चाहिए: {{options}}",
       "FIELD_MUST_BE_NON_NEGATIVE": "{{field}} ऋणात्मक नहीं हो सकता",
+      "QUANTITY_MUST_BE_POSITIVE": "मात्रा शून्य से ज़्यादा होनी चाहिए",
       "FIELD_MUST_BE_DATE": "{{field}} एक वास्तविक तारीख होनी चाहिए",
       "FIELD_MAX_LENGTH": "{{field}} {{max}} अक्षर या उससे कम होना चाहिए",
       "FIELD_STRING_MAX_LENGTH": "{{field}} {{max}} अक्षर या उससे कम होना चाहिए",
@@ -172,7 +182,8 @@
     "alerts": "अलर्ट",
     "settings": "सेटिंग्स",
     "staff": "स्टाफ",
-    "products": "उत्पाद"
+    "products": "उत्पाद",
+    "counter": "काउंटर"
   },
   "splash": {
     "tagline": "अपने व्यापार से कुछ भी पूछें"
@@ -286,7 +297,9 @@
     "catalogEmptyReadOnly": "इस ब्रांच के लिए अभी कोई उत्पाद नहीं जोड़ा गया",
     "roleEmptyBadge": "जल्द आ रहा है",
     "roleEmptyTitle": "आपके लिए स्क्रीन अभी बन रही हैं",
-    "roleEmptyBody": "आपकी भूमिका और पहुँच सही है, पर उसके लिए स्क्रीन अभी पूरी नहीं हुई हैं। तैयार होते ही यहाँ दिखेंगी।"
+    "roleEmptyBody": "आपकी भूमिका और पहुँच सही है, पर उसके लिए स्क्रीन अभी पूरी नहीं हुई हैं। तैयार होते ही यहाँ दिखेंगी।",
+    "counterTitle": "काउंटर खोलें",
+    "counterSubtitle": "ऑर्डर बनाएँ और टोकन दें"
   },
   "phase": {
     "examplesLabel": "आप क्या पूछ सकेंगे"
@@ -418,6 +431,30 @@
     "withdraw": "बिक्री से हटाएँ",
     "restore": "फिर से बिक्री पर लाएँ",
     "withdrawHint": "हटाने पर यह हर सूची से छिप जाता है, मिटता नहीं — पुरानी बिक्री में नाम बना रहता है।"
+  },
+  "counter": {
+    "title": "काउंटर",
+    "dayClosed": "दिन बंद",
+    "dayTotal": "आज की कमाई",
+    "dayOrders": "टोकन",
+    "dayOpen": "अभी खुले",
+    "tapToAdd": "जोड़ने के लिए दबाएँ",
+    "noProducts": "इस ब्रांच के लिए अभी किसी उत्पाद का दाम तय नहीं है",
+    "todayTokens": "आज के टोकन",
+    "itemCount": "{{count}} चीज़",
+    "itemCount_plural": "{{count}} चीज़ें",
+    "longPressHint": "बदलने के लिए टोकन दबाएँ। रद्द करने के लिए दबाकर रखें।",
+    "newOrder": "नया ऑर्डर",
+    "handOver": "दे दें",
+    "trayEmpty": "शुरू करने के लिए ऊपर से कोई उत्पाद दबाएँ",
+    "voidTitle": "टोकन {{token}} रद्द करें?",
+    "voidBody": "यह दिन की कमाई में नहीं गिना जाएगा, और यह नंबर दोबारा नहीं दिया जाएगा।",
+    "void": "रद्द करें"
+  },
+  "counterStatus": {
+    "OPEN": "खुला",
+    "CLOSED": "दे दिया",
+    "VOID": "रद्द"
   },
   "upload": {
     "title": "बिक्री डेटा अपलोड करें",

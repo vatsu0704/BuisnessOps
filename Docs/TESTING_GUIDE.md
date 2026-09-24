@@ -650,6 +650,80 @@ from Flow 15a.
 
 ---
 
+## Flow 17d — The counter: tokens, the running total, and editing
+
+Requirement 1. Log in as the **cashier** (Flow 15a) — they get a **Counter**
+tab. An owner or manager reaches the same screen from Home instead, since the
+tab bar only has room for five; opened that way it carries an **✕** in the
+corner, which the cashier's tab does not (there would be nothing to close).
+
+Needs at least one product with a price at that branch (Flow 17b).
+
+1. Open **Counter**.
+   - ✅ **Expected:** today's takings, the token count and how many are still
+     open across the top; a grid of products below; a bar at the bottom.
+   - ✅ **Expected:** every product tile is wide enough to read — a name over at
+     most two lines and the price beneath it. Three across on a normal phone,
+     two on a small one, more on a tablet. Nothing reading as a vertical column
+     of single letters.
+2. Tap a product with nothing open.
+   - ✅ **Expected:** a token is issued **immediately** and the item goes on it.
+     The bottom bar shows the token number and the total. You should not have
+     had to press "New order" first.
+   - ✅ **Expected:** that product's tile turns blue and shows **1**.
+3. Tap two more products, and use the + / − next to a line.
+   - ✅ **Expected:** the total changes with every tap, and each tile's badge
+     counts up with it. Pressing − down to zero takes the line off entirely and
+     clears that tile's badge.
+   - ✅ **Expected:** put a dozen different items on one token — the bottom bar
+     stops growing and scrolls instead, so the product grid stays reachable.
+4. Press **Hand over**.
+   - ✅ **Expected:** the token moves to *Today's tokens* marked "Handed over",
+     and the bottom bar goes back to "New order".
+5. Tap that handed-over token in the list, then add another item to it.
+   - ✅ **Expected:** it works. Closing an order hands it over; it does **not**
+     freeze it. This is the "they can edit it" half of requirement 1.
+6. Ring up a few more tokens.
+   - ✅ **Expected:** the numbers go up by one each time and never repeat.
+7. Go to **Home** (or Reports later) and look at the sales figure.
+   - ✅ **Expected:** it has gone up by exactly what you rang up. Counter sales
+     and uploaded CSV sales land in the same place.
+8. Press and hold a token → **Void**.
+   - ✅ **Expected:** it is marked Voided, the day's takings drop by its amount,
+     and that token number is never handed out again. The row stays in the list
+     but greys out with its amount struck through — a void is information, not
+     a deletion.
+9. Switch to your other branch at the top.
+   - ✅ **Expected:** its tokens number independently — a quiet branch is still
+     on low numbers while a busy one is high.
+   - ✅ **Expected:** with three branches, the odd one sits across its own row
+     rather than leaving a half-width gap beside it.
+10. Switch the app to Gujarati or Hindi (Settings → language) and come back.
+    - ✅ **Expected:** the three tiles across the top still line their numbers up
+      with each other even where a label needs two lines, and no product tile
+      has collapsed. Indic labels run longer than the English ones, so this is
+      where a layout that only just fits stops fitting.
+
+---
+
+## Flow 17e — Closing the day
+
+The floor that stops an edit quietly rewriting a number you have already been
+shown.
+
+1. With at least one token still **Open**, try to close the day.
+   - ✅ **Expected:** refused, telling you how many are still open.
+2. Hand over or void everything, then close the day.
+   - ✅ **Expected:** it closes, and a **Day closed** badge appears.
+3. Try to edit any of that day's tokens, or start a new one.
+   - ✅ **Expected:** both refused, saying the day has been closed. **New order**
+     is visibly greyed out rather than failing only once you press it.
+4. Reopen the day.
+   - ✅ **Expected:** editing works again. Closing by mistake has to be
+     recoverable, or the guard becomes a trap.
+
+---
+
 ## Flow 18 — Errors in your own language
 
 The app has always been translated; the *messages from the server* were not, so

@@ -347,7 +347,7 @@ got to.
 | 1 | Roles and the permission matrix | R14 | ✅ done |
 | 2 | One account, many businesses | R16 | ✅ done |
 | 3 | Product catalog, new Home, hide AI | R4, R7 | ✅ done |
-| 4 | Counter billing and tokens | R1, R17 | ⏳ not started |
+| 4 | Counter billing and tokens | R1, R17 | ✅ done |
 | 5 | Supply orders end to end | R3, R5, R9, R11, R12 | ⏳ not started |
 | 6 | Expenses and the daily log | R10 | ⏳ not started |
 | 7 | Firebase notifications | R2, R8 | ⏳ not started |
@@ -527,3 +527,69 @@ rebuilding the surface from screenshots.
 A role whose screens are not built yet — WAREHOUSE and DELIVERY_AGENT until
 Task 5 — would otherwise land on a blank Home and reasonably conclude the app
 is broken. Home says so instead.
+
+### Task 4 — Counter billing and tokens ✅
+
+Requirement 1: "as orders come in the cashier adds them, issues a token, and the
+money keeps counting — and once an order is taken they can edit it." Explicitly
+**not** a purchase flow: no cart, no payment step, no fulfilment.
+
+**It landed in two commits, and the order mattered.** First a pure refactor
+extracting `salesProjection.service.js` out of `ingestion.service.js` with no
+behaviour change, proven by `ingestion.test.js` passing untouched. Only then was
+the counter built on top. `ingestion.test.js` is one of very few real
+write-path tests in this repo; rewriting it in the same change that adds a
+feature would have thrown away the thing that made the refactor safe.
+
+**One sales fact table, still.** A `CounterOrder` is not a second source of
+sales — every mutation recomputes the total from its items and re-projects into
+`Transaction`/`LineItem` inside one `prisma.$transaction`. So `getSalesSummary`
+and every future metric keep reading one table, and because the projection is
+idempotent, requirement 1's "they can edit it" costs nothing: editing runs it
+again. `VOID` projects as `TransactionStatus.VOIDED`, which the existing
+`status: 'COMPLETED'` filter already excludes — **no new code anywhere** for the
+void case.
+
+**The token allocator is the project's first deliberate `$queryRaw`**, and the
+reason is worth keeping: Prisma cannot express `ON CONFLICT DO UPDATE SET x = x
++ 1`, and every alternative is worse. `MAX(tokenNumber) + 1` races two cashiers
+on one counter; adding a retry loop makes it degrade exactly when the counter is
+busiest, and the failure mode is a 500 while a customer stands there. A Postgres
+sequence is the wrong shape entirely — not per-branch-per-day, needs runtime
+DDL, never resets. One statement, atomic under READ COMMITTED. The
+`@@unique([branchId, tokenDate, tokenNumber])` on `CounterOrder` is **not** the
+allocator; it is the assertion that the allocator is correct, the same posture
+`Attendance` takes with its no-double-punch key. A test opens twelve orders
+concurrently and asserts twelve distinct tokens.
+
+`tokenDate` is the **branch's** local date via `todayKeyInZone`. Keyed on UTC, a
+branch in Asia/Kolkata restarts its numbering at 05:30 local, mid-breakfast.
+
+**Closing an order is not freezing it.** Requirement 1 wants orders editable
+after they are handed over, so `CLOSED` stays editable and can be reopened. The
+immutability floor is the **day** close, which requirement 17's export needs:
+without it, an edit after the export silently restates a number someone has
+already been shown — the exact failure `SalarySlip`'s FINALIZED rule exists to
+prevent. Closing a day refuses while orders are still open, and reopening is
+available, because a day closed by mistake at 18:00 with two hours of trading
+left must be recoverable or the floor is a trap.
+
+**Prices come from the catalog, never the caller.** A client-supplied
+`unitPrice` on a catalog line is ignored outright — a price the client can name
+is a price the client can invent. `name` + `unitPrice` is accepted only for a
+one-off with no product behind it.
+
+**The screen is laid out around the job**: the open order and its running total
+pinned under the thumb, the product grid above, the day's other tokens below.
+Tapping a product with nothing open starts a token rather than scolding, because
+that is what the cashier meant.
+
+**A tab-budget rule came out of this.** Adding Counter took owner/admin/manager
+to six tabs, and at 320dp the Gujarati, Hindi and Marathi labels truncate before
+the English ones — the languages most likely to be in use break first. Five is
+now the documented budget: `demoteWhen` gives up a tab slot for a role whose job
+it is not (an owner reaches the till from Home instead), and a `__DEV__` warning
+fires if any role ever exceeds five again.
+
+`backend/tests/counter-order.test.js` — 22 tests across tokens, the running
+total, editing, the projection, the day floor and access.

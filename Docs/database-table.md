@@ -608,23 +608,7 @@ Task 1 of that track (roles and the capability matrix) has landed, and its two
 schema changes are recorded in place above: the three new `MembershipRole`
 values on `Membership`, and `PaymentMethod.UNSPECIFIED` on `Transaction`.
 
-**Counter billing (R1).** `CounterOrder` + `CounterOrderItem` hold a token
-number, a running total and an open/closed/void state. They are **not** a second
-sales fact table: every mutation projects into `Transaction`/`LineItem` inside
-the same Prisma transaction, so `getSalesSummary` and every future metric keep
-reading one table — Architecture Principle 4 in
-[PROJECT_FLOW.md](PROJECT_FLOW.md), applied to an in-app source rather than a
-POS file. `Transaction` gains a `TransactionSource` discriminator
-(`POS_IMPORT | COUNTER`) so imported and counter sales can be told apart.
-
-`BranchTokenCounter` (`@@id([branchId, tokenDate])`) allocates the per-branch,
-per-day token number in one atomic `INSERT … ON CONFLICT DO UPDATE` — a
-`MAX+1`-and-retry would contend exactly when the counter is busiest.
-`tokenDate` is the **branch's** local date, via `todayKeyInZone`, or numbering
-restarts at 05:30 IST. `DayClose` is the floor on editing: once a day is
-exported, changing one of its orders would restate a number someone has already
-been shown, which is the failure `SalarySlip`'s FINALIZED rule already exists to
-prevent.
+**Counter billing (R1) — ✅ built, see the tables in section 12.**
 
 **Supply orders (R3, R5, R9, R11, R12).** `SupplyOrder` carries the status
 machine (`DRAFT → PLACED → ACCEPTED → PACKED → DISPATCHED → DELIVERED`, with
@@ -650,3 +634,69 @@ push sender render text in the right language without violating the rule that
 the backend does not translate — see the notification section of
 [REQUIREMENTS.md](REQUIREMENTS.md). `Notification` stores `code` + `params`,
 never prose, exactly as the error catalog does.
+
+---
+
+## 12. Counter billing — built (Branch Operations Task 4)
+
+Requirement 1's tables. Migration `20260924163804_counter_billing`.
+
+### `CounterOrder`
+One customer's order at a counter. **Not** a sales fact table — see the projection note below.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId / branchId | String | FK |
+| tokenNumber | Int | what the customer is called by |
+| tokenDate | Date | the **branch's** local date, via `todayKeyInZone`. Keyed on UTC, a branch in `Asia/Kolkata` restarts its numbering at 05:30 local, mid-breakfast |
+| status | Enum `OPEN, CLOSED, VOID` | `CLOSED` means handed over, **not** frozen — requirement 1 asks for orders to stay editable after they are taken. The freeze is `DayClose` |
+| totalAmount | Decimal(12,2) | recomputed from the items on every mutation, never adjusted, so it cannot drift from the lines it totals |
+| currency | String | branch currency, falling back to the business default |
+| paymentMethod | Enum `PaymentMethod` | defaults `UNSPECIFIED`: requirement 1 has no payment step, and writing `OTHER` would corrupt the cash-mix metric |
+| placedByMembershipId | String, nullable | who rang it up. From the session, never the request body |
+| transactionId | String, nullable, **unique** | the projection. One order, one transaction. `SetNull` so deleting a transaction cannot orphan the order that explains it |
+| openedAt / closedAt / updatedAt | DateTime | |
+| unique | (branchId, tokenDate, tokenNumber) | **not the allocator** — the assertion that the allocator is correct, the same posture `Attendance` takes with its no-double-punch key |
+
+### `CounterOrderItem`
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| counterOrderId | String | FK, Cascade |
+| productId | String, nullable | null for a one-off with no catalog entry |
+| productNameSnapshot | String | snapshotted at ring-up. Renaming or repricing a product next week must not rewrite what this receipt said |
+| quantity | Decimal(12,3) | |
+| unitPrice / lineTotal | Decimal(12,2) | the price comes from the catalog, resolved for this branch — a price the client can name is a price the client can invent |
+
+### `BranchTokenCounter`
+The allocator. Composite PK `(branchId, tokenDate)`, incremented by one atomic statement:
+
+```sql
+INSERT INTO branch_token_counters ("branchId", "tokenDate", "lastNumber")
+VALUES ($1::uuid, $2::date, 1)
+ON CONFLICT ("branchId", "tokenDate")
+DO UPDATE SET "lastNumber" = branch_token_counters."lastNumber" + 1
+RETURNING "lastNumber"
+```
+
+The project's first deliberate `$queryRaw`, because Prisma cannot express `ON CONFLICT DO UPDATE SET x = x + 1` and every alternative is worse: `MAX+1` races two cashiers on one counter, a retry loop degrades exactly when the counter is busiest (a 500 while a customer stands there), and a Postgres sequence is not per-branch-per-day, needs runtime DDL and never resets.
+
+### `DayClose`
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId / branchId | String | FK |
+| date | Date | matches `CounterOrder.tokenDate` |
+| closedAt / closedByMembershipId | | |
+| unique | (branchId, date) | |
+
+The floor on editing. Requirement 1 wants orders editable after they are placed; requirement 17 exports the day. Without a floor, an edit after the export silently restates a number someone has already been shown. Closing refuses while orders are still `OPEN`, and reopening is deliberately available — a day closed by mistake with hours of trading left must be recoverable, or the guard is a trap.
+
+### The projection
+
+Every counter mutation runs `salesProjection.service.js`'s `writeTransaction` inside the same `prisma.$transaction`, under `externalId = "counter:<orderId>"` against the existing `@@unique([branchId, externalId])`. Upsert + delete-lines + recreate makes it **idempotent**, which is what makes editing free — it just runs again. `VOID` projects as `TransactionStatus.VOIDED`, which `getSalesSummary`'s existing `status: 'COMPLETED'` filter already excludes with no new code.
+
+`Transaction.source` (`TransactionSource`: `POS_IMPORT | COUNTER`) tells the two sources apart. `@default(POS_IMPORT)` backfilled every existing row correctly — everything already in there arrived by CSV upload.
+
+One consequence worth knowing: `LineItem.id` is unstable across edits and the table churns. At a counter's volume that is nothing.

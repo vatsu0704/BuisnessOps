@@ -155,7 +155,17 @@ into the task rather than waiting to be sent a screenshot.
   At six roles each chip got about 40px and every label wrapped one character
   per line.
 - **Prefer a layout that scales** with the number of items — a stacked list, a
-  wrap, a grid — over one that silently degrades as items are added.
+  wrap, a grid — over one that silently degrades as items are added. A grid's
+  column count belongs to the *screen*, not to the stylesheet: derive it from
+  `useWindowDimensions()` and a minimum readable tile width, the way
+  `CounterScreen` does, rather than writing `width: '31%'` and hoping every
+  phone is wide enough.
+- **A size only works on the node that is actually laid out.** `width: '33%'`
+  or `flex: 1` resolves against the *parent*, so putting it on a child that a
+  component wraps in an unstyled view collapses it to nothing. `PressableScale`
+  used to do exactly that, and the counter's product tiles rendered one
+  character per line. When a shared component takes a `style`, that style must
+  land on the element the parent measures.
 - **Fix the layout, not the symptom.** Shrinking the font or truncating labels
   to make six chips fit is not a fix.
 - **Reuse `src/components` and the theme tokens** so the result stays
