@@ -348,11 +348,12 @@ got to.
 | 2 | One account, many businesses | R16 | ✅ done |
 | 3 | Product catalog, new Home, hide AI | R4, R7 | ✅ done |
 | 4 | Counter billing and tokens | R1, R17 | ✅ done |
-| 5 | Supply orders end to end | R3, R5, R9, R11, R12 | ⏳ not started |
+| 5 | Supply orders end to end | R3, R5, R5.1, R9, R11, R12, R21, R22, R23 | ✅ done |
 | 6 | Expenses and the daily log | R10 | ⏳ not started |
 | 7 | Firebase notifications | R2, R8 | ⏳ not started |
 | 8 | Analytics and net profit | R13, R15 | ⏳ not started |
 | 9 | Day-end and month-end export | R17 | ⏳ not started |
+| 10 | Restrictions that explain themselves | R18, R19 | ⏳ not started |
 
 ### Task 1 — Roles and the permission matrix ✅
 
@@ -441,6 +442,20 @@ meant a second account — exactly what R16 asks to stop.
   businesses, so putting it inside would have meant only people who already have
   two could add a third. Fields default from the business being acted under,
   since a second shop in the same country is the common case.
+- **Narrowed to owners afterwards.** Starting a business is the owner's act, not
+  a delegated one: an admin runs the business they were given, and a cashier or
+  a warehouse desk has no use for the entry. It is the capability
+  `business:create`, the second entry in `ADMIN_EXCLUDES` — so `MANAGER`, which
+  derives from `ADMIN`, does not get it either, and nothing checks a role name.
+
+  This is the one place where the app is deliberately **narrower than the API**,
+  which is worth stating because the usual rule is that they match. The gate is
+  about what Settings offers; the endpoint stays open because it has no tenant
+  to check a capability against, and deciding "which business's role?" would
+  stop an invited cashier from ever starting one of their own. The direction is
+  the safe one: a control that is hidden, never a control that 403s. The entry
+  also survives for someone whose every membership was revoked — no role is left
+  to hold a capability, and hiding it would leave an account that can do nothing.
 - `INDUSTRY_OPTIONS` moved to `frontend/src/constants/industries.ts` and
   `INDUSTRIES` to `backend/src/validations/shared.js`, each of which had been
   about to become a second copy.
@@ -593,3 +608,219 @@ fires if any role ever exceeds five again.
 
 `backend/tests/counter-order.test.js` — 22 tests across tokens, the running
 total, editing, the projection, the day floor and access.
+
+### Task 5 — Supply orders end to end ✅
+
+Requirements 3, 5, 5.1, 9, 11 and 12, which are one feature: a branch orders raw
+material from a central warehouse desk, pays for it, the desk fulfils and
+dispatches it, an agent delivers it, and either end can say it is running late.
+
+**A supply order is deliberately NOT projected into the sales fact table.**
+This looks inconsistent beside Task 4 and is the whole point: a counter order is
+a *sale* — revenue — and a supply order is an internal transfer and a *cost*.
+Writing it into `Transaction`/`LineItem` would inflate every sales figure in the
+product by the value of the flour a branch bought from its own warehouse. Task 8
+reads it from `supply_orders` as a cost input to net profit instead.
+
+**The status machine is data, in one place.** `TRANSITIONS` in
+`supplyOrder.service.js` is the whole of what may follow what, and
+`assertTransition` is the only thing that enforces it. Written as `if`s at each
+endpoint, the rule would be whatever each handler remembered. `CANCELLED` is
+reachable from every stage the goods have not left the warehouse in and from
+none after: cancelling something already on a bike would leave a branch holding
+stock the system says was never sent.
+
+**Cancel and reject are two verbs for one end state, on purpose.** The branch
+withdrawing its own order and the warehouse saying it cannot fill one are
+different events with different people to tell. They carry different
+capabilities (`supplyOrder:create` vs `supplyOrder:fulfil`), allow different
+statuses, and the reason is required on a rejection and optional on a
+cancellation. One shared endpoint would have lost which happened.
+
+**Every change writes an event**, through the single `recordEvent` choke point.
+That is what makes requirement 5.1's four asks — material tracking, order
+tracking, dispatch and payment — one stream rather than four features, and it is
+where Task 7's push notifications hook in: one trigger there covers the whole of
+requirement 8's list, where six call sites would mean six things to keep in step
+and one silently missed. It is deliberately **not** stubbed with an empty
+notifier today, because a function that does nothing reads as a function that
+works.
+
+**Payment is recorded, never collected** — the decision in `REQUIREMENTS.md`. No
+gateway, no money through the app. `ONLINE` means the branch paid some other way
+and typed a reference; the warehouse checks it against its own records
+(`PENDING → PAID → VERIFIED | FAILED`). `COD` stays `PENDING` until the goods
+arrive and becomes `PAID` at the moment of delivery, because that is when the
+money actually changes hands. Verifying an order nobody has claimed to pay for
+is refused rather than quietly stamping it VERIFIED.
+
+**And the cash is confirmed, not assumed** (requirement 22). That `PAID` used to
+be a side effect of arriving: the goods reaching the branch was taken as
+evidence that the branch's money had reached the warehouse. They are two events,
+and only the person standing at the counter knows whether the second one
+happened — so marking a COD order delivered asks them, naming the amount and the
+branch, and the server refuses the delivery without the answer. "Not yet" leaves
+the order on the road and unpaid, which is the state it is actually in and the
+state somebody can still chase. Taking the cash writes its own `PAYMENT` row
+(`PAYMENT_COLLECTED`) with who took it, because before this a COD order's
+history showed it becoming `PAID` with nothing anywhere saying who had the
+money. An order with nothing outstanding is delivered with no question asked: a
+question whose answer cannot matter only teaches people to tap through it.
+
+**Order numbers use the same atomic allocator as tokens** (`INSERT … ON CONFLICT
+DO UPDATE … RETURNING`) and differ in two ways: they are per *business*, and
+they never reset. A token is shouted across a counter and has to stay small; an
+order number is quoted days later and has to stay unique. They are issued at
+`PLACED`, not at cart creation — numbering carts burns numbers on orders that
+never happened and leaves gaps the warehouse would ask about.
+
+**One cart per branch, not per cashier.** The branch is what orders, two people
+on a shift adding to one list is what a kitchen expects, and a per-person cart
+strands whatever someone had half-built when their shift ended. It is
+find-then-create rather than a partial unique index, following the precedent the
+`Holiday` model already sets: Prisma 5 cannot express one and hand-adding it in
+SQL would leave permanent drift against `schema.prisma`. Losing that race costs
+a second cart, which is visible and fixable.
+
+**Prices come from the catalog, never the caller** — same rule as the counter.
+An unpriced item is refused rather than ordered at zero, because free flour in
+the figures is worse than an error.
+
+**Three listings, three capabilities, one component.** The cashier's tracking
+list, the warehouse desk and the delivery queue are separate endpoints
+(`supply-orders`, `supply-desk`, `supply-deliveries`) so the capability required
+decides which cut a caller gets, instead of one endpoint re-deriving permission
+from a `?scope=` switch. On the device they are one `SupplyOrderList` with
+different props: three near-copies would drift, and the desk's would be the one
+that forgot the delay banner.
+
+**Dispatch names an agent, and the desk still never sees the team list**
+(requirement 21). The first pass left dispatch unassigned, reasoning that
+picking somebody meant listing the business's members and the warehouse holds no
+`team:view`. The premise was right and the conclusion was wrong: the answer to
+"this screen needs less than the team list" is a narrower endpoint, not a
+missing feature. `GET /supply-delivery-agents`, guarded by `supplyOrder:fulfil`,
+returns a membership id, a name, a duty state and a count — no email, no
+branches, no employment record.
+
+Who appears on it is a capability question asked carefully: an admin holds
+*every* capability, so filtering on `supplyOrder:deliver` alone would offer the
+owner and every admin as couriers. The list is `supplyOrder:deliver` **and not**
+`supplyOrder:fulfil` — someone who can run the desk is not who the desk is
+looking for. Both halves come off the matrix, so this is still an allow-list,
+and a role added later that carries but does not fulfil appears without an edit.
+
+**Availability is reported, never enforced.** "Free" comes from the attendance
+module — a punch-in with no punch-out — rather than from a second notion of
+availability invented for this screen. Attendance has nothing to say about an
+agent with no employment record, or about a business that does not punch in at
+all, so that state is `UNKNOWN` and sorts *above* off duty; blocking on
+availability would leave those businesses unable to assign anybody. Every agent
+stays selectable and the freest is preselected: the person at the desk knows
+things this process does not.
+
+**"Nobody yet" stays on offer**, so a business with no agent can still ship, and
+an unnamed run still reaches every agent covering that branch. **Assigning is
+its own verb** as well as a field on dispatch, because "who is taking it" and
+"it has left" are different facts with different timing — the named agent goes
+home an hour later, and with only the dispatch field the sole way to correct
+that would be to undo a dispatch that really happened. Each assignment writes an
+`ASSIGNMENT` event with the agent's name snapshotted; assigning the same person
+twice writes nothing, because a history that says a run was given to Ravi and
+then given to Ravi is one nobody reads twice.
+
+**A branch's delivery address is not its city and region.** Those describe where
+a branch *is*, for reporting; they are not somewhere a rider can go.
+`addressLine` is free text and multi-line, because an Indian address is not a
+fixed set of fields and forcing one drops the half that actually finds the place
+("behind the old post office"). It travels on the order itself rather than
+costing a second request, since the agent's order screen is the only thing they
+open and branch endpoints are not theirs to call. A branch with no address says
+so rather than showing a blank, and nothing fails.
+
+**Design.** Supply, Desk and Deliveries are tabs for the roles whose daily work
+they are. That took a cashier to six tabs, so `demoteWhen` grew an `unless`:
+Products is given up by anyone holding `supplyOrder:create` *unless* they also
+hold `analytics:viewBusiness`. A cashier trades the catalog for Supply and
+reaches it from Home; an admin, who holds the same capability, keeps it. Every
+role is back within the five-tab budget. Quantities are typed on the cart
+screen, not tapped up on the catalog: raw material is ordered in twenties, and
+reaching 20 kg by pressing a plus twenty times is not a design.
+
+**A warehouse is a `Branch` with a kind** (requirement 23), not a table of its
+own. Adding a staff member demanded a branch, and for a warehouse employee
+there was no true answer — the only locations a business had were the places it
+sells from, so there was nowhere to file them and therefore no way for them to
+punch in. Attendance, geofencing, payroll, rosters and staff records are every
+one of them already keyed on `branchId`, so as a Branch a warehouse gets all
+five the day it is created; a separate table would have meant teaching all five
+about a second kind of place first.
+
+What it earns is enforced where goods move, not merely left out of the pickers:
+`branchOf` in both counterOrder.service.js and supplyOrder.service.js refuses a
+WAREHOUSE with `BRANCH_IS_WAREHOUSE`. A warehouse has no till, and an order it
+placed on itself would reach the desk asking the desk to ship to the desk. On
+the device the split is one rule — **`tradingBranches` where goods move,
+`branches` where people are** — stated once in `useBranches` so the next picker
+lands on the right side of it.
+
+**Adding a staff member reads the role off the email.** The email field was only
+ever "link an account so they can punch in"; it is also the one thing on that
+form that identifies somebody the business already knows. So it now says who
+they are, and when their role reaches every branch the question changes from
+"which branch do they work at" to "where is their base", with a line saying that
+it only decides where attendance and payslips are filed. The location is chosen
+automatically in the two cases where there is nothing to choose — one location,
+or a person whose work spans every branch and a warehouse to base them at — and
+never guessed otherwise, because filing someone at the wrong shop silently is
+worse than a tap. The membership role is also offered as the job title, which a
+delivery agent otherwise types by hand. The lookup needs `team:view`, so for a
+cashier it simply does not happen and the screen behaves as it did.
+
+**The form was in the wrong order, which made all of that unreachable.** The
+email sat in the *last* card and the location picker in the first, so the
+recognition could never fire before the question it was meant to answer had
+already been asked — an owner adding a delivery agent was shown "WHICH BRANCH DO
+THEY WORK AT?" over a list of shops the agent works at none of. The screen now
+runs **who they are → where they are based → what they are paid**, which is the
+order the answers actually depend on each other in. The subtitle went with it:
+it opened "Every staff member belongs to one branch", which is the sentence that
+made the wrong answer sound like the only one.
+
+**Interface work in the same pass.**
+
+- **Destructive actions confirm, through one helper.** Three screens had
+  hand-written the same `Alert.alert(title, body, [cancel, destructive])` and
+  three more destructive actions had no question at all — cancelling a supply
+  order, withdrawing a product, withdrawing a raw material. `utils/confirm.ts`
+  is that shape once, resolving a promise so a caller reads as
+  `if (await confirm(...))`; it uses React Native's own `Alert`, falls back to
+  the browser dialog on web the way `utils/haptics.ts` no-ops there, and settles
+  `false` on an Android back press so a busy flag can never stick.
+- **`PrimaryButton` had no horizontal padding.** It never showed while every
+  button was full width, because the content is centred and the space came from
+  the button being wider than its label. The supply cart sized one by its
+  content and the label sat flush against both edges. Fixed in the component:
+  a button has to look right at its own natural width, not only when something
+  else is stretching it. The cart's tray also stopped being a row — the total
+  and the button shared one line, and every Indic translation of "Place order"
+  is longer than the English, so the figure was squeezed first in the languages
+  most likely to be used.
+- **Language is a dropdown**, built from `Modal` with `onRequestClose` for the
+  Android back button. Four stacked rows was a fifth of the Settings screen for
+  a setting most people touch once, and it grew with every language added.
+- **The business id is off the Settings screen.** It is a UUID; nobody reading
+  that screen can do anything with it.
+- **Home shows the cards for your job, not for your capabilities.** An admin
+  holds every capability in the matrix, so "Order raw material" and "Your
+  deliveries" were on an owner's Home — neither of which an owner does. Sections
+  gained the same `hideWhen: { holds, unless }` the tab bar uses. Hiding the
+  ordering card took away the only route an admin had to the raw-material
+  catalog, so a **Raw material catalog** card replaces it on
+  `supplyItem:manage` — which also gave the warehouse desk its first way in at
+  all: it holds that capability and had no screen to use it on.
+
+`backend/tests/supply-order.test.js` — 59 tests across the catalog, the cart,
+placing, the status machine, role separation, the desk, delays, delivery,
+handing a run to an agent, the destination address, cancelling and cross-tenant
+isolation.

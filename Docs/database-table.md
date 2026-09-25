@@ -700,3 +700,140 @@ Every counter mutation runs `salesProjection.service.js`'s `writeTransaction` in
 `Transaction.source` (`TransactionSource`: `POS_IMPORT | COUNTER`) tells the two sources apart. `@default(POS_IMPORT)` backfilled every existing row correctly — everything already in there arrived by CSV upload.
 
 One consequence worth knowing: `LineItem.id` is unstable across edits and the table churns. At a counter's volume that is nothing.
+
+---
+
+## 13. Supply orders — built (Branch Operations Task 5)
+
+Requirements 3, 5, 5.1, 9, 11 and 12. A branch orders raw material from one central warehouse desk, the desk fulfils and dispatches it, an agent delivers it, and either end can post a delay the cashier sees.
+
+**These tables are deliberately NOT projected into `Transaction`/`LineItem`.** A counter order is a *sale*; a supply order is an internal transfer and a *cost*. Writing it into the sales fact table would inflate every sales figure in the product by the value of the flour a branch bought from its own warehouse. Task 8 reads it from here as a cost input to net profit.
+
+### `InventoryItem` — extended
+
+Modelled in Phase 1 to track usage, with no API at all until requirement 5 gave it the job it was shaped for: this is the list a branch orders from.
+
+| Column | Type | Notes |
+|---|---|---|
+| unitPrice | Decimal(12,2)? | **New.** What the warehouse charges for one `unit`. Nullable on purpose: items have existed here since Phase 1 without a price, and an unpriced item must be un-orderable rather than orderable at zero |
+| isActive | Boolean | **New.** Withdrawn without deleting — deleting would orphan the history of every order that ever contained it |
+
+Business-wide by design, unlike `Product`, which grew a nullable `branchId` in requirement 4. A branch sells its own menu; it does not keep a private list of flour.
+
+Name uniqueness is a **service-level** check (case-insensitive), not a unique index — the same trade the `Holiday` model documents. Prisma 5 cannot express a functional unique index and hand-adding one in SQL would leave permanent drift against `schema.prisma`. Two simultaneous creates can still both land; that costs a duplicate row someone can withdraw.
+
+### `SupplyOrder`
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId / branchId | String | FK |
+| orderNumber | Int? | Null while it is a `DRAFT` cart. Issued at `PLACED` from `SupplyOrderCounter` |
+| status | `SupplyOrderStatus` | `DRAFT | PLACED | ACCEPTED | PACKED | DISPATCHED | DELIVERED | CANCELLED` |
+| totalAmount / currency | Decimal(12,2) / String | Recomputed from the items on every change, never adjusted |
+| paymentMode | `SupplyPaymentMode?` | `ONLINE | COD`. Null on a draft; required to leave one |
+| paymentStatus | `SupplyPaymentStatus` | `PENDING | PAID | VERIFIED | FAILED` |
+| paymentReference | String? | What the warehouse checks against its own records |
+| paymentVerifiedAt | DateTime? | |
+| promisedAt | DateTime? | When it is currently expected. Each delay pushes it, when one was given |
+| placedByMembershipId | String? | FK, `SetNull`. **Null until `PLACED`**, then whoever placed it. Kept because per-cashier reporting filters on it |
+| deliveryAgentMembershipId | String? | FK, `SetNull`. Kept because the agent's queue filters on it |
+| placedAt / dispatchedAt / deliveredAt / cancelledAt | DateTime? | |
+| unique | (businessId, orderNumber) | |
+| indexes | (businessId, status), (businessId, branchId, status), (deliveryAgentMembershipId, status) | the desk's query, the branch's, and the agent's |
+
+**Only two membership columns, and both exist because a query filters on them.** Who accepted, packed, dispatched or verified the payment lives in `SupplyOrderEvent` — that table *is* the audit trail, and four more actor columns here would be a second record of the same fact, free to disagree with the first.
+
+It is filled in at `PLACED` and not before, and that matters because the cart is shared: whoever opens it is often not whoever sends it. Stamping the opener made an order's header claim it was "placed by Hari" while its own history said Deep placed it — one act, two names.
+
+`DRAFT` is the cart, one per **branch** rather than per cashier: the branch is what orders, and a per-person cart strands whatever someone had half-built when their shift ended. Find-then-create, for the same partial-index reason as above.
+
+### `SupplyOrderItem`
+
+| Column | Type | Notes |
+|---|---|---|
+| supplyOrderId | String | FK, `Cascade` |
+| inventoryItemId | String? | FK, `SetNull` |
+| itemNameSnapshot / unitSnapshot | String | Snapshotted, like `CounterOrderItem` — a rename next month must not rewrite what this order said |
+| quantity | Decimal(12,3) | |
+| unitPrice / lineTotal | Decimal(12,2) | Price taken from the catalog, never from the caller |
+| unique | (supplyOrderId, inventoryItemId) | |
+
+That unique key is the difference between a cart and a till roll: adding the same item twice raises the quantity instead of producing two lines a picker has to reconcile. `CounterOrderItem` deliberately has no equivalent.
+
+### `SupplyOrderEvent`
+
+| Column | Type | Notes |
+|---|---|---|
+| supplyOrderId | String | FK, `Cascade` |
+| type | `SupplyOrderEventType` | `STATUS_CHANGE | DELAY | PAYMENT | ASSIGNMENT` |
+| fromStatus / toStatus | `SupplyOrderStatus?` | |
+| delayMinutes | Int? | requirement 9's "+30 minutes" |
+| reasonCode | String? | A **code**, never prose |
+| note | String? | The actor's own words, shown exactly as typed |
+| actorMembershipId | String? | FK, `SetNull` |
+| index | (supplyOrderId, createdAt) | |
+
+One table covers requirement 5.1's whole list — material tracking, order tracking, dispatch and payment — because they are one stream of events. `reasonCode` follows the error catalog's contract for the same reason: the server cannot know whether the cashier reading it has the app in Gujarati, so the device renders `t('supplyDelay.<CODE>')`. The delay reasons are `TRAFFIC`, `STOCK_OUT`, `VEHICLE_ISSUE`, `WEATHER`, `STAFF_SHORTAGE`, `OTHER`; the payment codes are `PAYMENT_CLAIMED`, `PAYMENT_ON_DELIVERY`, `PAYMENT_VERIFIED`, `PAYMENT_FAILED`, `PAYMENT_COLLECTED`.
+
+`PAYMENT_COLLECTED` (R22) is the cash-on-delivery entry in that story: the agent confirming the branch's money is in their hand, written beside the delivery rather than inside it. Before it, a COD order's `paymentStatus` moved to `PAID` as a side effect of arriving, with nothing anywhere recording who had taken the money. The delivery endpoint refuses to close a COD order without that confirmation, so the row is never missing from an order that claims to be paid.
+
+`ASSIGNMENT` (R21) is who is carrying it, and is deliberately **not** a `STATUS_CHANGE`: handing a run to a different agent moves nothing along the status machine, and filing it as one would put a row in the timeline claiming a transition that never happened. Its `note` holds the agent's **name**, snapshotted the way `SupplyOrderItem.itemNameSnapshot` holds the item's, so the history still reads correctly after that person is renamed or leaves. That is not the backend writing prose — there is no sentence, only a name the device puts inside one of its own (`t('supply.assignedTo', { name })`). The *current* assignee is always `SupplyOrder.deliveryAgentMembershipId`; these rows are how it got there.
+
+### `SupplyOrderCounter`
+
+| Column | Type | Notes |
+|---|---|---|
+| businessId | String | PK, FK `Cascade` |
+| lastNumber | Int | |
+
+Allocated by the same atomic `INSERT … ON CONFLICT DO UPDATE … RETURNING` as `BranchTokenCounter`. Two differences: per **business**, and it never resets. A token is shouted across a counter and has to stay small; an order number is quoted days later ("where has 214 got to?") and has to stay unique over time.
+
+---
+
+## 14. Punch location — who fills it, and why (R20)
+
+No schema change: `Attendance` has carried `punchInLat/Lng` and `punchOutLat/Lng` since the attendance module was built. What changed is that they stopped being incidental.
+
+| Policy | Chosen by | Geofence | Coordinates |
+|---|---|---|---|
+| Fixed place of work | the default | applied where the branch configures one | needed only to check against it |
+| `attendance:punchAnywhere` | `DELIVERY_AGENT` | **not applied** | **required** |
+
+The second row is a trade, not a privilege. A delivery agent is at a different branch every hour, so a radius around one of them is meaningless — but accepting the punch without a location would remove the check and record nothing in its place. Requiring the coordinates is what keeps the day auditable, and it is why the capability is in `ADMIN_EXCLUDES`: an admin holding everything else would inherit the cost without needing the exemption.
+
+`Attendance.branchId` still comes from `StaffMember.branchId`, and that stays true for an agent — it is their payroll home, not a claim about where they worked. Where they actually were is the coordinates.
+
+These rows have a second reader now. `GET /supply-delivery-agents` (R21) reads today's attendance for each agent to answer "who is free": a `punchInAt` with no `punchOutAt` is `ON_DUTY`, a row that has been punched out of — or no row at all — is `OFF_DUTY`, and an agent with no `StaffMember` record is `UNKNOWN`, because attendance genuinely has nothing to say about them. "Today" is the branch's own calendar day, as everywhere else that reads attendance. `UNKNOWN` sorts *above* off duty on purpose: it is the state every agent is in at a business that does not use punch-in, and sinking them would bury the whole list.
+
+---
+
+## 15. `BranchKind` — a warehouse is a location (R23)
+
+| Column | Type | Notes |
+|---|---|---|
+| `Branch.kind` | `BranchKind` | `BRANCH | WAREHOUSE`, `@default(BRANCH)` |
+
+Adding a staff member requires a branch, because `Attendance`, `SalarySlip`, `StaffMember` and every roster query are keyed on `branchId`. A warehouse employee had nowhere to be filed — the only locations a business had were the places it sells from — so there was no way for them to punch in at all.
+
+**A warehouse is therefore a `Branch`, distinguished by a kind, rather than a table of its own.** That is the whole point: as a Branch it has a timezone, coordinates, a geofence, staff, attendance, payslips and a roster on the day it is created. A separate `Warehouse` table would have needed all five of those modules taught about a second kind of place before anyone could punch in anywhere.
+
+The column defaults to `BRANCH`, so every location that already existed stays what it was and there is no backfill.
+
+What a warehouse may **not** do is enforced in the two services where goods move, not merely omitted from the pickers: `branchOf` in `counterOrder.service.js` and `supplyOrder.service.js` both throw `BRANCH_IS_WAREHOUSE` (400). A warehouse has no till, and an order it placed on itself would arrive at the desk asking the desk to ship to the desk. On the device the same split is one rule stated in `useBranches`: **`tradingBranches` where goods move, `branches` where people are.**
+
+---
+
+## 16. Branch delivery address (R21)
+
+| Column | Type | Notes |
+|---|---|---|
+| `Branch.addressLine` | String? | Street, building, landmark. Free text and **multi-line** |
+| `Branch.postalCode` | String? | |
+
+`city`, `region` and `country` already existed and describe where a branch **is**, for reporting. They are not an address anybody can ride to, which is why these are separate columns rather than a stricter use of those. `addressLine` is deliberately unstructured: an Indian address is not a fixed set of fields, and forcing one drops the half that actually finds the place ("behind the old post office").
+
+Both nullable. Every branch that existed before this column has neither, and a branch whose own staff know where it is never needs one — an order to such a branch shows "No address saved for this branch" rather than failing.
+
+The destination travels on the supply order (`ORDER_INCLUDE.branch` selects it alongside `latitude`/`longitude`), because the delivery agent's order screen is the only thing they open and branch endpoints are not theirs to call. The map link prefers the coordinates when the branch has them and falls back to the written address.
+

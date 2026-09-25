@@ -24,7 +24,14 @@ async function punchIn(req, res, next) {
 
     const staffMember = await requireOwnStaffMember(req);
 
-    const attendance = await attendanceService.punchIn(req.tenant.businessId, staffMember, req.body);
+    const attendance = await attendanceService.punchIn(
+      req.tenant.businessId,
+      staffMember,
+      req.body,
+      // The location policy is a capability, and the capability comes from the
+      // session — never from the body.
+      req.tenant.role
+    );
     res.status(201).json(attendance);
   } catch (err) {
     next(err);
@@ -38,7 +45,14 @@ async function punchOut(req, res, next) {
 
     const staffMember = await requireOwnStaffMember(req);
 
-    const attendance = await attendanceService.punchOut(req.tenant.businessId, staffMember, req.body);
+    const attendance = await attendanceService.punchOut(
+      req.tenant.businessId,
+      staffMember,
+      req.body,
+      // The location policy is a capability, and the capability comes from the
+      // session — never from the body.
+      req.tenant.role
+    );
     res.json(attendance);
   } catch (err) {
     next(err);

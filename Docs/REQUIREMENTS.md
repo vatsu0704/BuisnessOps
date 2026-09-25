@@ -357,11 +357,20 @@ reasons, and the expected arrival time.
 | **Who** | `DELIVERY_AGENT` (`supplyOrder:deliver`) |
 | **Task** | [Task 5](#task-5--supply-orders-end-to-end) |
 
+**Re-scoped:** the agent is **not tied to a branch**. They carry raw material to
+every branch, so the role is business-wide (`branch:allAccess`) rather than
+scoped by `BranchAccess` rows.
+
 **Acceptance criteria**
 
-- A delivery agent sees only the orders assigned to them.
+- A delivery agent sees the orders assigned to them, **plus every branch's
+  dispatched orders that nobody was named on** — a run to a branch they were
+  never "granted" still reaches them, because there is no such grant any more.
 - Marking delivered updates the cashier's view and sends them a push.
 - A delivery agent cannot accept, pack or dispatch — only deliver and post delays.
+- All-branch scope is **data only**. They hold none of the `staff:*`
+  capabilities, exactly like the warehouse desk: an outside worker carrying
+  every branch's HR records is the failure that split exists to prevent.
 
 ### R13 — Admin sees every branch, and net profit
 
@@ -449,7 +458,7 @@ with the reason written into the migration.
 
 | | |
 | --- | --- |
-| **Who** | Any signed-in user |
+| **Who** | `OWNER` (`business:create`) — see the narrowing below |
 | **Task** | [Task 2](#task-2--one-account-many-businesses) |
 
 Most of this already exists and is unreachable: a user can hold memberships in many
@@ -457,9 +466,26 @@ businesses, and Settings already has a working switcher. What is missing is the 
 endpoint to create a **second** business — today a business is only ever created by
 signing up, so a second business means a second account.
 
+**Narrowed after review:** only an **owner** is offered this. Starting a business is the
+owner's act, not a delegated one — an admin runs the business they were given, and a
+cashier or a warehouse desk has no use for the entry at all. It is the capability
+`business:create`, excluded from `ADMIN` and therefore from `MANAGER` too, so nothing
+anywhere checks a role name.
+
+That gate is about **what Settings offers, not a permission boundary**, and the two are
+deliberately different here. `POST /businesses` stays ungated: it runs before the
+business exists, so there is no tenant to check a capability against, and answering
+"which business's role?" would stop an invited cashier from ever starting one of their
+own. The entry stays visible for someone whose every membership was revoked, since there
+is no role left to hold a capability and hiding it would leave an account that can do
+nothing.
+
 **Acceptance criteria**
 
-- A signed-in user creates another business from Settings and becomes its owner.
+- An owner creates another business from Settings and becomes its owner.
+- An admin, manager, cashier, warehouse or delivery agent does not see the entry.
+- Someone who owns one business and cashiers in another sees it while switched to their
+  own, and not while switched to the other — Settings means "this business".
 - The switcher lists all of them and switching changes what every screen shows.
 - A person who is admin in one business and cashier in another gets the right
   permissions and the right tabs in each, and the app updates cleanly on switch.
@@ -485,6 +511,222 @@ is the export.
 - The same for a whole month.
 - Exports work for any past date, so losing the file is recoverable.
 - The file opens in Excel, and a printable summary can be shared from the phone.
+
+### R18 — One cashier per branch
+
+> Admin should assign only one branch to one cashier. Two cashiers in one branch is not
+> possible. Yes, admin can switch to another cashier for that branch.
+
+A **1:1 rule**: a cashier holds exactly one branch, and a branch has at most one cashier.
+
+**Confirmed:** assigning a branch that already has a cashier **replaces** the holder
+after the admin confirms, naming who is being displaced. The rule applies to `CASHIER`
+**only** — a delivery agent covering three branches stays possible, and managers and
+staff are unchanged.
+
+| | |
+| --- | --- |
+| **Who** | `ADMIN`, `OWNER`, `MANAGER` assign (`team:manageBranchAccess`); `CASHIER` is the constrained role |
+| **Task** | [Task 10](#task-10--restrictions-that-explain-themselves) |
+
+**Acceptance criteria**
+
+- Inviting a cashier with no branch, or with two, is refused before the invite is sent.
+- A branch never has two active cashiers at once.
+- Giving a branch to a second cashier is refused with a message naming the one who holds
+  it, and offers to swap. Confirming moves the branch in one step.
+- The displaced cashier keeps their account and loses only the branch. They can be given
+  another branch or removed, and until then the app tells them they have no branch rather
+  than showing empty screens.
+- Memberships that already break the rule (created before it existed) are **reported, not
+  silently rewritten** — an admin decides who keeps which branch.
+
+### R19 — Every restriction says what it is
+
+> Role-wise functionality hide and show, and when the user uses it, show the message to
+> the user: what is the restriction.
+
+Hiding what a role cannot use is already how the app works — the capability matrix drives
+the tabs, the routes and the buttons. What is missing is the other half: when something
+*is* refused, the app says "Insufficient permissions", which tells nobody anything.
+
+| | |
+| --- | --- |
+| **Who** | Everyone. The refusals differ by role; the explaining does not |
+| **Task** | [Task 10](#task-10--restrictions-that-explain-themselves) |
+
+**Acceptance criteria**
+
+- A refusal says **what the rule is**, not that a rule exists: "only the warehouse desk
+  accepts orders", not "insufficient permissions".
+- Where it helps and leaks nothing, the refusal names the blocker — "Branch 1 already has
+  a cashier: Hari" — because the admin's next action depends on knowing who.
+- It says **who can lift it** where that is knowable, so the reader knows whom to ask.
+- Restrictions that are not about permissions get the same treatment: a closed day, an
+  order too far along to cancel, an item with no price.
+- Every message is a code translated on the device, like all the others. The server still
+  does not write prose.
+- A role whose screens are not built still says so rather than showing a blank page.
+
+### R20 — Punch in from anywhere, with the place on the record
+
+> The delivery agent will not work for any particular branch — he will deliver the raw
+> material to every branch. And he will do the punch-in and punch-out from everywhere,
+> but at that time it needs to store the current location and current time, so admin and
+> manager can see that.
+
+A geofence assumes a fixed place of work. A delivery agent has none, so the radius
+cannot apply to them — but the exemption is only safe if it is a **trade**: the
+coordinates stop being optional and become the record of where the punch happened.
+
+| | |
+| --- | --- |
+| **Who** | `DELIVERY_AGENT` punches (`attendance:punchAnywhere`); `ADMIN`, `OWNER`, `MANAGER` read it |
+| **Task** | Built with [Task 5](#task-5--supply-orders-end-to-end)'s follow-up |
+
+**Acceptance criteria**
+
+- A delivery agent punches in and out from any distance, and the branch geofence is not
+  applied to them.
+- A punch with no coordinates is **refused**, with its own message: giving away the
+  geofence and recording nothing in its place is the worst of both.
+- Both punches store latitude, longitude and the time.
+- An admin or manager sees when and where, on the person's attendance history, and can
+  open the spot in a map.
+- The exemption is a capability held by that role alone. It is **not** conferred by
+  holding everything else — an admin is excluded on purpose, because forcing a location
+  before every punch is a cost that only pays for a job with no fixed address.
+
+### R21 — The desk gives the run to an agent who is free, and tells them where to go
+
+> The warehouse user assigns the order to a delivery agent who is available. And show the
+> full address to the delivery agent with the order, which he can see on the order detail
+> page.
+
+Two halves of one job: somebody has to be named, and the person named has to be able to
+find the place.
+
+| | |
+| --- | --- |
+| **Who** | `WAREHOUSE` assigns (`supplyOrder:fulfil`); `DELIVERY_AGENT` reads the address |
+| **Task** | [Task 5](#task-5--supply-orders-end-to-end) |
+
+**Acceptance criteria**
+
+- Dispatching asks who is taking it, and the list is ordered by who is free: on duty
+  first, then whoever is carrying least.
+- Availability comes from **attendance** — a punch-in with no punch-out — and not from a
+  second idea of "free" invented for this screen. An agent with no employment record, or
+  a business that does not punch in at all, reports `UNKNOWN`, which sorts above off duty.
+- Availability is **shown, never enforced.** Every agent stays selectable: the person at
+  the desk knows things the app does not, and a business that does not use punch-in must
+  not find every agent unavailable.
+- The picker is **not the team list.** The warehouse desk holds no `team:view` and must
+  not need it to do its own job, so the endpoint returns a name, a duty state and a
+  count — no email, no branches, no employment record.
+- Only people whose **job** is carrying appear. An admin holds every capability, so the
+  list is `supplyOrder:deliver` **and not** `supplyOrder:fulfil`, read off the matrix —
+  never a role name.
+- "Nobody yet" stays available on dispatch. A business with no agent yet still has to
+  ship, and an unnamed run reaches every agent covering that branch.
+- A run can be **moved to a different agent** while it is accepted, packed or dispatched
+  — the named agent goes home and it has to go to somebody else — and not after it is
+  delivered, which would rewrite who delivered it.
+- Every assignment is a row in the order's timeline, with the agent's name snapshotted.
+  Assigning the same person twice writes nothing.
+- A branch carries a **delivery address** — a free-text, multi-line street line plus a
+  PIN code — set when it is created and editable in Branch settings.
+- The address travels **on the order**, so the agent's order screen shows it without a
+  request they hold no capability to make, with a chip that opens the spot in a map:
+  coordinates when the branch has them, the written address otherwise.
+- A branch with no address shows "No address saved for this branch" rather than a blank,
+  and nothing fails.
+
+### R22 — Cash on delivery is confirmed by the person who took it
+
+> When the delivery agent receives money which is COD (given by the cashier), the
+> delivery agent should confirm the money was received. Put a question there for the
+> delivery agent — like, have you received money from that branch's cashier? If yes, then
+> the delivery agent is able to mark as delivered.
+
+The goods arriving and the money arriving are **two events**, and only the person
+standing at the counter knows whether the second one happened. Delivering used to stamp
+a COD order PAID as a side effect of arriving, which recorded the branch's cash as having
+reached the warehouse on the strength of the goods reaching the branch.
+
+| | |
+| --- | --- |
+| **Who** | Whoever closes the run — `DELIVERY_AGENT` (`supplyOrder:deliver`), or the desk |
+| **Task** | [Task 5](#task-5--supply-orders-end-to-end) |
+
+**Acceptance criteria**
+
+- Marking a **cash on delivery** order delivered asks first, naming the amount and the
+  branch whose cashier owes it: *"Have you taken ₹2,400 from the Ring Road cashier?"*
+- **Yes** delivers it and records the money as collected. **Not yet** does nothing — the
+  order stays on the road, unpaid, where it can still be chased.
+- The server refuses a COD delivery that does not carry the confirmation, so the rule is
+  not only in the buttons. The flag must be a real boolean: a truthy string is not an
+  answer.
+- Collecting the cash is **its own row** on the order's history, with who took it and
+  when, beside the delivery rather than inside it.
+- An order with nothing outstanding — paid online, or already settled — is delivered with
+  no question asked. A question whose answer cannot matter teaches people to tap through
+  it.
+
+### R23 — A warehouse is a location, and a staff member's base follows their role
+
+> As an owner I need to add a staff (warehouse), so the owner should not have to choose
+> any specific branch. Can we check the role based on the email address when adding
+> staff? We need to add a warehouse location, then the punch-in and punch-out works for
+> that person.
+
+Adding a staff member asked "which branch do they work at?" and would not go on until
+somebody answered. For a warehouse employee there was no true answer: the only locations
+a business had were the places it sells from.
+
+**A warehouse is a `Branch` with `kind: WAREHOUSE`, not a new table.** Attendance,
+geofencing, payroll, rosters and staff records are every one of them already keyed on
+`branchId`. As a branch, a warehouse gets all five on the day it is created — which is
+exactly what "then the punch-in and punch-out works for that person" asks for. A separate
+table would mean teaching all five about a second kind of place first.
+
+| | |
+| --- | --- |
+| **Who** | `OWNER`/`ADMIN` create locations and add staff |
+| **Entities** | `Branch.kind`, `BranchKind` |
+| **Task** | [Task 5](#task-5--supply-orders-end-to-end) |
+
+**Acceptance criteria**
+
+- Adding a location asks what it is: a **branch** (sells and orders) or a **warehouse**
+  (supplies the branches). Anything that already exists is a branch, with no backfill.
+- A warehouse takes coordinates and a geofence like any other location, so its staff
+  punch in there against its radius.
+- A warehouse is **refused a counter order and a supply cart by the server**, not merely
+  left out of the pickers: it has no till, and it does not order raw material from
+  itself.
+- Branch pickers split by meaning: **where goods move** shows branches only; **where
+  people work** shows every location. A figure labelled "branches" counts the selling
+  network.
+- Adding a staff member recognises an email that already belongs to a member and says
+  who they are and what role they hold.
+- **The email is asked before the location**, because the answer changes what the
+  location question means. Asked after it — which is how it shipped first — the form
+  demands "which branch do they work at?" before it has any way of knowing the answer is
+  "none of them".
+- When that role reaches every branch — delivery agent, warehouse desk, admin — the
+  question changes from "which branch do they work at" to "where is their base", and
+  says that it only decides where attendance and payslips are filed.
+- The location is chosen automatically where there is nothing to choose: the business has
+  one location, or the person's work spans every branch and a warehouse exists. It is
+  never guessed for a branch-scoped person, because filing someone at the wrong shop
+  silently is worse than a tap.
+- The job title is offered from their membership role — a delivery agent gets "Delivery
+  agent" — as a suggestion that any typing replaces, and that clears if the email does.
+- A **delivery agent added this way punches in and out from anywhere**, with the
+  coordinates recorded (R20), and their attendance and payslip are filed against their
+  base. That is the whole point of the chain: no staff record means no attendance at all.
 
 ---
 
@@ -556,7 +798,7 @@ and every other task assumes its roles exist.
    refusal, branch-local dates.
 
 ### Task 5 — Supply orders end to end
-*Requirements: R3, R5, R5.1, R9, R11, R12.*
+*Requirements: R3, R5, R5.1, R9, R11, R12, R21, R22, R23.*
 
 1. Give `InventoryItem` a price, an active flag and its first API.
 2. The order, item and event tables.
@@ -564,11 +806,57 @@ and every other task assumes its roles exist.
 4. Warehouse: the all-branch queue, accept → pack → dispatch, verify payment, post a
    delay.
 5. Delivery agent: assigned queue, mark delivered, post a delay with a reason.
-6. Every transition writes an event and notifies.
+6. Every transition writes an event. **Notifying is Task 7** — the single
+   `recordEvent` choke point is where it hooks in, and it is deliberately not
+   stubbed with an empty notifier in the meantime, because a function that does
+   nothing reads as a function that works.
 7. The cashier's tracking view.
-8. Six screens, translations ×4.
+8. Seven screens, translations ×4.
 9. Tests: illegal transitions refused, each role refused the others' actions,
    cross-branch and cross-tenant denial.
+
+**Decided while building it.**
+
+- **A supply order is a cost, not a sale.** Unlike a counter order it is *not*
+  projected into `Transaction`/`LineItem`: doing so would inflate every sales
+  figure by the value of the raw material a branch bought from its own
+  warehouse. Task 8 reads it as a cost input to net profit.
+- **Cancel and reject are separate verbs** for the same end state. The branch
+  withdrawing its order and the warehouse refusing it are different events with
+  different people to tell, so they carry different capabilities, allow
+  different statuses, and only the rejection requires a reason.
+- **Dispatch names a delivery agent, without the desk getting the team list**
+  (R21). The first pass left dispatch unassigned, on the grounds that choosing
+  someone meant listing the business's members and the warehouse holds no
+  `team:view`. That was the wrong conclusion from a right premise: the fix is a
+  narrower endpoint, not a missing feature. `GET /supply-delivery-agents` is
+  guarded by `supplyOrder:fulfil` and returns a name, a duty state and a count —
+  no email, no branches, no employment record.
+- **Whose job is delivering is not who is able to deliver.** An admin holds
+  every capability, so a bare `supplyOrder:deliver` filter would list the owner
+  and every admin as a courier. The picker is `supplyOrder:deliver` **and not**
+  `supplyOrder:fulfil` — someone who can run the desk is not who the desk is
+  looking for — read off the matrix, so a role added later that carries but does
+  not fulfil appears with no edit.
+- **Availability is reported, never enforced.** It comes from attendance, which
+  has nothing to say about an agent with no employment record or a business that
+  does not punch in — so `UNKNOWN` sorts above off duty and every agent stays
+  selectable. Blocking on it would leave those businesses unable to assign
+  anybody.
+- **"Nobody yet" stays on offer.** A business with no delivery agent still has
+  to ship, and an unassigned dispatch appears in the queue of every agent
+  covering that branch. Requiring an agent would refuse a dispatch the server
+  has no better answer for.
+- **Assigning is its own verb, not only a field on dispatch.** "Who is taking
+  it" and "it has left" are different facts with different timing: the agent who
+  was given it goes home an hour later, and with only the dispatch field the one
+  way to correct that would be to undo a dispatch that really happened.
+- **A branch's delivery address is not its city and region.** Those describe
+  where a branch *is*, for reporting. `addressLine` is free text and multi-line
+  because an Indian address is not a fixed set of fields, and forcing one drops
+  the half that finds the place. It travels on the order itself: the agent's
+  order screen is the only thing they open, and branch endpoints are not theirs
+  to call.
 
 ### Task 6 — Expenses and the daily log
 *Requirement: R10.*
@@ -611,7 +899,49 @@ and every other task assumes its roles exist.
    downloads that do not fail on an error status.
 4. Export actions on Reports and the branch day view.
 
-### Task 10 — Documents
+### Task 10 — Restrictions that explain themselves
+*Requirements: R18, R19.*
+
+Two halves of one idea: the app already hides what a role cannot use, and it should also
+**say why** when something is refused. R18 is the first restriction that is not a
+capability at all — it is an invariant about who may hold a branch — which is exactly the
+kind of rule a generic "insufficient permissions" cannot explain.
+
+1. **The invariant, in the service layer.** One cashier per branch, one branch per
+   cashier, enforced where memberships and branch access are written — not in a
+   controller, and never only in the app. Invite, accept-invite, and the branch-access
+   edit are three doors into the same room.
+2. Validation: a cashier invited with no branch, or with two, is refused before the
+   invite is created. `INVITABLE_ROLES` already derives from the matrix; this is the
+   branch count, which nothing checks today.
+3. **The swap.** Assigning an occupied branch returns a 409 naming the current cashier.
+   A confirmed retry moves the branch and leaves the previous holder with no branch, in
+   one transaction, so there is never a moment with two or with none.
+4. Error codes and their wording in all four locales, carrying the blocker's name as a
+   `param` — never baked into the sentence.
+5. **Frontend:** the invite and Team screens show which branches already have a cashier
+   before the admin picks one, and the swap is a confirmation naming the person being
+   displaced. A cashier with no branch gets a clear notice, not empty screens.
+6. **The audit.** Every `PERMISSION_DENIED` and `BRANCH_ACCESS_DENIED` throw site gets a
+   message that states the rule. This is the bulk of R19 and the least glamorous part.
+7. A "why is this not here?" affordance on the surfaces where hiding is more confusing
+   than explaining — chiefly Home, which already has the pattern for a role whose screens
+   are not built.
+8. **A pre-existing conflict to resolve first.** `supply-order.test.js` puts two cashiers
+   on one branch on purpose, to prove an order is credited to whoever placed it rather
+   than whoever opened the cart. Under R18 that fixture becomes illegal. The test stays —
+   the second person becomes the **owner**, who also holds `supplyOrder:create` — and it
+   is a better test for it, since owner-plus-cashier is the pairing that survives.
+9. Tests: the invariant holds under concurrent assignment; the swap moves exactly one
+   branch and leaves exactly one holder; a displaced cashier is inert but intact; every
+   new refusal returns its own code rather than the generic one.
+
+**One design note that survives R18.** The supply cart is per *branch*, not per cashier.
+That was argued from "two people on a shift", which R18 makes rare — but it still holds,
+because an owner or manager also holds `supplyOrder:create` and can order for any branch.
+The cart being the branch's means their additions and the cashier's are one list.
+
+### Task 11 — Documents
 
 Written **with** each task, not after: this file, `PROJECT_FLOW.md`,
 `database-table.md`, `TESTING_GUIDE.md`, and the `CLAUDE.md` additions for the push

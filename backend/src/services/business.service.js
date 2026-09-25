@@ -3,16 +3,37 @@ const { fail } = require('../errors');
 
 function createBranch(
   businessId,
-  { name, code, city, region, country, timezone, currency, latitude, longitude, geofenceRadiusMeters }
+  {
+    name,
+    code,
+    kind,
+    city,
+    region,
+    country,
+    addressLine,
+    postalCode,
+    timezone,
+    currency,
+    latitude,
+    longitude,
+    geofenceRadiusMeters,
+  }
 ) {
   return prisma.branch.create({
     data: {
       businessId,
       name,
       code,
+      // Undefined falls through to the column default, BRANCH. A WAREHOUSE is
+      // a place the business staffs but does not sell from — see BranchKind.
+      kind,
       city,
       region,
       country,
+      // Where a delivery goes, as opposed to where the branch is for reporting.
+      // Optional at creation and editable afterwards, like the geofence.
+      addressLine,
+      postalCode,
       timezone,
       currency,
       latitude,
@@ -41,9 +62,12 @@ async function updateBranch(businessId, branchId, patch) {
   const data = {};
   const fields = [
     'name',
+    'kind',
     'city',
     'region',
     'country',
+    'addressLine',
+    'postalCode',
     'currency',
     'status',
     'timezone',

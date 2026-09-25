@@ -16,6 +16,13 @@ import TeamScreen from '@/screens/TeamScreen';
 import InviteMemberScreen from '@/screens/InviteMemberScreen';
 import ProductsScreen from '@/screens/ProductsScreen';
 import CounterScreen from '@/screens/CounterScreen';
+import SupplyCatalogScreen from '@/screens/SupplyCatalogScreen';
+import SupplyCartScreen from '@/screens/SupplyCartScreen';
+import SupplyOrdersScreen from '@/screens/SupplyOrdersScreen';
+import SupplyOrderDetailScreen from '@/screens/SupplyOrderDetailScreen';
+import SupplyItemFormScreen from '@/screens/SupplyItemFormScreen';
+import WarehouseDeskScreen from '@/screens/WarehouseDeskScreen';
+import DeliveryQueueScreen from '@/screens/DeliveryQueueScreen';
 import { useMembership } from '@/hooks/useBusinessId';
 import TabNavigator from './TabNavigator';
 import { canOpenRoute } from './routeAccess';
@@ -38,6 +45,14 @@ export type AppStackParamList = {
   AddProduct: { branchId?: string } | undefined;
   EditProduct: { productId: string };
   Counter: undefined;
+  // Supply orders (requirements 3, 5, 5.1, 9, 11, 12).
+  SupplyCatalog: undefined;
+  SupplyCart: { supplyOrderId: string };
+  SupplyOrders: undefined;
+  SupplyOrderDetail: { supplyOrderId: string };
+  SupplyItemForm: { inventoryItemId?: string } | undefined;
+  SupplyDesk: undefined;
+  SupplyDeliveries: undefined;
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -67,6 +82,15 @@ const MODAL_SCREENS: { name: keyof AppStackParamList; component: ComponentType<a
   // Also a tab for a cashier. Registered here as well so an owner or manager,
   // who trades the tab slot for Reports, can still reach the till from Home.
   { name: 'Counter', component: CounterScreen },
+  // Same story as Counter: each of these is a tab for the role whose daily
+  // work it is, and a pushed screen for everyone who reaches it from Home.
+  { name: 'SupplyCatalog', component: SupplyCatalogScreen },
+  { name: 'SupplyCart', component: SupplyCartScreen },
+  { name: 'SupplyOrders', component: SupplyOrdersScreen },
+  { name: 'SupplyOrderDetail', component: SupplyOrderDetailScreen },
+  { name: 'SupplyItemForm', component: SupplyItemFormScreen },
+  { name: 'SupplyDesk', component: WarehouseDeskScreen },
+  { name: 'SupplyDeliveries', component: DeliveryQueueScreen },
 ];
 
 /**

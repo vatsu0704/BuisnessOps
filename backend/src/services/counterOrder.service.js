@@ -35,9 +35,18 @@ function toDecimal(value) {
   return new Prisma.Decimal(value);
 }
 
+/**
+ * The branch a token belongs to, and a check that it is one.
+ *
+ * A WAREHOUSE location has no counter and no customers — it is a place the
+ * business staffs, not one it sells from. Guarded here rather than only in the
+ * branch picker, because a token issued against a warehouse would put a sale
+ * into the sales figures for somewhere that never made one.
+ */
 async function branchOf(businessId, branchId) {
   const branch = await prisma.branch.findFirst({ where: { id: branchId, businessId } });
   if (!branch) throw fail('BRANCH_NOT_FOUND_IN_BUSINESS', 404);
+  if (branch.kind === 'WAREHOUSE') throw fail('BRANCH_IS_WAREHOUSE', 400);
   return branch;
 }
 

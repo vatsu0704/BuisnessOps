@@ -26,7 +26,7 @@ export default function SalesTilesSection() {
         formatValue={(v) => formatAmount(v, sales.currency)}
       />
       <StatTile label={t('home.statTransactions')} value={sales.transactionCount} />
-      <StatTile label={t('home.statBranches')} value={stats.total} />
+      <StatTile label={t('home.statBranches')} value={stats.trading} />
     </View>
   );
 }

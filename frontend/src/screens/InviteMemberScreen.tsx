@@ -65,7 +65,7 @@ const ROLE_ICONS: Record<InvitableRole, keyof typeof Ionicons.glyphMap> = {
 export default function InviteMemberScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const businessId = useBusinessId();
-  const { branches } = useBranches();
+  const { tradingBranches: branches } = useBranches();
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<InvitableRole>('STAFF');

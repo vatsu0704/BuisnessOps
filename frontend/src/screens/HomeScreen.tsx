@@ -53,7 +53,25 @@ function initials(name?: string | null, email?: string | null): string {
  * a surface nobody else has. Tasks 5 and 6 add the warehouse queue, the
  * delivery list and the expense-gap list the same way.
  */
-const SECTIONS: { key: string; capability: Capability | null; Component: ComponentType }[] = [
+const SECTIONS: {
+  key: string;
+  capability: Capability | null;
+  /**
+   * Drop the card for anyone who `holds` this — unless they also hold
+   * `unless`. The same shape `TAB_CATALOGUE` uses, and for the same reason.
+   *
+   * A capability says what someone *may* do; it does not say whose **job** it
+   * is. An admin holds every capability in the matrix, so gating on the
+   * capability alone put "Order raw material" and "Your deliveries" on an
+   * owner's Home — neither of which an owner does. The branch orders, the
+   * agent delivers.
+   *
+   * The discriminator is always a second capability, never a role name, so a
+   * role added later lands on the right side of it by itself.
+   */
+  hideWhen?: { holds: Capability; unless?: Capability };
+  Component: ComponentType;
+}[] = [
   // Punching in is a daily action and belongs one tap from opening the app.
   // TodayPunchCard renders nothing for someone with no staff record, so it
   // needs no capability of its own.
@@ -63,6 +81,36 @@ const SECTIONS: { key: string; capability: Capability | null; Component: Compone
   { key: 'counter', capability: 'counterOrder:create', Component: CounterSection },
   // Requirement 4 — the default post-login surface.
   { key: 'catalog', capability: 'product:view', Component: BranchCatalogSection },
+  // Requirement 3. The warehouse desk has this as a tab; an admin reaches it
+  // from here, which is the only place they ever need it.
+  { key: 'desk', capability: 'supplyOrder:fulfil', Component: DeskSection },
+  // Requirement 12, same story for the delivery agent's run — and only for
+  // them. Whoever runs the desk is not who carries the run, which is the same
+  // discriminator the agent picker uses to decide who may be assigned one.
+  {
+    key: 'deliveries',
+    capability: 'supplyOrder:deliver',
+    hideWhen: { holds: 'supplyOrder:fulfil' },
+    Component: DeliveriesSection,
+  },
+  // Requirement 5 — ordering raw material. A branch orders; an admin does not,
+  // so they trade this card for the catalog one below. Same `unless` that lets
+  // a cashier give up the Products tab while an admin keeps it.
+  {
+    key: 'supply',
+    capability: 'supplyOrder:create',
+    hideWhen: { holds: 'analytics:viewBusiness' },
+    Component: SupplySection,
+  },
+  // What the warehouse stocks and what it charges. This is the only way into
+  // the raw-material catalog for anyone who does not order from it — which,
+  // until now, included the warehouse desk itself: it holds `supplyItem:manage`
+  // and had no route to the screen that uses it.
+  { key: 'supplyCatalog', capability: 'supplyItem:manage', Component: SupplyCatalogSection },
+  // Requirement 11 — tracking what was ordered. Stays for everyone who can see
+  // orders at all, including an admin: reading where a branch's order has got
+  // to is oversight, not the branch's daily job.
+  { key: 'supplyOrders', capability: 'supplyOrder:view', Component: SupplyOrdersSection },
   { key: 'sales', capability: 'analytics:viewBranch', Component: SalesTilesSection },
   { key: 'branches', capability: 'branch:update', Component: BranchesSection },
   { key: 'upload', capability: 'dataSource:manage', Component: UploadSection },
@@ -83,6 +131,76 @@ function CounterSection() {
       title={t('home.counterTitle')}
       subtitle={t('home.counterSubtitle')}
       onPress={() => navigation.navigate('Counter')}
+    />
+  );
+}
+
+function SupplySection() {
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  return (
+    <InfoCard
+      testID="home-open-supply"
+      icon="cube-outline"
+      title={t('home.supplyTitle')}
+      subtitle={t('home.supplySubtitle')}
+      onPress={() => navigation.navigate('SupplyCatalog')}
+    />
+  );
+}
+
+function SupplyCatalogSection() {
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  return (
+    <InfoCard
+      testID="home-open-supply-catalog"
+      icon="pricetags-outline"
+      title={t('home.supplyCatalogTitle')}
+      subtitle={t('home.supplyCatalogSubtitle')}
+      onPress={() => navigation.navigate('SupplyCatalog')}
+    />
+  );
+}
+
+function SupplyOrdersSection() {
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  return (
+    <InfoCard
+      testID="home-open-supply-orders"
+      icon="receipt-outline"
+      title={t('home.supplyTrackTitle')}
+      subtitle={t('home.supplyTrackSubtitle')}
+      onPress={() => navigation.navigate('SupplyOrders')}
+    />
+  );
+}
+
+function DeskSection() {
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  return (
+    <InfoCard
+      testID="home-open-desk"
+      icon="file-tray-full-outline"
+      title={t('home.deskTitle')}
+      subtitle={t('home.deskSubtitle')}
+      onPress={() => navigation.navigate('SupplyDesk')}
+    />
+  );
+}
+
+function DeliveriesSection() {
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  return (
+    <InfoCard
+      testID="home-open-deliveries"
+      icon="bicycle-outline"
+      title={t('home.deliveriesTitle')}
+      subtitle={t('home.deliveriesSubtitle')}
+      onPress={() => navigation.navigate('SupplyDeliveries')}
     />
   );
 }
@@ -125,9 +243,14 @@ export default function HomeScreen({ navigation }: Props) {
   // the "add your first branch" card would fail on tap.
   const noAccess = hasNoActiveBusiness(user);
 
-  const sections = SECTIONS.filter(
-    (section) => !section.capability || hasCapability(membership, section.capability)
-  );
+  const sections = SECTIONS.filter((section) => {
+    if (section.capability && !hasCapability(membership, section.capability)) return false;
+    if (!section.hideWhen) return true;
+    const hidden =
+      hasCapability(membership, section.hideWhen.holds) &&
+      !(section.hideWhen.unless && hasCapability(membership, section.hideWhen.unless));
+    return !hidden;
+  });
 
   // A role whose surfaces are not built yet — WAREHOUSE and DELIVERY_AGENT
   // until Task 5 — would otherwise land on a blank screen and reasonably

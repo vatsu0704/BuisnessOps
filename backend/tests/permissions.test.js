@@ -47,8 +47,41 @@ describe('the capability matrix', () => {
   });
 
   it('keeps every branch-scoped role out of branch:allAccess', () => {
-    for (const role of ['CASHIER', 'DELIVERY_AGENT', 'STAFF']) {
+    // DELIVERY_AGENT used to be in this list and deliberately is not any more:
+    // they carry raw material to every branch, so the queue has to span all of
+    // them. WAREHOUSE's split applies to them for the same reason it applies to
+    // the desk — see the test below.
+    for (const role of ['CASHIER', 'STAFF']) {
       expect(roleHas(role, 'branch:allAccess')).toBe(false);
+    }
+  });
+
+  // The same split as WAREHOUSE, and it matters more here: a delivery agent is
+  // an outside worker holding all-branch data scope. If these ever agree, every
+  // branch's HR records are on a bike.
+  it('gives DELIVERY_AGENT all-branch DATA scope and no authority over people', () => {
+    expect(roleHas('DELIVERY_AGENT', 'branch:allAccess')).toBe(true);
+    expect(roleHas('DELIVERY_AGENT', 'staff:viewAllBranches')).toBe(false);
+    expect(roleHas('DELIVERY_AGENT', 'staff:viewOthers')).toBe(false);
+    expect(roleHas('DELIVERY_AGENT', 'payroll:view')).toBe(false);
+  });
+
+  // An exemption, not a privilege — which is why holding everything else does
+  // not confer it. See ADMIN_EXCLUDES in the catalog.
+  it('gives punch-anywhere only to the role with no fixed place of work', () => {
+    expect(roleHas('DELIVERY_AGENT', 'attendance:punchAnywhere')).toBe(true);
+    expect(roleHas('ADMIN', 'attendance:punchAnywhere')).toBe(false);
+    expect(roleHas('MANAGER', 'attendance:punchAnywhere')).toBe(false);
+    expect(roleHas('CASHIER', 'attendance:punchAnywhere')).toBe(false);
+  });
+
+  // Starting a business is the owner's act, not a delegated one: an admin runs
+  // the business they were given. The second entry in ADMIN_EXCLUDES, and the
+  // reason MANAGER — which derives from ADMIN — does not get it either.
+  it('lets only an owner start another business', () => {
+    expect(roleHas('OWNER', 'business:create')).toBe(true);
+    for (const role of ['ADMIN', 'MANAGER', 'WAREHOUSE', 'CASHIER', 'DELIVERY_AGENT', 'STAFF']) {
+      expect(roleHas(role, 'business:create')).toBe(false);
     }
   });
 

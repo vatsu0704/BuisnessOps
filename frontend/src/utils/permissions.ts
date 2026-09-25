@@ -87,6 +87,17 @@ export const can = {
   /** Set or change a base salary. A CASHIER does this for their own branch. */
   setPay: (m: Membership | undefined) => hasCapability(m, 'staff:setPay'),
   manageTeam: (m: Membership | undefined) => hasCapability(m, 'team:view'),
+  /**
+   * Start another business under this account — the owner's act, not a
+   * delegated one. An admin runs the business they were given; this is the one
+   * entry in Settings about the account rather than about that business.
+   *
+   * Asked of the membership for the business currently switched to, like every
+   * other gate on that screen. Someone who owns one business and cashiers in
+   * another therefore switches to their own before adding a third, which is
+   * one tap and keeps Settings meaning "this business".
+   */
+  createBusiness: (m: Membership | undefined) => hasCapability(m, 'business:create'),
   /** See the catalog. Everyone who can sell or price something needs this. */
   viewProducts: (m: Membership | undefined) => hasCapability(m, 'product:view'),
   /** Add, edit and price products — including a branch's own (requirement 4). */
@@ -94,4 +105,20 @@ export const can = {
   /** Weekly off, holidays, branch timezone and geofence — these set the payroll divisor. */
   manageWorkCalendar: (m: Membership | undefined) => hasCapability(m, 'workCalendar:manage'),
   markAttendance: (m: Membership | undefined) => hasCapability(m, 'attendance:markOthers'),
+
+  // --- Supply orders (requirements 3, 5, 5.1, 9, 11, 12) ---
+  /** Browse the raw-material catalog and what the warehouse charges for it. */
+  viewSupplyItems: (m: Membership | undefined) => hasCapability(m, 'supplyItem:view'),
+  /** Add, price and withdraw raw material. The desk stocks it, so the desk edits it. */
+  manageSupplyItems: (m: Membership | undefined) => hasCapability(m, 'supplyItem:manage'),
+  /** See supply orders at all. WHICH ones is narrowed by branch and assignment. */
+  viewSupplyOrders: (m: Membership | undefined) => hasCapability(m, 'supplyOrder:view'),
+  /** Cart raw material, place the order, and withdraw it before it is accepted. */
+  orderSupplies: (m: Membership | undefined) => hasCapability(m, 'supplyOrder:create'),
+  /** Accept, pack, dispatch, reject, and check the payment — the warehouse desk. */
+  fulfilSupplyOrders: (m: Membership | undefined) => hasCapability(m, 'supplyOrder:fulfil'),
+  /** Carry an order and mark it delivered (requirement 12). */
+  deliverSupplyOrders: (m: Membership | undefined) => hasCapability(m, 'supplyOrder:deliver'),
+  /** Post "+30 minutes, traffic". Requirement 9 has two ends and this is both. */
+  postSupplyDelay: (m: Membership | undefined) => hasCapability(m, 'supplyOrder:delay'),
 };

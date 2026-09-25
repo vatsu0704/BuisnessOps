@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +23,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
+import { confirm } from '@/utils/confirm';
 import { haptics } from '@/utils/haptics';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EditStaff'>;
@@ -121,7 +122,7 @@ export default function EditStaffScreen({ route, navigation }: Props) {
     }
   }
 
-  function handleToggleActive() {
+  async function handleToggleActive() {
     if (!businessId || !staffMember) return;
     const deactivating = staffMember.status === 'ACTIVE';
 
@@ -141,10 +142,13 @@ export default function EditStaffScreen({ route, navigation }: Props) {
       return;
     }
     // Confirm the destructive direction only.
-    Alert.alert(t('editStaff.deactivateTitle'), t('editStaff.deactivateBody'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('editStaff.deactivate'), style: 'destructive', onPress: () => void run() },
-    ]);
+    const ok = await confirm({
+      title: t('editStaff.deactivateTitle'),
+      body: t('editStaff.deactivateBody'),
+      confirmLabel: t('editStaff.deactivate'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (ok) void run();
   }
 
   return (
@@ -282,7 +286,7 @@ export default function EditStaffScreen({ route, navigation }: Props) {
                   <PressableScale
                     testID="edit-staff-toggle-active"
                     style={styles.dangerButton}
-                    onPress={handleToggleActive}
+                    onPress={() => void handleToggleActive()}
                   >
                     <Ionicons
                       name={staffMember?.status === 'ACTIVE' ? 'person-remove-outline' : 'person-add-outline'}

@@ -54,8 +54,18 @@ export default function BranchesSection() {
           />
           <View style={styles.branchText}>
             <Text style={styles.branchName}>{branch.name}</Text>
+            {/* A warehouse is in this list because this is the only way to
+                reach its settings — and it has to say which it is, or the
+                count of "branches" above will not match what is on screen. */}
             <Text style={styles.branchMeta}>
-              {[branch.code, branch.city, branch.region].filter(Boolean).join(' · ')}
+              {[
+                branch.kind === 'WAREHOUSE' ? t('addBranch.kindWarehouse') : null,
+                branch.code,
+                branch.city,
+                branch.region,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </Text>
           </View>
           {/* Says out loud that a branch with no radius set enforces none,

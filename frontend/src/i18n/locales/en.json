@@ -7,7 +7,8 @@
     "cancel": "Cancel",
     "retry": "Try again",
     "none": "None",
-    "remove": "Remove"
+    "remove": "Remove",
+    "all": "All"
   },
   "errors": {
     "unreachable": "Cannot reach the BizIQ server at {{url}}. Check that the device is on the same network as the server and that the server is running.",
@@ -88,7 +89,27 @@
       "RECORD_DUPLICATE": "This already exists.",
       "RECORD_NOT_FOUND": "That record no longer exists.",
       "RECORD_REFERENCE_MISSING": "Something this refers to no longer exists.",
-      "INTERNAL_ERROR": "Something went wrong on the server. Please try again."
+      "INTERNAL_ERROR": "Something went wrong on the server. Please try again.",
+      "SUPPLY_ITEM_NOT_FOUND": "That item is not in the raw-material catalog",
+      "SUPPLY_ITEM_NAME_TAKEN": "The catalog already has an item called {{name}}",
+      "SUPPLY_ITEM_INACTIVE": "{{name}} is no longer supplied",
+      "SUPPLY_ITEM_HAS_NO_PRICE": "{{name}} has no price set, so it cannot be ordered yet",
+      "SUPPLY_ORDER_NOT_FOUND": "Supply order not found",
+      "SUPPLY_ORDER_ITEM_NOT_FOUND": "That item is not on this order",
+      "SUPPLY_ORDER_INVALID_TRANSITION": "An order that is {{from}} cannot become {{to}}",
+      "SUPPLY_ORDER_NOT_EDITABLE": "This order is {{status}}, so its items can no longer be changed",
+      "SUPPLY_ORDER_EMPTY": "Add something to the order before placing it",
+      "SUPPLY_ORDER_REFERENCE_REQUIRED": "Paying online needs the payment reference so the warehouse can check it",
+      "SUPPLY_ORDER_CANCEL_TOO_LATE": "The warehouse has already started on this order — ask them to reject it instead",
+      "SUPPLY_ORDER_DELAY_NOT_APPLICABLE": "An order that is {{status}} cannot be delayed",
+      "SUPPLY_ORDER_PAYMENT_NOT_CLAIMED": "There is no payment to check on this order yet",
+      "SUPPLY_ORDER_AGENT_NOT_FOUND": "That delivery agent is not an active member of this business",
+      "SUPPLY_ORDER_AGENT_NOT_PERMITTED": "That member cannot be given a delivery, so the order would be stuck",
+      "SUPPLY_ORDER_NOT_ASSIGNED": "This delivery is assigned to someone else",
+      "PUNCH_LOCATION_ALWAYS_REQUIRED": "Your punches record where you were, so location has to be switched on",
+      "SUPPLY_ORDER_ASSIGN_NOT_APPLICABLE": "An order that is {{status}} cannot be given to a delivery agent",
+      "SUPPLY_ORDER_CASH_NOT_CONFIRMED": "This order is cash on delivery — confirm you have taken the money before marking it delivered",
+      "BRANCH_IS_WAREHOUSE": "This is a warehouse, not a branch — it does not sell or order raw material"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} is required",
@@ -127,7 +148,10 @@
       "ROW_QUANTITY_NOT_A_NUMBER": "Row {{row}}: quantity is not a number",
       "ROW_UNIT_PRICE_NOT_A_NUMBER": "Row {{row}}: unit_price is not a number",
       "ROW_PAYMENT_METHOD_INVALID": "Row {{row}}: payment_method must be one of {{options}}",
-      "ROW_DATE_INVALID": "Row {{row}}: occurred_at is not a valid date"
+      "ROW_DATE_INVALID": "Row {{row}}: occurred_at is not a valid date",
+      "DATETIME_INVALID": "{{field}} must be a valid date and time",
+      "DATETIME_IN_PAST": "{{field}} cannot be in the past",
+      "DELAY_MINUTES_RANGE": "delayMinutes must be a whole number of minutes between 1 and {{max}}"
     },
     "field": {
       "name": "Name",
@@ -165,7 +189,10 @@
       "unmarkedWorkingDayStatus": "Unmarked days",
       "isPaid": "Paid holiday",
       "displayName": "Name",
-      "preferredLocale": "Language"
+      "preferredLocale": "Language",
+      "addressLine": "Delivery address",
+      "postalCode": "PIN code",
+      "deliveryAgentMembershipId": "Delivery agent"
     }
   },
   "language": {
@@ -183,7 +210,10 @@
     "settings": "Settings",
     "staff": "Staff",
     "products": "Products",
-    "counter": "Counter"
+    "counter": "Counter",
+    "supply": "Supply",
+    "desk": "Desk",
+    "deliveries": "Deliveries"
   },
   "splash": {
     "tagline": "Ask your business anything"
@@ -299,7 +329,17 @@
     "roleEmptyTitle": "Your tools are still being built",
     "roleEmptyBody": "Your role is set up and your access is correct, but the screens for it are not finished yet. They will appear here as they land.",
     "counterTitle": "Open the counter",
-    "counterSubtitle": "Ring up an order and issue a token"
+    "counterSubtitle": "Ring up an order and issue a token",
+    "supplyTitle": "Order raw material",
+    "supplySubtitle": "Cart what the branch needs and send it to the warehouse",
+    "deskTitle": "The order desk",
+    "deskSubtitle": "Every incoming supply order, from every branch",
+    "deliveriesTitle": "Your deliveries",
+    "deliveriesSubtitle": "What you are carrying right now",
+    "supplyTrackTitle": "Track supply orders",
+    "supplyTrackSubtitle": "Where each order has got to",
+    "supplyCatalogTitle": "Raw material catalog",
+    "supplyCatalogSubtitle": "What the warehouse supplies, and what it charges"
   },
   "phase": {
     "examplesLabel": "What you'll be able to ask"
@@ -361,7 +401,12 @@
     "timezone": "Timezone",
     "submit": "Create branch",
     "submitting": "Creating...",
-    "geofenceHint": "Optional. Set the shop location and a radius to require staff to be at the branch to punch in. You can add this later."
+    "geofenceHint": "Optional. Set the shop location and a radius to require staff to be at the branch to punch in. You can add this later.",
+    "kind": "What is this place?",
+    "kindBranch": "Branch",
+    "kindBranchHint": "Sells and orders",
+    "kindWarehouse": "Warehouse",
+    "kindWarehouseHint": "Supplies the branches"
   },
   "addBusiness": {
     "title": "Add a business",
@@ -430,7 +475,9 @@
     "branchPriceCleared": "Back to the business price.",
     "withdraw": "Withdraw from sale",
     "restore": "Put back on sale",
-    "withdrawHint": "Withdrawing hides it from every catalog without deleting it — past sales keep naming what was sold."
+    "withdrawHint": "Withdrawing hides it from every catalog without deleting it — past sales keep naming what was sold.",
+    "withdrawTitle": "Withdraw {{name}}?",
+    "withdrawBody": "It can no longer be sold at any branch. Past sales keep it, and you can restore it later."
   },
   "counter": {
     "title": "Counter",
@@ -494,7 +541,11 @@
     "doneForToday": "Punched in at {{inTime}} · out at {{outTime}}",
     "punchIn": "Punch in",
     "punchOut": "Punch out",
-    "noHistory": "No attendance recorded for this month yet"
+    "noHistory": "No attendance recorded for this month yet",
+    "traceIn": "In {{time}}",
+    "traceOut": "Out {{time}}",
+    "traceWhere": "Punched here",
+    "traceNoLocation": "Location not recorded"
   },
   "staff": {
     "title": "Staff",
@@ -506,7 +557,7 @@
   },
   "addStaff": {
     "title": "Add staff",
-    "subtitle": "Every staff member belongs to one branch. Link an email only if they should be able to punch in themselves.",
+    "subtitle": "If they already have an account, start with their email — it fills in the rest. Attendance and payslips are filed against the location you choose.",
     "branchSection": "Which branch do they work at?",
     "name": "Name",
     "namePlaceholder": "e.g. Priya Mehta",
@@ -521,7 +572,11 @@
     "emailPlaceholder": "their.email@example.com",
     "emailInvalid": "Enter a valid email address.",
     "submit": "Add staff member",
-    "submitting": "Adding..."
+    "submitting": "Adding...",
+    "knownMember": "{{name}} is already on the team as {{role}}",
+    "branchHomeSection": "Where is their base?",
+    "branchHomeHint": "Their work is not limited to one place. This is only where their attendance and payslip are filed.",
+    "personSection": "Who are they?"
   },
   "staffDetail": {
     "title": "Staff member",
@@ -755,10 +810,148 @@
     "locationUnavailable": "Could not get your location. Check that location is on and that BizIQ is allowed to use it.",
     "radiusNeedsLocation": "Set the branch location first — a radius needs a point to measure from.",
     "geofenceOff": "Geofencing is off. Staff can punch in from anywhere.",
-    "notFound": "That branch no longer exists."
+    "notFound": "That branch no longer exists.",
+    "address": "Delivery address",
+    "addressPlaceholder": "Building, street, landmark",
+    "addressHint": "What a delivery agent needs in order to find this branch.",
+    "postalCode": "PIN code",
+    "kindHint": "A warehouse is staffed and punched into like anywhere else. It simply has no counter and orders no raw material."
   },
   "businessSwitcher": {
     "title": "Business",
     "hint": "You belong to more than one. Everything in the app follows the one selected here."
+  },
+  "supply": {
+    "catalogTitle": "Raw material",
+    "catalogSubtitle": "What the warehouse supplies",
+    "cartTitle": "Your order",
+    "ordersTitle": "Supply orders",
+    "deskTitle": "Order desk",
+    "deliveriesTitle": "Deliveries",
+    "orderTitle": "Order #{{number}}",
+    "draftTitle": "Not placed yet",
+    "add": "Add",
+    "added": "In your order",
+    "cartEmpty": "Nothing in this order yet",
+    "cartEmptyBody": "Add what the branch needs from the catalog.",
+    "openCart": "Review order",
+    "reviewCount": "{{count}} item",
+    "reviewCount_plural": "{{count}} items",
+    "place": "Place order",
+    "paymentMode": "How are you paying?",
+    "payOnline": "Paid online",
+    "payOnlineHint": "Give the reference so the warehouse can check it",
+    "payCod": "Cash on delivery",
+    "payCodHint": "Pay the agent when it arrives",
+    "reference": "Payment reference",
+    "referencePlaceholder": "UPI or bank reference",
+    "noOrders": "No supply orders yet",
+    "noOrdersBody": "Orders you place on the warehouse will show here.",
+    "deskEmpty": "Nothing waiting",
+    "deskEmptyBody": "Orders from every branch arrive here.",
+    "noDeliveries": "Nothing to deliver",
+    "noDeliveriesBody": "Dispatched orders assigned to you appear here.",
+    "catalogEmpty": "The catalog is empty",
+    "catalogEmptyBody": "The warehouse adds what it supplies.",
+    "perUnit": "{{price}} per {{unit}}",
+    "noPriceYet": "No price yet",
+    "withdrawn": "Withdrawn",
+    "uncategorised": "Other",
+    "search": "Search the catalog",
+    "accept": "Accept",
+    "pack": "Mark packed",
+    "dispatch": "Dispatch",
+    "deliver": "Mark delivered",
+    "reject": "Cannot supply",
+    "cancel": "Cancel order",
+    "cancelTitle": "Cancel this order?",
+    "cancelBody": "The warehouse has not taken it on yet, so it can still be withdrawn.",
+    "postDelay": "Report a delay",
+    "delayTitle": "How late will it be?",
+    "delayMinutes": "Minutes",
+    "delayReason": "Why?",
+    "note": "Anything to add",
+    "noteOptional": "Optional",
+    "verifyPayment": "Check the payment",
+    "markVerified": "Found it",
+    "markFailed": "Not found",
+    "assignAgent": "Who is taking it?",
+    "assignNobody": "Nobody yet",
+    "promisedAt": "Expected by {{time}}",
+    "noPromise": "No time promised",
+    "promiseQuestion": "When will it be ready?",
+    "promiseSkip": "Not sure yet",
+    "timeline": "What has happened",
+    "payment": "Payment",
+    "branch": "Branch",
+    "placedBy": "Placed by {{name}}",
+    "total": "Total",
+    "manage": "Manage catalog",
+    "addItem": "Add an item",
+    "editItem": "Edit item",
+    "itemName": "Name",
+    "itemUnit": "Unit",
+    "itemUnitHint": "kg, litre, packet",
+    "itemCategory": "Category",
+    "itemPrice": "Price per unit",
+    "itemActive": "Currently supplied",
+    "itemActiveHint": "Withdrawn items stay on old orders but cannot be ordered again",
+    "quantity": "Quantity",
+    "delayBadge": "+{{minutes}} min",
+    "byWhom": "by {{name}}",
+    "withdraw": "Stop supplying this",
+    "restore": "Supply it again",
+    "deliverTo": "Deliver to",
+    "noAddress": "No address saved for this branch",
+    "openMap": "Open in maps",
+    "assignedTo": "Given to {{name}}",
+    "assignUnnamed": "Unnamed member",
+    "reassign": "Change the agent",
+    "assignNobodyHint": "Every agent covering this branch will see it",
+    "noAgents": "No delivery agents yet",
+    "noAgentsBody": "Invite someone as a delivery agent and they will appear here.",
+    "dutyOn": "On duty since {{time}}",
+    "dutyOff": "Not punched in today",
+    "dutyUnknown": "Attendance not tracked",
+    "carrying": "carrying {{count}} run",
+    "carrying_plural": "carrying {{count}} runs",
+    "free": "free right now",
+    "cashTitle": "Cash on delivery",
+    "cashQuestion": "Have you taken {{amount}} from the {{branch}} cashier?",
+    "cashHint": "Saying yes records the money as collected. Say not yet if it has not been handed over.",
+    "cashYes": "Yes, I have the money",
+    "cashNo": "Not yet",
+    "withdrawTitle": "Stop supplying {{name}}?",
+    "withdrawBody": "It comes off every branch’s order list. Orders already placed keep it, and you can supply it again later."
+  },
+  "supplyStatus": {
+    "DRAFT": "Not placed",
+    "PLACED": "Placed",
+    "ACCEPTED": "Accepted",
+    "PACKED": "Packed",
+    "DISPATCHED": "On the way",
+    "DELIVERED": "Delivered",
+    "CANCELLED": "Cancelled"
+  },
+  "supplyPayment": {
+    "PENDING": "Pending",
+    "PAID": "Paid",
+    "VERIFIED": "Verified",
+    "FAILED": "Not found"
+  },
+  "supplyDelay": {
+    "TRAFFIC": "Traffic",
+    "STOCK_OUT": "Out of stock",
+    "VEHICLE_ISSUE": "Vehicle trouble",
+    "WEATHER": "Weather",
+    "STAFF_SHORTAGE": "Short staffed",
+    "OTHER": "Something else"
+  },
+  "supplyEvent": {
+    "PAYMENT_CLAIMED": "Payment reference given",
+    "PAYMENT_ON_DELIVERY": "To be paid on delivery",
+    "PAYMENT_VERIFIED": "Payment verified",
+    "PAYMENT_FAILED": "Payment not found",
+    "PAYMENT_COLLECTED": "Cash taken on delivery"
   }
 }

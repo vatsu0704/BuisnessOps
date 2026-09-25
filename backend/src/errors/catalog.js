@@ -59,6 +59,28 @@ const API_MESSAGES = {
   DAY_NOT_CLOSED: 'This day is not closed',
   DAY_HAS_OPEN_ORDERS: 'Close or void the {{count}} open order(s) before closing the day',
 
+  // --- Supply orders --------------------------------------------------------
+  SUPPLY_ITEM_NOT_FOUND: 'That item is not in the raw-material catalog',
+  SUPPLY_ITEM_NAME_TAKEN: 'The catalog already has an item called {{name}}',
+  SUPPLY_ITEM_INACTIVE: '{{name}} is no longer supplied',
+  SUPPLY_ITEM_HAS_NO_PRICE: '{{name}} has no price set, so it cannot be ordered yet',
+  SUPPLY_ORDER_NOT_FOUND: 'Supply order not found',
+  SUPPLY_ORDER_ITEM_NOT_FOUND: 'That item is not on this order',
+  SUPPLY_ORDER_INVALID_TRANSITION: 'An order that is {{from}} cannot become {{to}}',
+  SUPPLY_ORDER_NOT_EDITABLE: 'This order is {{status}}, so its items can no longer be changed',
+  SUPPLY_ORDER_EMPTY: 'Add something to the order before placing it',
+  SUPPLY_ORDER_REFERENCE_REQUIRED: 'Paying online needs the payment reference so the warehouse can check it',
+  SUPPLY_ORDER_CANCEL_TOO_LATE:
+    'The warehouse has already started on this order — ask them to reject it instead',
+  SUPPLY_ORDER_DELAY_NOT_APPLICABLE: 'An order that is {{status}} cannot be delayed',
+  SUPPLY_ORDER_PAYMENT_NOT_CLAIMED: 'There is no payment to check on this order yet',
+  SUPPLY_ORDER_CASH_NOT_CONFIRMED:
+    'This order is cash on delivery — confirm you have taken the money before marking it delivered',
+  SUPPLY_ORDER_AGENT_NOT_FOUND: 'That delivery agent is not an active member of this business',
+  SUPPLY_ORDER_AGENT_NOT_PERMITTED: 'That member cannot be given a delivery, so the order would be stuck',
+  SUPPLY_ORDER_ASSIGN_NOT_APPLICABLE: 'An order that is {{status}} cannot be given to a delivery agent',
+  SUPPLY_ORDER_NOT_ASSIGNED: 'This delivery is assigned to someone else',
+
   // --- Products -------------------------------------------------------------
   PRODUCT_NOT_FOUND: 'Product not found',
   PRODUCT_NOT_SOLD_AT_BRANCH: 'This product belongs to a different branch, so it cannot be priced here',
@@ -68,6 +90,7 @@ const API_MESSAGES = {
 
   // --- Business and branches ----------------------------------------------
   BUSINESS_NOT_FOUND: 'Business not found',
+  BRANCH_IS_WAREHOUSE: 'This is a warehouse, not a branch — it does not sell or order raw material',
   BRANCH_NOT_FOUND: 'Branch not found',
   BRANCH_NOT_FOUND_IN_BUSINESS: 'Branch not found in this business',
   GEOFENCE_NEEDS_COORDINATES: 'A geofence radius needs the branch latitude and longitude to be set',
@@ -87,6 +110,10 @@ const API_MESSAGES = {
   NOT_A_STAFF_MEMBER: 'You are not registered as a staff member of this business',
   STAFF_HAS_NO_BRANCH: 'This staff member is not attached to a branch of this business',
   PUNCH_LOCATION_REQUIRED: 'This branch requires your location to punch in/out',
+  // A different reason from the one above, so it gets a different sentence: no
+  // geofence is being checked here, the location itself is the record.
+  PUNCH_LOCATION_ALWAYS_REQUIRED:
+    'Your punches record where you were, so location has to be switched on',
   PUNCH_OUTSIDE_GEOFENCE:
     'You are {{distance}}m from the branch, outside the allowed {{radius}}m radius',
   PUNCH_ALREADY_IN: 'Already punched in today',
@@ -155,6 +182,9 @@ const FIELD_MESSAGES = {
   QUANTITY_MUST_BE_POSITIVE: 'quantity must be more than zero',
   FIELD_MUST_BE_NON_NEGATIVE: '{{field}} must be a non-negative number',
   FIELD_MUST_BE_DATE: '{{field}} must be a real calendar date in YYYY-MM-DD form',
+  DATETIME_INVALID: '{{field}} must be a valid date and time',
+  DATETIME_IN_PAST: '{{field}} cannot be in the past',
+  DELAY_MINUTES_RANGE: 'delayMinutes must be a whole number of minutes between 1 and {{max}}',
   FIELD_MAX_LENGTH: '{{field}} must be {{max}} characters or fewer',
 
   // Per-row diagnostics from a CSV/Excel upload. `column` is the literal

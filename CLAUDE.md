@@ -127,6 +127,36 @@ scoped.post('/staff', requirePermission('staff:create'), staffController.createS
   `staff:viewAllBranches`. `WAREHOUSE` holds the first and not the second —
   don't recombine them, and keep the `branchAccess !== null` guards that stop a
   null reaching `.includes` and turning a 403 into a 500.
+- **When a screen needs less than a capability grants, add a narrower endpoint
+  — never the broader capability, and never drop the feature.** The warehouse
+  desk has to pick a delivery agent but must not read the team list, so
+  `GET /supply-delivery-agents` returns a name, a duty state and a count under
+  `supplyOrder:fulfil`. Granting `team:view` would have handed the desk every
+  branch's people; leaving dispatch unassigned, which is what happened first,
+  turned a permission boundary into a missing feature.
+- **"Who is able to do X" is not "whose job is X".** `OWNER`/`ADMIN` hold every
+  capability, so any list built from one capability alone includes them. Where
+  that is wrong, narrow with a second capability off the matrix — the agent
+  picker is `supplyOrder:deliver` **and not** `supplyOrder:fulfil` — rather than
+  excluding a role by name. It stays an allow-list, and a role added later lands
+  on the right side of it by itself. The same shape, `{ holds, unless }`, gates
+  Home's sections and the tab bar; an owner sees neither "Order raw material"
+  nor "Your deliveries" for exactly this reason.
+- **When you take a surface away from a role, check what else reached it.**
+  Hiding the ordering card from an admin removed the only route they had to the
+  raw-material catalog — and exposed that the warehouse desk, which owns that
+  catalog, had never had one at all.
+
+## Branches
+
+- **`tradingBranches` where goods move, `branches` where people are.** A
+  `Branch` may be a shop or a `WAREHOUSE` (`Branch.kind`). A warehouse has
+  staff, attendance, a geofence and a roster — all of which are keyed on a
+  branch, which is the whole reason it is modelled as one — but it has no till
+  and does not order raw material from itself. `useBranches()` returns both
+  lists; pick by what the picker is asking. The server refuses the trading
+  cases anyway (`BRANCH_IS_WAREHOUSE`), but a control that 400s is a control
+  that should not have been offered.
 - Two routes in `business.routes.js` are deliberately unguarded — `GET /` and
   `GET /branches`. The business switcher calls them for every member, including
   STAFF. Adding a `requirePermission` there looks like tidying and silently
@@ -166,8 +196,26 @@ into the task rather than waiting to be sent a screenshot.
   used to do exactly that, and the counter's product tiles rendered one
   character per line. When a shared component takes a `style`, that style must
   land on the element the parent measures.
+- **A shared component has to look right at its own natural width**, not only
+  when a parent is stretching it. `PrimaryButton`'s gradient had no horizontal
+  padding at all, which was invisible for months because every caller made it
+  full width — the content is centred, so the space came from the button being
+  wider than its label. The first caller to size one by its content got a label
+  flush against both edges. When a component is only ever used one way, check
+  it in the other.
+- **A row of two things that both grow is a row that breaks in Gujarati.** The
+  supply cart's tray put the order total and the Place-order button on one
+  line; every Indic translation of the label is longer than the English, so the
+  figure was squeezed first in the languages most likely to be used. Stack
+  them, or give one a hard ceiling.
 - **Fix the layout, not the symptom.** Shrinking the font or truncating labels
   to make six chips fit is not a fix.
+- **Anything that cannot be undone asks first**, through `utils/confirm.ts` —
+  never a hand-written `Alert.alert`, of which there were three slightly
+  different copies. It resolves a promise, so a caller reads as
+  `if (await confirm({...}))`. Only the destructive direction asks: withdrawing
+  a product asks, restoring it does not, because a question in front of an undo
+  is only friction.
 - **Reuse `src/components` and the theme tokens** so the result stays
   consistent, and add a shared component when the pattern will recur rather
   than styling it inline. `OptionRow` (single-select list with a description)
@@ -180,6 +228,38 @@ into the task rather than waiting to be sent a screenshot.
   a hole in it.
 
 ## Frontend conventions
+
+**Build against the React Native documentation, with core APIs.** For new
+features and for bug fixes alike, check the documented behaviour before writing
+the code, and use the primitive React Native already ships — `useWindowDimensions`,
+`Pressable`, `FlatList`, `Platform`, `Keyboard`, `Linking` and the rest — rather
+than an invented equivalent or a package that duplicates one. Flexbox, `gap`,
+percentage sizing and safe-area handling each behave in a specific documented
+way; guessing at them is how both of this project's layout defects shipped. Add
+a dependency only where React Native genuinely has no answer, and take anything
+native through an Expo config plugin (see *Native Android builds*).
+
+**Shared server data lives in a store, not in each screen's `useState`.** If more
+than one component reads it, it belongs in a zustand store under `src/store/`
+(`authStore`, `branchStore`, `salesStore`), and the hook over it keeps the shape
+its call sites already use. This is not a preference — it is a bug that shipped:
+`useBranches` held its own `useState`, so each of its twelve callers had a
+private copy fetched once on mount, and because tab screens never unmount, Home's
+branch card kept showing a stale list until the app was killed and reopened.
+
+- **Every store records which business its data belongs to** (`loadedFor`), and
+  the hook's selector checks it. Without that, switching business flashes the
+  previous tenant's rows for a frame.
+- **Whatever mutates the data refreshes it** — `refreshBranches()`,
+  `refreshSalesSummary()` — before navigating away, because the mutating screen
+  unmounts and leaves no effect to re-run.
+- **In-flight requests are deduped, and the pending promise is kept out of the
+  store**, or every subscriber re-renders twice for a value none of them read.
+- **A failed refresh keeps the previous data** and shows the error beside it,
+  rather than emptying a screen that was reading fine a moment ago.
+- Data scoped to one screen, or keyed per branch (`useBranchProducts`), may stay
+  local — but then it needs a `useFocusEffect` refetch, because a tab screen
+  never unmounts and its `useEffect` will not run again.
 
 - `@/` resolves to `frontend/src` (configured in both `tsconfig.json` and `babel.config.js`).
 - Design tokens live in `src/theme/index.ts` (colors, spacing, radius, typography,

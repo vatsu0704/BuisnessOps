@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { createBranch } from '@/api/business';
+import { refreshBranches } from '@/store/branchStore';
 import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
@@ -13,10 +14,12 @@ import FormInput from '@/components/FormInput';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
+import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
 import { useBusinessId } from '@/hooks/useBusinessId';
+import type { BranchKind } from '@/types/branch';
 import { getCurrentCoords } from '@/utils/location';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AddBranch'>;
@@ -28,8 +31,16 @@ export default function AddBranchScreen({ navigation }: Props) {
 
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  // What this location IS. A warehouse is staffed and punched into like any
+  // other location, and simply does not sell or order — see BranchKind.
+  const [kind, setKind] = useState<BranchKind>('BRANCH');
   const [city, setCity] = useState('');
   const [region, setRegion] = useState('');
+  // Where a delivery goes, as opposed to where the branch is for reporting.
+  // Optional here and editable in Branch settings afterwards: a branch that
+  // never receives a supply order never needs one.
+  const [addressLine, setAddressLine] = useState('');
+  const [postalCode, setPostalCode] = useState('');
   const [timezone, setTimezone] = useState(business?.timezone ?? 'Asia/Kolkata');
   const [currency, setCurrency] = useState(business?.defaultCurrency ?? 'INR');
 
@@ -85,15 +96,23 @@ export default function AddBranchScreen({ navigation }: Props) {
       await createBranch(businessId, {
         name: name.trim(),
         code: code.trim().toUpperCase(),
+        kind,
         timezone: timezone.trim(),
         city: city.trim() || undefined,
         region: region.trim() || undefined,
+        addressLine: addressLine.trim() || undefined,
+        postalCode: postalCode.trim() || undefined,
         country: business?.country,
         currency: currency.trim() || undefined,
         latitude: hasCoordinates ? Number(latitude) : undefined,
         longitude: hasCoordinates ? Number(longitude) : undefined,
         geofenceRadiusMeters: parsedRadius ?? undefined,
       });
+      // Before navigating away: every screen reads one shared list, so this is
+      // what makes the new branch appear on Home, in Settings and in every
+      // branch picker at once. Without it the list is correct on the server and
+      // stale on screen until the app is restarted.
+      await refreshBranches();
       haptics.success();
       navigation.goBack();
     } catch (err) {
@@ -131,6 +150,29 @@ export default function AddBranchScreen({ navigation }: Props) {
 
             <AnimatedEntrance delay={step(1)}>
               <View style={styles.card}>
+                {/* Two options, side by side — exactly what SegmentedOption is
+                    for. It comes first because it changes what the rest of the
+                    form is describing. */}
+                <Text style={styles.sectionTitle}>{t('addBranch.kind')}</Text>
+                <View style={styles.kindRow}>
+                  <SegmentedOption
+                    testID="branch-kind-BRANCH"
+                    title={t('addBranch.kindBranch')}
+                    caption={t('addBranch.kindBranchHint')}
+                    icon="storefront-outline"
+                    selected={kind === 'BRANCH'}
+                    onPress={() => setKind('BRANCH')}
+                  />
+                  <SegmentedOption
+                    testID="branch-kind-WAREHOUSE"
+                    title={t('addBranch.kindWarehouse')}
+                    caption={t('addBranch.kindWarehouseHint')}
+                    icon="cube-outline"
+                    selected={kind === 'WAREHOUSE'}
+                    onPress={() => setKind('WAREHOUSE')}
+                  />
+                </View>
+
                 <FormInput
                   testID="branch-name"
                   label={t('addBranch.name')}
@@ -170,7 +212,33 @@ export default function AddBranchScreen({ navigation }: Props) {
                     />
                   </View>
                 </View>
+                {/* Full width and multi-line: this is what a delivery agent
+                    reads to find the place, and the landmark is usually the
+                    half that does it. The placeholder carries the shape, since
+                    the label's `hint` slot is sized for one word — the full
+                    explanation lives on Branch settings, which has room for a
+                    sentence. */}
+                <FormInput
+                  testID="branch-address"
+                  label={t('branchSettings.address')}
+                  hint={t('addStaff.optional')}
+                  icon="navigate-circle-outline"
+                  placeholder={t('branchSettings.addressPlaceholder')}
+                  multiline
+                  value={addressLine}
+                  onChangeText={setAddressLine}
+                />
                 <View style={styles.row}>
+                  <View style={styles.rowItem}>
+                    <FormInput
+                      testID="branch-postal-code"
+                      label={t('branchSettings.postalCode')}
+                      icon="mail-outline"
+                      keyboardType="number-pad"
+                      value={postalCode}
+                      onChangeText={setPostalCode}
+                    />
+                  </View>
                   <View style={styles.rowItem}>
                     <FormInput
                       label={t('addBranch.currency')}
@@ -180,15 +248,13 @@ export default function AddBranchScreen({ navigation }: Props) {
                       onChangeText={setCurrency}
                     />
                   </View>
-                  <View style={styles.rowItem}>
-                    <FormInput
-                      label={t('addBranch.timezone')}
-                      icon="time-outline"
-                      value={timezone}
-                      onChangeText={setTimezone}
-                    />
-                  </View>
                 </View>
+                <FormInput
+                  label={t('addBranch.timezone')}
+                  icon="time-outline"
+                  value={timezone}
+                  onChangeText={setTimezone}
+                />
               </View>
             </AnimatedEntrance>
 
@@ -319,6 +385,9 @@ const styles = StyleSheet.create({
     ...shadow.md,
   },
   row: { flexDirection: 'row', gap: spacing.md },
+  // Two chips share the width evenly, which is what SegmentedOption is built
+  // for — and two is comfortably inside the three it stops working past.
+  kindRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   rowItem: { flex: 1 },
   submitWrap: { marginTop: spacing.lg },
   errorBanner: {

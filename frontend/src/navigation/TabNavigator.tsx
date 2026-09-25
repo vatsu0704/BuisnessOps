@@ -8,6 +8,9 @@ import HomeScreen from '@/screens/HomeScreen';
 import ProductsScreen from '@/screens/ProductsScreen';
 import ReportsScreen from '@/screens/ReportsScreen';
 import StaffHubScreen from '@/screens/StaffHubScreen';
+import SupplyCatalogScreen from '@/screens/SupplyCatalogScreen';
+import WarehouseDeskScreen from '@/screens/WarehouseDeskScreen';
+import DeliveryQueueScreen from '@/screens/DeliveryQueueScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
 import { useMembership } from '@/hooks/useBusinessId';
 import { hasCapability } from '@/utils/permissions';
@@ -17,6 +20,9 @@ import { colors } from '@/theme';
 export type AppTabParamList = {
   Home: undefined;
   Counter: undefined;
+  Supply: undefined;
+  Desk: undefined;
+  Deliveries: undefined;
   Products: undefined;
   Staff: undefined;
   Reports: undefined;
@@ -45,19 +51,35 @@ const TAB_CATALOGUE: {
   name: keyof AppTabParamList;
   component: ComponentType<any>;
   icon: keyof typeof Ionicons.glyphMap;
-  labelKey: 'tabs.home' | 'tabs.counter' | 'tabs.products' | 'tabs.staff' | 'tabs.reports' | 'tabs.settings';
+  labelKey:
+    | 'tabs.home'
+    | 'tabs.counter'
+    | 'tabs.supply'
+    | 'tabs.desk'
+    | 'tabs.deliveries'
+    | 'tabs.products'
+    | 'tabs.staff'
+    | 'tabs.reports'
+    | 'tabs.settings';
   capability: Capability | null;
   /**
-   * Give up the tab slot when the viewer also holds this, because the surface
-   * is not their daily work. It stays reachable as a stack route and from Home.
+   * Give up the tab slot for anyone who `holds` this capability — unless they
+   * also hold `unless`. The surface stays reachable as a stack route and from
+   * Home; it simply is not their daily work.
    *
    * This exists for one reason: **five tabs is the budget.** At six, a 320dp
    * phone gives each tab about 53dp, and the labels do not fit — "ઉત્પાદનો",
    * "કાઉન્ટર" and their Hindi and Marathi equivalents truncate before the
    * English ones do, so the languages most likely to be used are the ones that
    * break first. A tab bar is not the place to discover that.
+   *
+   * `unless` earns its place with Products: a cashier trades it away for
+   * Supply, which they use every day, while an admin — who holds the same
+   * `supplyOrder:create` but also `analytics:viewBusiness` — keeps it. One
+   * capability could not tell those two apart, and a role name is not something
+   * this file is allowed to ask for.
    */
-  demoteWhen?: Capability;
+  demoteWhen?: { holds: Capability; unless?: Capability };
 }[] = [
   // The icon was `chatbubble-ellipses-outline`, borrowed from the AI ask bar
   // that requirement 7 hides. A chat bubble on a tab that now opens a product
@@ -75,7 +97,35 @@ const TAB_CATALOGUE: {
     icon: 'calculator-outline',
     labelKey: 'tabs.counter',
     capability: 'counterOrder:create',
-    demoteWhen: 'analytics:viewBusiness',
+    demoteWhen: { holds: 'analytics:viewBusiness' },
+  },
+  // Ordering raw material from the warehouse is a daily job at a branch, so it
+  // sits beside the till. Requirement 5.
+  {
+    name: 'Supply',
+    component: SupplyCatalogScreen,
+    icon: 'cube-outline',
+    labelKey: 'tabs.supply',
+    capability: 'supplyOrder:create',
+    demoteWhen: { holds: 'analytics:viewBusiness' },
+  },
+  // Requirement 3: the one desk that sees every branch's incoming orders.
+  {
+    name: 'Desk',
+    component: WarehouseDeskScreen,
+    icon: 'file-tray-full-outline',
+    labelKey: 'tabs.desk',
+    capability: 'supplyOrder:fulfil',
+    demoteWhen: { holds: 'analytics:viewBusiness' },
+  },
+  // Requirement 12: the run an agent is carrying.
+  {
+    name: 'Deliveries',
+    component: DeliveryQueueScreen,
+    icon: 'bicycle-outline',
+    labelKey: 'tabs.deliveries',
+    capability: 'supplyOrder:deliver',
+    demoteWhen: { holds: 'analytics:viewBusiness' },
   },
   {
     name: 'Products',
@@ -83,6 +133,10 @@ const TAB_CATALOGUE: {
     icon: 'pricetags-outline',
     labelKey: 'tabs.products',
     capability: 'product:view',
+    // A cashier gives this slot to Supply: they price a product occasionally
+    // and order flour every morning, and the catalog stays on Home. An admin
+    // holds supplyOrder:create too, so `unless` is what keeps Products theirs.
+    demoteWhen: { holds: 'supplyOrder:create', unless: 'analytics:viewBusiness' },
   },
   { name: 'Staff', component: StaffHubScreen, icon: 'people-outline', labelKey: 'tabs.staff', capability: null },
   {
@@ -110,11 +164,14 @@ export default function TabNavigator() {
   // restructuring above it.
   const membership = useMembership();
 
-  const tabs = TAB_CATALOGUE.filter(
-    (tab) =>
-      (!tab.capability || hasCapability(membership, tab.capability)) &&
-      !(tab.demoteWhen && hasCapability(membership, tab.demoteWhen))
-  );
+  const tabs = TAB_CATALOGUE.filter((tab) => {
+    if (tab.capability && !hasCapability(membership, tab.capability)) return false;
+    if (!tab.demoteWhen) return true;
+    const demoted =
+      hasCapability(membership, tab.demoteWhen.holds) &&
+      !(tab.demoteWhen.unless && hasCapability(membership, tab.demoteWhen.unless));
+    return !demoted;
+  });
 
   // The budget is a rule, not a hope. If a later task adds a sixth tab for some
   // role, this is where that gets noticed — in development, immediately —

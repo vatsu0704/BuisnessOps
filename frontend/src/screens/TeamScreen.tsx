@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
@@ -24,6 +24,7 @@ import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
+import { confirm } from '@/utils/confirm';
 import { haptics } from '@/utils/haptics';
 import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
 
@@ -86,29 +87,22 @@ export default function TeamScreen({ navigation }: Props) {
    */
   const confirmAndRun = useCallback(
     (rowId: string, title: string, body: string, confirmLabel: string, run: () => Promise<void>) => {
-      Alert.alert(title, body, [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: confirmLabel,
-          style: 'destructive',
-          onPress: () => {
-            void (async () => {
-              setBusyId(rowId);
-              setError(null);
-              try {
-                await run();
-                haptics.success();
-                await load();
-              } catch (err) {
-                haptics.error();
-                setError(extractErrorMessage(err));
-              } finally {
-                setBusyId(null);
-              }
-            })();
-          },
-        },
-      ]);
+      void (async () => {
+        const ok = await confirm({ title, body, confirmLabel, cancelLabel: t('common.cancel') });
+        if (!ok) return;
+        setBusyId(rowId);
+        setError(null);
+        try {
+          await run();
+          haptics.success();
+          await load();
+        } catch (err) {
+          haptics.error();
+          setError(extractErrorMessage(err));
+        } finally {
+          setBusyId(null);
+        }
+      })();
     },
     [load, t]
   );

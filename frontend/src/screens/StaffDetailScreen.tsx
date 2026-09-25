@@ -18,6 +18,7 @@ import { parseOptionalNumber } from '@/utils/validation';
 import type { AttendanceRecord, AttendanceStatus, MonthSummary, SalarySlip, StaffMember } from '@/types/staffing';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import AttendanceStatusPill from '@/components/AttendanceStatusPill';
+import PunchTrace from '@/components/PunchTrace';
 import FormInput from '@/components/FormInput';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
@@ -256,8 +257,13 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
               ) : (
                 records.map((record, index) => (
                   <View key={record.id} style={[styles.dayRow, index > 0 && styles.dayRowDivided]}>
-                    <Text style={styles.dayDate}>{formatDate(dateKeyFromApi(record.date), t)}</Text>
-                    <AttendanceStatusPill status={record.status} />
+                    <View style={styles.dayHead}>
+                      <Text style={styles.dayDate}>{formatDate(dateKeyFromApi(record.date), t)}</Text>
+                      <AttendanceStatusPill status={record.status} />
+                    </View>
+                    {/* When and where. Renders nothing for a day that was
+                        marked by hand, so those rows stay as they were. */}
+                    <PunchTrace record={record} />
                   </View>
                 ))
               )}
@@ -430,7 +436,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   monthLabel: { fontSize: 14.5, fontWeight: '700', color: colors.text, minWidth: 140, textAlign: 'center' },
-  dayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md },
+  // A column now: the date and its status pill sit on one line, and the punch
+  // trace goes underneath rather than competing with them for width.
+  dayRow: { paddingVertical: spacing.md },
+  dayHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   dayRowDivided: { borderTopWidth: 1, borderTopColor: colors.border },
   dayDate: { fontSize: 13.5, color: colors.text, fontWeight: '600' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },

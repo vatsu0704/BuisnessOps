@@ -8,6 +8,8 @@ import type { CreateBusinessPayload } from '@/api/business';
 import { activeMembership } from '@/utils/permissions';
 import type { User } from '@/types/user';
 import type { Business } from '@/types/business';
+import { useBranchStore } from '@/store/branchStore';
+import { useSalesStore } from '@/store/salesStore';
 
 const TOKEN_KEY = 'biziq_token';
 // Which business the switcher last settled on, remembered per device so the
@@ -156,6 +158,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     await secureStorage.deleteItem(TOKEN_KEY);
     await secureStorage.deleteItem(BUSINESS_KEY);
     setAuthToken(null);
+    // The shared caches outlive this store's state, so they are emptied here
+    // too. `loadedFor` already stops one account's data being shown to another,
+    // but leaving it in memory after a logout is not something to rely on.
+    useBranchStore.getState().reset();
+    useSalesStore.getState().reset();
     set({ token: null, user: null, business: null, activeBusinessId: null });
   },
 

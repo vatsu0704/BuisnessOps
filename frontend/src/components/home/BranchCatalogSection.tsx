@@ -33,7 +33,7 @@ export default function BranchCatalogSection() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const business = useAuthStore((s) => s.business);
   const membership = useMembership();
-  const { branches } = useBranches();
+  const { tradingBranches: branches } = useBranches();
 
   // The first branch this person can reach. For a cashier that is their branch;
   // for an owner it is whichever comes first, and the Products tab is where

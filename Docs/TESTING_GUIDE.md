@@ -108,7 +108,10 @@ appears under Confirm Password.
    - Currency / Timezone — prefilled from your business
 3. Tap **"Create branch."**
 4. ✅ **Expected:** you're back on Home, the branch now appears under "Your
-   branches," and the Branches stat tile went up by one.
+   branches," and the Branches stat tile went up by one — **without** closing
+   and reopening the app. Every screen reads one shared branch list, so it
+   should also be in the branch pickers on Products, Counter and Supply
+   straight away, and in the Settings branch count.
 5. Repeat once or twice more with different codes — several of the later
    flows (Upload, Add staff) are more interesting with 2+ branches.
 
@@ -161,14 +164,21 @@ you'll get a clean "already exists" error, not a crash.
 
    Staff & payroll used to live here too. It is now its own **Staff tab**,
    because it is used daily rather than configured once — see Flow 13.
-   - A language selector (English / Hindi / Gujarati / Marathi)
+   - A language **dropdown**, showing the language you are in
    - **"Log out"**
-3. Tap a different language in the language selector.
-4. ✅ **Expected:** the whole app's text switches immediately (try Home,
-   Settings, Upload — everything should be translated, not just this
-   screen). Switch back to English when you're done, or continue testing in
-   another language if you want to spot-check translations (the Hindi/
-   Gujarati/Marathi files are machine-quality, not reviewed by native
+
+   The business id used to sit at the bottom of the business card. It is gone:
+   it is a UUID and there was nothing anyone could do with it.
+3. Tap the language dropdown.
+4. ✅ **Expected:** a sheet slides up from the bottom with all four languages,
+   the current one ticked. Press the Android back button — it closes and
+   nothing changes. Tap outside it — the same.
+5. Open it again and choose a different language.
+6. ✅ **Expected:** the sheet closes and the whole app's text switches
+   immediately (try Home, Settings, Upload — everything should be translated,
+   not just this screen). Switch back to English when you're done, or continue
+   testing in another language if you want to spot-check translations (the
+   Hindi/Gujarati/Marathi files are machine-quality, not reviewed by native
    speakers — wording roughness there is expected, not a bug to report).
 
 ---
@@ -562,9 +572,15 @@ with its own business, then invite that email into your first business.)
 
 Requirement 16: one account, several businesses, rather than one account each.
 
-1. Signed in as an owner, open **Settings**.
+1. Signed in as an **owner**, open **Settings**.
    - ✅ **Expected:** an **Add another business** row. It is there even if you
      own only one business — that is the point of it.
+   - ✅ **Expected:** log in as an **admin, manager, cashier, warehouse user or
+     delivery agent** and the row is **not** there. Starting a business is the
+     owner's act; an admin runs the business they were given.
+   - ✅ **Expected:** an owner who is also a cashier in someone else's business
+     sees it while switched to their own and not while switched to the other.
+     Settings means "this business". Switch back to add a third.
 2. Tap it.
    - ✅ **Expected:** a form with the same fields signup asked for, already
      filled in with the current business's industry, country, currency and
@@ -639,6 +655,13 @@ from Flow 15a.
 3. Log in as an **owner or manager**.
    - ✅ **Expected:** all five tabs, and Home shows punch, catalog, the sales
      tiles, the branch list and the upload card.
+   - ✅ **Expected:** Home does **not** offer "Order raw material" or "Your
+     deliveries". An owner holds every capability in the app, but a branch
+     orders and an agent delivers — neither is the owner's job. What they get
+     instead is **Raw material catalog**, which is where prices are set.
+   - ✅ **Expected:** the cashier still has "Order raw material", and the
+     delivery agent still has "Your deliveries". Same capabilities, different
+     jobs.
 4. With an account in two businesses (Flow 17a), switch business in Settings
    where your role differs between the two.
    - ✅ **Expected:** the tab bar changes to match the role in the business you
@@ -721,6 +744,322 @@ shown.
 4. Reopen the day.
    - ✅ **Expected:** editing works again. Closing by mistake has to be
      recoverable, or the guard becomes a trap.
+
+---
+
+## Flow 17f — Stock the raw-material catalog
+
+Requirement 5's first half. Log in as the **warehouse** person (Flow 15a) — they
+get a **Desk** tab. An owner or admin does this from Home → *Order raw material*.
+
+The catalog is **business-wide**, not per branch: one warehouse, one list, one
+price. That is the opposite of Products (Flow 17b), and deliberate — a branch
+sells its own menu but does not keep a private list of flour.
+
+1. Open the catalog and press **Add an item**.
+   - ✅ **Expected:** name, unit, category and price. Only name and unit are
+     required.
+2. Add three: `Flour / kg / 45`, `Milk / litre / 60`, and one with **no price** at
+   all, say `Saffron / gram`.
+   - ✅ **Expected:** all three save. The unpriced one is listed with "No price
+     yet" rather than ₹0.
+3. Try to add `flour` again, in lower case.
+   - ✅ **Expected:** refused — the catalog already has one. Case does not make it
+     a different sack.
+4. Open Flour and press **Stop supplying this**.
+   - ✅ **Expected:** marked withdrawn. It stays in the desk's list so it can be
+     brought back, and disappears from what a cashier can order.
+5. Bring it back with **Supply it again**.
+   - ✅ **Expected:** orderable once more. Withdrawing is never a delete: every
+     past order still names what was on it.
+
+---
+
+## Flow 17g — A branch orders raw material
+
+Requirement 5. Log in as the **cashier** — they get a **Supply** tab. Needs
+Flow 17f done first.
+
+1. Open **Supply** and tap **+** beside Flour, then beside Milk.
+   - ✅ **Expected:** each tile's chip shows what is now on the order, and a bar
+     appears at the bottom with the count and the running total.
+2. Tap **+** on Flour again.
+   - ✅ **Expected:** the quantity goes to 2 — one line, not two. A picker should
+     never have to add two rows of flour together.
+3. Try to add the unpriced item.
+   - ✅ **Expected:** refused, naming it. An unpriced item is un-orderable rather
+     than free.
+4. Press **Review order**, then type `20` into the Flour quantity.
+   - ✅ **Expected:** the line total and the order total follow. Quantities are
+     typed here rather than tapped up in the catalog, because raw material is
+     ordered in twenties.
+5. Press **−** on Milk until it reaches zero.
+   - ✅ **Expected:** the line comes off entirely.
+6. Choose **Cash on delivery** and press **Place order**.
+   - ✅ **Expected:** it becomes an order with a number, and the screen moves to
+     its detail. Payment reads "Cash on delivery" — nothing is outstanding, that
+     is simply how it will be paid.
+7. Go back to Supply and add something again.
+   - ✅ **Expected:** a **fresh** cart. The old one is an order now.
+8. Start another order, choose **Paid online**, and try to place it with the
+   reference box empty.
+   - ✅ **Expected:** refused. A reference the warehouse can check against its own
+     records is the whole content of "paid online" in a system that deliberately
+     never takes the money.
+9. Type a reference and place it.
+   - ✅ **Expected:** payment shows **Paid** — claimed, not settled. The warehouse
+     confirms it in Flow 17h.
+
+---
+
+## Flow 17h — The warehouse desk
+
+Requirement 3: "one person can see all the branches' incoming supply orders."
+Log in as the **warehouse** person. Ideally place orders from two different
+branches first (Flow 17g, once as each branch's cashier).
+
+1. Open **Desk**.
+   - ✅ **Expected:** orders from **every** branch, oldest first, each saying which
+     branch it came from. A queue read newest-first starves the order the branch
+     is already on the phone about.
+   - ✅ **Expected:** no carts. A branch still adding things is not an order, and a
+     queue where some rows are not real work stops being trusted.
+2. Open the online-paid order and press **Found it** under the payment.
+   - ✅ **Expected:** payment becomes **Verified**, and the history records who
+     checked it.
+3. Open the COD order and try the same.
+   - ✅ **Expected:** refused — there is nothing to check yet. Cash on delivery is
+     paid on delivery.
+4. Press **Accept** and choose **+60 min**.
+   - ✅ **Expected:** accepted, and an expected time appears.
+5. Press **Mark packed**, then **Dispatch**.
+   - ✅ **Expected:** each step moves one place. There is no way to skip one: the
+     status machine refuses it on the server, not just in the buttons.
+   - ✅ **Expected:** **Dispatch** asks who is taking it before it goes — see
+     Flow 17k, which is that panel on its own.
+6. On another placed order, press **Cannot supply**, choose *Out of stock*, add a
+   note, and submit.
+   - ✅ **Expected:** cancelled, with the reason and your note on its history. This
+     is the desk's verb; the branch's own **Cancel order** is a different act and
+     is recorded differently.
+7. As the **cashier**, open that order.
+   - ✅ **Expected:** they see the rejection and the reason, in their own language.
+     The reason travels as a code, so it reads in Gujarati for a Gujarati device
+     even though the warehouse person typed nothing in Gujarati.
+
+---
+
+## Flow 17i — Delays, delivery, and what the cashier sees
+
+Requirements 9, 11 and 12.
+
+1. As the **warehouse**, open an accepted order and press **Report a delay**.
+   Enter `30`, choose *Out of stock*, and submit.
+   - ✅ **Expected:** the order's history gains "+30 min — Out of stock", and if a
+     time was promised it moves by exactly thirty minutes.
+2. As the **cashier**, open **Supply orders** from Home (or the order from your
+   tracking list).
+   - ✅ **Expected:** the delay shows on the card without opening it, and the full
+     history is on the detail. This is requirement 9's whole point — the branch
+     finds out without ringing anyone.
+3. As the **delivery agent** (Flow 15a), open **Deliveries**. For this step,
+   dispatch the order with **Nobody yet** chosen in the panel.
+   - ✅ **Expected:** the dispatched order is there even though nobody was named:
+     an unassigned dispatch goes to every agent covering that branch, which is
+     how it gets picked up. Naming one is Flow 17k.
+4. Press **Report a delay**, choose *Traffic*, submit.
+   - ✅ **Expected:** it lands on the same history as the warehouse's delay.
+     Requirement 9 has two ends and both write to one stream.
+5. Press **Mark delivered** on a **cash on delivery** order.
+   - ✅ **Expected:** it asks first — *"Have you taken ₹… from the … cashier?"* —
+     naming the amount and the branch. The goods arriving is not evidence the
+     money did, and only you at the counter know.
+6. Press **Not yet**.
+   - ✅ **Expected:** nothing happens. The order stays dispatched and unpaid,
+     which is where it actually is and where somebody can still chase it.
+7. Press **Mark delivered** again and answer **Yes, I have the money**.
+   - ✅ **Expected:** delivered, payment becomes **Paid**, and the history gains
+     its own line — *Cash taken on delivery* — saying who took it.
+8. Do the same on an **online** order.
+   - ✅ **Expected:** no question, because nothing is outstanding. Its payment
+     state is left exactly as the warehouse left it: delivering something is not
+     evidence that its payment cleared.
+9. Try to report a delay on the delivered order now.
+   - ✅ **Expected:** refused. A delivered order cannot be late.
+10. As the **cashier**, place a new order and immediately press **Cancel order**.
+    - ✅ **Expected:** withdrawn — the warehouse has not taken it on yet.
+11. Have the warehouse **Accept** another one, then try to cancel it as the cashier.
+    - ✅ **Expected:** refused, telling you to ask the warehouse to reject it
+      instead. Somebody has started picking it.
+
+---
+
+## Flow 17j — The delivery agent punches from the road
+
+Requirement 20. A geofence assumes a fixed place of work; a delivery agent has
+none, so the radius does not apply to them — and the trade is that their
+location stops being optional.
+
+Needs a branch with a geofence (Flow 19) and a **delivery agent** who also has a
+staff record at some branch, so they have attendance at all.
+
+1. Invite a delivery agent (Flow 15a).
+   - ✅ **Expected:** the invite screen does **not** ask which branches. They are
+     not tied to one — they deliver to all of them.
+2. As that agent, open Home and punch in while nowhere near the branch.
+   - ✅ **Expected:** it works. A cashier standing in the same spot is refused
+     (Flow 19), and that is the intended difference.
+3. Turn the phone's location off and try to punch out.
+   - ✅ **Expected:** refused, saying your punches record where you were. The
+     exemption is not "no location" — it is "location instead of a radius".
+4. Turn location back on and punch out.
+   - ✅ **Expected:** it works.
+5. As the **admin or manager**, open Staff → that agent → their attendance.
+   - ✅ **Expected:** the day shows the in and out times, and a **Punched here**
+     chip. Tapping it opens the spot in a map.
+6. Look at a day someone was marked present by hand rather than punching.
+   - ✅ **Expected:** no times and no chip — there is nothing to show, and the row
+     stays as it was.
+7. As the agent, open **Deliveries** with an order dispatched to a branch nobody
+   assigned them to.
+   - ✅ **Expected:** it is in their queue. They carry to every branch.
+8. As the agent, try to open a branch roster or a colleague's record.
+   - ✅ **Expected:** refused. All-branch scope covers **data**, never people —
+     the same line the warehouse desk sits on.
+
+---
+
+## Flow 17k — Giving the run to an agent, and telling them where to go
+
+Requirement 21. Two halves of one job: somebody has to be named, and the person
+named has to be able to find the place.
+
+Needs two delivery agents (Flow 15a, twice) and a branch with an address. Set
+the address first: **Settings → the branch → Branch settings → Delivery
+address**. Type a street line *and* a landmark on a second line, add the PIN
+code, and save.
+
+1. As the **warehouse**, take an order to **packed** (Flow 17h) and press
+   **Dispatch**.
+   - ✅ **Expected:** a panel asking *Who is taking it?*, listing your delivery
+     agents — and **nobody else**. The owner, you at the desk, and every cashier
+     are absent: they can all technically close a delivery, but carrying is not
+     their job.
+   - ✅ **Expected:** each row says whether they are on duty and how much they
+     are already carrying, and the freest one is already selected. One press
+     from here.
+2. Look at an agent who has not punched in today.
+   - ✅ **Expected:** "Not punched in today", sorted below the ones who have —
+     but still selectable. Availability is a caption, not a lock; you know
+     things the app does not.
+3. Have one agent punch in (Flow 17j) and reopen the panel.
+   - ✅ **Expected:** they now say **On duty since HH:MM** and have moved to the
+     top. That is the attendance module answering, not a second idea of "free".
+4. Choose an agent and press **Dispatch**.
+   - ✅ **Expected:** dispatched, the order header says **Given to *name***, and
+     the history gains a row saying the same with a time.
+5. Press **Change the agent** and pick the other one.
+   - ✅ **Expected:** it moves. The order appears in the new agent's
+     **Deliveries** and disappears from the first agent's — a run belongs to one
+     person at a time.
+6. Press **Change the agent** and pick the *same* person again.
+   - ✅ **Expected:** nothing new on the history. A timeline saying a run was
+     given to Ravi and then given to Ravi is one nobody reads twice.
+7. As the **delivery agent** who now has it, open the order.
+   - ✅ **Expected:** a **Deliver to** card near the top with the branch name,
+     the street line exactly as it was typed — including the second line — and
+     the city and PIN code beneath.
+   - ✅ **Expected:** an **Open in maps** chip. Tapping it opens the branch in
+     whichever map app the phone has: at its coordinates if the branch has them
+     (Flow 19), at the written address otherwise.
+8. Open an order for a branch whose address was never filled in.
+   - ✅ **Expected:** "No address saved for this branch", and no map chip.
+     Nothing fails — the agent has the branch name and can ring the shop.
+9. As the **cashier** who placed it, open the same order.
+   - ✅ **Expected:** the same **Deliver to** card. This is the one place the
+     address a rider will be sent to is visible, which is how a wrong one gets
+     noticed before somebody is standing in the wrong street.
+10. As the cashier, try to find **Change the agent**.
+    - ✅ **Expected:** it is not there. Who carries it is the warehouse's call.
+
+---
+
+## Flow 17l — A warehouse is a location, and who a staff member is
+
+Requirement 23. Adding a staff member used to demand a branch, and a warehouse
+employee had no true answer — so there was nowhere to file them and no way for
+them to punch in.
+
+1. As the **owner**, Home → **Branches** → **Add branch**.
+   - ✅ **Expected:** the form opens by asking **what this place is** — Branch
+     (sells and orders) or Warehouse (supplies the branches).
+2. Choose **Warehouse**, name it, give it a code, press **Use my current
+   location**, set a radius, and save.
+   - ✅ **Expected:** created. It appears in the branch list marked as a
+     warehouse, so the list and the "branches" count in Settings agree with
+     each other — the count is the selling network, and the warehouse is not
+     part of it.
+3. Open the **Counter** and the **supply catalog** and look at their branch
+   pickers.
+   - ✅ **Expected:** the warehouse is **not** offered in either. It has no till
+     and it does not order raw material from itself. (The server refuses both
+     as well, so this is a tidy screen rather than the only defence.)
+4. Staff → **Add staff**.
+   - ✅ **Expected:** the first card is **"Who are they?"**, and the **account
+     email is its first field** — before the location question, not after it.
+     That order is the whole fix: the email is what decides whether "which
+     branch do they work at" is even the right question.
+5. Type the email of the person you invited as a **delivery agent**
+   (Flow 15a) — the case that exposed this.
+   - ✅ **Expected:** a line appears saying they are already on the team as
+     Delivery agent, and the **job title fills in as "Delivery agent"**. Type
+     over it and your text wins; clear the email and the suggestion goes.
+   - ✅ **Expected:** the location question becomes **"Where is their base?"**
+     with a sentence saying it only decides where attendance and payslips are
+     filed — and the **warehouse is already selected**. A delivery agent works
+     at none of the branches, so being asked to pick one was the bug.
+6. Do the same with the **warehouse** person's email.
+   - ✅ **Expected:** identical behaviour. Both reach every branch, and the
+     screen asks the matrix rather than naming either role.
+7. Type a **cashier's** email instead.
+   - ✅ **Expected:** it names them, and the question stays "which branch do
+     they work at" with nothing preselected. A branch-scoped person is never
+     guessed at: being filed at the wrong shop silently is worse than a tap.
+8. Do the same as a **cashier** rather than the owner.
+   - ✅ **Expected:** no recognition line at all — reading the team needs a
+     permission a cashier does not have — and the screen behaves as it always
+     did.
+9. Save the delivery agent, then log in as them and **punch in from anywhere**.
+   - ✅ **Expected:** it works, with no geofence and the location recorded
+     (Flow 17j). Their attendance and payslip are filed against the warehouse.
+     Without the staff record made in step 5 there is no attendance at all —
+     that chain is what "so they will do punch-in punch-out" needs.
+10. As the warehouse person, punch in while at the warehouse.
+    - ✅ **Expected:** it works, against the warehouse's own radius.
+11. Try to change the warehouse back to a branch in **Branch settings**.
+    - ✅ **Expected:** allowed. A location created as the wrong kind would
+      otherwise be stuck as one forever.
+
+---
+
+## Flow 17m — Asking before something cannot be undone
+
+1. As a **cashier**, place a supply order and press **Cancel order**.
+   - ✅ **Expected:** it asks first, and **nothing happens** if you back out.
+     Withdrawing cannot be undone — placing it again means rebuilding the cart.
+2. As the **warehouse**, open the raw-material catalog, edit an item and press
+   **Stop supplying this**.
+   - ✅ **Expected:** it asks. Press the same button again afterwards to restore
+     it.
+   - ✅ **Expected:** restoring does **not** ask. A question in front of an undo
+     is only friction.
+3. Do the same with **Withdraw** on a product (Flow 17b), **Void** on a token
+   (Flow 17d), removing a team member (Flow 16) and deactivating a staff member.
+   - ✅ **Expected:** every one asks, in the same shape and the same language.
+4. On any of those dialogs, press the Android **back button** rather than either
+   choice.
+   - ✅ **Expected:** it closes and nothing happens — and the button you pressed
+     is usable again rather than stuck spinning.
 
 ---
 
@@ -814,17 +1153,40 @@ radius — see Flow 18 step 6 for what that message should look like.
   attendance days that person marked.
 - **Reports and Alerts tabs** intentionally show a "planned" notice — they're
   Phase 4/5 work, not started yet.
-- **WAREHOUSE and DELIVERY_AGENT have their permissions but not their screens.**
-  Both can be invited and are correctly scoped (Flow 15a), but the warehouse
-  order queue and the delivery list are Task 5 and not built. Home says so
-  rather than showing them a blank page. CASHIER is further along — the catalog
-  and their branch's staff and pay work today; counter billing (Task 4) and
-  expenses (Task 6) are still to come.
+- **Nothing notifies anyone yet.** Every supply-order step is recorded and
+  visible the next time someone opens the screen, but no push goes out — that is
+  Task 7 (Firebase). So a warehouse person has to look at the Desk to see a new
+  order, and a cashier has to open the order to find a delay.
+- **An agent is not told they have been given a run.** Dispatch names somebody
+  now (Flow 17k), and the run appears in their Deliveries queue — but nothing
+  pushes. They have to open the app. That is Task 7 again.
+- **A branch created before this build has no delivery address**, so an order to
+  it shows "No address saved for this branch" until somebody fills one in under
+  Settings → branch → Branch settings. Nothing fails; the agent simply has the
+  branch name and no street.
+- **Cash stops being tracked once the agent has it.** A cash-on-delivery order
+  records that the agent took the money from the branch (Flow 17i), which is
+  what makes it Paid. Nothing records the agent then handing it in at the
+  warehouse — there is no cash-in-hand figure per agent and no hand-over step.
+  If that matters, it is a feature, not a bug report.
+- **A warehouse location is not in the reports.** It is a place with staff,
+  attendance and payslips, and it is deliberately left out of the branch
+  pickers for selling and ordering — which also means it is not a row in
+  anything that compares branches. That is right for sales and will need
+  deciding again when Task 8 works out net profit, since a warehouse has costs.
+- **"Available" only means punched in.** An agent who does not use punch-in, or
+  has no staff record, shows as "Attendance not tracked" forever. They are still
+  selectable — availability is a caption, not a lock — but the desk gets no help
+  from it at a business that does not run attendance.
+- **Expenses are the remaining gap for a cashier** (Task 6). The catalog,
+  counter billing, supply ordering, and their branch's staff and pay all work
+  today.
 - **The "ask a question" bar and the AI notice are gone from Home**, along with
   the chat-bubble Home tab icon — requirement 7. They are hidden behind a flag,
   not deleted, and come back when the query engine does (Phase 2).
-- **A manager's branch grants no longer do anything.** Requirement 14 made the
-  role business-wide. The Team screen still lets you remove a manager's branch
+- **A manager's or delivery agent's branch grants no longer do anything.**
+  Requirement 14 made the manager business-wide and requirement 20 did the same
+  for the delivery agent, who delivers to every branch. The Team screen still lets you remove a manager's branch
   access and the request succeeds, but it changes nothing about what they can
   reach. The invite screen already stops asking for branches for that role; the
   Team screen's removal affordance is the remaining loose end.

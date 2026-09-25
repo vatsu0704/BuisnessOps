@@ -34,6 +34,8 @@
 // them look like translation paths they are not.
 const CAPABILITIES = {
   // --- Business, branches and team ---
+  'business:create':
+    'Start another business under the same account. FRONTEND VISIBILITY ONLY — the POST /businesses endpoint is deliberately ungated, because it runs before the business exists and has no tenant to check a capability against. See the note in business.controller.js',
   'branch:create': 'Add a branch to the business',
   'branch:update': 'Change a branch: timezone, coordinates, punch-in geofence',
   'branch:allAccess':
@@ -52,6 +54,8 @@ const CAPABILITIES = {
   'staff:setPay': "Set or change someone's base salary",
   'attendance:markOthers': "Mark a colleague present, absent, half-day or on leave",
   'attendance:viewRoster': "See a branch's attendance roster for a day",
+  'attendance:punchAnywhere':
+    'Punch in and out away from any branch. For a job with no fixed location: the geofence is not applied, and in exchange the coordinates become REQUIRED rather than optional, so where and when is always on the record',
 
   // --- Payroll ---
   'payroll:view': "See generated payslips other than your own",
@@ -72,8 +76,13 @@ const CAPABILITIES = {
   'counterOrder:closeDay': "Close a branch's day, after which its orders can no longer be edited",
 
   // --- Supply orders (Task 5) ---
-  'supplyOrder:create': 'Cart raw material and place an order on the warehouse',
-  'supplyOrder:fulfil': 'Accept, pack and dispatch a supply order; verify its payment',
+  'supplyItem:view': 'See the raw-material catalog and what the warehouse charges for it',
+  'supplyItem:manage': 'Add, price and withdraw raw material. The warehouse decides what it stocks, so a cashier who orders from the catalog deliberately cannot edit it',
+  'supplyOrder:view':
+    'See supply orders. WHAT is seen depends on the role and is enforced separately: the warehouse desk sees every branch (requirement 3), a delivery agent sees the run they are carrying, a cashier sees their own branches',
+  'supplyOrder:create': 'Cart raw material and place an order on the warehouse; cancel it while the warehouse has not accepted it yet',
+  'supplyOrder:fulfil':
+    'Accept, pack and dispatch a supply order; hand it to a delivery agent and see who is free to take it; verify its payment; reject one the warehouse cannot fill',
   'supplyOrder:deliver': 'Carry a supply order and mark it delivered',
   'supplyOrder:delay': 'Post a delay against an order, with a reason',
 
@@ -94,14 +103,27 @@ const ALL = Object.keys(CAPABILITIES);
 // Requirement 14: "manager will also have all the access that admin has".
 // MANAGER is therefore DERIVED from ADMIN rather than copied, so a capability
 // added to one reaches the other automatically and the two cannot silently
-// drift. Both exclusion lists are deliberately empty today; they exist as the
-// seam for narrowing either role later, in one visible place.
+// drift. The exclusion lists are the seam for narrowing either role, in one
+// visible place.
 //
 // MANAGER is NOT free of limits — it just has no *capability* limits. The
 // record-level rule in business.service.js stops a manager revoking the admin
 // or owner who issued their account, the same way an admin already cannot
 // revoke the owner.
-const ADMIN_EXCLUDES = new Set([]);
+// `attendance:punchAnywhere` is the first entry either of these has ever had,
+// and it is an exemption rather than a privilege — which is why an admin does
+// NOT get it by holding everything else. It exists for a job with no fixed
+// place of work, and it comes with a cost: coordinates stop being optional. An
+// admin forced to supply a location before every punch would be paying that
+// cost for a job that happens at a desk, and they can already record their own
+// attendance directly through `attendance:markOthers`.
+//
+// `business:create` is here because starting a NEW business is the owner's act,
+// not a delegated one: an admin runs the business they were given, and this is
+// the one entry in Settings that is about the account rather than about the
+// business being administered. Excluding it here is what makes "owner only"
+// true without anyone checking a role name.
+const ADMIN_EXCLUDES = new Set(['attendance:punchAnywhere', 'business:create']);
 const MANAGER_EXCLUDES = new Set([]);
 
 const ADMIN = ALL.filter((capability) => !ADMIN_EXCLUDES.has(capability));
@@ -123,6 +145,11 @@ const ROLE_CAPABILITIES = {
   // branch's HR records.
   WAREHOUSE: [
     'branch:allAccess',
+    // The desk owns the raw-material catalog: it is the thing being shipped,
+    // and its prices are what the warehouse charges.
+    'supplyItem:view',
+    'supplyItem:manage',
+    'supplyOrder:view',
     'supplyOrder:fulfil',
     'supplyOrder:delay',
     // Requirement 10: the back-office person calls the branches that have not
@@ -142,6 +169,11 @@ const ROLE_CAPABILITIES = {
     'counterOrder:edit',
     'counterOrder:void',
     'counterOrder:closeDay',
+    // Orders from the catalog and tracks what happens next (requirement 11),
+    // but does not get supplyItem:manage — the warehouse sets the prices it
+    // is charging.
+    'supplyItem:view',
+    'supplyOrder:view',
     'supplyOrder:create',
     'expense:log',
     'staff:create',
@@ -157,7 +189,24 @@ const ROLE_CAPABILITIES = {
     'export:monthEnd',
   ],
 
-  DELIVERY_AGENT: ['supplyOrder:deliver', 'supplyOrder:delay'],
+  // Carries orders to EVERY branch, so this role is business-wide, not
+  // branch-scoped: `branch:allAccess` is what puts every branch's dispatched
+  // order in their queue instead of only the ones they were granted.
+  //
+  // It is the DATA scope and nothing more. Deliberately no `staff:*` here —
+  // the same split that keeps the warehouse desk out of HR records keeps a
+  // delivery agent out of them. `supplyOrder:view` is narrowed to the run they
+  // are actually carrying by the query itself, not by this list.
+  //
+  // Their work has no fixed location, so they punch from wherever they are and
+  // the coordinates are recorded in place of a geofence.
+  DELIVERY_AGENT: [
+    'branch:allAccess',
+    'attendance:punchAnywhere',
+    'supplyOrder:view',
+    'supplyOrder:deliver',
+    'supplyOrder:delay',
+  ],
 
   // Own attendance and own payslips only. Those are reached by self-checks
   // ("is this my own record?"), not by capabilities, which is why this list is

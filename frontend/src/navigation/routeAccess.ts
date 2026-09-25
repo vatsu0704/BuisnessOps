@@ -36,6 +36,17 @@ export const ROUTE_CAPABILITY: Partial<Record<keyof AppStackParamList, Capabilit
   AddProduct: 'product:manage',
   EditProduct: 'product:manage',
   Counter: 'counterOrder:create',
+  // Supply orders. The capability each one needs is the capability the
+  // backend guards its endpoints with, so a route that opens is a route
+  // whose requests succeed: SupplyOrderDetail asks only to VIEW, because the
+  // actions it offers are gated separately inside it.
+  SupplyCatalog: 'supplyItem:view',
+  SupplyCart: 'supplyOrder:create',
+  SupplyOrders: 'supplyOrder:view',
+  SupplyOrderDetail: 'supplyOrder:view',
+  SupplyItemForm: 'supplyItem:manage',
+  SupplyDesk: 'supplyOrder:fulfil',
+  SupplyDeliveries: 'supplyOrder:deliver',
 };
 
 /** Is this route one the current membership may open? */

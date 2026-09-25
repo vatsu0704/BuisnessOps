@@ -20,6 +20,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
+import { confirm } from '@/utils/confirm';
 import { haptics } from '@/utils/haptics';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EditProduct'>;
@@ -36,7 +37,7 @@ type Props = NativeStackScreenProps<AppStackParamList, 'EditProduct'>;
 export default function EditProductScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
   const businessId = useBusinessId();
-  const { branches } = useBranches();
+  const { tradingBranches: branches } = useBranches();
   const { productId } = route.params;
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -109,6 +110,19 @@ export default function EditProductScreen({ navigation, route }: Props) {
 
   async function toggleActive() {
     if (!businessId || !product || isSaving) return;
+
+    // Only the destructive direction asks — withdrawing stops the product
+    // being sellable at every branch. Restoring is the same button again.
+    if (product.isActive) {
+      const ok = await confirm({
+        title: t('editProduct.withdrawTitle', { name: product.name }),
+        body: t('editProduct.withdrawBody'),
+        confirmLabel: t('editProduct.withdraw'),
+        cancelLabel: t('common.cancel'),
+      });
+      if (!ok) return;
+    }
+
     setIsSaving(true);
     setError(null);
     try {

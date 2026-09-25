@@ -32,7 +32,7 @@ export default function ProductsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const business = useAuthStore((s) => s.business);
   const membership = useMembership();
-  const { branches } = useBranches();
+  const { tradingBranches: branches } = useBranches();
   const canManage = can.manageProducts(membership);
 
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);

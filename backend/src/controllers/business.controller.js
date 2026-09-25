@@ -18,6 +18,14 @@ const {
  * anyone with an account may start a business of their own, exactly as signup
  * already allows, and gating it would mean someone's ability to start a
  * business depended on a role they hold in someone else's.
+ *
+ * The APP hides the entry point from anyone but an owner (`business:create`,
+ * excluded from ADMIN and therefore from MANAGER). That is a decision about
+ * what Settings offers, not a permission boundary, and the two are different
+ * on purpose: the capability is per-business and this operation belongs to no
+ * business. Adding `requirePermission('business:create')` here would need a
+ * tenant that does not exist, and answering "which business's role?" would
+ * stop an invited cashier from ever starting one of their own.
  */
 async function createBusiness(req, res, next) {
   try {

@@ -40,6 +40,18 @@ export interface AttendanceRecord {
   status: AttendanceStatus;
   punchInAt: string | null;
   punchOutAt: string | null;
+  /**
+   * Where the punch happened. Decimal strings, like every other Prisma decimal.
+   *
+   * Recorded on every punch that supplies them, and **required** for a role
+   * holding `attendance:punchAnywhere` — a delivery agent has no fixed branch,
+   * so the coordinates are what replaces the geofence as the record of where
+   * they were.
+   */
+  punchInLat: string | null;
+  punchInLng: string | null;
+  punchOutLat: string | null;
+  punchOutLng: string | null;
   notes: string | null;
   markedByMembershipId: string | null;
 }

@@ -1,48 +1,35 @@
-import { useCallback, useEffect, useState } from 'react';
-import { getSalesSummary } from '@/api/business';
-import { extractErrorMessage } from '@/api/client';
-import { useAuthStore } from '@/store/authStore';
+import { useEffect } from 'react';
+import { useSalesStore } from '@/store/salesStore';
 import { useBusinessId } from '@/hooks/useBusinessId';
 
+/**
+ * The business-wide sales figure.
+ *
+ * Same shape as before, now backed by `salesStore` so Home and its sales tiles
+ * read one number instead of two copies that could disagree — see the store's
+ * header for the bug that caused.
+ */
 export function useSalesSummary() {
   const businessId = useBusinessId();
 
-  const [totalSales, setTotalSales] = useState(0);
-  const [transactionCount, setTransactionCount] = useState(0);
-  const [currency, setCurrency] = useState('INR');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const load = useSalesStore((s) => s.load);
+  const refresh = useSalesStore((s) => s.refresh);
+  const error = useSalesStore((s) => s.error);
 
-  const load = useCallback(async () => {
-    if (!businessId) {
-      setTotalSales(0);
-      setTransactionCount(0);
-      setIsLoading(false);
-      return;
-    }
-    try {
-      setError(null);
-      const byCurrency = await getSalesSummary(businessId);
-      setTotalSales(byCurrency.reduce((sum, row) => sum + Number(row.totalSales), 0));
-      setTransactionCount(byCurrency.reduce((sum, row) => sum + row.transactionCount, 0));
-      // A business could in theory mix currencies across branches; until that's
-      // surfaced in the UI, the first (usually only) currency drives display.
-      if (byCurrency[0]) setCurrency(byCurrency[0].currency);
-    } catch (err) {
-      setError(extractErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [businessId]);
+  // Each selector checks `loadedFor` itself rather than closing over a value
+  // computed by another one, which would go stale between store updates.
+  const totalSales = useSalesStore((s) => (s.loadedFor === businessId ? s.totalSales : 0));
+  const transactionCount = useSalesStore((s) =>
+    s.loadedFor === businessId ? s.transactionCount : 0
+  );
+  const currency = useSalesStore((s) => s.currency);
+  const isLoading = useSalesStore((s) =>
+    businessId ? s.isLoading || s.loadedFor !== businessId : false
+  );
 
   useEffect(() => {
-    void load();
-  }, [load]);
-
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
-    await load();
-  }, [load]);
+    void load(businessId);
+  }, [businessId, load]);
 
   return { totalSales, transactionCount, currency, isLoading, error, refresh };
 }

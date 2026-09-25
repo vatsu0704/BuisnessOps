@@ -7,7 +7,8 @@
     "cancel": "रद्द करा",
     "retry": "पुन्हा प्रयत्न करा",
     "none": "काहीही नाही",
-    "remove": "काढा"
+    "remove": "काढा",
+    "all": "सर्व"
   },
   "errors": {
     "unreachable": "{{url}} वर BizIQ सर्व्हरशी संपर्क होत नाही. डिव्हाइस सर्व्हरच्या त्याच नेटवर्कवर आहे आणि सर्व्हर चालू आहे का ते तपासा.",
@@ -88,7 +89,27 @@
       "RECORD_DUPLICATE": "हे आधीपासून अस्तित्वात आहे.",
       "RECORD_NOT_FOUND": "ही नोंद आता अस्तित्वात नाही.",
       "RECORD_REFERENCE_MISSING": "याच्याशी जोडलेले काहीतरी आता अस्तित्वात नाही.",
-      "INTERNAL_ERROR": "सर्व्हरवर काहीतरी चुकले. कृपया पुन्हा प्रयत्न करा."
+      "INTERNAL_ERROR": "सर्व्हरवर काहीतरी चुकले. कृपया पुन्हा प्रयत्न करा.",
+      "SUPPLY_ITEM_NOT_FOUND": "ही वस्तू कच्च्या मालाच्या यादीत नाही",
+      "SUPPLY_ITEM_NAME_TAKEN": "यादीत {{name}} नावाची वस्तू आधीच आहे",
+      "SUPPLY_ITEM_INACTIVE": "{{name}} आता पुरवले जात नाही",
+      "SUPPLY_ITEM_HAS_NO_PRICE": "{{name}} चा दर ठरलेला नाही, त्यामुळे आत्ता मागवता येत नाही",
+      "SUPPLY_ORDER_NOT_FOUND": "पुरवठा ऑर्डर सापडली नाही",
+      "SUPPLY_ORDER_ITEM_NOT_FOUND": "ही वस्तू या ऑर्डरमध्ये नाही",
+      "SUPPLY_ORDER_INVALID_TRANSITION": "जी ऑर्डर {{from}} आहे ती {{to}} होऊ शकत नाही",
+      "SUPPLY_ORDER_NOT_EDITABLE": "ही ऑर्डर {{status}} आहे, आता तिच्या वस्तू बदलता येणार नाहीत",
+      "SUPPLY_ORDER_EMPTY": "ऑर्डर देण्यापूर्वी त्यात काहीतरी घाला",
+      "SUPPLY_ORDER_REFERENCE_REQUIRED": "ऑनलाइन भरण्यासाठी संदर्भ क्रमांक हवा, म्हणजे गोदाम तपासू शकेल",
+      "SUPPLY_ORDER_CANCEL_TOO_LATE": "गोदामाने या ऑर्डरवर काम सुरू केले आहे — त्यांना नकार द्यायला सांगा",
+      "SUPPLY_ORDER_DELAY_NOT_APPLICABLE": "जी ऑर्डर {{status}} आहे तिच्यात विलंब नोंदवता येत नाही",
+      "SUPPLY_ORDER_PAYMENT_NOT_CLAIMED": "या ऑर्डरवर सध्या तपासण्यासारखे कोणतेही पेमेंट नाही",
+      "SUPPLY_ORDER_AGENT_NOT_FOUND": "हा डिलिव्हरी एजंट या व्यवसायाचा सक्रिय सदस्य नाही",
+      "SUPPLY_ORDER_AGENT_NOT_PERMITTED": "या सदस्याला डिलिव्हरी देता येणार नाही, ऑर्डर अडकेल",
+      "SUPPLY_ORDER_NOT_ASSIGNED": "ही डिलिव्हरी दुसऱ्याला दिली आहे",
+      "PUNCH_LOCATION_ALWAYS_REQUIRED": "तुमच्या पंचमध्ये ठिकाण नोंदले जाते, त्यामुळे लोकेशन सुरू असणे आवश्यक आहे",
+      "SUPPLY_ORDER_ASSIGN_NOT_APPLICABLE": "जी ऑर्डर {{status}} आहे ती डिलिव्हरी एजंटला देता येत नाही",
+      "SUPPLY_ORDER_CASH_NOT_CONFIRMED": "ही ऑर्डर डिलिव्हरीवर रोख आहे — पोहोचवले नोंदवण्यापूर्वी पैसे घेतल्याची खात्री करा",
+      "BRANCH_IS_WAREHOUSE": "हे गोदाम आहे, शाखा नाही — इथे विक्री होत नाही आणि कच्चा माल मागवला जात नाही"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} आवश्यक आहे",
@@ -127,7 +148,10 @@
       "ROW_QUANTITY_NOT_A_NUMBER": "ओळ {{row}}: quantity ही संख्या नाही",
       "ROW_UNIT_PRICE_NOT_A_NUMBER": "ओळ {{row}}: unit_price ही संख्या नाही",
       "ROW_PAYMENT_METHOD_INVALID": "ओळ {{row}}: payment_method यापैकी एक असावे: {{options}}",
-      "ROW_DATE_INVALID": "ओळ {{row}}: occurred_at वैध तारीख नाही"
+      "ROW_DATE_INVALID": "ओळ {{row}}: occurred_at वैध तारीख नाही",
+      "DATETIME_INVALID": "{{field}} वैध तारीख आणि वेळ असावी",
+      "DATETIME_IN_PAST": "{{field}} भूतकाळातील असू शकत नाही",
+      "DELAY_MINUTES_RANGE": "विलंब 1 ते {{max}} मिनिटांदरम्यान पूर्ण संख्येत असावा"
     },
     "field": {
       "name": "नाव",
@@ -165,7 +189,10 @@
       "unmarkedWorkingDayStatus": "नोंद नसलेले दिवस",
       "isPaid": "पगारी सुट्टी",
       "displayName": "नाव",
-      "preferredLocale": "भाषा"
+      "preferredLocale": "भाषा",
+      "addressLine": "डिलिव्हरीचा पत्ता",
+      "postalCode": "पिन कोड",
+      "deliveryAgentMembershipId": "डिलिव्हरी एजंट"
     }
   },
   "language": {
@@ -183,7 +210,10 @@
     "settings": "सेटिंग्ज",
     "staff": "कर्मचारी",
     "products": "उत्पादने",
-    "counter": "काउंटर"
+    "counter": "काउंटर",
+    "supply": "पुरवठा",
+    "desk": "डेस्क",
+    "deliveries": "डिलिव्हरी"
   },
   "splash": {
     "tagline": "तुमच्या व्यवसायाबद्दल काहीही विचारा"
@@ -299,7 +329,17 @@
     "roleEmptyTitle": "तुमच्यासाठीच्या स्क्रीन अजून तयार होत आहेत",
     "roleEmptyBody": "तुमची भूमिका आणि प्रवेश बरोबर आहे, पण त्यासाठीच्या स्क्रीन अजून पूर्ण झालेल्या नाहीत. तयार होताच इथे दिसतील.",
     "counterTitle": "काउंटर उघडा",
-    "counterSubtitle": "ऑर्डर बनवा आणि टोकन द्या"
+    "counterSubtitle": "ऑर्डर बनवा आणि टोकन द्या",
+    "supplyTitle": "कच्चा माल मागवा",
+    "supplySubtitle": "शाखेला जे हवे ते घालून गोदामाला पाठवा",
+    "deskTitle": "ऑर्डर डेस्क",
+    "deskSubtitle": "प्रत्येक शाखेच्या येणाऱ्या पुरवठा ऑर्डर",
+    "deliveriesTitle": "तुमच्या डिलिव्हरी",
+    "deliveriesSubtitle": "सध्या तुम्ही काय नेत आहात",
+    "supplyTrackTitle": "पुरवठा ऑर्डर पहा",
+    "supplyTrackSubtitle": "प्रत्येक ऑर्डर कुठवर आली",
+    "supplyCatalogTitle": "कच्च्या मालाची यादी",
+    "supplyCatalogSubtitle": "गोदाम काय पुरवते आणि कोणत्या दरात"
   },
   "phase": {
     "examplesLabel": "तुम्ही काय विचारू शकाल"
@@ -361,7 +401,12 @@
     "timezone": "वेळ क्षेत्र",
     "submit": "शाखा तयार करा",
     "submitting": "तयार होत आहे...",
-    "geofenceHint": "ऐच्छिक. दुकानाचे स्थान आणि परिसर ठरवा म्हणजे पंच इनसाठी कर्मचाऱ्याला शाखेवर असावे लागेल. हे नंतरही जोडता येते."
+    "geofenceHint": "ऐच्छिक. दुकानाचे स्थान आणि परिसर ठरवा म्हणजे पंच इनसाठी कर्मचाऱ्याला शाखेवर असावे लागेल. हे नंतरही जोडता येते.",
+    "kind": "ही जागा काय आहे?",
+    "kindBranch": "शाखा",
+    "kindBranchHint": "विकते आणि मागवते",
+    "kindWarehouse": "गोदाम",
+    "kindWarehouseHint": "शाखांना माल पाठवते"
   },
   "addBusiness": {
     "title": "व्यवसाय जोडा",
@@ -430,7 +475,9 @@
     "branchPriceCleared": "व्यवसायाच्या किमतीवर परत.",
     "withdraw": "विक्रीतून काढा",
     "restore": "पुन्हा विक्रीवर आणा",
-    "withdrawHint": "काढल्याने ते प्रत्येक यादीतून लपते, पुसले जात नाही — जुन्या विक्रीत नाव राहते."
+    "withdrawHint": "काढल्याने ते प्रत्येक यादीतून लपते, पुसले जात नाही — जुन्या विक्रीत नाव राहते.",
+    "withdrawTitle": "{{name}} मागे घ्यायचे?",
+    "withdrawBody": "ते कोणत्याही शाखेत विकले जाणार नाही. जुनी विक्री तशीच राहील, आणि तुम्ही नंतर पुन्हा आणू शकता."
   },
   "counter": {
     "title": "काउंटर",
@@ -494,7 +541,11 @@
     "doneForToday": "{{inTime}} वाजता इन · {{outTime}} वाजता आउट",
     "punchIn": "पंच इन",
     "punchOut": "पंच आउट",
-    "noHistory": "या महिन्यासाठी कोणतीही उपस्थिती नोंदवलेली नाही"
+    "noHistory": "या महिन्यासाठी कोणतीही उपस्थिती नोंदवलेली नाही",
+    "traceIn": "आगमन {{time}}",
+    "traceOut": "निर्गमन {{time}}",
+    "traceWhere": "इथून पंच केले",
+    "traceNoLocation": "ठिकाण नोंदलेले नाही"
   },
   "staff": {
     "title": "स्टाफ",
@@ -506,7 +557,7 @@
   },
   "addStaff": {
     "title": "स्टाफ जोडा",
-    "subtitle": "प्रत्येक स्टाफ सदस्य एका शाखेशी संबंधित असतो. त्यांना स्वतः पंच इन करायचे असेल तरच ईमेल जोडा.",
+    "subtitle": "त्यांचे आधीच खाते असेल तर ईमेलने सुरुवात करा — बाकीचे आपोआप भरेल. हजेरी आणि पगारपत्रक तुम्ही निवडलेल्या ठिकाणी नोंदवले जाते.",
     "branchSection": "ते कोणत्या शाखेत काम करतात?",
     "name": "नाव",
     "namePlaceholder": "उदा. प्रिया मेहता",
@@ -521,7 +572,11 @@
     "emailPlaceholder": "their.email@example.com",
     "emailInvalid": "वैध ईमेल पत्ता टाका.",
     "submit": "स्टाफ सदस्य जोडा",
-    "submitting": "जोडत आहे..."
+    "submitting": "जोडत आहे...",
+    "knownMember": "{{name}} आधीच संघात {{role}} आहेत",
+    "branchHomeSection": "त्यांचा तळ कुठे आहे?",
+    "branchHomeHint": "त्यांचे काम एका जागेपुरते नाही. इथे फक्त त्यांची हजेरी आणि पगारपत्रक नोंदवले जाते.",
+    "personSection": "हे कोण आहेत?"
   },
   "staffDetail": {
     "title": "स्टाफ सदस्य",
@@ -755,10 +810,148 @@
     "locationUnavailable": "तुमचे स्थान मिळू शकले नाही. स्थान चालू आहे आणि BizIQ ला परवानगी आहे का ते तपासा.",
     "radiusNeedsLocation": "आधी शाखेचे स्थान सेट करा — परिसर मोजण्यासाठी एक बिंदू हवा.",
     "geofenceOff": "जिओफेन्सिंग बंद आहे. कर्मचारी कुठूनही पंच इन करू शकतात.",
-    "notFound": "ही शाखा आता अस्तित्वात नाही."
+    "notFound": "ही शाखा आता अस्तित्वात नाही.",
+    "address": "डिलिव्हरीचा पत्ता",
+    "addressPlaceholder": "इमारत, रस्ता, खूण",
+    "addressHint": "डिलिव्हरी एजंटला ही शाखा शोधण्यासाठी हेच लागते.",
+    "postalCode": "पिन कोड",
+    "kindHint": "गोदामातही कर्मचारी असतात आणि तिथेच पंच इन होते. फक्त तिथे काउंटर नसते आणि कच्चा माल मागवला जात नाही."
   },
   "businessSwitcher": {
     "title": "व्यवसाय",
     "hint": "तुम्ही एकापेक्षा जास्त व्यवसायात आहात. ॲपमधील सर्व काही येथे निवडलेल्या व्यवसायानुसार दिसेल."
+  },
+  "supply": {
+    "catalogTitle": "कच्चा माल",
+    "catalogSubtitle": "गोदाम काय पुरवते",
+    "cartTitle": "तुमची ऑर्डर",
+    "ordersTitle": "पुरवठा ऑर्डर",
+    "deskTitle": "ऑर्डर डेस्क",
+    "deliveriesTitle": "डिलिव्हरी",
+    "orderTitle": "ऑर्डर #{{number}}",
+    "draftTitle": "अजून दिलेली नाही",
+    "add": "घाला",
+    "added": "ऑर्डरमध्ये",
+    "cartEmpty": "या ऑर्डरमध्ये अजून काही नाही",
+    "cartEmptyBody": "यादीतून शाखेला जे हवे ते घाला.",
+    "openCart": "ऑर्डर पहा",
+    "reviewCount": "{{count}} वस्तू",
+    "reviewCount_plural": "{{count}} वस्तू",
+    "place": "ऑर्डर द्या",
+    "paymentMode": "पैसे कसे भरणार?",
+    "payOnline": "ऑनलाइन भरले",
+    "payOnlineHint": "संदर्भ द्या म्हणजे गोदाम तपासू शकेल",
+    "payCod": "डिलिव्हरीवर रोख",
+    "payCodHint": "माल आल्यावर एजंटला द्या",
+    "reference": "पेमेंट संदर्भ",
+    "referencePlaceholder": "UPI किंवा बँक संदर्भ",
+    "noOrders": "अजून पुरवठा ऑर्डर नाही",
+    "noOrdersBody": "गोदामाला दिलेल्या ऑर्डर इथे दिसतील.",
+    "deskEmpty": "काही बाकी नाही",
+    "deskEmptyBody": "प्रत्येक शाखेच्या ऑर्डर इथे येतात.",
+    "noDeliveries": "पोहोचवण्यासारखे काही नाही",
+    "noDeliveriesBody": "तुम्हाला दिलेल्या ऑर्डर इथे दिसतील.",
+    "catalogEmpty": "यादी रिकामी आहे",
+    "catalogEmptyBody": "गोदाम जे पुरवते ते घालते.",
+    "perUnit": "{{unit}} मागे {{price}}",
+    "noPriceYet": "दर ठरलेला नाही",
+    "withdrawn": "बंद",
+    "uncategorised": "इतर",
+    "search": "यादीत शोधा",
+    "accept": "स्वीकारा",
+    "pack": "पॅक झाले",
+    "dispatch": "रवाना करा",
+    "deliver": "पोहोचवले",
+    "reject": "पुरवता येणार नाही",
+    "cancel": "ऑर्डर रद्द करा",
+    "cancelTitle": "ही ऑर्डर रद्द करायची?",
+    "cancelBody": "गोदामाने अजून घेतलेली नाही, त्यामुळे मागे घेता येते.",
+    "postDelay": "विलंब कळवा",
+    "delayTitle": "किती उशीर होईल?",
+    "delayMinutes": "मिनिटे",
+    "delayReason": "का?",
+    "note": "काही सांगायचे आहे",
+    "noteOptional": "ऐच्छिक",
+    "verifyPayment": "पेमेंट तपासा",
+    "markVerified": "सापडले",
+    "markFailed": "सापडले नाही",
+    "assignAgent": "कोण नेणार?",
+    "assignNobody": "अजून कोणी नाही",
+    "promisedAt": "{{time}} पर्यंत पोहोचेल",
+    "noPromise": "वेळ ठरलेली नाही",
+    "promiseQuestion": "कधीपर्यंत तयार होईल?",
+    "promiseSkip": "अजून नक्की नाही",
+    "timeline": "आतापर्यंत काय झाले",
+    "payment": "पेमेंट",
+    "branch": "शाखा",
+    "placedBy": "{{name}} यांनी दिली",
+    "total": "एकूण",
+    "manage": "यादी सांभाळा",
+    "addItem": "वस्तू घाला",
+    "editItem": "वस्तू बदला",
+    "itemName": "नाव",
+    "itemUnit": "एकक",
+    "itemUnitHint": "किलो, लिटर, पाकीट",
+    "itemCategory": "वर्ग",
+    "itemPrice": "प्रति एकक दर",
+    "itemActive": "सध्या पुरवले जाते",
+    "itemActiveHint": "बंद वस्तू जुन्या ऑर्डरमध्ये राहते पण पुन्हा मागवता येत नाही",
+    "quantity": "प्रमाण",
+    "delayBadge": "+{{minutes}} मिनिटे",
+    "byWhom": "{{name}} कडून",
+    "withdraw": "पुरवठा थांबवा",
+    "restore": "पुन्हा पुरवा",
+    "deliverTo": "कुठे पोहोचवायचे",
+    "noAddress": "या शाखेचा पत्ता जतन केलेला नाही",
+    "openMap": "नकाशात उघडा",
+    "assignedTo": "{{name}} यांना दिली",
+    "assignUnnamed": "नाव नसलेला सदस्य",
+    "reassign": "एजंट बदला",
+    "assignNobodyHint": "या शाखेकडे जाणाऱ्या प्रत्येक एजंटला दिसेल",
+    "noAgents": "अजून कोणी डिलिव्हरी एजंट नाही",
+    "noAgentsBody": "कोणाला डिलिव्हरी एजंट म्हणून जोडा, ते इथे दिसतील.",
+    "dutyOn": "{{time}} पासून ड्युटीवर",
+    "dutyOff": "आज पंच इन केलेले नाही",
+    "dutyUnknown": "हजेरी नोंदवली जात नाही",
+    "carrying": "{{count}} डिलिव्हरी सोबत",
+    "carrying_plural": "{{count}} डिलिव्हरी सोबत",
+    "free": "सध्या मोकळे",
+    "cashTitle": "डिलिव्हरीवर रोख",
+    "cashQuestion": "तुम्ही {{branch}} च्या कॅशियरकडून {{amount}} घेतले आहेत का?",
+    "cashHint": "होय म्हटल्यास पैसे मिळाले अशी नोंद होईल. अजून मिळाले नसतील तर \"अजून नाही\" निवडा.",
+    "cashYes": "होय, पैसे मिळाले",
+    "cashNo": "अजून नाही",
+    "withdrawTitle": "{{name}} देणे थांबवायचे?",
+    "withdrawBody": "ते प्रत्येक शाखेच्या ऑर्डर यादीतून निघून जाईल. आधीच्या ऑर्डरमध्ये राहील, आणि तुम्ही नंतर पुन्हा सुरू करू शकता."
+  },
+  "supplyStatus": {
+    "DRAFT": "दिलेली नाही",
+    "PLACED": "दिली",
+    "ACCEPTED": "स्वीकारली",
+    "PACKED": "पॅक",
+    "DISPATCHED": "वाटेवर",
+    "DELIVERED": "पोहोचली",
+    "CANCELLED": "रद्द"
+  },
+  "supplyPayment": {
+    "PENDING": "बाकी",
+    "PAID": "भरले",
+    "VERIFIED": "तपासले",
+    "FAILED": "सापडले नाही"
+  },
+  "supplyDelay": {
+    "TRAFFIC": "वाहतूक",
+    "STOCK_OUT": "साठा संपला",
+    "VEHICLE_ISSUE": "गाडीची अडचण",
+    "WEATHER": "हवामान",
+    "STAFF_SHORTAGE": "कर्मचारी कमी",
+    "OTHER": "दुसरे काही"
+  },
+  "supplyEvent": {
+    "PAYMENT_CLAIMED": "पेमेंट संदर्भ दिला",
+    "PAYMENT_ON_DELIVERY": "पोहोचल्यावर पेमेंट",
+    "PAYMENT_VERIFIED": "पेमेंट तपासले",
+    "PAYMENT_FAILED": "पेमेंट सापडले नाही",
+    "PAYMENT_COLLECTED": "डिलिव्हरीवर रोख घेतली"
   }
 }

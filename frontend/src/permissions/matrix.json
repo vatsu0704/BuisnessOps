@@ -1,6 +1,7 @@
 {
   "$comment": "GENERATED MIRROR of backend/src/permissions/catalog.js. Do not hand-edit: change the backend catalog, then run npm run lint:permissions to see what drifted. The descriptions are carried across so this file is readable on its own.",
   "capabilities": {
+    "business:create": "Start another business under the same account. FRONTEND VISIBILITY ONLY — the POST /businesses endpoint is deliberately ungated, because it runs before the business exists and has no tenant to check a capability against. See the note in business.controller.js",
     "branch:create": "Add a branch to the business",
     "branch:update": "Change a branch: timezone, coordinates, punch-in geofence",
     "branch:allAccess": "Act across every branch without a BranchAccess row. This is the DATA scope only — see the note on staff:viewAllBranches",
@@ -15,6 +16,7 @@
     "staff:setPay": "Set or change someone's base salary",
     "attendance:markOthers": "Mark a colleague present, absent, half-day or on leave",
     "attendance:viewRoster": "See a branch's attendance roster for a day",
+    "attendance:punchAnywhere": "Punch in and out away from any branch. For a job with no fixed location: the geofence is not applied, and in exchange the coordinates become REQUIRED rather than optional, so where and when is always on the record",
     "payroll:view": "See generated payslips other than your own",
     "payroll:run": "Generate, finalize and bulk-run payroll",
     "workCalendar:manage": "Change the weekly off and the holiday list — these set the payroll divisor",
@@ -25,8 +27,11 @@
     "counterOrder:edit": "Change a counter order after it was placed",
     "counterOrder:void": "Void a counter order, removing it from the day’s sales",
     "counterOrder:closeDay": "Close a branch's day, after which its orders can no longer be edited",
-    "supplyOrder:create": "Cart raw material and place an order on the warehouse",
-    "supplyOrder:fulfil": "Accept, pack and dispatch a supply order; verify its payment",
+    "supplyItem:view": "See the raw-material catalog and what the warehouse charges for it",
+    "supplyItem:manage": "Add, price and withdraw raw material. The warehouse decides what it stocks, so a cashier who orders from the catalog deliberately cannot edit it",
+    "supplyOrder:view": "See supply orders. WHAT is seen depends on the role and is enforced separately: the warehouse desk sees every branch (requirement 3), a delivery agent sees the run they are carrying, a cashier sees their own branches",
+    "supplyOrder:create": "Cart raw material and place an order on the warehouse; cancel it while the warehouse has not accepted it yet",
+    "supplyOrder:fulfil": "Accept, pack and dispatch a supply order; hand it to a delivery agent and see who is free to take it; verify its payment; reject one the warehouse cannot fill",
     "supplyOrder:deliver": "Carry a supply order and mark it delivered",
     "supplyOrder:delay": "Post a delay against an order, with a reason",
     "expense:log": "Record what a branch spent, by category",
@@ -63,6 +68,9 @@
       "counterOrder:edit",
       "counterOrder:void",
       "counterOrder:closeDay",
+      "supplyItem:view",
+      "supplyItem:manage",
+      "supplyOrder:view",
       "supplyOrder:create",
       "supplyOrder:fulfil",
       "supplyOrder:deliver",
@@ -99,6 +107,9 @@
       "counterOrder:edit",
       "counterOrder:void",
       "counterOrder:closeDay",
+      "supplyItem:view",
+      "supplyItem:manage",
+      "supplyOrder:view",
       "supplyOrder:create",
       "supplyOrder:fulfil",
       "supplyOrder:deliver",
@@ -112,6 +123,9 @@
     ],
     "WAREHOUSE": [
       "branch:allAccess",
+      "supplyItem:view",
+      "supplyItem:manage",
+      "supplyOrder:view",
       "supplyOrder:fulfil",
       "supplyOrder:delay",
       "expense:viewAllBranches"
@@ -121,6 +135,8 @@
       "counterOrder:edit",
       "counterOrder:void",
       "counterOrder:closeDay",
+      "supplyItem:view",
+      "supplyOrder:view",
       "supplyOrder:create",
       "expense:log",
       "staff:create",
@@ -136,6 +152,9 @@
       "export:monthEnd"
     ],
     "DELIVERY_AGENT": [
+      "branch:allAccess",
+      "attendance:punchAnywhere",
+      "supplyOrder:view",
       "supplyOrder:deliver",
       "supplyOrder:delay"
     ],

@@ -24,6 +24,9 @@ const { ROLES } = require('../permissions');
 // one there will ever be" is what keeps a business from losing its only owner.
 const INVITABLE_ROLES = ROLES.filter((role) => role !== 'OWNER');
 const BRANCH_STATUSES = ['ACTIVE', 'INACTIVE', 'CLOSED'];
+// A location the business sells from, or the one it ships from. See BranchKind
+// in schema.prisma for why a warehouse is a Branch at all.
+const BRANCH_KINDS = ['BRANCH', 'WAREHOUSE'];
 
 // Shared by create and update rather than copied, so the two can't drift.
 // `requireRadiusCoordinates` is false on update, where the coordinates may
@@ -73,10 +76,23 @@ function validateCreateBusiness(body) {
   return errors;
 }
 
+// Free text, and nullable, on both create and update. An address is not a
+// shape that validates: forcing one drops the half that actually finds the
+// place ("behind the old post office").
+const BRANCH_TEXT_FIELDS = ['city', 'region', 'country', 'addressLine', 'postalCode', 'currency'];
+
 function validateCreateBranch(body) {
   const errors = [];
   if (!body.name || typeof body.name !== 'string') errors.push(required('name'));
   if (!body.code || typeof body.code !== 'string') errors.push(required('code'));
+  if (body.kind !== undefined && !BRANCH_KINDS.includes(body.kind)) {
+    errors.push(mustBeOneOf('kind', BRANCH_KINDS));
+  }
+  for (const field of BRANCH_TEXT_FIELDS) {
+    if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'string') {
+      errors.push(mustBeString(field));
+    }
+  }
   if (!body.timezone || typeof body.timezone !== 'string') errors.push(required('timezone'));
   // Unvalidated before, which is why utils/datetime.js has to fall back rather
   // than trust Branch.timezone.
@@ -95,9 +111,12 @@ function validateUpdateBranch(body) {
   const errors = [];
   const allowed = [
     'name',
+    'kind',
     'city',
     'region',
     'country',
+    'addressLine',
+    'postalCode',
     'currency',
     'status',
     'timezone',
@@ -113,13 +132,16 @@ function validateUpdateBranch(body) {
   if (body.name !== undefined && (typeof body.name !== 'string' || !body.name.trim())) {
     errors.push(cannotBeEmpty('name'));
   }
-  for (const field of ['city', 'region', 'country', 'currency']) {
+  for (const field of BRANCH_TEXT_FIELDS) {
     if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'string') {
       errors.push(mustBeString(field));
     }
   }
   if (body.status !== undefined && !BRANCH_STATUSES.includes(body.status)) {
     errors.push(mustBeOneOf('status', BRANCH_STATUSES));
+  }
+  if (body.kind !== undefined && !BRANCH_KINDS.includes(body.kind)) {
+    errors.push(mustBeOneOf('kind', BRANCH_KINDS));
   }
   if (body.timezone !== undefined && !isValidTimeZone(body.timezone)) {
     errors.push(fieldError('TIMEZONE_INVALID', 'timezone'));

@@ -36,7 +36,7 @@ export default function AddProductScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
   const businessId = useBusinessId();
   const membership = useMembership();
-  const { branches } = useBranches();
+  const { tradingBranches: branches } = useBranches();
 
   // Only an all-branch role may create a product the whole business sells.
   const canCreateBusinessWide = hasCapability(membership, 'branch:allAccess');

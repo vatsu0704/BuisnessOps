@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/client';
-import type { Branch } from '@/types/branch';
+import type { Branch, BranchKind } from '@/types/branch';
 import type { Business } from '@/types/business';
 
 /**
@@ -46,10 +46,17 @@ export async function listBranches(businessId: string): Promise<Branch[]> {
 export interface CreateBranchPayload {
   name: string;
   code: string;
+  /** Omitted means BRANCH, which is what a location is unless it is said otherwise. */
+  kind?: BranchKind;
   timezone: string;
   city?: string;
   region?: string;
   country?: string;
+  // Where a delivery goes. Optional at creation and editable afterwards — a
+  // branch whose own staff know where it is never needs one, and a branch that
+  // takes supply orders does.
+  addressLine?: string;
+  postalCode?: string;
   currency?: string;
   // Optional at creation: a branch with no coordinates simply enforces no
   // punch-in radius, which is the default and a perfectly normal branch.
@@ -65,8 +72,11 @@ export interface CreateBranchPayload {
  */
 export interface UpdateBranchPayload {
   name?: string;
+  kind?: BranchKind;
   city?: string | null;
   region?: string | null;
+  addressLine?: string | null;
+  postalCode?: string | null;
   currency?: string | null;
   timezone?: string;
   latitude?: number | null;

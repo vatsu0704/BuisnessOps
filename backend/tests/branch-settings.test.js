@@ -185,4 +185,73 @@ describe('Branch settings', () => {
     expect(res.statusCode).toBe(404);
     expect(res.body.code).toBe('BRANCH_NOT_FOUND');
   });
+
+  // --- A warehouse is a location too (requirement 23) ----------------------
+  //
+  // Attendance, geofencing and payroll are all keyed on a branch, so a
+  // warehouse has to BE one for its staff to punch in at all. What it is not
+  // is a place that trades, and that is enforced rather than merely unoffered.
+
+  describe('warehouse locations', () => {
+    let warehouseId;
+
+    it('creates one, and defaults everything else to a branch', async () => {
+      const warehouse = await request(app)
+        .post(`/api/businesses/${businessId}/branches`)
+        .set(auth(ownerToken))
+        .send({ name: 'Central Warehouse', code: `WH${RUN_ID}`, kind: 'WAREHOUSE', timezone: 'Asia/Kolkata' });
+      expect(warehouse.statusCode).toBe(201);
+      expect(warehouse.body.kind).toBe('WAREHOUSE');
+      warehouseId = warehouse.body.id;
+
+      // The one created in beforeAll said nothing about its kind.
+      const listed = await request(app)
+        .get(`/api/businesses/${businessId}/branches`)
+        .set(auth(ownerToken));
+      expect(listed.body.find((b) => b.id === branchId).kind).toBe('BRANCH');
+    });
+
+    it('takes a geofence like any other location, which is what punching in needs', async () => {
+      const res = await request(app)
+        .patch(`/api/businesses/${businessId}/branches/${warehouseId}`)
+        .set(auth(ownerToken))
+        .send({ latitude: 21.17, longitude: 72.83, geofenceRadiusMeters: 150 });
+      expect(res.statusCode).toBe(200);
+      expect(res.body.geofenceRadiusMeters).toBe(150);
+    });
+
+    it('refuses to open a counter order against it', async () => {
+      const res = await request(app)
+        .post(`/api/businesses/${businessId}/counter-orders`)
+        .set(auth(ownerToken))
+        .send({ branchId: warehouseId });
+      expect(res.statusCode).toBe(400);
+      expect(res.body.code).toBe('BRANCH_IS_WAREHOUSE');
+    });
+
+    it('refuses to open a supply cart for it — it is where the material comes from', async () => {
+      const res = await request(app)
+        .get(`/api/businesses/${businessId}/branches/${warehouseId}/supply-cart`)
+        .set(auth(ownerToken));
+      expect(res.statusCode).toBe(400);
+      expect(res.body.code).toBe('BRANCH_IS_WAREHOUSE');
+    });
+
+    it('can be corrected back to a branch', async () => {
+      const res = await request(app)
+        .patch(`/api/businesses/${businessId}/branches/${warehouseId}`)
+        .set(auth(ownerToken))
+        .send({ kind: 'BRANCH' });
+      expect(res.statusCode).toBe(200);
+      expect(res.body.kind).toBe('BRANCH');
+    });
+
+    it('refuses a kind nobody defined', async () => {
+      const res = await request(app)
+        .patch(`/api/businesses/${businessId}/branches/${branchId}`)
+        .set(auth(ownerToken))
+        .send({ kind: 'FACTORY' });
+      expect(res.statusCode).toBe(400);
+    });
+  });
 });

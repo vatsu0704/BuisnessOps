@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import { useBranchProducts } from '@/hooks/useBranchProducts';
+import { refreshSalesSummary } from '@/store/salesStore';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { extractErrorMessage } from '@/api/client';
 import {
@@ -36,6 +36,7 @@ import SegmentedOption from '@/components/SegmentedOption';
 import StatTile from '@/components/StatTile';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
+import { confirm } from '@/utils/confirm';
 import { haptics } from '@/utils/haptics';
 
 /**
@@ -94,12 +95,12 @@ export default function CounterScreen() {
   const isPushed = useNavigationState((state) => state.type === 'stack');
   const businessId = useBusinessId();
   const business = useAuthStore((s) => s.business);
-  const { branches } = useBranches();
+  const { tradingBranches: branches } = useBranches();
 
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const branchId = selectedBranchId ?? branches[0]?.id ?? null;
 
-  const { products } = useBranchProducts(branchId);
+  const { products, refresh: refreshProducts } = useBranchProducts(branchId);
   const [orders, setOrders] = useState<CounterOrder[]>([]);
   const [summary, setSummary] = useState<CounterDaySummary | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
@@ -161,7 +162,11 @@ export default function CounterScreen() {
   useFocusEffect(
     useCallback(() => {
       void load();
-    }, [load])
+      // The Counter tab never unmounts, so without this a product added or
+      // priced on another screen would not reach the grid until the app was
+      // restarted.
+      void refreshProducts();
+    }, [load, refreshProducts])
   );
 
   /** Every mutation returns the whole order, so the list is patched not refetched. */
@@ -182,6 +187,10 @@ export default function CounterScreen() {
       after?.(result);
       // The day totals move on every mutation, and only the server knows them.
       if (businessId && branchId) setSummary(await getCounterDaySummary(businessId, branchId));
+      // A counter order projects into the sales fact table, so the figure on
+      // Home moved too. Refreshing the shared store is what makes it move on
+      // screen rather than at the next restart.
+      void refreshSalesSummary();
     } catch (err) {
       haptics.error();
       setError(extractErrorMessage(err));
@@ -231,22 +240,20 @@ export default function CounterScreen() {
     });
   };
 
-  const confirmVoid = (order: CounterOrder) => {
-    Alert.alert(
-      t('counter.voidTitle', { token: order.tokenNumber }),
-      t('counter.voidBody'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('counter.void'),
-          style: 'destructive',
-          onPress: () =>
-            void run(() => voidCounterOrder(businessId!, order.id), (updated) => {
-              applyOrder(updated);
-              if (activeOrderId === updated.id) setActiveOrderId(null);
-            }),
-        },
-      ]
+  const confirmVoid = async (order: CounterOrder) => {
+    const ok = await confirm({
+      title: t('counter.voidTitle', { token: order.tokenNumber }),
+      body: t('counter.voidBody'),
+      confirmLabel: t('counter.void'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (!ok) return;
+    void run(
+      () => voidCounterOrder(businessId!, order.id),
+      (updated) => {
+        applyOrder(updated);
+        if (activeOrderId === updated.id) setActiveOrderId(null);
+      }
     );
   };
 
@@ -375,7 +382,7 @@ export default function CounterScreen() {
                       order.status === 'VOID' && styles.orderRowVoid,
                     ]}
                     onPress={() => setActiveOrderId(order.status === 'VOID' ? null : order.id)}
-                    onLongPress={() => order.status !== 'VOID' && confirmVoid(order)}
+                    onLongPress={() => { if (order.status !== 'VOID') void confirmVoid(order); }}
                   >
                     <View style={styles.tokenBadge}>
                       <Text style={styles.tokenText}>{order.tokenNumber}</Text>
