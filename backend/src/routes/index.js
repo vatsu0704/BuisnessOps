@@ -10,6 +10,7 @@ const workCalendarRoutes = require('./workCalendar.routes');
 const productRoutes = require('./product.routes');
 const counterOrderRoutes = require('./counterOrder.routes');
 const supplyRoutes = require('./supply.routes');
+const expenseRoutes = require('./expense.routes');
 const inviteRoutes = require('./invite.routes');
 
 const router = express.Router();
@@ -25,6 +26,7 @@ router.use('/businesses', workCalendarRoutes);
 router.use('/businesses', productRoutes);
 router.use('/businesses', counterOrderRoutes);
 router.use('/businesses', supplyRoutes);
+router.use('/businesses', expenseRoutes);
 router.use('/invites', inviteRoutes);
 router.use('/users', userRoutes);
 

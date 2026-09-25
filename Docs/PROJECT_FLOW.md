@@ -349,7 +349,7 @@ got to.
 | 3 | Product catalog, new Home, hide AI | R4, R7 | ✅ done |
 | 4 | Counter billing and tokens | R1, R17 | ✅ done |
 | 5 | Supply orders end to end | R3, R5, R5.1, R9, R11, R12, R21, R22, R23 | ✅ done |
-| 6 | Expenses and the daily log | R10 | ⏳ not started |
+| 6 | Expenses and the daily log | R10 | ✅ done |
 | 7 | Firebase notifications | R2, R8 | ⏳ not started |
 | 8 | Analytics and net profit | R13, R15 | ⏳ not started |
 | 9 | Day-end and month-end export | R17 | ⏳ not started |
@@ -824,3 +824,78 @@ made the wrong answer sound like the only one.
 placing, the status machine, role separation, the desk, delays, delivery,
 handing a run to an agent, the destination address, cancelling and cross-tenant
 isolation.
+
+---
+
+### Task 6 — Expenses and the daily log ✅
+
+Requirement 10: "gas bill, electricity bill, petty expenses and everything else.
+Also daily cost: how much did I spend today? And how much did I sell today?
+Category-wise too. The person at the back office will call the branches that
+haven't logged their daily expenses."
+
+**The counterpart to Task 4, and deliberately not its mirror image.** A counter
+order is what a branch took in and is projected into `Transaction`; an expense is
+what it paid out and is projected nowhere. They meet in one endpoint —
+`GET /branches/:branchId/expense-day` — because the requirement asks them as one
+question, and answering them on two screens would make the comparison the reader's
+job.
+
+**Seeded categories are codes, not names.** Every business starts with the same
+eight, and they are read by a cashier who may have the app in Gujarati. The
+backend cannot translate, so a seeded category carries a `code` and the device
+renders `t('expenseCategory.GAS')`; the `name` column is the English fallback,
+playing exactly the role the English in `errors/catalog.js` plays. A category
+somebody types carries no code and is shown verbatim — their own words are not
+ours to translate, the same rule a delay note already follows.
+
+**Custom categories exist because the breakdown is the requirement.** The seeded
+eight cover what R10 names and not "Vegetables" or "Staff tea". Without a way to
+add one, everything specific lands in Other with a note — and "today I took
+₹2,000 of milk" stops being answerable about milk, which is the feature.
+
+**The double-count question is answered here, not in Task 8.** There is no
+raw-material category, on purpose: supply spend is already recorded in
+`supply_orders`, and a category inviting someone to log it again by hand would
+subtract it twice from net profit. §5 of `REQUIREMENTS.md` records the decision
+and what is left for Task 8 — a business can still name a custom category
+anything, so the export flags overlap rather than pretending the data shape
+prevents it.
+
+**`expense:view` is a new capability, and the reason is the warehouse desk.**
+R10 gives the back office the job of chasing branches, which means reading every
+branch's figures and recording none of them. `expense:log` and
+`expense:viewAllBranches` could not express that between them: one is the wrong
+authority and the other is a question of scope. This is the same narrowing that
+produced `GET /supply-delivery-agents` in Task 5 — when a screen needs less than
+a capability grants, the answer is a narrower capability, not the broader one.
+
+**"Who hasn't logged today" is a query, and every branch is asked about its own
+day.** A business with branches in two timezones has no single "today", so
+taking the server's would tell the back office to ring a branch whose day has
+not started. Two queries however many branches there are: the branch list, then
+one grouped count over the (branch, date) pairs it produced. Computed when the
+card loads, so it is exact — a job snapshotting at 20:00 is wrong by 20:05, and
+the requirement says a person makes the call anyway.
+
+**`localDayRange` is the new piece of `utils/datetime.js`.** Expenses are keyed
+on a branch-local date and need no conversion; sales are instants and do.
+`occurredAt::date` would have compared UTC days — counting every sale before
+05:30 IST against the day before — and could not have used the existing index,
+because a function over a column is not indexable. Task 9's day-end export wants
+the same window.
+
+**Design notes.** The category picker is a wrapping row of content-width chips
+rather than anything that divides the line evenly: the list is eight long before
+a business adds one of its own, which is well past where `SegmentedOption`
+stops working. The day card shows **two** money tiles and the difference as a
+full-width line — three equal shares of a 393dp phone leave each figure about
+75dp, which holds ₹2,000 and not ₹1,50,000, and the difference is the conclusion
+drawn from the two above it rather than a third peer.
+
+`backend/tests/expense.test.js` — 16 tests across seeding through both business
+creation paths, custom categories, refusing to rename a standard one, the
+positive-amount and future-date rules, correcting and removing an entry, the day
+and month views, the compliance list for today and for a past date, and the four
+permission boundaries (desk reads but cannot log, cashier cannot reach another
+branch by id or by route, cashier cannot see the business-wide list).

@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const expenseService = require('./expense.service');
 const { fail } = require('../errors');
 
 function createBranch(
@@ -306,6 +307,14 @@ async function createBusinessForUser(userId, data, client = prisma) {
       joinedAt: new Date(),
     },
   });
+
+  // Requirement 10's starting categories, inside the same transaction as the
+  // business itself. A business with none cannot log an expense at all, so
+  // this is a default of the business rather than a step someone can skip —
+  // which is exactly the kind of drift between the two creation paths that
+  // this function exists to prevent.
+  await expenseService.seedCategories(business.id, client);
+
   return { business, membership };
 }
 

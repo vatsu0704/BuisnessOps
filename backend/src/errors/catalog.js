@@ -88,6 +88,15 @@ const API_MESSAGES = {
   PRODUCT_BUSINESS_WIDE_NOT_PERMITTED:
     'Only someone with access to every branch can add or change a product the whole business sells',
 
+  // --- Expenses (Task 6, requirement 10) ----------------------------------
+  EXPENSE_NOT_FOUND: 'That expense no longer exists',
+  EXPENSE_DATE_IN_FUTURE: "An expense cannot be logged for a day that has not happened at this branch yet",
+  EXPENSE_CATEGORY_NOT_FOUND: 'That expense category no longer exists',
+  EXPENSE_CATEGORY_INACTIVE: '{{name}} has been withdrawn — pick another category',
+  EXPENSE_CATEGORY_DUPLICATE: 'There is already a category called {{name}}',
+  EXPENSE_CATEGORY_IS_STANDARD:
+    'This is one of the standard categories, so its name comes from the app and cannot be changed. It can be withdrawn instead',
+
   // --- Business and branches ----------------------------------------------
   BUSINESS_NOT_FOUND: 'Business not found',
   BRANCH_IS_WAREHOUSE: 'This is a warehouse, not a branch — it does not sell or order raw material',
@@ -222,6 +231,11 @@ const FIELD_MESSAGES = {
   WORK_WEEK_NOTHING_TO_UPDATE: 'provide weeklyOffDays or unmarkedWorkingDayStatus',
   BRANCH_ID_OR_NULL: 'branchId must be a string, or null for a business-wide holiday',
   PROVIDER_REQUIRED: 'provider is required (e.g. CSV_UPLOAD)',
+
+  AMOUNT_POSITIVE: 'amount must be a number greater than zero',
+  CATEGORY_NAME_LENGTH: 'name must be between 1 and {{max}} characters',
+  EXPENSE_NOTHING_TO_UPDATE: 'provide categoryId, amount, date, note or paymentMethod',
+  CATEGORY_NOTHING_TO_UPDATE: 'provide name or isActive',
 };
 
 module.exports = { API_MESSAGES, FIELD_MESSAGES };

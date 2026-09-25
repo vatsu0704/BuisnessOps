@@ -23,6 +23,8 @@ import SupplyOrderDetailScreen from '@/screens/SupplyOrderDetailScreen';
 import SupplyItemFormScreen from '@/screens/SupplyItemFormScreen';
 import WarehouseDeskScreen from '@/screens/WarehouseDeskScreen';
 import DeliveryQueueScreen from '@/screens/DeliveryQueueScreen';
+import ExpensesScreen from '@/screens/ExpensesScreen';
+import AddExpenseScreen from '@/screens/AddExpenseScreen';
 import { useMembership } from '@/hooks/useBusinessId';
 import TabNavigator from './TabNavigator';
 import { canOpenRoute } from './routeAccess';
@@ -53,6 +55,10 @@ export type AppStackParamList = {
   SupplyItemForm: { inventoryItemId?: string } | undefined;
   SupplyDesk: undefined;
   SupplyDeliveries: undefined;
+  // Branch expenses (requirement 10). Both take a branch so the back office
+  // can follow a branch it is chasing straight into that branch's figures.
+  Expenses: { branchId?: string } | undefined;
+  AddExpense: { branchId?: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -91,6 +97,8 @@ const MODAL_SCREENS: { name: keyof AppStackParamList; component: ComponentType<a
   { name: 'SupplyItemForm', component: SupplyItemFormScreen },
   { name: 'SupplyDesk', component: WarehouseDeskScreen },
   { name: 'SupplyDeliveries', component: DeliveryQueueScreen },
+  { name: 'Expenses', component: ExpensesScreen },
+  { name: 'AddExpense', component: AddExpenseScreen },
 ];
 
 /**

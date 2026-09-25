@@ -47,6 +47,10 @@ export const ROUTE_CAPABILITY: Partial<Record<keyof AppStackParamList, Capabilit
   SupplyItemForm: 'supplyItem:manage',
   SupplyDesk: 'supplyOrder:fulfil',
   SupplyDeliveries: 'supplyOrder:deliver',
+  // Reading a branch's spending and recording it are separate capabilities, so
+  // the back-office desk opens this screen and is offered no way to log.
+  Expenses: 'expense:view',
+  AddExpense: 'expense:log',
 };
 
 /** Is this route one the current membership may open? */

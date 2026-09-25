@@ -951,11 +951,17 @@ exception and the new lint scripts.
 
 ## 5. Open decisions
 
-**Does supply-order spend double-count against expenses?** (R13, Task 8.) If a cashier
-pays for a supply order *and* logs it as an expense, the net-profit formula subtracts it
-twice. Proposed answer: supply orders are excluded from the manual expense categories,
-and the export flags any overlap it finds. **Confirm before Task 8 ships**, because it
-changes a number people make decisions on.
+**Does supply-order spend double-count against expenses?** (R13, Task 8.)
+**Decided in Task 6, because that is where it had to be enforced.** If a cashier paid
+for a supply order *and* logged it as an expense, the net-profit formula would subtract
+it twice. So the seeded expense categories deliberately contain **no raw-material or
+stock category** — `MILK, GAS, ELECTRICITY, RENT, REPAIRS, TRANSPORT, PETTY, OTHER` —
+and supply spend is read from `supply_orders`, where it already is. Expenses are
+everything else.
+
+What remains for Task 8 is the part a category list cannot enforce: a business may add a
+category of its own and call it anything, so the export flags overlap it finds rather
+than pretending the shape of the data prevents it.
 
 **Does a counter order record how it was paid?** R1 says no payment step, so the default
 is "unspecified". But cash-vs-digital mix is a named Phase 5 metric, and it costs one

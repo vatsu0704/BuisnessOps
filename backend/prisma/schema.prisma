@@ -119,6 +119,8 @@ model Business {
   dayCloses             DayClose[]
   supplyOrders          SupplyOrder[]
   supplyOrderCounter    SupplyOrderCounter?
+  expenseCategories     ExpenseCategory[]
+  expenses              Expense[]
 
   @@map("businesses")
 }
@@ -212,6 +214,7 @@ model Branch {
   tokenCounters         BranchTokenCounter[]
   dayCloses             DayClose[]
   supplyOrders          SupplyOrder[]
+  expenses              Expense[]
 
   @@unique([businessId, code])
   @@index([businessId])
@@ -291,6 +294,7 @@ model Membership {
   supplyOrdersPlaced SupplyOrder[]      @relation("SupplyOrderPlacedBy")
   supplyDeliveries   SupplyOrder[]      @relation("SupplyOrderDeliveryAgent")
   supplyOrderEvents  SupplyOrderEvent[] @relation("SupplyOrderEventActor")
+  expensesRecorded   Expense[]          @relation("ExpenseRecordedBy")
 
   @@unique([userId, businessId])
   @@index([businessId])
@@ -1055,4 +1059,109 @@ model SupplyOrderCounter {
   lastNumber Int      @default(0)
 
   @@map("supply_order_counters")
+}
+
+// ---------------------------------------------------------------------------
+// Task 6 — Branch expenses (requirement 10)
+//
+// "Gas bill, electricity bill, petty expenses and everything else. Also daily
+// cost: how much did I spend today? And how much did I sell today?"
+//
+// The counterpart to CounterOrder: that table is what a branch took in, this is
+// what it paid out. Neither is projected into the other — a sale and a cost are
+// different facts — and Task 8 reads both to arrive at net profit.
+// ---------------------------------------------------------------------------
+
+// What a branch spends money on.
+//
+// Per business rather than global, because one business's "Milk" is another's
+// "Fuel" — and because a business that adds "Vegetables" must not add it to
+// everybody else's list.
+//
+// ## Why a code AND a name
+//
+// Every business starts with the same seven categories, and those are shown to
+// a cashier who may be reading the app in Gujarati. The backend cannot
+// translate — it does not know the reader's language, which is the whole reason
+// errors travel as codes. So a seeded category carries `code`, and the device
+// renders `t('expenseCategory.<code>')`; `name` is the English fallback, the
+// same role the English in errors/catalog.js plays.
+//
+// A category somebody types carries `code = null` and is shown verbatim,
+// because their own words are not ours to translate.
+//
+// ## What is deliberately NOT here
+//
+// There is no "raw material" or "stock" category, and that is the answer to the
+// double-count question REQUIREMENTS.md §5 raised: a supply order is already a
+// cost recorded in SupplyOrder, so a category inviting someone to log it again
+// by hand would subtract it twice from net profit. Task 8 reads supply spend
+// from supply orders; expenses are everything else.
+model ExpenseCategory {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Set for the seeded set, null for one somebody typed.
+  code String?
+  name String
+
+  // Withdrawn rather than deleted: a category is on expenses already logged,
+  // and deleting it would rewrite what those rows say they were for.
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expenses Expense[]
+
+  // Postgres treats NULLs as distinct, so this constrains the seeded set to one
+  // row per code per business while leaving custom categories (code = null)
+  // unconstrained by it — which is what the name key below is for.
+  @@unique([businessId, code])
+  @@unique([businessId, name])
+  @@index([businessId, isActive])
+  @@map("expense_categories")
+}
+
+model Expense {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  amount   Decimal @db.Decimal(12, 2)
+  currency String
+
+  // The branch's own local date, exactly as CounterOrder.tokenDate is, so
+  // "today's spend against today's sales" compares two figures drawn from the
+  // same day. Keyed on UTC, a branch in Asia/Kolkata would file everything
+  // spent before 05:30 against yesterday.
+  expenseDate DateTime @db.Date
+
+  // "Today I took ₹2,000 of milk" — the category carries the what, this
+  // carries the detail that is nobody else's to translate.
+  note String?
+
+  // Cash or UPI, for the same cash-mix figure CounterOrder.paymentMethod
+  // feeds. UNSPECIFIED rather than a guess, for the same reason.
+  paymentMethod PaymentMethod @default(UNSPECIFIED)
+
+  recordedByMembershipId String?
+  recordedByMembership   Membership? @relation("ExpenseRecordedBy", fields: [recordedByMembershipId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // The compliance query — "which branches logged nothing today" — is a
+  // left join on (branchId, expenseDate), and the day view reads the same key.
+  @@index([businessId, branchId, expenseDate])
+  @@index([businessId, expenseDate])
+  @@index([categoryId])
+  @@map("expenses")
 }

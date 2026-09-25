@@ -161,6 +161,14 @@ scoped.post('/staff', requirePermission('staff:create'), staffController.createS
   `GET /branches`. The business switcher calls them for every member, including
   STAFF. Adding a `requirePermission` there looks like tidying and silently
   breaks switching for everyone who is not an admin.
+- **A `@db.Date` column already holds a branch's own calendar day; a `DateTime`
+  holds an instant.** `CounterOrder.tokenDate` and `Expense.expenseDate` are
+  branch-local and need no conversion, so a day or month window over them is a
+  plain range. `Transaction.occurredAt` is an instant, so a branch's day is the
+  window of real time it occupied — `localDayRange(key, timeZone)` in
+  `utils/datetime.js`. Never reach for `occurredAt::date`: it compares **UTC**
+  days, which files every sale before 05:30 IST against the day before, and a
+  function over a column cannot use the index behind it.
 - Adding a role means a Postgres enum change, and `ALTER TYPE … ADD VALUE`
   cannot be *used* in the transaction that added it — Prisma wraps each
   migration file in one, so data work using a new value needs its own migration

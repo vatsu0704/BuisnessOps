@@ -109,7 +109,13 @@
       "PUNCH_LOCATION_ALWAYS_REQUIRED": "तुमच्या पंचमध्ये ठिकाण नोंदले जाते, त्यामुळे लोकेशन सुरू असणे आवश्यक आहे",
       "SUPPLY_ORDER_ASSIGN_NOT_APPLICABLE": "जी ऑर्डर {{status}} आहे ती डिलिव्हरी एजंटला देता येत नाही",
       "SUPPLY_ORDER_CASH_NOT_CONFIRMED": "ही ऑर्डर डिलिव्हरीवर रोख आहे — पोहोचवले नोंदवण्यापूर्वी पैसे घेतल्याची खात्री करा",
-      "BRANCH_IS_WAREHOUSE": "हे गोदाम आहे, शाखा नाही — इथे विक्री होत नाही आणि कच्चा माल मागवला जात नाही"
+      "BRANCH_IS_WAREHOUSE": "हे गोदाम आहे, शाखा नाही — इथे विक्री होत नाही आणि कच्चा माल मागवला जात नाही",
+      "EXPENSE_NOT_FOUND": "हा खर्च आता अस्तित्वात नाही",
+      "EXPENSE_DATE_IN_FUTURE": "या शाखेवर तो दिवस अजून आलेलाच नाही",
+      "EXPENSE_CATEGORY_NOT_FOUND": "हा प्रवर्ग आता अस्तित्वात नाही",
+      "EXPENSE_CATEGORY_INACTIVE": "{{name}} मागे घेतला आहे — दुसरा प्रवर्ग निवडा",
+      "EXPENSE_CATEGORY_DUPLICATE": "{{name}} नावाचा प्रवर्ग आधीच आहे",
+      "EXPENSE_CATEGORY_IS_STANDARD": "हा प्रमाणित प्रवर्ग आहे, त्याचे नाव ॲपमधून येते. तुम्ही तो मागे घेऊ शकता"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} आवश्यक आहे",
@@ -151,7 +157,11 @@
       "ROW_DATE_INVALID": "ओळ {{row}}: occurred_at वैध तारीख नाही",
       "DATETIME_INVALID": "{{field}} वैध तारीख आणि वेळ असावी",
       "DATETIME_IN_PAST": "{{field}} भूतकाळातील असू शकत नाही",
-      "DELAY_MINUTES_RANGE": "विलंब 1 ते {{max}} मिनिटांदरम्यान पूर्ण संख्येत असावा"
+      "DELAY_MINUTES_RANGE": "विलंब 1 ते {{max}} मिनिटांदरम्यान पूर्ण संख्येत असावा",
+      "AMOUNT_POSITIVE": "शून्यापेक्षा मोठी रक्कम टाका",
+      "CATEGORY_NAME_LENGTH": "प्रवर्गाचे नाव जास्तीत जास्त {{max}} अक्षरांचे असू शकते",
+      "EXPENSE_NOTHING_TO_UPDATE": "प्रवर्ग, रक्कम, तारीख, टीप किंवा पैसे देण्याची पद्धत बदला",
+      "CATEGORY_NOTHING_TO_UPDATE": "नाव बदला, किंवा प्रवर्ग मागे घ्या"
     },
     "field": {
       "name": "नाव",
@@ -339,7 +349,11 @@
     "supplyTrackTitle": "पुरवठा ऑर्डर पहा",
     "supplyTrackSubtitle": "प्रत्येक ऑर्डर कुठवर आली",
     "supplyCatalogTitle": "कच्च्या मालाची यादी",
-    "supplyCatalogSubtitle": "गोदाम काय पुरवते आणि कोणत्या दरात"
+    "supplyCatalogSubtitle": "गोदाम काय पुरवते आणि कोणत्या दरात",
+    "expensesTitle": "आजचे खर्च",
+    "expensesSubtitle": "काय गेले, काय आले",
+    "expenseGapsTitle": "विचारायच्या शाखा",
+    "expenseGapsSubtitle": "कोणी आजचा खर्च नोंदवला नाही"
   },
   "phase": {
     "examplesLabel": "तुम्ही काय विचारू शकाल"
@@ -502,6 +516,69 @@
     "OPEN": "उघडे",
     "CLOSED": "दिले",
     "VOID": "रद्द"
+  },
+  "paymentMethod": {
+    "CASH": "रोख",
+    "CARD": "कार्ड",
+    "UPI": "UPI",
+    "WALLET": "वॉलेट",
+    "OTHER": "इतर",
+    "MIXED": "मिश्र",
+    "UNSPECIFIED": "सांगितले नाही"
+  },
+  "expenses": {
+    "title": "खर्च",
+    "subtitle": "या शाखेने काय दिले, आणि काय कमावले",
+    "todaySection": "आज",
+    "spent": "खर्च",
+    "sold": "विक्री",
+    "difference": "फरक",
+    "noneToday": "आज काहीच नोंदवले नाही",
+    "noneTodayHint": "दिवसाचा गॅस, दूध आणि किरकोळ खर्च नोंदवा म्हणजे महिन्याचा हिशेब लागेल.",
+    "logExpense": "खर्च नोंदवा",
+    "breakdownSection": "कुठे गेले",
+    "monthSection": "या महिन्यात",
+    "monthTotal": "{{count}} नोंदीत {{amount}}",
+    "monthTotal_plural": "{{count}} नोंदींत {{amount}}",
+    "monthEmpty": "या महिन्यात अजून काहीच नोंदवले नाही",
+    "entrySection": "नोंदी",
+    "entryCount": "{{count}} नोंद",
+    "entryCount_plural": "{{count}} नोंदी",
+    "by": "{{name}} यांनी",
+    "deleteTitle": "हा खर्च काढून टाकायचा?",
+    "deleteBody": "{{category}} चा {{amount}} आजच्या एकूणातून वजा होईल.",
+    "delete": "काढून टाका",
+    "addTitle": "खर्च नोंदवा",
+    "branch": "कोणती शाखा?",
+    "category": "कशासाठी?",
+    "amount": "किती?",
+    "date": "कोणत्या दिवसाचा?",
+    "note": "टीप",
+    "notePlaceholder": "उदा. दुधाचे दोन कॅन",
+    "paidWith": "पैसे दिले",
+    "save": "खर्च जतन करा",
+    "newCategory": "प्रवर्ग जोडा",
+    "newCategoryTitle": "तुमचा स्वतःचा प्रवर्ग",
+    "newCategoryHint": "प्रमाणित यादीत नसलेले — भाजी, कर्मचाऱ्यांचा चहा, पॅकिंग.",
+    "newCategoryPlaceholder": "प्रवर्गाचे नाव",
+    "create": "प्रवर्ग जोडा",
+    "cancel": "राहू द्या",
+    "gapsTitle": "काहीच नोंदवले नसलेल्या शाखा",
+    "gapsSubtitle": "{{count}} शाखेने आज कोणताही खर्च नोंदवला नाही",
+    "gapsSubtitle_plural": "{{count}} शाखांनी आज कोणताही खर्च नोंदवला नाही",
+    "gapsAllDone": "प्रत्येक शाखेने आज नोंदवले आहे",
+    "gapsLogged": "आज {{amount}}",
+    "gapsNothing": "आज काहीच नाही"
+  },
+  "expenseCategory": {
+    "MILK": "दूध",
+    "GAS": "गॅस",
+    "ELECTRICITY": "वीज",
+    "RENT": "भाडे",
+    "REPAIRS": "दुरुस्ती",
+    "TRANSPORT": "वाहतूक",
+    "PETTY": "किरकोळ खर्च",
+    "OTHER": "इतर"
   },
   "upload": {
     "title": "विक्री डेटा अपलोड करा",

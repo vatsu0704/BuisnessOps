@@ -837,3 +837,90 @@ Both nullable. Every branch that existed before this column has neither, and a b
 
 The destination travels on the supply order (`ORDER_INCLUDE.branch` selects it alongside `latitude`/`longitude`), because the delivery agent's order screen is the only thing they open and branch endpoints are not theirs to call. The map link prefers the coordinates when the branch has them and falls back to the written address.
 
+
+---
+
+## 17. Branch expenses — built (Branch Operations Task 6)
+
+Requirement 10's tables. Migration `20260925210000_branch_expenses`.
+
+The counterpart to section 12: `CounterOrder` is what a branch took **in**,
+`Expense` is what it paid **out**. Neither projects into the other — a sale and
+a cost are different facts — and Task 8 reads both to arrive at net profit.
+
+### `ExpenseCategory`
+
+What a branch spends money on. Per business, not global: one business's "Milk"
+is another's "Fuel", and a business that adds "Vegetables" must not add it to
+everybody else's list.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId | String | FK, cascade |
+| code | String, nullable | set for the eight seeded categories, `null` for one somebody typed |
+| name | String | the **English fallback** for a coded category, and the only name a custom one has |
+| isActive | Boolean | withdrawn, never deleted: a category is attached to expenses already logged, and removing it would rewrite what those rows say they were for |
+| sortOrder | Int | seeded 10–80; a custom category sorts at 100, after all of them |
+| unique | (businessId, code) | Postgres treats NULLs as distinct, so this constrains the seeded set to one row per code and leaves custom rows unconstrained by it |
+| unique | (businessId, name) | which is what stops two "Vegetables" |
+
+**Why a code *and* a name.** Every business starts with the same eight
+categories, and those are shown to a cashier who may be reading the app in
+Gujarati. The backend cannot translate — it does not know the reader's language,
+which is the whole reason errors travel as codes — so a seeded category sends
+its `code` and the device renders `t('expenseCategory.<CODE>')`. `name` plays
+exactly the role the English in `errors/catalog.js` plays: what curl and the
+logs see. A category somebody typed has `code: null` and is shown verbatim,
+because their own words are not ours to translate.
+
+The seeded set is `MILK, GAS, ELECTRICITY, RENT, REPAIRS, TRANSPORT, PETTY,
+OTHER`. It is written in **two** places by necessity — `SEEDED_CATEGORIES` in
+`expense.service.js`, which runs inside the transaction that creates a business,
+and the backfill in the migration, which seeds the businesses that already
+existed. Adding a category later therefore needs a new migration as well as an
+edit, or businesses will differ by age.
+
+**There is deliberately no raw-material category.** See section 5 of
+`REQUIREMENTS.md`: a supply order is already a cost recorded in `supply_orders`,
+and a category inviting someone to log it again by hand would subtract it twice
+from net profit.
+
+### `Expense`
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId / branchId | String | FK, cascade |
+| categoryId | String | FK, **Restrict** — a category with spending against it cannot be deleted out from under it |
+| amount | Decimal(12,2) | strictly positive. Zero is a half-typed form; a negative is a refund, which this table does not model |
+| currency | String | branch currency, falling back to the business default |
+| expenseDate | Date | the **branch's** own local date, exactly as `CounterOrder.tokenDate` is — which is what makes "today's spend against today's sales" compare two figures from the same day |
+| note | String, nullable | "two cans of milk". The category carries the what; this carries the detail, and is shown as typed |
+| paymentMethod | Enum `PaymentMethod` | defaults `UNSPECIFIED`, feeding the same cash-mix figure `CounterOrder.paymentMethod` does |
+| recordedByMembershipId | String, nullable | from the session, never the body. `SetNull` |
+| index | (businessId, branchId, expenseDate) | the day and month views |
+| index | (businessId, expenseDate) | the compliance query |
+
+**A WAREHOUSE may have expenses.** `expense.service.js`'s `branchOf` is the one
+that does *not* raise `BRANCH_IS_WAREHOUSE`, unlike its counterparts in
+`counterOrder.service.js` and `supplyOrder.service.js`. A warehouse has no till
+and orders no raw material from itself, but it does pay an electricity bill — a
+location with costs and no way to record them is a hole in the figures, not a
+rule being enforced.
+
+### Reading the day against the day: `localDayRange`
+
+`expenseDate` is already a branch-local calendar day, so the expense side of
+"what did I spend today?" needs no conversion. The sales side does:
+`Transaction.occurredAt` is an *instant*, so `utils/datetime.js` gained
+`localDayRange(key, timeZone)`, which returns the half-open `[start, end)` UTC
+window a branch's calendar day occupied.
+
+Asking Postgres for `occurredAt::date` instead would have compared **UTC** days
+— counting every sale before 05:30 IST against the day before — and could not
+have used the `(businessId, branchId, occurredAt)` index either, because a
+function over a column is not indexable. The helper samples the zone offset
+twice so a daylight-saving day is still 23 or 25 hours long; India never shifts,
+so the second read is a no-op there and correct elsewhere. Task 9's day-end
+export needs the same window.

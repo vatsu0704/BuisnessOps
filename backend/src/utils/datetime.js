@@ -16,6 +16,27 @@
 // are only ever a handful of distinct timezones in play.
 const formatters = new Map();
 
+const wallFormatters = new Map();
+
+function wallClockFormatter(timeZone) {
+  if (!wallFormatters.has(timeZone)) {
+    wallFormatters.set(
+      timeZone,
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    );
+  }
+  return wallFormatters.get(timeZone);
+}
+
 function zoneFormatter(timeZone) {
   if (!formatters.has(timeZone)) {
     formatters.set(
@@ -53,6 +74,49 @@ function localDateKey(instant, timeZone) {
   const parts = zoneFormatter(safeZone(timeZone)).formatToParts(instant);
   const at = (type) => parts.find((p) => p.type === type).value;
   return `${at('year')}-${at('month')}-${at('day')}`;
+}
+
+/**
+ * How far ahead of UTC `timeZone` is at `instant`, in minutes.
+ *
+ * Derived by formatting the instant in the zone and reading the wall clock
+ * back, because there is no API that simply states an offset.
+ */
+function offsetMinutesAt(instant, timeZone) {
+  const parts = wallClockFormatter(safeZone(timeZone)).formatToParts(instant);
+  const at = (type) => Number(parts.find((p) => p.type === type).value);
+  // Some ICU builds render midnight as hour 24 under hour12: false.
+  const wall = Date.UTC(at('year'), at('month') - 1, at('day'), at('hour') % 24, at('minute'), at('second'));
+  return (wall - instant.getTime()) / 60000;
+}
+
+/**
+ * The half-open [start, end) UTC instants of one local calendar day.
+ *
+ * `@db.Date` columns already hold a branch-local calendar day, so anything
+ * keyed on one needs no conversion. Transaction.occurredAt is an *instant*,
+ * though, so answering "what did this branch sell today?" means turning the
+ * branch's local day into the window of real time it occupied. Asking Postgres
+ * for `occurredAt::date` instead would compare UTC days and, in IST, count
+ * every sale before 05:30 against the day before — and it could not use the
+ * (businessId, branchId, occurredAt) index either, because a function over the
+ * column is not indexable.
+ *
+ * The second offset read is the daylight-saving correction: the offset is
+ * sampled at UTC midnight, which can fall on the other side of a transition
+ * from the local midnight being sought. India never shifts, so this is a no-op
+ * there and correct elsewhere.
+ */
+function localDayRange(key, timeZone) {
+  const utcMidnight = dateOnly(key);
+  const firstGuess = new Date(utcMidnight.getTime() - offsetMinutesAt(utcMidnight, timeZone) * 60000);
+  const start = new Date(utcMidnight.getTime() - offsetMinutesAt(firstGuess, timeZone) * 60000);
+
+  const nextUtcMidnight = new Date(utcMidnight.getTime() + 86400000);
+  const nextGuess = new Date(nextUtcMidnight.getTime() - offsetMinutesAt(nextUtcMidnight, timeZone) * 60000);
+  const end = new Date(nextUtcMidnight.getTime() - offsetMinutesAt(nextGuess, timeZone) * 60000);
+
+  return { start, end };
 }
 
 /** 'YYYY-MM-DD' to the UTC-midnight Date that @db.Date columns store. */
@@ -113,6 +177,7 @@ module.exports = {
   localDateKey,
   dateOnly,
   dateKeyOf,
+  localDayRange,
   todayKeyInZone,
   todayInZone,
   weekdayOf,

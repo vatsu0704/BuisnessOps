@@ -109,7 +109,13 @@
       "PUNCH_LOCATION_ALWAYS_REQUIRED": "તમારા પંચમાં સ્થળ નોંધાય છે, તેથી લોકેશન ચાલુ રાખવું જરૂરી છે",
       "SUPPLY_ORDER_ASSIGN_NOT_APPLICABLE": "જે ઓર્ડર {{status}} છે તે ડિલિવરી એજન્ટને આપી શકાતો નથી",
       "SUPPLY_ORDER_CASH_NOT_CONFIRMED": "આ ઓર્ડર ડિલિવરી પર રોકડ છે — પહોંચાડ્યું નોંધતા પહેલાં ખાતરી કરો કે તમે પૈસા લીધા છે",
-      "BRANCH_IS_WAREHOUSE": "આ ગોડાઉન છે, શાખા નહીં — અહીં વેચાણ થતું નથી કે કાચો માલ મંગાવાતો નથી"
+      "BRANCH_IS_WAREHOUSE": "આ ગોડાઉન છે, શાખા નહીં — અહીં વેચાણ થતું નથી કે કાચો માલ મંગાવાતો નથી",
+      "EXPENSE_NOT_FOUND": "આ ખર્ચ હવે અસ્તિત્વમાં નથી",
+      "EXPENSE_DATE_IN_FUTURE": "આ શાખા પર એ દિવસ હજી આવ્યો જ નથી",
+      "EXPENSE_CATEGORY_NOT_FOUND": "આ શ્રેણી હવે અસ્તિત્વમાં નથી",
+      "EXPENSE_CATEGORY_INACTIVE": "{{name}} પાછી ખેંચી લેવાઈ છે — બીજી શ્રેણી પસંદ કરો",
+      "EXPENSE_CATEGORY_DUPLICATE": "{{name}} નામની શ્રેણી પહેલેથી છે",
+      "EXPENSE_CATEGORY_IS_STANDARD": "આ પ્રમાણભૂત શ્રેણી છે, તેનું નામ ઍપમાંથી આવે છે. તમે તેને પાછી ખેંચી શકો છો"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} જરૂરી છે",
@@ -151,7 +157,11 @@
       "ROW_DATE_INVALID": "પંક્તિ {{row}}: occurred_at માન્ય તારીખ નથી",
       "DATETIME_INVALID": "{{field}} યોગ્ય તારીખ અને સમય હોવો જોઈએ",
       "DATETIME_IN_PAST": "{{field}} ભૂતકાળનો હોઈ શકે નહીં",
-      "DELAY_MINUTES_RANGE": "વિલંબ 1 થી {{max}} મિનિટ વચ્ચે પૂર્ણ સંખ્યામાં હોવો જોઈએ"
+      "DELAY_MINUTES_RANGE": "વિલંબ 1 થી {{max}} મિનિટ વચ્ચે પૂર્ણ સંખ્યામાં હોવો જોઈએ",
+      "AMOUNT_POSITIVE": "શૂન્યથી મોટી રકમ દાખલ કરો",
+      "CATEGORY_NAME_LENGTH": "શ્રેણીનું નામ વધુમાં વધુ {{max}} અક્ષરનું હોઈ શકે",
+      "EXPENSE_NOTHING_TO_UPDATE": "શ્રેણી, રકમ, તારીખ, નોંધ કે ચુકવણીની રીત બદલો",
+      "CATEGORY_NOTHING_TO_UPDATE": "નામ બદલો, અથવા શ્રેણી પાછી ખેંચો"
     },
     "field": {
       "name": "નામ",
@@ -339,7 +349,11 @@
     "supplyTrackTitle": "સપ્લાય ઓર્ડર જુઓ",
     "supplyTrackSubtitle": "દરેક ઓર્ડર ક્યાં પહોંચ્યો",
     "supplyCatalogTitle": "કાચા માલની યાદી",
-    "supplyCatalogSubtitle": "ગોડાઉન શું આપે છે અને કયા ભાવે"
+    "supplyCatalogSubtitle": "ગોડાઉન શું આપે છે અને કયા ભાવે",
+    "expensesTitle": "આજના ખર્ચ",
+    "expensesSubtitle": "શું ગયું, શું આવ્યું",
+    "expenseGapsTitle": "જે શાખાઓને પૂછવાનું છે",
+    "expenseGapsSubtitle": "કોણે આજનો ખર્ચ નોંધ્યો નથી"
   },
   "phase": {
     "examplesLabel": "તમે શું પૂછી શકશો"
@@ -502,6 +516,69 @@
     "OPEN": "ખુલ્લું",
     "CLOSED": "આપી દીધું",
     "VOID": "રદ"
+  },
+  "paymentMethod": {
+    "CASH": "રોકડ",
+    "CARD": "કાર્ડ",
+    "UPI": "UPI",
+    "WALLET": "વૉલેટ",
+    "OTHER": "અન્ય",
+    "MIXED": "મિશ્ર",
+    "UNSPECIFIED": "કહ્યું નથી"
+  },
+  "expenses": {
+    "title": "ખર્ચ",
+    "subtitle": "આ શાખાએ શું ચૂકવ્યું, અને શું કમાયું",
+    "todaySection": "આજે",
+    "spent": "ખર્ચ",
+    "sold": "વેચાણ",
+    "difference": "તફાવત",
+    "noneToday": "આજે કશું નોંધાયું નથી",
+    "noneTodayHint": "દિવસનો ગેસ, દૂધ અને પરચૂરણ ખર્ચ નોંધો જેથી મહિનાનો હિસાબ મળે.",
+    "logExpense": "ખર્ચ નોંધો",
+    "breakdownSection": "ક્યાં ગયું",
+    "monthSection": "આ મહિને",
+    "monthTotal": "{{count}} નોંધમાં {{amount}}",
+    "monthTotal_plural": "{{count}} નોંધોમાં {{amount}}",
+    "monthEmpty": "આ મહિને હજી કશું નોંધાયું નથી",
+    "entrySection": "નોંધો",
+    "entryCount": "{{count}} નોંધ",
+    "entryCount_plural": "{{count}} નોંધો",
+    "by": "{{name}} દ્વારા",
+    "deleteTitle": "આ ખર્ચ કાઢી નાખવો?",
+    "deleteBody": "{{category}} નો {{amount}} આજના કુલમાંથી નીકળી જશે.",
+    "delete": "કાઢી નાખો",
+    "addTitle": "ખર્ચ નોંધો",
+    "branch": "કઈ શાખા?",
+    "category": "શેના માટે?",
+    "amount": "કેટલા?",
+    "date": "કયા દિવસનો?",
+    "note": "નોંધ",
+    "notePlaceholder": "દા.ત. દૂધના બે કેન",
+    "paidWith": "ચુકવણી",
+    "save": "ખર્ચ સાચવો",
+    "newCategory": "શ્રેણી ઉમેરો",
+    "newCategoryTitle": "તમારી પોતાની શ્રેણી",
+    "newCategoryHint": "જે પ્રમાણભૂત યાદીમાં નથી — શાકભાજી, સ્ટાફની ચા, પેકિંગ.",
+    "newCategoryPlaceholder": "શ્રેણીનું નામ",
+    "create": "શ્રેણી ઉમેરો",
+    "cancel": "રહેવા દો",
+    "gapsTitle": "જે શાખાઓએ કશું નોંધ્યું નથી",
+    "gapsSubtitle": "{{count}} શાખાએ આજે કોઈ ખર્ચ નોંધ્યો નથી",
+    "gapsSubtitle_plural": "{{count}} શાખાઓએ આજે કોઈ ખર્ચ નોંધ્યો નથી",
+    "gapsAllDone": "દરેક શાખાએ આજે નોંધી દીધું છે",
+    "gapsLogged": "આજે {{amount}}",
+    "gapsNothing": "આજે કશું નહીં"
+  },
+  "expenseCategory": {
+    "MILK": "દૂધ",
+    "GAS": "ગેસ",
+    "ELECTRICITY": "વીજળી",
+    "RENT": "ભાડું",
+    "REPAIRS": "સમારકામ",
+    "TRANSPORT": "હેરફેર",
+    "PETTY": "પરચૂરણ ખર્ચ",
+    "OTHER": "અન્ય"
   },
   "upload": {
     "title": "વેચાણ ડેટા અપલોડ કરો",

@@ -87,6 +87,8 @@ const CAPABILITIES = {
   'supplyOrder:delay': 'Post a delay against an order, with a reason',
 
   // --- Expenses (Task 6) ---
+  'expense:view':
+    "Read a branch's spending and its category breakdown. Separate from expense:log because the back-office desk reads every branch's figures and records none of them, and separate from expense:viewAllBranches because WHICH branches is a question of scope, not of whether you may look at all",
   'expense:log': "Record what a branch spent, by category",
   'expense:viewAllBranches':
     "See every branch's expenses, and which ones have logged nothing today",
@@ -153,7 +155,11 @@ const ROLE_CAPABILITIES = {
     'supplyOrder:fulfil',
     'supplyOrder:delay',
     // Requirement 10: the back-office person calls the branches that have not
-    // logged today's expenses, so they need to see which ones those are.
+    // logged today's expenses, so they need to see which ones those are — and
+    // `expense:view` to open one and see what it did log. They deliberately do
+    // not get `expense:log`: the desk chases the branches, it does not spend
+    // their money for them.
+    'expense:view',
     'expense:viewAllBranches',
   ],
 
@@ -175,6 +181,7 @@ const ROLE_CAPABILITIES = {
     'supplyItem:view',
     'supplyOrder:view',
     'supplyOrder:create',
+    'expense:view',
     'expense:log',
     'staff:create',
     'staff:update',

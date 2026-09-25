@@ -659,14 +659,16 @@ from Flow 15a.
 1. Log in as the **cashier**.
    - ✅ **Expected:** tabs **Home · Products · Staff · Settings**. No Reports.
    - ✅ **Expected:** Home leads with their branch's numbers, then the counter,
-     then the catalog for their branch. No **Your branches** card — they do not
-     edit branches.
+     then **Today's expenses**, then the catalog for their branch. No **Your
+     branches** card — they do not edit branches, and no **Branches to chase**
+     card — their own branch is the only one they can see.
    - ✅ **Expected:** in Products they can add a product for *their* branch, and
      the whole-business option is not offered at all — not offered-and-refused.
 2. Log in as the **warehouse** user or the **delivery agent**.
    - ✅ **Expected:** tabs **Home · Staff · Settings** — no Products, no Reports.
-   - ✅ **Expected:** Home says plainly that their screens are still being
-     built, rather than showing an empty page. Their tools arrive in Task 5.
+   - ✅ **Expected:** the warehouse user gets **Branches to chase** on Home
+     (requirement 10) and the delivery agent does not. Chasing branches for
+     their daily expenses is the back office's job, and carrying orders is not.
 3. Log in as an **owner or manager**.
    - ✅ **Expected:** all five tabs, and Home runs sales tiles → branch list →
      counter → catalog, with the upload card at the foot.
@@ -1155,6 +1157,85 @@ radius — see Flow 18 step 6 for what that message should look like.
 
 ---
 
+## Flow 17n — Expenses: what went out against what came in
+
+Requirement 10. Log in as the **cashier** (Flow 15a). Ring up a token or two in
+Flow 17d first, or "Sold" will read zero and the comparison has nothing to show.
+
+1. On **Home**, tap **Today's expenses**.
+   - ✅ **Expected:** a **Spent** and a **Sold** tile side by side, and
+     **Difference** on its own full-width line below them. The difference is the
+     conclusion drawn from the two figures, not a third number of the same kind,
+     and it turns red when the branch is down on the day.
+2. Tap **Log an expense**.
+   - ✅ **Expected:** eight categories as chips — Milk, Gas, Electricity, Rent,
+     Repairs, Transport, Petty cash, Other — each as wide as its own label,
+     wrapping onto more rows rather than squeezing. No label breaks mid-word in
+     any of the four languages.
+   - ✅ **Expected:** there is **no raw-material or stock category**, on purpose.
+     A supply order is already recorded as a cost; logging it again by hand would
+     subtract it twice from net profit.
+3. Choose **Milk**, enter `2000`, note "two cans", leave the date on today, pick
+   **Cash**, and save.
+   - ✅ **Expected:** back on the expense screen, **Spent** has moved by ₹2,000,
+     **Difference** has moved the other way by the same amount, and a "Milk"
+     chip showing ₹2,000 appears under the tiles. That chip is requirement 10's
+     "today I took ₹2,000 of milk".
+4. Try to save an expense of `0`, and one of `-50`.
+   - ✅ **Expected:** refused both times. Zero is a half-typed form; a negative
+     is a refund, which this does not model.
+5. Set the date to some day **next year** and save.
+   - ✅ **Expected:** refused — that day has not happened at this branch yet.
+     The mistake it usually catches is a mistyped year, and an expense filed
+     into the future never appears in any day anybody looks at.
+6. Tap **Add a category** in the picker, type `Vegetables`, and add it.
+   - ✅ **Expected:** it appears as a chip and is **already chosen** — somebody
+     who just typed it wants this expense to be that. Adding it a second time is
+     refused by name.
+7. Log a second expense against **Gas**, then scroll to **This month**.
+   - ✅ **Expected:** the month total, the category breakdown biggest-first, and
+     a line per day that has any spending. Step the month back — an empty month
+     says so rather than showing a total of zero.
+8. Press the bin on one of today's entries.
+   - ✅ **Expected:** it asks first, naming the amount and the category, and
+     backing out changes nothing. There is no day-close floor on expenses: a gas
+     bill that arrives a week late is the normal case, not the exception.
+
+---
+
+## Flow 17o — The back office rings the branches that have not logged
+
+Requirement 10's last line. Needs two branches, with the cashier of only one of
+them having logged something today (Flow 17n).
+
+1. Log in as the **warehouse** user and look at **Home**.
+   - ✅ **Expected:** a **Branches to chase** card directly under the numbers,
+     saying how many branches have logged no expense today and naming them.
+   - ✅ **Expected:** it is a **list, not a link**. The action here is a phone
+     call, and the only thing needed to make it is the name.
+2. Have the other branch's cashier log an expense, then pull Home down to
+   refresh.
+   - ✅ **Expected:** that branch drops off the list. The answer is computed
+     when the card loads, so it is right at the moment it is read — not as of
+     whenever some job last ran.
+3. Once every branch has logged, look at the card again.
+   - ✅ **Expected:** it turns green, says so, and lists what each branch spent
+     instead — so it is still worth reading on a day when nobody needs ringing.
+4. Tap a branch row.
+   - ✅ **Expected:** that branch's expense screen opens, and there is **no
+     "Log an expense" button on it**. The desk chases branches; it does not
+     spend their money. Reading and recording are separate capabilities, and
+     this is the difference showing up on screen.
+5. As the **cashier**, check Home.
+   - ✅ **Expected:** no **Branches to chase** card. Their own branch is the
+     only one they can see, and a one-row list of yourself answers nothing.
+6. With branches in **two different timezones**, check the card near midnight.
+   - ✅ **Expected:** each branch is judged against **its own** local date. A
+     business spanning timezones has no single "today", and ringing a branch
+     whose day has not started is the failure this avoids.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
 - **No overtime, leave balances or statutory deductions**: hours from
@@ -1196,9 +1277,15 @@ radius — see Flow 18 step 6 for what that message should look like.
   has no staff record, shows as "Attendance not tracked" forever. They are still
   selectable — availability is a caption, not a lock — but the desk gets no help
   from it at a business that does not run attendance.
-- **Expenses are the remaining gap for a cashier** (Task 6). The catalog,
-  counter billing, supply ordering, and their branch's staff and pay all work
-  today.
+- **An expense cannot be edited from the app, only removed and logged again.**
+  The endpoint takes a correction (`PATCH /expenses/:id`) and the backend tests
+  cover it; the screen offers the bin and not a pencil. Removing and re-adding
+  reaches the same place in two taps more.
+- **The warehouse is counted in "branches to chase".** It is a location with an
+  electricity bill, so it can log expenses and is expected to — but it has no
+  till, so opening its expense screen shows a **Sold** of zero and a difference
+  that is simply its spending. That is right for cash movement and will need
+  deciding again when Task 8 works out net profit.
 - **The "ask a question" bar and the AI notice are gone from Home**, along with
   the chat-bubble Home tab icon — requirement 7. They are hidden behind a flag,
   not deleted, and come back when the query engine does (Phase 2).

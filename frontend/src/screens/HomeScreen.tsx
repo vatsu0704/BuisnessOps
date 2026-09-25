@@ -26,6 +26,7 @@ import PhaseNotice from '@/components/PhaseNotice';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
 import TodayPunchCard from '@/components/TodayPunchCard';
+import ExpenseGapsCard from '@/components/expense/ExpenseGapsCard';
 import BranchCatalogSection from '@/components/home/BranchCatalogSection';
 import BranchesSection from '@/components/home/BranchesSection';
 import SalesTilesSection from '@/components/home/SalesTilesSection';
@@ -85,6 +86,11 @@ const SECTIONS: {
   // The till (requirement 1). A cashier has it as a tab as well; an owner or
   // manager trades that tab slot for Reports, so for them this is the way in.
   { key: 'counter', capability: 'counterOrder:create', Component: CounterSection },
+  // Requirement 10. The chase list sits directly under the numbers because it
+  // is the one card on Home that asks somebody to do something today, and the
+  // branch's own expense card follows it.
+  { key: 'expenseGaps', capability: 'expense:viewAllBranches', Component: ExpenseGapsSection },
+  { key: 'expenses', capability: 'expense:log', Component: ExpensesSection },
   // Requirement 4 — the catalog every branch sells from.
   { key: 'catalog', capability: 'product:view', Component: BranchCatalogSection },
   // Requirement 3. The warehouse desk has this as a tab; an admin reaches it
@@ -207,6 +213,28 @@ function DeliveriesSection() {
       onPress={() => navigation.navigate('SupplyDeliveries')}
     />
   );
+}
+
+function ExpensesSection() {
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  return (
+    <InfoCard
+      testID="home-open-expenses"
+      icon="wallet-outline"
+      title={t('home.expensesTitle')}
+      subtitle={t('home.expensesSubtitle')}
+      onPress={() => navigation.navigate('Expenses')}
+    />
+  );
+}
+
+/**
+ * Not an InfoCard: the back office's question is "who do I ring?", and the
+ * answer is a list of names rather than a door to another screen.
+ */
+function ExpenseGapsSection() {
+  return <ExpenseGapsCard />;
 }
 
 function UploadSection() {

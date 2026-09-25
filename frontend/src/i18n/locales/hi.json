@@ -109,7 +109,13 @@
       "PUNCH_LOCATION_ALWAYS_REQUIRED": "आपके पंच में जगह दर्ज होती है, इसलिए लोकेशन चालू रखना ज़रूरी है",
       "SUPPLY_ORDER_ASSIGN_NOT_APPLICABLE": "जो ऑर्डर {{status}} है वह किसी डिलीवरी एजेंट को नहीं दी जा सकती",
       "SUPPLY_ORDER_CASH_NOT_CONFIRMED": "यह ऑर्डर डिलीवरी पर नक़द है — पहुँचा दिया दर्ज करने से पहले पुष्टि करें कि आपने पैसे ले लिए हैं",
-      "BRANCH_IS_WAREHOUSE": "यह गोदाम है, शाखा नहीं — यहाँ न बिक्री होती है न कच्चा माल मँगाया जाता है"
+      "BRANCH_IS_WAREHOUSE": "यह गोदाम है, शाखा नहीं — यहाँ न बिक्री होती है न कच्चा माल मँगाया जाता है",
+      "EXPENSE_NOT_FOUND": "यह खर्च अब मौजूद नहीं है",
+      "EXPENSE_DATE_IN_FUTURE": "इस ब्रांच पर वह दिन अभी आया ही नहीं है",
+      "EXPENSE_CATEGORY_NOT_FOUND": "यह श्रेणी अब मौजूद नहीं है",
+      "EXPENSE_CATEGORY_INACTIVE": "{{name}} हटा दी गई है — कोई और श्रेणी चुनें",
+      "EXPENSE_CATEGORY_DUPLICATE": "{{name}} नाम की श्रेणी पहले से है",
+      "EXPENSE_CATEGORY_IS_STANDARD": "यह मानक श्रेणी है, इसका नाम ऐप से आता है। आप इसे हटा सकते हैं"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} आवश्यक है",
@@ -151,7 +157,11 @@
       "ROW_DATE_INVALID": "पंक्ति {{row}}: occurred_at एक मान्य तारीख नहीं है",
       "DATETIME_INVALID": "{{field}} एक सही तारीख़ और समय होना चाहिए",
       "DATETIME_IN_PAST": "{{field}} बीते समय का नहीं हो सकता",
-      "DELAY_MINUTES_RANGE": "देरी 1 से {{max}} मिनट के बीच पूरी संख्या में होनी चाहिए"
+      "DELAY_MINUTES_RANGE": "देरी 1 से {{max}} मिनट के बीच पूरी संख्या में होनी चाहिए",
+      "AMOUNT_POSITIVE": "शून्य से बड़ी रकम डालें",
+      "CATEGORY_NAME_LENGTH": "श्रेणी का नाम ज़्यादा से ज़्यादा {{max}} अक्षरों का हो सकता है",
+      "EXPENSE_NOTHING_TO_UPDATE": "श्रेणी, रकम, तारीख, टिप्पणी या भुगतान का तरीका बदलें",
+      "CATEGORY_NOTHING_TO_UPDATE": "नाम बदलें, या श्रेणी हटाएँ"
     },
     "field": {
       "name": "नाम",
@@ -339,7 +349,11 @@
     "supplyTrackTitle": "सप्लाई ऑर्डर देखें",
     "supplyTrackSubtitle": "हर ऑर्डर कहाँ तक पहुँचा",
     "supplyCatalogTitle": "कच्चे माल की सूची",
-    "supplyCatalogSubtitle": "गोदाम क्या देता है और किस दाम पर"
+    "supplyCatalogSubtitle": "गोदाम क्या देता है और किस दाम पर",
+    "expensesTitle": "आज के खर्च",
+    "expensesSubtitle": "क्या गया, क्या आया",
+    "expenseGapsTitle": "जिन ब्रांच से पूछना है",
+    "expenseGapsSubtitle": "किसने आज का खर्च दर्ज नहीं किया"
   },
   "phase": {
     "examplesLabel": "आप क्या पूछ सकेंगे"
@@ -502,6 +516,69 @@
     "OPEN": "खुला",
     "CLOSED": "दे दिया",
     "VOID": "रद्द"
+  },
+  "paymentMethod": {
+    "CASH": "नकद",
+    "CARD": "कार्ड",
+    "UPI": "UPI",
+    "WALLET": "वॉलेट",
+    "OTHER": "अन्य",
+    "MIXED": "मिला-जुला",
+    "UNSPECIFIED": "बताया नहीं"
+  },
+  "expenses": {
+    "title": "खर्च",
+    "subtitle": "इस ब्रांच ने क्या चुकाया, और क्या कमाया",
+    "todaySection": "आज",
+    "spent": "खर्च",
+    "sold": "बिक्री",
+    "difference": "अंतर",
+    "noneToday": "आज कुछ दर्ज नहीं हुआ",
+    "noneTodayHint": "दिन की गैस, दूध और फुटकर खर्च दर्ज करें ताकि महीने का हिसाब बैठे।",
+    "logExpense": "खर्च दर्ज करें",
+    "breakdownSection": "कहाँ गया",
+    "monthSection": "इस महीने",
+    "monthTotal": "{{count}} प्रविष्टि में {{amount}}",
+    "monthTotal_plural": "{{count}} प्रविष्टियों में {{amount}}",
+    "monthEmpty": "इस महीने अभी कुछ दर्ज नहीं हुआ",
+    "entrySection": "प्रविष्टियाँ",
+    "entryCount": "{{count}} प्रविष्टि",
+    "entryCount_plural": "{{count}} प्रविष्टियाँ",
+    "by": "{{name}} द्वारा",
+    "deleteTitle": "यह खर्च हटाएँ?",
+    "deleteBody": "{{category}} का {{amount}} आज के कुल में से निकल जाएगा।",
+    "delete": "हटाएँ",
+    "addTitle": "खर्च दर्ज करें",
+    "branch": "कौन सी ब्रांच?",
+    "category": "किस चीज़ का?",
+    "amount": "कितना?",
+    "date": "किस दिन का?",
+    "note": "टिप्पणी",
+    "notePlaceholder": "जैसे दूध के दो कैन",
+    "paidWith": "भुगतान",
+    "save": "खर्च सहेजें",
+    "newCategory": "श्रेणी जोड़ें",
+    "newCategoryTitle": "अपनी एक श्रेणी",
+    "newCategoryHint": "जो मानक सूची में नहीं है — सब्ज़ी, स्टाफ़ की चाय, पैकिंग।",
+    "newCategoryPlaceholder": "श्रेणी का नाम",
+    "create": "श्रेणी जोड़ें",
+    "cancel": "रहने दें",
+    "gapsTitle": "जिन ब्रांच ने कुछ दर्ज नहीं किया",
+    "gapsSubtitle": "{{count}} ब्रांच ने आज कोई खर्च दर्ज नहीं किया",
+    "gapsSubtitle_plural": "{{count}} ब्रांच ने आज कोई खर्च दर्ज नहीं किया",
+    "gapsAllDone": "हर ब्रांच ने आज दर्ज कर दिया है",
+    "gapsLogged": "आज {{amount}}",
+    "gapsNothing": "आज कुछ नहीं"
+  },
+  "expenseCategory": {
+    "MILK": "दूध",
+    "GAS": "गैस",
+    "ELECTRICITY": "बिजली",
+    "RENT": "किराया",
+    "REPAIRS": "मरम्मत",
+    "TRANSPORT": "आना-जाना",
+    "PETTY": "फुटकर खर्च",
+    "OTHER": "अन्य"
   },
   "upload": {
     "title": "बिक्री डेटा अपलोड करें",
