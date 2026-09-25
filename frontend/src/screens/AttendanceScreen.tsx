@@ -21,14 +21,9 @@ import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
 import { useBusinessId } from '@/hooks/useBusinessId';
-import { dateKeyFromApi, formatDate, todayISO } from '@/utils/date';
+import { dateKeyFromApi, formatDate, formatTime, todayISO } from '@/utils/date';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Attendance'>;
-
-function formatTime(iso: string | null): string | null {
-  if (!iso) return null;
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
 
 export default function AttendanceScreen({ navigation }: Props) {
   const { t } = useTranslation();
@@ -121,13 +116,13 @@ export default function AttendanceScreen({ navigation }: Props) {
                   {hasPunchedOut ? (
                     <Text style={styles.todayStatus}>
                       {t('attendance.doneForToday', {
-                        inTime: formatTime(today?.punchInAt ?? null),
-                        outTime: formatTime(today?.punchOutAt ?? null),
+                        inTime: formatTime(today?.punchInAt, t),
+                        outTime: formatTime(today?.punchOutAt, t),
                       })}
                     </Text>
                   ) : hasPunchedIn ? (
                     <Text style={styles.todayStatus}>
-                      {t('attendance.punchedInAt', { time: formatTime(today?.punchInAt ?? null) })}
+                      {t('attendance.punchedInAt', { time: formatTime(today?.punchInAt, t) })}
                     </Text>
                   ) : (
                     <Text style={styles.todayStatus}>{t('attendance.notPunchedIn')}</Text>

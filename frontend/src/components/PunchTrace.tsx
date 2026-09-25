@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import PressableScale from '@/components/PressableScale';
 import { colors, radius, spacing } from '@/theme';
+import { formatTime } from '@/utils/date';
 import type { AttendanceRecord } from '@/types/staffing';
 
 /**
@@ -18,12 +19,6 @@ import type { AttendanceRecord } from '@/types/staffing';
  * without turning the ones marked by hand into empty space.
  */
 
-function timeOf(iso: string | null): string | null {
-  if (!iso) return null;
-  const at = new Date(iso);
-  return `${`${at.getHours()}`.padStart(2, '0')}:${`${at.getMinutes()}`.padStart(2, '0')}`;
-}
-
 /**
  * Opened with `Linking`, which hands the coordinates to whatever map the
  * device actually has. The https form is used rather than a `geo:` URI because
@@ -38,8 +33,8 @@ function openMap(latitude: string, longitude: string) {
 export default function PunchTrace({ record }: { record: AttendanceRecord | null }) {
   const { t } = useTranslation();
 
-  const inTime = timeOf(record?.punchInAt ?? null);
-  const outTime = timeOf(record?.punchOutAt ?? null);
+  const inTime = formatTime(record?.punchInAt, t);
+  const outTime = formatTime(record?.punchOutAt, t);
   if (!inTime && !outTime) return null;
 
   // The punch-out location is the more recent of the two and the one that
@@ -79,8 +74,9 @@ export default function PunchTrace({ record }: { record: AttendanceRecord | null
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.xs, marginTop: spacing.xs },
-  // Wraps rather than sitting in a fixed row: "आगमन 09:12" and "निर्गमन 18:04"
-  // together run past a narrow phone in a way the English never does.
+  // Wraps rather than sitting in a fixed row: "आगमन 9:12 AM" and
+  // "निर्गमन 6:04 PM" together run past a narrow phone in a way the English
+  // never does — and the meridiem made both of them longer still.
   times: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   time: { fontSize: 12, color: colors.textSecondary },
   place: {

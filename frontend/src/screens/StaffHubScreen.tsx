@@ -21,6 +21,7 @@ import { haptics } from '@/utils/haptics';
 import type { AttendanceStatus, DailyRoster, SalarySlip, StaffMember } from '@/types/staffing';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import AttendanceStatusPill from '@/components/AttendanceStatusPill';
+import AttendanceStatusPicker from '@/components/AttendanceStatusPicker';
 import InfoCard from '@/components/InfoCard';
 import Pill from '@/components/Pill';
 import PressableScale from '@/components/PressableScale';
@@ -29,8 +30,6 @@ import SegmentedOption from '@/components/SegmentedOption';
 import StatTile from '@/components/StatTile';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
-
-const MARKABLE: AttendanceStatus[] = ['PRESENT', 'ABSENT', 'HALF_DAY', 'LEAVE'];
 
 /**
  * The Staff tab.
@@ -210,18 +209,12 @@ export default function StaffHubScreen() {
                           </PressableScale>
 
                           {markingId === entry.staffMember.id ? (
-                            <View style={styles.markRow}>
-                              {MARKABLE.map((status) => (
-                                <View key={status} style={styles.markItem}>
-                                  <SegmentedOption
-                                    testID={`roster-mark-${entry.staffMember.id}-${status}`}
-                                    title={t(`attendanceStatus.${status}`)}
-                                    selected={entry.attendance?.status === status}
-                                    onPress={() => handleQuickMark(entry.staffMember.id, status)}
-                                  />
-                                </View>
-                              ))}
-                            </View>
+                            <AttendanceStatusPicker
+                              testIDPrefix={`roster-mark-${entry.staffMember.id}`}
+                              value={entry.attendance?.status ?? null}
+                              onChange={(status) => handleQuickMark(entry.staffMember.id, status)}
+                              style={styles.markRow}
+                            />
                           ) : null}
                         </View>
                       ))
@@ -413,8 +406,7 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12.5, color: colors.textSecondary, marginTop: 1 },
   calm: { fontSize: 13, color: colors.textSecondary, paddingVertical: spacing.sm },
   emptyText: { fontSize: 13.5, color: colors.textTertiary, textAlign: 'center', paddingVertical: spacing.lg },
-  markRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, paddingBottom: spacing.sm },
-  markItem: { minWidth: '22%', flexGrow: 1 },
+  markRow: { paddingBottom: spacing.sm },
   monthNav: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -8,6 +8,7 @@ import OptionRow from '@/components/OptionRow';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import { colors, radius, spacing } from '@/theme';
+import { formatTime } from '@/utils/date';
 import type { DeliveryAgent } from '@/types/supply';
 
 /**
@@ -43,11 +44,6 @@ type Props = {
 
 /** `undefined` while the list is still loading and nothing is chosen yet. */
 type Choice = string | null | undefined;
-
-function timeOf(iso: string | null): string {
-  if (!iso) return '';
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
 
 export default function AgentPicker({
   title,
@@ -89,7 +85,7 @@ export default function AgentPicker({
   function describe(agent: DeliveryAgent): string {
     const duty =
       agent.dutyState === 'ON_DUTY'
-        ? t('supply.dutyOn', { time: timeOf(agent.onDutySince) })
+        ? t('supply.dutyOn', { time: formatTime(agent.onDutySince, t) })
         : agent.dutyState === 'OFF_DUTY'
           ? t('supply.dutyOff')
           : t('supply.dutyUnknown');

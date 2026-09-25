@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '@/theme';
+import { formatTime } from '@/utils/date';
 import type { SupplyOrderEvent } from '@/types/supply';
 
 /**
@@ -31,13 +32,6 @@ const TINTS: Record<SupplyOrderEvent['type'], string> = {
   PAYMENT: colors.success,
   ASSIGNMENT: colors.primary,
 };
-
-function timeOf(iso: string) {
-  const at = new Date(iso);
-  const hh = `${at.getHours()}`.padStart(2, '0');
-  const mm = `${at.getMinutes()}`.padStart(2, '0');
-  return `${hh}:${mm}`;
-}
 
 export default function SupplyTimeline({ events }: { events: SupplyOrderEvent[] }) {
   const { t } = useTranslation();
@@ -81,7 +75,7 @@ export default function SupplyTimeline({ events }: { events: SupplyOrderEvent[] 
             <View style={styles.body}>
               <View style={styles.headline}>
                 <Text style={styles.headlineText}>{headline}</Text>
-                <Text style={styles.time}>{timeOf(event.createdAt)}</Text>
+                <Text style={styles.time}>{formatTime(event.createdAt, t)}</Text>
               </View>
               {reason ? <Text style={styles.reason}>{reason}</Text> : null}
               {/* An assignment's note IS the name in the headline above, so

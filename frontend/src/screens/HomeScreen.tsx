@@ -76,10 +76,16 @@ const SECTIONS: {
   // TodayPunchCard renders nothing for someone with no staff record, so it
   // needs no capability of its own.
   { key: 'punch', capability: null, Component: PunchSection },
+  // How the business is doing, then where it is doing it, then the way in to
+  // today's work. The numbers lead because they are what Home is *read* for —
+  // everything below is a place to go, and a list of destinations answers no
+  // question on its own.
+  { key: 'sales', capability: 'analytics:viewBranch', Component: SalesTilesSection },
+  { key: 'branches', capability: 'branch:update', Component: BranchesSection },
   // The till (requirement 1). A cashier has it as a tab as well; an owner or
   // manager trades that tab slot for Reports, so for them this is the way in.
   { key: 'counter', capability: 'counterOrder:create', Component: CounterSection },
-  // Requirement 4 — the default post-login surface.
+  // Requirement 4 — the catalog every branch sells from.
   { key: 'catalog', capability: 'product:view', Component: BranchCatalogSection },
   // Requirement 3. The warehouse desk has this as a tab; an admin reaches it
   // from here, which is the only place they ever need it.
@@ -111,8 +117,6 @@ const SECTIONS: {
   // orders at all, including an admin: reading where a branch's order has got
   // to is oversight, not the branch's daily job.
   { key: 'supplyOrders', capability: 'supplyOrder:view', Component: SupplyOrdersSection },
-  { key: 'sales', capability: 'analytics:viewBranch', Component: SalesTilesSection },
-  { key: 'branches', capability: 'branch:update', Component: BranchesSection },
   { key: 'upload', capability: 'dataSource:manage', Component: UploadSection },
 ];
 

@@ -222,6 +222,14 @@ into the task rather than waiting to be sent a screenshot.
   and `SegmentedOption` (compact chip for two or three side-by-side options)
   are the two choice controls; pick by the number of options and whether each
   needs a sentence to explain it.
+- **`SegmentedOption` stops working at four.** It sets `flex: 1`, so a row
+  divides the width evenly however many siblings there are: four chips get
+  about 76dp each on a 393dp phone, which does not hold "Present" at 13px, let
+  alone its Gujarati translation. It broke that way twice — six roles on the
+  invite screen, then four statuses on "Mark a day". Past three options, use a
+  wrapping row of chips sized by their own content, as
+  `AttendanceStatusPicker` does; nothing then breaks however long the
+  translation runs or however many options are added later.
 - **Let the type system carry the design step where it can.** `ROLE_ICONS` in
   `InviteMemberScreen` is a `Record` over every invitable role, so adding a role
   fails `tsc` until someone picks its icon — rather than rendering one row with
@@ -292,6 +300,16 @@ user-facing string** — render it with `t('section.key')` from
   persists locally and PATCHes `/auth/me/locale` so other devices follow.
 - i18next runs with `compatibilityJSON: 'v3'` because React Native has no
   dependable `Intl.PluralRules`; plurals therefore use `key` / `key_plural`.
+- **Dates and clock times come from `utils/date.ts`, never from `Intl`.** The
+  same missing Intl that forces the plural setting above also makes
+  `toLocaleDateString` / `toLocaleTimeString` unreliable on Hermes: they fall
+  back to a fixed format and quietly ignore their options, which is why
+  `{ hour12: true }` would not have fixed anything. Month names, weekday names
+  and the AM/PM marker are therefore ordinary translation keys, and
+  `formatTime(iso, t)` assembles a time through `time.ofDay` so a locale can
+  reorder the figure and the marker. Six hand-rolled copies of a clock
+  formatter had accumulated before this was one function — if you are about to
+  write `getHours()` in a component, the helper already exists.
 - The Hindi, Gujarati and Marathi files were written without a native-speaker
   review. Treat wording fixes from a speaker as expected, not as defects.
 

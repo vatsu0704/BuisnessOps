@@ -12,7 +12,7 @@ import { useMyStaffMember } from '@/hooks/useMyStaffMember';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
-import { dateKeyFromApi, formatDate, todayISO, weekdayOfISO } from '@/utils/date';
+import { dateKeyFromApi, formatDate, formatTime, todayISO, weekdayOfISO } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 import type { AttendanceRecord } from '@/types/staffing';
 
@@ -26,13 +26,6 @@ interface Props {
    * no card in it. Holding it here means the spacing disappears with the card.
    */
   style?: StyleProp<ViewStyle>;
-}
-
-function timeOf(iso: string): string {
-  const d = new Date(iso);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 /**
@@ -111,9 +104,12 @@ export default function TodayPunchCard({ onOpenHistory, style }: Props) {
 
   let statusLine: string;
   if (hasPunchedOut && record?.punchInAt && record?.punchOutAt) {
-    statusLine = t('today.done', { inTime: timeOf(record.punchInAt), outTime: timeOf(record.punchOutAt) });
+    statusLine = t('today.done', {
+      inTime: formatTime(record.punchInAt, t),
+      outTime: formatTime(record.punchOutAt, t),
+    });
   } else if (hasPunchedIn && record?.punchInAt) {
-    statusLine = t('today.punchedInAt', { time: timeOf(record.punchInAt) });
+    statusLine = t('today.punchedInAt', { time: formatTime(record.punchInAt, t) });
   } else if (isWeeklyOff) {
     // Don't nag someone to punch on their day off.
     statusLine = t('today.weekOff');

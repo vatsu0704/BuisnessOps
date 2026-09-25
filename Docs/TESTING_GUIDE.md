@@ -75,9 +75,11 @@ or two different browsers. Flows 7 and 8 call this out explicitly.
    - Country, Currency, Timezone — prefilled (`IN`, `INR`, `Asia/Kolkata`),
      edit if you want
 3. Tap **"Create account & continue."**
-4. ✅ **Expected:** you land on **Home**, greeted by name, showing your
-   business name, and stat tiles for Sales / Orders / Branches (all zero —
-   nothing uploaded yet).
+4. ✅ **Expected:** you land on **Home**, greeted by name and your business
+   name, and the **first** thing under the greeting is the stat tiles for
+   Sales / Orders / Branches (all zero — nothing uploaded yet), then **Your
+   branches**, then **Open the counter**. The numbers lead because they are
+   what Home is read for; everything below them is somewhere to go.
 
 **Try the validation, too:** type a malformed email (e.g. `not-an-email`) —
 a red "Enter a valid email address" message appears under the field and the
@@ -314,6 +316,12 @@ Continuing from the staff record you created in Flow 8:
    section.
 5. In **"Mark a day,"** the date defaults to today — change it to an earlier
    date this month (type it as `YYYY-MM-DD`), tap **Absent**, tap **Save**.
+   - ✅ **Expected:** under **Status**, four chips — Present, Absent, Half day,
+     Leave — each as wide as its own label, wrapping onto a second line rather
+     than squeezing. No label breaks mid-word in any of the four languages.
+   - ✅ **Expected:** the chosen chip takes that status's own colour — green for
+     Present, red for Absent, amber for Half day — which is the colour the day
+     then wears in the list above.
 6. ✅ **Expected:** that date now appears in the attendance list above with
    an **Absent** badge.
 7. In **"Payroll,"** optionally enter a **Deductions** amount, then tap
@@ -385,8 +393,9 @@ person with Sundays off could only ever earn about 87% of their salary.
    today's date and "Not punched in yet", with a **Punch in** button.
    - An owner with no staff record sees **no card at all** — not an empty one.
 3. Tap **Punch in**. Allow location if asked.
-   - ✅ **Expected:** the card flips to "Punched in at HH:MM" and the button
-     becomes **Punch out**.
+   - ✅ **Expected:** the card flips to "Punched in at 9:12 AM" and the button
+     becomes **Punch out**. Every clock time in the app is 12-hour with AM/PM —
+     never 24-hour, in any of the four languages.
    - If the branch has a geofence and you are outside it, the punch is refused
      with the distance in the message.
 4. Tap **Punch out**. The button disappears; the card reads "In at … · out at …".
@@ -407,9 +416,13 @@ the empty Alerts placeholder.
    marked". The summary strip counts Present / Absent / Unmarked.
    - This is the fix for the old roster, which returned only people who already
      had a record — so "who hasn't punched in yet?" was unanswerable.
-3. **Tap a person's row** → status chips appear inline. Tap **Half day**.
-   - ✅ **Expected:** the row's pill updates without leaving the tab. Marking a
-     day used to take four taps into the detail screen.
+3. **Tap a person's row** → the same four status chips appear inline. Tap
+   **Half day**.
+   - ✅ **Expected:** the row's pill updates without leaving the tab, in the
+     colour of the chip you pressed. Marking a day used to take four taps into
+     the detail screen.
+   - ✅ **Expected:** the chip already matching that person's marked status is
+     shown as chosen, so you can see what you are changing.
 4. On a weekly off or a holiday, the section shows a calm one-line notice
    instead of a wall of "Not marked".
 5. Scroll to **Staff** → tap a person → their detail screen opens, now with a
@@ -645,7 +658,9 @@ from Flow 15a.
 
 1. Log in as the **cashier**.
    - ✅ **Expected:** tabs **Home · Products · Staff · Settings**. No Reports.
-   - ✅ **Expected:** Home leads with the catalog for their branch.
+   - ✅ **Expected:** Home leads with their branch's numbers, then the counter,
+     then the catalog for their branch. No **Your branches** card — they do not
+     edit branches.
    - ✅ **Expected:** in Products they can add a product for *their* branch, and
      the whole-business option is not offered at all — not offered-and-refused.
 2. Log in as the **warehouse** user or the **delivery agent**.
@@ -653,8 +668,8 @@ from Flow 15a.
    - ✅ **Expected:** Home says plainly that their screens are still being
      built, rather than showing an empty page. Their tools arrive in Task 5.
 3. Log in as an **owner or manager**.
-   - ✅ **Expected:** all five tabs, and Home shows punch, catalog, the sales
-     tiles, the branch list and the upload card.
+   - ✅ **Expected:** all five tabs, and Home runs sales tiles → branch list →
+     counter → catalog, with the upload card at the foot.
    - ✅ **Expected:** Home does **not** offer "Order raw material" or "Your
      deliveries". An owner holds every capability in the app, but a branch
      orders and an agent delivers — neither is the owner's job. What they get
@@ -862,6 +877,9 @@ Requirements 9, 11 and 12.
    - ✅ **Expected:** the delay shows on the card without opening it, and the full
      history is on the detail. This is requirement 9's whole point — the branch
      finds out without ringing anyone.
+   - ✅ **Expected:** every time down the right-hand side of **What has happened**
+     reads as `4:35 PM`, as does the **Expected by** pill above it. Switch the
+     language and the figures stay 12-hour.
 3. As the **delivery agent** (Flow 15a), open **Deliveries**. For this step,
    dispatch the order with **Nobody yet** chosen in the panel.
    - ✅ **Expected:** the dispatched order is there even though nobody was named:

@@ -83,3 +83,28 @@ export function formatDateLong(iso: string, t: TFunction): string {
   const [y, m, d] = iso.split('-').map(Number);
   return `${d} ${monthName(m, t)} ${y}`;
 }
+
+/**
+ * "9:05 AM" — a clock time in the reader's language.
+ *
+ * Deliberately not `toLocaleTimeString({ hour12: true })`. Hermes ships
+ * without a dependable Intl, so that call falls back to a fixed format and
+ * ignores the option — which is why every clock time in the app rendered as
+ * 24-hour whatever the device was set to. The meridiem is looked up from the
+ * translation files for the same reason month and weekday names are, and the
+ * two halves are assembled by `time.ofDay` rather than concatenated here, so a
+ * locale that puts the marker before the figure can say so.
+ *
+ * Accepts null and returns an empty string, because most callers are reading a
+ * punch that may not have happened yet.
+ */
+export function formatTime(iso: string | null | undefined, t: TFunction): string {
+  if (!iso) return '';
+  const at = new Date(iso);
+  const hours = at.getHours();
+  return t('time.ofDay', {
+    // Midnight and noon are 12, not 0 — the one case a plain `% 12` gets wrong.
+    time: `${hours % 12 === 0 ? 12 : hours % 12}:${pad(at.getMinutes())}`,
+    meridiem: hours < 12 ? t('time.am') : t('time.pm'),
+  });
+}

@@ -18,12 +18,12 @@ import { parseOptionalNumber } from '@/utils/validation';
 import type { AttendanceRecord, AttendanceStatus, MonthSummary, SalarySlip, StaffMember } from '@/types/staffing';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import AttendanceStatusPill from '@/components/AttendanceStatusPill';
+import AttendanceStatusPicker from '@/components/AttendanceStatusPicker';
 import PunchTrace from '@/components/PunchTrace';
 import FormInput from '@/components/FormInput';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
-import SegmentedOption from '@/components/SegmentedOption';
 import DateField from '@/components/DateField';
 import MonthSummaryStrip from '@/components/MonthSummaryStrip';
 import Pill from '@/components/Pill';
@@ -35,8 +35,6 @@ import { can } from '@/utils/permissions';
 import { dateKeyFromApi, formatDate, fromISODate, daysInMonth, todayISO } from '@/utils/date';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StaffDetail'>;
-
-const MARKABLE: AttendanceStatus[] = ['PRESENT', 'ABSENT', 'HALF_DAY', 'LEAVE'];
 
 export default function StaffDetailScreen({ route, navigation }: Props) {
   const { staffMemberId } = route.params;
@@ -281,17 +279,13 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
                 minimumDate={fromISODate(monthStart)}
                 maximumDate={fromISODate(markMax)}
               />
-              <View style={styles.chipRow}>
-                {MARKABLE.map((s) => (
-                  <SegmentedOption
-                    key={s}
-                    testID={`staff-detail-mark-${s}`}
-                    title={t(`attendanceStatus.${s}`)}
-                    selected={markStatus === s}
-                    onPress={() => setMarkStatus(s)}
-                  />
-                ))}
-              </View>
+              <AttendanceStatusPicker
+                testIDPrefix="staff-detail-mark"
+                label={t('staffDetail.status')}
+                value={markStatus}
+                onChange={setMarkStatus}
+                style={styles.chipRow}
+              />
               <PrimaryButton
                 testID="staff-detail-mark-submit"
                 title={t('staffDetail.markSubmit')}
@@ -447,7 +441,7 @@ const styles = StyleSheet.create({
   },
   dayRowDivided: { borderTopWidth: 1, borderTopColor: colors.border },
   dayDate: { fontSize: 13.5, color: colors.text, fontWeight: '600' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
+  chipRow: { marginBottom: spacing.lg },
   markButton: { marginTop: spacing.sm },
   slipRow: {
     flexDirection: 'row',

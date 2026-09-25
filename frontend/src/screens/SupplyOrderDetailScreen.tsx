@@ -35,6 +35,7 @@ import { SupplyPaymentPill, SupplyStatusPill } from '@/components/supply/SupplyP
 import SupplyTimeline from '@/components/supply/SupplyTimeline';
 import { confirm } from '@/utils/confirm';
 import { formatAmount } from '@/utils/format';
+import { formatTime } from '@/utils/date';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 
@@ -256,12 +257,7 @@ export default function SupplyOrderDetailScreen() {
                   <Pill
                     tone="warning"
                     icon="time-outline"
-                    label={t('supply.promisedAt', {
-                      time: new Date(order.promisedAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      }),
-                    })}
+                    label={t('supply.promisedAt', { time: formatTime(order.promisedAt, t) })}
                   />
                 ) : null}
               </View>

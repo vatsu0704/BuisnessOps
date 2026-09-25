@@ -585,6 +585,7 @@
     "noSalaryHint": "Set a monthly salary for this person before generating a payslip.",
     "markSection": "Mark a day",
     "date": "Date",
+    "status": "Status",
     "markSubmit": "Save",
     "payrollSection": "Payroll — {{month}}",
     "deductions": "Deductions",
@@ -684,6 +685,11 @@
     "4": "Thursday",
     "5": "Friday",
     "6": "Saturday"
+  },
+  "time": {
+    "am": "AM",
+    "pm": "PM",
+    "ofDay": "{{time}} {{meridiem}}"
   },
   "dateField": {
     "pick": "Choose a date"
