@@ -97,6 +97,12 @@ const API_MESSAGES = {
   EXPENSE_CATEGORY_IS_STANDARD:
     'This is one of the standard categories, so its name comes from the app and cannot be changed. It can be withdrawn instead',
 
+  // --- Notifications (Task 7, requirements 2 and 8) -----------------------
+  NOTIFICATION_NOT_FOUND: 'That notification no longer exists',
+  NOTIFICATION_CATEGORY_UNKNOWN: 'There is no notification category called {{category}}',
+  NOTIFICATION_CATEGORY_REQUIRED:
+    'Attendance notifications cannot be turned off — being told you were marked absent is the point of them',
+
   // --- Business and branches ----------------------------------------------
   BUSINESS_NOT_FOUND: 'Business not found',
   BRANCH_IS_WAREHOUSE: 'This is a warehouse, not a branch — it does not sell or order raw material',
@@ -236,6 +242,8 @@ const FIELD_MESSAGES = {
   CATEGORY_NAME_LENGTH: 'name must be between 1 and {{max}} characters',
   EXPENSE_NOTHING_TO_UPDATE: 'provide categoryId, amount, date, note or paymentMethod',
   CATEGORY_NOTHING_TO_UPDATE: 'provide name or isActive',
+  DEVICE_TOKEN_REQUIRED: 'token is required',
+  NOTIFICATION_ENABLED_REQUIRED: 'enabled is required as true or false',
 };
 
 module.exports = { API_MESSAGES, FIELD_MESSAGES };

@@ -9,6 +9,8 @@ import { activeMembership } from '@/utils/permissions';
 import type { User } from '@/types/user';
 import type { Business } from '@/types/business';
 import { useBranchStore } from '@/store/branchStore';
+import { useNotificationStore } from '@/store/notificationStore';
+import { currentPushToken, unregisterFromPush } from '@/utils/push';
 import { useSalesStore } from '@/store/salesStore';
 
 const TOKEN_KEY = 'biziq_token';
@@ -163,6 +165,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // but leaving it in memory after a logout is not something to rely on.
     useBranchStore.getState().reset();
     useSalesStore.getState().reset();
+    useNotificationStore.getState().reset();
+    // Stop this handset receiving pushes for the account signing out. Awaited
+    // but never allowed to throw: somebody pressing Log out has to end up
+    // logged out whatever the network is doing.
+    await unregisterFromPush(await currentPushToken());
     set({ token: null, user: null, business: null, activeBusinessId: null });
   },
 

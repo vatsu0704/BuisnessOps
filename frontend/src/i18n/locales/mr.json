@@ -115,7 +115,10 @@
       "EXPENSE_CATEGORY_NOT_FOUND": "हा प्रवर्ग आता अस्तित्वात नाही",
       "EXPENSE_CATEGORY_INACTIVE": "{{name}} मागे घेतला आहे — दुसरा प्रवर्ग निवडा",
       "EXPENSE_CATEGORY_DUPLICATE": "{{name}} नावाचा प्रवर्ग आधीच आहे",
-      "EXPENSE_CATEGORY_IS_STANDARD": "हा प्रमाणित प्रवर्ग आहे, त्याचे नाव ॲपमधून येते. तुम्ही तो मागे घेऊ शकता"
+      "EXPENSE_CATEGORY_IS_STANDARD": "हा प्रमाणित प्रवर्ग आहे, त्याचे नाव ॲपमधून येते. तुम्ही तो मागे घेऊ शकता",
+      "NOTIFICATION_NOT_FOUND": "ही सूचना आता अस्तित्वात नाही",
+      "NOTIFICATION_CATEGORY_UNKNOWN": "{{category}} नावाचा कोणताही प्रवर्ग नाही",
+      "NOTIFICATION_CATEGORY_REQUIRED": "हजेरीच्या सूचना बंद करता येत नाहीत — गैरहजर नोंदवल्याचे कळणे हाच त्यांचा हेतू आहे"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} आवश्यक आहे",
@@ -161,7 +164,9 @@
       "AMOUNT_POSITIVE": "शून्यापेक्षा मोठी रक्कम टाका",
       "CATEGORY_NAME_LENGTH": "प्रवर्गाचे नाव जास्तीत जास्त {{max}} अक्षरांचे असू शकते",
       "EXPENSE_NOTHING_TO_UPDATE": "प्रवर्ग, रक्कम, तारीख, टीप किंवा पैसे देण्याची पद्धत बदला",
-      "CATEGORY_NOTHING_TO_UPDATE": "नाव बदला, किंवा प्रवर्ग मागे घ्या"
+      "CATEGORY_NOTHING_TO_UPDATE": "नाव बदला, किंवा प्रवर्ग मागे घ्या",
+      "DEVICE_TOKEN_REQUIRED": "हे डिव्हाइस सूचनांसाठी नोंदवता आले नाही",
+      "NOTIFICATION_ENABLED_REQUIRED": "हे सुरू करायचे की बंद ते निवडा"
     },
     "field": {
       "name": "नाव",
@@ -1036,5 +1041,44 @@
     "PAYMENT_VERIFIED": "पेमेंट तपासले",
     "PAYMENT_FAILED": "पेमेंट सापडले नाही",
     "PAYMENT_COLLECTED": "डिलिव्हरीवर रोख घेतली"
+  },
+  "notifications": {
+    "ATTENDANCE_MARKED_PRESENT": "{{branch}} येथे {{date}} साठी तुम्हाला हजर नोंदवले आहे.",
+    "ATTENDANCE_MARKED_ABSENT": "{{branch}} येथे {{date}} साठी तुम्हाला गैरहजर नोंदवले आहे.",
+    "ATTENDANCE_MARKED_HALF_DAY": "{{branch}} येथे {{date}} साठी तुमचा अर्धा दिवस नोंदवला आहे.",
+    "ATTENDANCE_MARKED_LEAVE": "{{branch}} येथे {{date}} साठी तुमची रजा नोंदवली आहे.",
+    "SUPPLY_ORDER_PLACED": "{{branch}} कडून ऑर्डर #{{orderNumber}} — {{amount}}, {{payment}}.",
+    "SUPPLY_ORDER_ACCEPTED": "गोदामाने ऑर्डर #{{orderNumber}} वर काम सुरू केले आहे.",
+    "SUPPLY_ORDER_PACKED": "ऑर्डर #{{orderNumber}} पॅक आहे आणि निघण्याच्या प्रतीक्षेत आहे.",
+    "SUPPLY_ORDER_DISPATCHED": "ऑर्डर #{{orderNumber}} गोदामातून निघाली आहे.",
+    "SUPPLY_ORDER_DELIVERED": "ऑर्डर #{{orderNumber}} पोहोचवली आहे.",
+    "SUPPLY_ORDER_REJECTED": "गोदाम ऑर्डर #{{orderNumber}} पूर्ण करू शकत नाही.",
+    "SUPPLY_ORDER_DELAYED": "ऑर्डर #{{orderNumber}} {{minutes}} मिनिटे उशिरा आहे.",
+    "SUPPLY_PAYMENT_VERIFIED": "गोदामाने ऑर्डर #{{orderNumber}} चे पैसे मिळाल्याचे पक्के केले आहे.",
+    "SUPPLY_ORDER_ASSIGNED": "{{branch}} ची ऑर्डर #{{orderNumber}} तुम्हाला पोहोचवायची आहे."
+  },
+  "notificationCentre": {
+    "title": "सूचना",
+    "subtitle": "तुम्ही नसताना काय घडले",
+    "empty": "अजून काहीच नाही",
+    "emptyBody": "ऑर्डरच्या बातम्या, उशीर आणि हजेरी इथे येतील.",
+    "markAllRead": "सर्व वाचलेले करा",
+    "unreadBadge": "{{count}} न वाचलेल्या",
+    "preferencesSection": "मला काय पाठवायचे",
+    "preferencesHint": "नको असलेले बंद करा. हे तुमच्या प्रत्येक व्यवसायाला लागू होते.",
+    "deviceOn": "या डिव्हाइसवर सूचना येतील",
+    "deviceOff": "या डिव्हाइसवर सूचना येणार नाहीत",
+    "deviceOffHint": "फोनच्या सेटिंगमध्ये BizIQ च्या सूचना सुरू करा, मग ॲप पुन्हा उघडा.",
+    "categoryAttendance": "हजेरी",
+    "categoryAttendanceHint": "कोणी तुमचा दिवस नोंदवल्यावर. नेहमी सुरू — गैरहजर नोंदवल्याचे कळणे हाच याचा हेतू आहे.",
+    "categoryOrders": "ऑर्डरच्या बातम्या",
+    "categoryOrdersHint": "दिली, स्वीकारली, पॅक, रवाना, पोहोचली.",
+    "categoryDelays": "उशीर",
+    "categoryDelaysHint": "ऑर्डरला उशीर होत असताना.",
+    "categoryPayments": "पैसे",
+    "categoryPaymentsHint": "गोदामाने पैसे मिळाल्याचे पक्के केल्यावर.",
+    "categoryDeliveries": "तुमच्या डिलिव्हरी",
+    "categoryDeliveriesHint": "एखादी डिलिव्हरी तुम्हाला दिल्यावर.",
+    "required": "नेहमी सुरू"
   }
 }

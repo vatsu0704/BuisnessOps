@@ -115,7 +115,10 @@
       "EXPENSE_CATEGORY_NOT_FOUND": "આ શ્રેણી હવે અસ્તિત્વમાં નથી",
       "EXPENSE_CATEGORY_INACTIVE": "{{name}} પાછી ખેંચી લેવાઈ છે — બીજી શ્રેણી પસંદ કરો",
       "EXPENSE_CATEGORY_DUPLICATE": "{{name}} નામની શ્રેણી પહેલેથી છે",
-      "EXPENSE_CATEGORY_IS_STANDARD": "આ પ્રમાણભૂત શ્રેણી છે, તેનું નામ ઍપમાંથી આવે છે. તમે તેને પાછી ખેંચી શકો છો"
+      "EXPENSE_CATEGORY_IS_STANDARD": "આ પ્રમાણભૂત શ્રેણી છે, તેનું નામ ઍપમાંથી આવે છે. તમે તેને પાછી ખેંચી શકો છો",
+      "NOTIFICATION_NOT_FOUND": "આ સૂચના હવે અસ્તિત્વમાં નથી",
+      "NOTIFICATION_CATEGORY_UNKNOWN": "{{category}} નામની કોઈ શ્રેણી નથી",
+      "NOTIFICATION_CATEGORY_REQUIRED": "હાજરીની સૂચનાઓ બંધ કરી શકાતી નથી — ગેરહાજર નોંધાયાની જાણ થવી એ જ એનો હેતુ છે"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} જરૂરી છે",
@@ -161,7 +164,9 @@
       "AMOUNT_POSITIVE": "શૂન્યથી મોટી રકમ દાખલ કરો",
       "CATEGORY_NAME_LENGTH": "શ્રેણીનું નામ વધુમાં વધુ {{max}} અક્ષરનું હોઈ શકે",
       "EXPENSE_NOTHING_TO_UPDATE": "શ્રેણી, રકમ, તારીખ, નોંધ કે ચુકવણીની રીત બદલો",
-      "CATEGORY_NOTHING_TO_UPDATE": "નામ બદલો, અથવા શ્રેણી પાછી ખેંચો"
+      "CATEGORY_NOTHING_TO_UPDATE": "નામ બદલો, અથવા શ્રેણી પાછી ખેંચો",
+      "DEVICE_TOKEN_REQUIRED": "આ ડિવાઇસ સૂચનાઓ માટે નોંધાઈ શક્યું નહીં",
+      "NOTIFICATION_ENABLED_REQUIRED": "પસંદ કરો કે આ ચાલુ કરવું છે કે બંધ"
     },
     "field": {
       "name": "નામ",
@@ -1036,5 +1041,44 @@
     "PAYMENT_VERIFIED": "ચુકવણી ચકાસી",
     "PAYMENT_FAILED": "ચુકવણી મળી નથી",
     "PAYMENT_COLLECTED": "ડિલિવરી પર રોકડ લીધી"
+  },
+  "notifications": {
+    "ATTENDANCE_MARKED_PRESENT": "{{branch}} પર {{date}} માટે તમને હાજર નોંધવામાં આવ્યા છે.",
+    "ATTENDANCE_MARKED_ABSENT": "{{branch}} પર {{date}} માટે તમને ગેરહાજર નોંધવામાં આવ્યા છે.",
+    "ATTENDANCE_MARKED_HALF_DAY": "{{branch}} પર {{date}} માટે તમારો અડધો દિવસ નોંધાયો છે.",
+    "ATTENDANCE_MARKED_LEAVE": "{{branch}} પર {{date}} માટે તમારી રજા નોંધાઈ છે.",
+    "SUPPLY_ORDER_PLACED": "{{branch}} તરફથી ઓર્ડર #{{orderNumber}} — {{amount}}, {{payment}}.",
+    "SUPPLY_ORDER_ACCEPTED": "વેરહાઉસે ઓર્ડર #{{orderNumber}} પર કામ શરૂ કર્યું છે.",
+    "SUPPLY_ORDER_PACKED": "ઓર્ડર #{{orderNumber}} પેક છે અને નીકળવાની રાહ જુએ છે.",
+    "SUPPLY_ORDER_DISPATCHED": "ઓર્ડર #{{orderNumber}} વેરહાઉસથી નીકળી ગયો છે.",
+    "SUPPLY_ORDER_DELIVERED": "ઓર્ડર #{{orderNumber}} પહોંચાડી દેવાયો છે.",
+    "SUPPLY_ORDER_REJECTED": "વેરહાઉસ ઓર્ડર #{{orderNumber}} પૂરો કરી શકે તેમ નથી.",
+    "SUPPLY_ORDER_DELAYED": "ઓર્ડર #{{orderNumber}} {{minutes}} મિનિટ મોડો છે.",
+    "SUPPLY_PAYMENT_VERIFIED": "વેરહાઉસે ઓર્ડર #{{orderNumber}} ની ચુકવણી પાકી કરી છે.",
+    "SUPPLY_ORDER_ASSIGNED": "{{branch}} નો ઓર્ડર #{{orderNumber}} તમારે પહોંચાડવાનો છે."
+  },
+  "notificationCentre": {
+    "title": "સૂચનાઓ",
+    "subtitle": "તમારી ગેરહાજરીમાં શું થયું",
+    "empty": "હજી કશું નથી",
+    "emptyBody": "ઓર્ડરના સમાચાર, મોડું થવું અને હાજરી અહીં આવશે.",
+    "markAllRead": "બધું વાંચેલું કરો",
+    "unreadBadge": "{{count}} ન વાંચેલી",
+    "preferencesSection": "મને શું મોકલવું",
+    "preferencesHint": "જે ન જોઈએ તે બંધ કરો. આ તમારા દરેક બિઝનેસ પર લાગુ પડે છે.",
+    "deviceOn": "આ ડિવાઇસ પર સૂચનાઓ આવશે",
+    "deviceOff": "આ ડિવાઇસ પર સૂચનાઓ નહીં આવે",
+    "deviceOffHint": "ફોનની સેટિંગમાં BizIQ ની સૂચનાઓ ચાલુ કરો, પછી ઍપ ફરી ખોલો.",
+    "categoryAttendance": "હાજરી",
+    "categoryAttendanceHint": "જ્યારે કોઈ તમારો દિવસ નોંધે. હંમેશા ચાલુ — ગેરહાજર નોંધાયાની જાણ થવી એ જ એનો હેતુ છે.",
+    "categoryOrders": "ઓર્ડરના સમાચાર",
+    "categoryOrdersHint": "મુકાયો, સ્વીકારાયો, પેક, રવાના, પહોંચ્યો.",
+    "categoryDelays": "મોડું",
+    "categoryDelaysHint": "જ્યારે ઓર્ડર મોડો થઈ રહ્યો હોય.",
+    "categoryPayments": "ચુકવણી",
+    "categoryPaymentsHint": "જ્યારે વેરહાઉસ ચુકવણી પાકી કરે.",
+    "categoryDeliveries": "તમારી ડિલિવરી",
+    "categoryDeliveriesHint": "જ્યારે કોઈ ડિલિવરી તમને સોંપાય.",
+    "required": "હંમેશા ચાલુ"
   }
 }

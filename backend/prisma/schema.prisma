@@ -121,6 +121,7 @@ model Business {
   supplyOrderCounter    SupplyOrderCounter?
   expenseCategories     ExpenseCategory[]
   expenses              Expense[]
+  notifications         Notification[]
 
   @@map("businesses")
 }
@@ -215,6 +216,7 @@ model Branch {
   dayCloses             DayClose[]
   supplyOrders          SupplyOrder[]
   expenses              Expense[]
+  notifications         Notification[]
 
   @@unique([businessId, code])
   @@index([businessId])
@@ -261,8 +263,11 @@ model User {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  memberships  Membership[]
-  staffMembers StaffMember[]
+  memberships             Membership[]
+  staffMembers            StaffMember[]
+  deviceTokens            DeviceToken[]
+  notifications           Notification[]
+  notificationPreferences NotificationPreference[]
 
   @@map("users")
 }
@@ -1164,4 +1169,136 @@ model Expense {
   @@index([businessId, expenseDate])
   @@index([categoryId])
   @@map("expenses")
+}
+
+// ---------------------------------------------------------------------------
+// Task 7 — Notifications (requirements 2 and 8)
+//
+// Every notification is a ROW first and a push second. The row is what the
+// in-app centre lists, what an unread badge counts, and what survives a push
+// that was never delivered — a phone that was off, a token that had expired, a
+// user with no device at all. Sending is best-effort on top of it.
+// ---------------------------------------------------------------------------
+
+enum PushPlatform {
+  ANDROID
+  IOS
+  WEB
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+}
+
+// One row per device per USER — not per membership.
+//
+// A phone belongs to a person, and that person may act under several businesses
+// (requirement 16). Keying this on a membership would register the same handset
+// two or three times and deliver every notification as many times over.
+//
+// `token` is globally unique so that re-registering after a logout/login MOVES
+// the row to the new user rather than leaving the previous one receiving pushes
+// on a handset they have signed out of. That is a security property, not a
+// tidiness one.
+model DeviceToken {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token    String       @unique
+  platform PushPlatform @default(ANDROID)
+
+  // The language THIS DEVICE is set to, reported when the token is registered.
+  //
+  // This column is what makes backend-rendered push text legitimate rather than
+  // a violation of the "the backend cannot know the reader's language" rule:
+  // for this one channel it can, because the device said so. It is deliberately
+  // NOT User.preferredLocale — a shared handset, or one whose owner changed the
+  // app language on a different phone, would otherwise show the wrong language
+  // on the lock screen, which is the one place the app cannot re-render it.
+  locale Locale @default(EN)
+
+  // Set when FCM reports the token is dead. Kept rather than deleted, so the
+  // same device registering again is an update and not a second row.
+  disabledAt DateTime?
+
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId, disabledAt])
+  @@map("device_tokens")
+}
+
+// What happened, addressed to one person.
+//
+// `code` + `params`, never a sentence — the same contract the error catalog
+// uses, and for the same reason: the row outlives the moment it was written and
+// the reader may change the app's language afterwards. The device renders
+// t('notifications.<code>', params) every time it draws the list, so an old
+// notification appears in today's language rather than the one it was sent in.
+//
+// The push that goes out alongside it carries BOTH: text rendered for the lock
+// screen, which Android draws before any app code runs, and the same code and
+// params in the data payload for the app to re-render from.
+model Notification {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // The recipient. A User, not a Membership — see DeviceToken.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  code   String
+  params Json   @default("{}")
+
+  // Where tapping it should go: { route, params }.
+  //
+  // Re-checked against the recipient's capabilities before it is dispatched — a
+  // notification outlives the access that justified it, and dispatching into a
+  // route the app never registered is a silent no-op, which is the kind of bug
+  // nobody reports.
+  deepLink Json?
+
+  status NotificationStatus @default(UNREAD)
+  readAt DateTime?
+
+  // What became of the push. `sentAt` null with no error means no device was
+  // registered, which is not a failure — requirement 2 says marking attendance
+  // still succeeds for a worker who has never opened the app.
+  sentAt        DateTime?
+  deliveryError String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, status, createdAt])
+  @@index([businessId, createdAt])
+  @@map("notifications")
+}
+
+// A category this person has switched OFF (requirement 8).
+//
+// A row means muted, and no row means on. Stored that way round because the
+// answer is almost always "I want all of them": the common case costs nothing,
+// and a category added later is on by default rather than silently off for
+// everybody who registered before it existed.
+//
+// Keyed on the user rather than the membership or the device — muting order
+// updates is a decision about what you want to hear, not about which business
+// you are looking at or which phone is in your hand.
+model NotificationPreference {
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category String
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, category])
+  @@map("notification_preferences")
 }

@@ -25,9 +25,11 @@ import WarehouseDeskScreen from '@/screens/WarehouseDeskScreen';
 import DeliveryQueueScreen from '@/screens/DeliveryQueueScreen';
 import ExpensesScreen from '@/screens/ExpensesScreen';
 import AddExpenseScreen from '@/screens/AddExpenseScreen';
+import NotificationsScreen from '@/screens/NotificationsScreen';
 import { useMembership } from '@/hooks/useBusinessId';
 import TabNavigator from './TabNavigator';
 import { canOpenRoute } from './routeAccess';
+import { usePushRegistration } from '@/hooks/usePushRegistration';
 
 export type AppStackParamList = {
   Tabs: undefined;
@@ -59,6 +61,9 @@ export type AppStackParamList = {
   // can follow a branch it is chasing straight into that branch's figures.
   Expenses: { branchId?: string } | undefined;
   AddExpense: { branchId?: string } | undefined;
+  // Requirement 8. Open to everyone: it lists your OWN notifications, and
+  // there is nobody to withhold that from.
+  Notifications: undefined;
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -99,6 +104,7 @@ const MODAL_SCREENS: { name: keyof AppStackParamList; component: ComponentType<a
   { name: 'SupplyDeliveries', component: DeliveryQueueScreen },
   { name: 'Expenses', component: ExpensesScreen },
   { name: 'AddExpense', component: AddExpenseScreen },
+  { name: 'Notifications', component: NotificationsScreen },
 ];
 
 /**
@@ -113,6 +119,11 @@ const MODAL_SCREENS: { name: keyof AppStackParamList; component: ComponentType<a
  */
 export default function AppNavigator() {
   const membership = useMembership();
+
+  // Registers this device and routes a notification tap. Here rather than in
+  // App.tsx because it needs a navigator in scope, and because this component
+  // is mounted for exactly as long as somebody is signed in.
+  usePushRegistration();
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

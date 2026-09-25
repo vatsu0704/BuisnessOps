@@ -115,7 +115,10 @@
       "EXPENSE_CATEGORY_NOT_FOUND": "यह श्रेणी अब मौजूद नहीं है",
       "EXPENSE_CATEGORY_INACTIVE": "{{name}} हटा दी गई है — कोई और श्रेणी चुनें",
       "EXPENSE_CATEGORY_DUPLICATE": "{{name}} नाम की श्रेणी पहले से है",
-      "EXPENSE_CATEGORY_IS_STANDARD": "यह मानक श्रेणी है, इसका नाम ऐप से आता है। आप इसे हटा सकते हैं"
+      "EXPENSE_CATEGORY_IS_STANDARD": "यह मानक श्रेणी है, इसका नाम ऐप से आता है। आप इसे हटा सकते हैं",
+      "NOTIFICATION_NOT_FOUND": "यह सूचना अब मौजूद नहीं है",
+      "NOTIFICATION_CATEGORY_UNKNOWN": "{{category}} नाम की कोई श्रेणी नहीं है",
+      "NOTIFICATION_CATEGORY_REQUIRED": "हाज़िरी की सूचनाएँ बंद नहीं हो सकतीं — गैरहाज़िर लगने की ख़बर मिलना ही इनका मक़सद है"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} आवश्यक है",
@@ -161,7 +164,9 @@
       "AMOUNT_POSITIVE": "शून्य से बड़ी रकम डालें",
       "CATEGORY_NAME_LENGTH": "श्रेणी का नाम ज़्यादा से ज़्यादा {{max}} अक्षरों का हो सकता है",
       "EXPENSE_NOTHING_TO_UPDATE": "श्रेणी, रकम, तारीख, टिप्पणी या भुगतान का तरीका बदलें",
-      "CATEGORY_NOTHING_TO_UPDATE": "नाम बदलें, या श्रेणी हटाएँ"
+      "CATEGORY_NOTHING_TO_UPDATE": "नाम बदलें, या श्रेणी हटाएँ",
+      "DEVICE_TOKEN_REQUIRED": "यह डिवाइस सूचनाओं के लिए दर्ज नहीं हो सका",
+      "NOTIFICATION_ENABLED_REQUIRED": "चुनें कि इसे चालू करना है या बंद"
     },
     "field": {
       "name": "नाम",
@@ -1036,5 +1041,44 @@
     "PAYMENT_VERIFIED": "भुगतान जाँचा गया",
     "PAYMENT_FAILED": "भुगतान नहीं मिला",
     "PAYMENT_COLLECTED": "डिलीवरी पर नक़द लिया"
+  },
+  "notifications": {
+    "ATTENDANCE_MARKED_PRESENT": "{{branch}} पर {{date}} के लिए आपको हाज़िर लगाया गया है।",
+    "ATTENDANCE_MARKED_ABSENT": "{{branch}} पर {{date}} के लिए आपको गैरहाज़िर लगाया गया है।",
+    "ATTENDANCE_MARKED_HALF_DAY": "{{branch}} पर {{date}} के लिए आपका आधा दिन लगाया गया है।",
+    "ATTENDANCE_MARKED_LEAVE": "{{branch}} पर {{date}} के लिए आपकी छुट्टी लगाई गई है।",
+    "SUPPLY_ORDER_PLACED": "{{branch}} से ऑर्डर #{{orderNumber}} — {{amount}}, {{payment}}।",
+    "SUPPLY_ORDER_ACCEPTED": "गोदाम ने ऑर्डर #{{orderNumber}} पर काम शुरू कर दिया है।",
+    "SUPPLY_ORDER_PACKED": "ऑर्डर #{{orderNumber}} पैक है और निकलने का इंतज़ार कर रहा है।",
+    "SUPPLY_ORDER_DISPATCHED": "ऑर्डर #{{orderNumber}} गोदाम से निकल चुका है।",
+    "SUPPLY_ORDER_DELIVERED": "ऑर्डर #{{orderNumber}} पहुँचा दिया गया है।",
+    "SUPPLY_ORDER_REJECTED": "गोदाम ऑर्डर #{{orderNumber}} पूरा नहीं कर सकता।",
+    "SUPPLY_ORDER_DELAYED": "ऑर्डर #{{orderNumber}} {{minutes}} मिनट लेट है।",
+    "SUPPLY_PAYMENT_VERIFIED": "गोदाम ने ऑर्डर #{{orderNumber}} का भुगतान पक्का कर दिया है।",
+    "SUPPLY_ORDER_ASSIGNED": "{{branch}} का ऑर्डर #{{orderNumber}} आपको पहुँचाना है।"
+  },
+  "notificationCentre": {
+    "title": "सूचनाएँ",
+    "subtitle": "आपकी गैरमौजूदगी में क्या हुआ",
+    "empty": "अभी कुछ नहीं",
+    "emptyBody": "ऑर्डर की ख़बरें, देरी और हाज़िरी यहाँ आएँगी।",
+    "markAllRead": "सब पढ़ा हुआ करें",
+    "unreadBadge": "{{count}} अनपढ़ी",
+    "preferencesSection": "मुझे क्या भेजें",
+    "preferencesHint": "जो न चाहिए उसे बंद कर दें। यह आपके हर बिज़नेस पर लागू होता है।",
+    "deviceOn": "इस डिवाइस पर सूचनाएँ आएँगी",
+    "deviceOff": "इस डिवाइस पर सूचनाएँ नहीं आएँगी",
+    "deviceOffHint": "फ़ोन की सेटिंग में BizIQ की सूचनाएँ चालू करें, फिर ऐप दोबारा खोलें।",
+    "categoryAttendance": "हाज़िरी",
+    "categoryAttendanceHint": "जब कोई आपका दिन लगाए। हमेशा चालू — गैरहाज़िर लगने की ख़बर मिलना ही इसका मक़सद है।",
+    "categoryOrders": "ऑर्डर की ख़बरें",
+    "categoryOrdersHint": "दिया गया, स्वीकार, पैक, रवाना, पहुँचा।",
+    "categoryDelays": "देरी",
+    "categoryDelaysHint": "जब ऑर्डर लेट हो रहा हो।",
+    "categoryPayments": "भुगतान",
+    "categoryPaymentsHint": "जब गोदाम भुगतान पक्का करे।",
+    "categoryDeliveries": "आपकी डिलीवरी",
+    "categoryDeliveriesHint": "जब कोई डिलीवरी आपको दी जाए।",
+    "required": "हमेशा चालू"
   }
 }

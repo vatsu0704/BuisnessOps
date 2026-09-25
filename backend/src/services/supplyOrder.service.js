@@ -2,6 +2,7 @@ const { Prisma } = require('@prisma/client');
 const prisma = require('../config/db');
 const { fail } = require('../errors');
 const { roleHas } = require('../permissions');
+const triggers = require('../notifications/triggers');
 const { todayInZone } = require('../utils/datetime');
 const supplyItemService = require('./supplyItem.service');
 
@@ -317,7 +318,7 @@ async function updateItem(businessId, supplyOrderId, itemId, { quantity }) {
  * warehouse would ask about.
  */
 async function placeOrder(businessId, supplyOrderId, { paymentMode, paymentReference, membershipId }) {
-  return prisma.$transaction(async (tx) => {
+  const placed = await prisma.$transaction(async (tx) => {
     const order = await getOrder(businessId, supplyOrderId, tx);
     assertTransition(order.status, 'PLACED');
 
@@ -363,6 +364,11 @@ async function placeOrder(businessId, supplyOrderId, { paymentMode, paymentRefer
 
     return getOrder(businessId, order.id, tx);
   });
+
+  // Requirement 3. Outside the transaction on purpose: a push describing an
+  // order that then rolled back would be worse than no push at all.
+  await triggers.orderPlaced(businessId, placed, { actorMembershipId: membershipId });
+  return placed;
 }
 
 /**
@@ -378,7 +384,7 @@ async function advance(
   toStatus,
   { membershipId, extraData = {}, note, events = [] } = {}
 ) {
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const order = await getOrder(businessId, supplyOrderId, tx);
     assertTransition(order.status, toStatus);
 
@@ -400,6 +406,13 @@ async function advance(
 
     return getOrder(businessId, order.id, tx);
   });
+
+  // Requirement 11 — one hook covers accept, pack, dispatch and deliver,
+  // because this function is the only way any of them happen.
+  await triggers.orderStatusChanged(businessId, updated, toStatus, {
+    actorMembershipId: membershipId,
+  });
+  return updated;
 }
 
 /**
@@ -496,14 +509,15 @@ async function dispatchOrder(businessId, supplyOrderId, { deliveryAgentMembershi
  * nobody reads twice.
  */
 async function assignOrder(businessId, supplyOrderId, { deliveryAgentMembershipId, membershipId }) {
-  return prisma.$transaction(async (tx) => {
+  const { order: assigned, agentId } = await prisma.$transaction(async (tx) => {
     const order = await getOrder(businessId, supplyOrderId, tx);
     if (!ASSIGNABLE.has(order.status)) {
       throw fail('SUPPLY_ORDER_ASSIGN_NOT_APPLICABLE', 409, { status: order.status });
     }
 
     const agent = await resolveAgent(businessId, deliveryAgentMembershipId, tx);
-    if (order.deliveryAgentMembershipId === agent.id) return order;
+    // Already theirs: nothing changed, so nobody is told again.
+    if (order.deliveryAgentMembershipId === agent.id) return { order, agentId: null };
 
     await tx.supplyOrder.update({
       where: { id: order.id },
@@ -511,8 +525,15 @@ async function assignOrder(businessId, supplyOrderId, { deliveryAgentMembershipI
     });
     await recordEvent(tx, order.id, assignmentEvent(agent, membershipId));
 
-    return getOrder(businessId, order.id, tx);
+    return { order: await getOrder(businessId, order.id, tx), agentId: agent.id };
   });
+
+  // Requirement 21's missing half: the run appeared in their queue, and
+  // nothing had ever told them it was there.
+  if (agentId) {
+    await triggers.orderAssigned(businessId, assigned, agentId, { actorMembershipId: membershipId });
+  }
+  return assigned;
 }
 
 /**
@@ -737,7 +758,7 @@ async function rejectOrder(businessId, supplyOrderId, { reasonCode, note, member
  * it is the actor's own words and is shown as typed.
  */
 async function postDelay(businessId, supplyOrderId, { delayMinutes, reasonCode, note, membershipId }) {
-  return prisma.$transaction(async (tx) => {
+  const delayed = await prisma.$transaction(async (tx) => {
     const order = await getOrder(businessId, supplyOrderId, tx);
     if (!DELAYABLE.has(order.status)) {
       throw fail('SUPPLY_ORDER_DELAY_NOT_APPLICABLE', 409, { status: order.status });
@@ -760,6 +781,12 @@ async function postDelay(businessId, supplyOrderId, { delayMinutes, reasonCode, 
 
     return getOrder(businessId, order.id, tx);
   });
+
+  // Requirement 9's whole point: the branch finds out without ringing anyone.
+  await triggers.orderDelayed(businessId, delayed, delayMinutes, {
+    actorMembershipId: membershipId,
+  });
+  return delayed;
 }
 
 /**
@@ -770,7 +797,7 @@ async function postDelay(businessId, supplyOrderId, { delayMinutes, reasonCode, 
  * put a VERIFIED on an order nobody has paid for.
  */
 async function verifyPayment(businessId, supplyOrderId, { outcome, note, membershipId }) {
-  return prisma.$transaction(async (tx) => {
+  const verified = await prisma.$transaction(async (tx) => {
     const order = await getOrder(businessId, supplyOrderId, tx);
     if (order.paymentStatus === 'PENDING') throw fail('SUPPLY_ORDER_PAYMENT_NOT_CLAIMED', 409);
 
@@ -791,6 +818,13 @@ async function verifyPayment(businessId, supplyOrderId, { outcome, note, members
 
     return getOrder(businessId, order.id, tx);
   });
+
+  // Only the good outcome is announced. A branch does not need a push telling
+  // it the reference it typed was wrong before the desk has spoken to them.
+  if (outcome === 'VERIFIED') {
+    await triggers.paymentVerified(businessId, verified, { actorMembershipId: membershipId });
+  }
+  return verified;
 }
 
 /** Shared by all three listings below. `branchAccess === null` means every one. */

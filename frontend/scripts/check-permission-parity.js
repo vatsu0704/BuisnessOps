@@ -119,30 +119,12 @@ if (fs.existsSync(SCHEMA)) {
   }
 }
 
-// --- 5. Backend prose stays where it is allowed to be ----------------------
-// CLAUDE.md forbids the backend writing user-facing prose, because it cannot
-// know the reader's language. Push notifications are the one bounded exception
-// (an FCM title is rendered by the OS before app code runs), so the dictionary
-// is allowed to exist — but only the push sender may reach it. This keeps the
-// exception from spreading back into the request path.
-const PROSE_FILES = ['notifications/labels.js'];
-const GUARDED_DIRS = ['controllers', 'services', 'validations', 'middleware'];
-for (const dir of GUARDED_DIRS) {
-  const full = path.join(BACKEND, 'src', dir);
-  if (!fs.existsSync(full)) continue;
-  for (const file of fs.readdirSync(full).filter((f) => f.endsWith('.js'))) {
-    const body = fs.readFileSync(path.join(full, file), 'utf8');
-    for (const prose of PROSE_FILES) {
-      const moduleName = prose.replace(/\.js$/, '');
-      if (body.includes(`notifications/${path.basename(moduleName)}`)) {
-        problems.push(
-          `src/${dir}/${file} requires ${prose} — only src/notifications/push.js may. ` +
-            `Throw a code and let the push sender render it.`
-        );
-      }
-    }
-  }
-}
+// --- 5. Backend prose: see check-notification-prose.js ---------------------
+// This file used to carry a substring scan for `notifications/labels.js` over
+// four directories. `scripts/check-notification-prose.js` now does that job
+// properly — it walks the whole backend tree and matches an actual `require`
+// rather than any mention of the path, which the loose version could not tell
+// apart from a comment explaining the rule. One gate, doing it correctly.
 
 if (problems.length) {
   console.error('Permission matrix parity FAILED:\n');

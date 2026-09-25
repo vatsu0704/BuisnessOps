@@ -103,3 +103,18 @@ jobs:
       # fine. The symptom is a button that 403s, or a feature nobody can find.
       - name: Check permission-matrix parity
         run: npm run lint:permissions
+
+      # The backend renders prose in exactly two places — push notifications
+      # and the payslip PDF — each because the device cannot render it there.
+      # Nothing compared their four languages before this, so payslip.labels.js
+      # could have drifted for months and a missing key prints as `undefined`
+      # on a document somebody is handed with their pay.
+      - name: Check backend dictionary parity
+        run: npm run lint:backend-i18n
+
+      # And the fence around that exception: only notifications/push.js may
+      # render notification text. Without this, the first controller to require
+      # the label file "for a nicer message" silently gives the project backend
+      # i18n in the request path, in a language nobody asked for.
+      - name: Check the notification prose boundary
+        run: npm run lint:notification-prose

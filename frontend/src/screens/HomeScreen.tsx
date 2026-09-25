@@ -21,6 +21,7 @@ import AnimatedEntrance from '@/components/AnimatedEntrance';
 import BrandMark from '@/components/BrandMark';
 import InfoCard from '@/components/InfoCard';
 import LanguageToggle from '@/components/LanguageToggle';
+import NotificationBell from '@/components/NotificationBell';
 import NoBusinessAccessNotice from '@/components/NoBusinessAccessNotice';
 import PhaseNotice from '@/components/PhaseNotice';
 import PressableScale from '@/components/PressableScale';
@@ -298,6 +299,7 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={styles.wordmark}>BizIQ</Text>
           <View style={styles.topBarSpacer} />
           <LanguageToggle />
+          <NotificationBell />
           <View style={styles.branchChip}>
             <Ionicons name="git-branch-outline" size={13} color={colors.primary} />
             <Text style={styles.branchChipText}>{t('home.branchCount', { count: stats.total })}</Text>

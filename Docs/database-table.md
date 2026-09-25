@@ -924,3 +924,90 @@ function over a column is not indexable. The helper samples the zone offset
 twice so a daylight-saving day is still 23 or 25 hours long; India never shifts,
 so the second read is a no-op there and correct elsewhere. Task 9's day-end
 export needs the same window.
+
+---
+
+## 18. Notifications — built (Branch Operations Task 7)
+
+Requirements 2 and 8. Migrations `20260926090000_notifications` and
+`20260926091500_notification_preferences`. Setup is `Docs/FIREBASE_SETUP.md`.
+
+### `DeviceToken`
+
+One row per device per **User** — not per membership.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| userId | String | FK, cascade |
+| token | String, **unique** | the raw FCM token |
+| platform | Enum `ANDROID, IOS, WEB` | |
+| locale | Enum `Locale` | the language **this device** is showing |
+| disabledAt | DateTime? | set when FCM says the token is dead, or on logout |
+| lastSeenAt | DateTime | refreshed on every registration |
+| index | (userId, disabledAt) | "every live device for this person" |
+
+**Why per user and not per membership.** A phone belongs to a person, and that
+person may act under several businesses (R16). Keying this on a membership
+would register the same handset two or three times and deliver every
+notification as many times over.
+
+**Why `token` is globally unique.** Re-registering after a logout/login **moves**
+the row to the new user rather than leaving the previous one subscribed to a
+handset they have signed out of. That is a security property, not tidiness.
+
+**Why `locale` is here and not read from `User.preferredLocale`.** This column
+is the thing that makes backend-rendered push text legitimate instead of a
+violation of the "the backend cannot know the reader's language" rule: for this
+one channel it was *told*. A shared handset, or one whose owner changed the app
+language on a different phone, would otherwise show the wrong language on the
+lock screen — the one surface the app cannot re-render afterwards.
+
+### `Notification`
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId | String | FK, cascade. The list is scoped to it, so switching business changes what the centre shows |
+| userId | String | the recipient. A User, not a Membership |
+| branchId | String? | `SetNull` |
+| code | String | one of `NOTIFICATION_CODES` in `notifications/labels.js` |
+| params | Json | everything the sentence needs. **Never a sentence** |
+| deepLink | Json? | `{ route, params }`, re-checked against capabilities before dispatch |
+| status | Enum `UNREAD, READ` | |
+| sentAt | DateTime? | null with no error means nobody had a device — not a failure |
+| deliveryError | String? | first FCM error, truncated |
+| index | (userId, status, createdAt) | the centre and the badge |
+
+**`code` + `params`, for the same reason the error catalog uses them.** The row
+outlives the moment it was written and the reader may change the app's language
+afterwards, so the device renders `t('notifications.<code>', params)` every time
+it draws the list. The push carries rendered text as well, because Android draws
+the lock screen before any app code runs.
+
+**The row is written first and the push attempted second.** Every awkward case —
+a phone that is off, a retired token, a worker with no app account, a server
+with no Firebase credentials — is then ordinary rather than special.
+
+### `NotificationPreference`
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| userId | String | FK, cascade |
+| category | String | one of `attendance, orders, delays, payments, deliveries` |
+| unique | (userId, category) | |
+
+**A row means MUTED; no row means on.** Stored that way round because the answer
+is almost always "I want all of them": the common case costs nothing, and a
+category added later is on by default rather than silently off for everybody who
+registered before it existed.
+
+**`attendance` is refused rather than ignored.** Requirement 2 exists so a worker
+finds out they were marked absent; a switch that hid that would defeat the
+requirement it was built for, and one that appears to work and does not is worse
+than one that says no.
+
+Keyed on the **user**, not the membership or the device: muting order updates is
+a decision about what you want to hear, not about which business you are looking
+at or which phone is in your hand.

@@ -21,6 +21,7 @@ from code.
 | `Docs/PROJECT_FLOW.md` | The phased delivery plan and the current status of each phase |
 | `Docs/database-table.md` | Data model notes |
 | `Docs/TESTING_GUIDE.md` | Click-by-click manual walkthrough of every user-facing flow that is built, in the order they have to be followed |
+| `Docs/FIREBASE_SETUP.md` | Creating the Firebase project and the two credential files push notifications need. Neither file is in git |
 
 A new document of this kind belongs in `Docs/` too. Only `CLAUDE.md` and
 `README.md` stay at the repository root, because Claude Code loads the rule book
@@ -321,6 +322,18 @@ user-facing string** — render it with `t('section.key')` from
 - The Hindi, Gujarati and Marathi files were written without a native-speaker
   review. Treat wording fixes from a speaker as expected, not as defects.
 
+**Two files are allowed to break this, and both are fenced.** `notifications/labels.js`
+and `documents/payslip.labels.js` render prose on the server because the device
+cannot: Android draws a notification before app code runs, and a payslip PDF is
+built where the app cannot reach it. A push is legitimate rather than a guess
+because the device reports its own language when it registers its token
+(`DeviceToken.locale`) — the rule's premise stops being true, rather than being
+quietly violated. `npm run lint:notification-prose` fails if anything but
+`notifications/push.js` requires the label file, and `npm run lint:backend-i18n`
+compares all four languages in both dictionaries and checks every code the
+backend can send has an app key. **Do not widen this**: everywhere else, send a
+code and let the device render it.
+
 **This applies to the backend too, which does not translate and must not try.**
 It cannot know the reader's language — the choice lives on the device and may
 differ from the account's `preferredLocale`. So never write a message as prose
@@ -347,6 +360,12 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
 - React Native 0.74's Gradle cannot run on JDK 24/25. JDK 17 is pinned per-project
   via `org.gradle.java.home` in `android/gradle.properties`, so the machine's global
   `JAVA_HOME` can stay on a newer JDK for other work. Do not change the global one.
+- **`frontend/google-services.json` must exist before a build**, or the app has
+  no Firebase config compiled into it and no push will ever arrive — the same
+  build-time trap as `EXPO_PUBLIC_API_URL`, and just as silent. It is gitignored;
+  `Docs/FIREBASE_SETUP.md` is how to produce it. The backend's half,
+  `backend/firebase-service-account.json`, is a **credential** — anyone holding
+  it can push to every user.
 - `expo prebuild --clean` deletes machine-local files that must then be restored:
   `android/local.properties`, the JDK pin in `android/gradle.properties`,
   `android/.idea/gradle.xml`, and `android/.gradle/config.properties`. Plain
@@ -368,10 +387,16 @@ setups, and `localhost` on its own means the phone itself:
   but not this one**, so after a mid-session replug or an adb restart the app
   still loads while every request fails with `errors.unreachable` — rerun
   `npm run adb:reverse` (or the raw `adb reverse`) rather than restarting Metro.
-- **Wi-Fi** — the development machine's LAN IP, with the phone on the same
-  network and Windows Firewall allowing inbound connections for the exact
-  `node.exe` binary running the backend (a rule for a different `node.exe` on
-  disk, e.g. an nvm copy, does not apply to it).
+- **Wireless adb** — `adb pair` / `adb connect` over Wi-Fi. **`adb reverse`
+  works over a TCP adb connection exactly as it does over USB**, so this keeps
+  `localhost:4000/api` working with no LAN IP and no firewall rule: it is the
+  USB setup above with the cable removed, not the Wi-Fi one below. Worth
+  preferring for that reason alone. The forward is per device and has to be
+  re-established after every reconnect, which `npm run adb:reverse` does.
+- **Wi-Fi, without adb** — the development machine's LAN IP, with the phone on
+  the same network and Windows Firewall allowing inbound connections for the
+  exact `node.exe` binary running the backend (a rule for a different
+  `node.exe` on disk, e.g. an nvm copy, does not apply to it).
 
 When neither holds, every request fails before reaching the server and the app
 surfaces `errors.unreachable` rather than any auth error — check connectivity

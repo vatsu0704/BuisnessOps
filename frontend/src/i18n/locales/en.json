@@ -115,7 +115,10 @@
       "EXPENSE_CATEGORY_NOT_FOUND": "That category no longer exists",
       "EXPENSE_CATEGORY_INACTIVE": "{{name}} has been withdrawn — pick another category",
       "EXPENSE_CATEGORY_DUPLICATE": "There is already a category called {{name}}",
-      "EXPENSE_CATEGORY_IS_STANDARD": "This is a standard category, so its name comes from the app. You can withdraw it instead"
+      "EXPENSE_CATEGORY_IS_STANDARD": "This is a standard category, so its name comes from the app. You can withdraw it instead",
+      "NOTIFICATION_NOT_FOUND": "That notification no longer exists",
+      "NOTIFICATION_CATEGORY_UNKNOWN": "There is no notification category called {{category}}",
+      "NOTIFICATION_CATEGORY_REQUIRED": "Attendance notifications cannot be turned off — being told you were marked absent is the point of them"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} is required",
@@ -161,7 +164,9 @@
       "AMOUNT_POSITIVE": "Enter an amount greater than zero",
       "CATEGORY_NAME_LENGTH": "A category name can be up to {{max}} characters",
       "EXPENSE_NOTHING_TO_UPDATE": "Change the category, amount, date, note or payment method",
-      "CATEGORY_NOTHING_TO_UPDATE": "Change the name, or withdraw the category"
+      "CATEGORY_NOTHING_TO_UPDATE": "Change the name, or withdraw the category",
+      "DEVICE_TOKEN_REQUIRED": "This device could not be registered for notifications",
+      "NOTIFICATION_ENABLED_REQUIRED": "Choose whether to turn this on or off"
     },
     "field": {
       "name": "Name",
@@ -1036,5 +1041,44 @@
     "PAYMENT_VERIFIED": "Payment verified",
     "PAYMENT_FAILED": "Payment not found",
     "PAYMENT_COLLECTED": "Cash taken on delivery"
+  },
+  "notifications": {
+    "ATTENDANCE_MARKED_PRESENT": "You were marked present for {{date}} at {{branch}}.",
+    "ATTENDANCE_MARKED_ABSENT": "You were marked absent for {{date}} at {{branch}}.",
+    "ATTENDANCE_MARKED_HALF_DAY": "You were marked half day for {{date}} at {{branch}}.",
+    "ATTENDANCE_MARKED_LEAVE": "You were marked on leave for {{date}} at {{branch}}.",
+    "SUPPLY_ORDER_PLACED": "Order #{{orderNumber}} from {{branch}} — {{amount}}, {{payment}}.",
+    "SUPPLY_ORDER_ACCEPTED": "The warehouse has started on order #{{orderNumber}}.",
+    "SUPPLY_ORDER_PACKED": "Order #{{orderNumber}} is packed and waiting to go out.",
+    "SUPPLY_ORDER_DISPATCHED": "Order #{{orderNumber}} has left the warehouse.",
+    "SUPPLY_ORDER_DELIVERED": "Order #{{orderNumber}} has been delivered.",
+    "SUPPLY_ORDER_REJECTED": "The warehouse cannot fill order #{{orderNumber}}.",
+    "SUPPLY_ORDER_DELAYED": "Order #{{orderNumber}} is {{minutes}} minutes late.",
+    "SUPPLY_PAYMENT_VERIFIED": "The warehouse has confirmed payment for order #{{orderNumber}}.",
+    "SUPPLY_ORDER_ASSIGNED": "Order #{{orderNumber}} to {{branch}} is yours to carry."
+  },
+  "notificationCentre": {
+    "title": "Notifications",
+    "subtitle": "What has happened while you were away",
+    "empty": "Nothing yet",
+    "emptyBody": "Order updates, delays and attendance marks land here.",
+    "markAllRead": "Mark all read",
+    "unreadBadge": "{{count}} unread",
+    "preferencesSection": "What to send me",
+    "preferencesHint": "Turn off what you do not need. These apply to every business you belong to.",
+    "deviceOn": "This device will receive notifications",
+    "deviceOff": "This device will not receive notifications",
+    "deviceOffHint": "Turn notifications on for BizIQ in your phone settings, then reopen the app.",
+    "categoryAttendance": "Attendance",
+    "categoryAttendanceHint": "When someone marks your day. Always on — being told you were marked absent is the point.",
+    "categoryOrders": "Order updates",
+    "categoryOrdersHint": "Placed, accepted, packed, on its way, delivered.",
+    "categoryDelays": "Delays",
+    "categoryDelaysHint": "When an order is running late.",
+    "categoryPayments": "Payments",
+    "categoryPaymentsHint": "When the warehouse confirms a payment.",
+    "categoryDeliveries": "Your deliveries",
+    "categoryDeliveriesHint": "When a run is given to you.",
+    "required": "Always on"
   }
 }

@@ -12,6 +12,7 @@ import AnimatedEntrance from '@/components/AnimatedEntrance';
 import BusinessSwitcher from '@/components/BusinessSwitcher';
 import InfoCard from '@/components/InfoCard';
 import LanguageSelector from '@/components/LanguageSelector';
+import NotificationSettings from '@/components/NotificationSettings';
 import NoBusinessAccessNotice from '@/components/NoBusinessAccessNotice';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -191,7 +192,14 @@ export default function SettingsScreen() {
             <LanguageSelector />
           </AnimatedEntrance>
 
+          {/* Requirement 8. Below the language picker on purpose: what
+              notifications say is decided by the language above, and the
+              switches only matter once you can read them. */}
           <AnimatedEntrance delay={step(9)} style={styles.block}>
+            <NotificationSettings />
+          </AnimatedEntrance>
+
+          <AnimatedEntrance delay={step(10)} style={styles.block}>
             <PressableScale testID="settings-logout" style={styles.logout} onPress={() => logout()}>
               <Ionicons name="log-out-outline" size={18} color={colors.error} />
               <Text style={styles.logoutText}>{t('settings.logout')}</Text>

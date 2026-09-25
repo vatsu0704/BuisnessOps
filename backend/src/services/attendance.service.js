@@ -1,5 +1,6 @@
 const prisma = require('../config/db');
 const { fail } = require('../errors');
+const triggers = require('../notifications/triggers');
 const { distanceMeters } = require('../utils/geo');
 const { roleHas } = require('../permissions');
 const { dateOnly, dateKeyOf, todayInZone, todayKeyInZone } = require('../utils/datetime');
@@ -147,7 +148,7 @@ async function markAttendance(businessId, staffMember, { date, status, notes }, 
       }
     : {};
 
-  return prisma.attendance.upsert({
+  const record = await prisma.attendance.upsert({
     where: { staffMemberId_date: { staffMemberId: staffMember.id, date: day } },
     create: {
       businessId,
@@ -160,6 +161,19 @@ async function markAttendance(businessId, staffMember, { date, status, notes }, 
     },
     update: { status, notes, markedByMembershipId, ...clearPunch },
   });
+
+  // Requirement 2 — "send text to worker for present and absent", confirmed as
+  // a push. Only a MANUAL mark notifies: this function is not on the punch-in
+  // path, so nobody is told about their own punch. A worker with no app account
+  // is simply not told and the mark still succeeds, which the requirement says
+  // in as many words.
+  await triggers.attendanceMarked(businessId, {
+    staffMemberId: staffMember.id,
+    status,
+    date,
+  });
+
+  return record;
 }
 
 function getMonthlyAttendance(businessId, staffMemberId, month, year) {

@@ -11,6 +11,7 @@ const productRoutes = require('./product.routes');
 const counterOrderRoutes = require('./counterOrder.routes');
 const supplyRoutes = require('./supply.routes');
 const expenseRoutes = require('./expense.routes');
+const notificationRoutes = require('./notification.routes');
 const inviteRoutes = require('./invite.routes');
 
 const router = express.Router();
@@ -27,6 +28,11 @@ router.use('/businesses', productRoutes);
 router.use('/businesses', counterOrderRoutes);
 router.use('/businesses', supplyRoutes);
 router.use('/businesses', expenseRoutes);
+// Requirement 8. The business-scoped half mounts beside the others; the device
+// and preference half does not, because a phone is registered before a business
+// is chosen — see the header of notification.routes.js.
+router.use('/businesses/:businessId', notificationRoutes.scoped);
+router.use('/notifications', notificationRoutes.router);
 router.use('/invites', inviteRoutes);
 router.use('/users', userRoutes);
 

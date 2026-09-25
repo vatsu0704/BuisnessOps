@@ -2,3 +2,12 @@
 *.log
 .env
 .env.local
+
+# Firebase — see Docs/FIREBASE_SETUP.md
+#
+# The service account is a CREDENTIAL: anyone holding it can send push
+# notifications to every BizIQ user. google-services.json is not secret in the
+# same way, but it identifies one particular Firebase project and belongs to
+# whoever set that project up rather than to the code.
+frontend/google-services.json
+backend/firebase-service-account.json

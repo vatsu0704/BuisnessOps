@@ -1236,6 +1236,82 @@ them having logged something today (Flow 17n).
 
 ---
 
+## Flow 17p — Notifications
+
+Requirements 2 and 8. **`Docs/FIREBASE_SETUP.md` first** — without it, everything
+below still works except the push itself: the rows are written, the bell counts
+them and the centre lists them. That is a supported mode, not a broken one, so
+run this flow either way.
+
+1. As any role, look at **Home**'s top bar.
+   - ✅ **Expected:** a bell between the language chip and the branch count. No
+     badge yet.
+2. As the **owner**, mark a staff member **absent** — one whose staff record
+   carries the email of a real app account (Flow 13).
+3. Log in as **that worker** on another device or browser profile.
+   - ✅ **Expected:** the bell shows a red **1**. Open it: *"You were marked
+     absent for 20 Sep at Andheri West."*
+   - ✅ **Expected with Firebase set up:** it also arrived as a notification on
+     the phone, in the language **that phone's app** is set to.
+4. Mark somebody who has a staff record but **no app account**.
+   - ✅ **Expected:** marking succeeds exactly as before. Nobody is notified and
+     nothing fails — requirement 2 says this in as many words.
+5. Tap the notification in the centre.
+   - ✅ **Expected:** it opens **My attendance**, the row loses its tint, and
+     the badge drops by one.
+6. **Change the app language** and reopen the centre.
+   - ✅ **Expected:** the whole history re-renders in the new language, including
+     notifications received days ago. They are stored as a code and its values,
+     not as a sentence. An Android notification already on the lock screen keeps
+     the language it arrived in, which is correct — it was written when it was
+     sent.
+7. As the **cashier**, place a supply order (Flow 17g).
+   - ✅ **Expected:** the **warehouse** user's bell goes up; the cashier's does
+     not. You are not told about your own actions.
+   - ✅ **Expected:** the **delivery agent** hears nothing about it. Who is told
+     is decided by capability — everyone holding `supplyOrder:fulfil` — and
+     carrying an order is not fulfilling one.
+8. As the **warehouse**, accept it and post a **+30 minute** delay.
+   - ✅ **Expected:** the cashier gets both, and the delay names the minutes.
+     This is requirement 9 finally arriving without anyone opening a screen.
+9. Dispatch it, naming an agent (Flow 17k).
+   - ✅ **Expected:** **the agent is told** — *"Order #214 to Andheri West is
+     yours to carry."* Until this task, the run appeared in their queue and
+     nothing announced it.
+10. Tap **Mark all read** in the centre.
+    - ✅ **Expected:** the badge clears and stays cleared after a refresh.
+
+---
+
+## Flow 17q — Turning notifications down
+
+Requirement 8's last line.
+
+1. Open **Settings** and scroll to **What to send me**.
+   - ✅ **Expected:** a line saying whether **this device** will receive
+     notifications at all, above the switches. If Android's permission was
+     refused it says so and tells you to fix it in the phone's settings —
+     Android only ever asks once, so an in-app button could not re-prompt.
+2. Turn **Order updates** off. Have a cashier place an order.
+   - ✅ **Expected:** no push, and no new row in the centre either. Muting stops
+     it being recorded, not just delivered.
+3. Turn it back on and place another.
+   - ✅ **Expected:** it comes through again.
+4. Look at **Attendance**.
+   - ✅ **Expected:** it has no switch — it reads **Always on**, with a sentence
+     saying why. Requirement 2 exists so a worker finds out they were marked
+     absent; a switch that hid that would defeat the requirement it was built
+     for, and one that looked operable and refused would be worse.
+5. Switch business (Flow 17) and open Settings again.
+   - ✅ **Expected:** the same switches. A preference belongs to the person, not
+     to the business or the phone.
+6. **Log out.**
+   - ✅ **Expected:** the logout completes normally. This device is unregistered
+     server-side, so the next person to sign in on it does not inherit the
+     previous account's notifications.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
 - **No overtime, leave balances or statutory deductions**: hours from
@@ -1252,13 +1328,16 @@ them having logged something today (Flow 17n).
   attendance days that person marked.
 - **Reports and Alerts tabs** intentionally show a "planned" notice — they're
   Phase 4/5 work, not started yet.
-- **Nothing notifies anyone yet.** Every supply-order step is recorded and
-  visible the next time someone opens the screen, but no push goes out — that is
-  Task 7 (Firebase). So a warehouse person has to look at the Desk to see a new
-  order, and a cashier has to open the order to find a delay.
-- **An agent is not told they have been given a run.** Dispatch names somebody
-  now (Flow 17k), and the run appears in their Deliveries queue — but nothing
-  pushes. They have to open the app. That is Task 7 again.
+- **Notifications need Firebase set up to leave the device** (`Docs/FIREBASE_SETUP.md`).
+  Without it the rows are still written and the in-app centre still lists them —
+  that is a supported mode, and the whole test suite runs in it — but nothing
+  reaches a lock screen.
+- **iOS gets no pushes.** BizIQ ships as an Android development build; iOS needs
+  its own Firebase app registration, a `GoogleService-Info.plist` and an APNs
+  key before any of this reaches an iPhone.
+- **A notification is never re-sent.** If the push fails, the row stays and the
+  person sees it the next time they open the app. There is no retry queue and no
+  scheduler to run one — see the note on scheduling in `REQUIREMENTS.md`.
 - **A branch created before this build has no delivery address**, so an order to
   it shows "No address saved for this branch" until somebody fills one in under
   Settings → branch → Branch settings. Nothing fails; the agent simply has the
