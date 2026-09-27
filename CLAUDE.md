@@ -370,6 +370,14 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
   `android/local.properties`, the JDK pin in `android/gradle.properties`,
   `android/.idea/gradle.xml`, and `android/.gradle/config.properties`. Plain
   `expo prebuild` preserves them, so prefer it unless a full reset is required.
+- **`npm run android` builds the *debug* variant**, which carries no JS bundle
+  and pulls one from Metro at launch — useless on a phone that is not tethered
+  to this machine. A shareable APK is the release variant:
+  `cd android && ./gradlew assembleRelease`, which writes
+  `android/app/build/outputs/apk/release/app-release.apk` with the bundle, and
+  therefore the `EXPO_PUBLIC_API_URL` that was in `.env` at build time, compiled
+  in. Without `frontend/keystore.properties` it is signed with the debug key —
+  fine for sideloading, not acceptable for the Play Store.
 - On Android 12+ the OS draws its own splash before app code runs. It needs
   `windowSplashScreenBackground`, which Expo SDK 51 does not emit — the config
   plugin above supplies it. Without it the launch starts on a black screen.
@@ -403,6 +411,13 @@ surfaces `errors.unreachable` rather than any auth error — check connectivity
 before suspecting credentials.
 
 Read these values only as `process.env.EXPO_PUBLIC_X` member expressions. Expo's
-Babel transform matches that exact shape; destructuring
-(`const { EXPO_PUBLIC_X } = process.env`) compiles and type-checks cleanly but
-yields `undefined` at runtime, producing a silent fallback that is hard to trace.
+Babel transform matches that exact shape, and **anything wrapped around
+`process.env` defeats it** — destructuring (`const { EXPO_PUBLIC_X } = process.env`)
+and a type assertion (`(process.env as { EXPO_PUBLIC_X?: string }).EXPO_PUBLIC_X`)
+both compile and type-check cleanly, then yield `undefined` at runtime and fall
+back silently. The cast form sat in `api/client.ts` for months undetected,
+because its fallback *was* the dev URL: over `adb reverse` a broken inline is
+indistinguishable from a working one, and only a release APK pointed at the
+hosted API exposed it — as "cannot reach the BizIQ server at
+http://localhost:4000/api" on a server that was up. No cast is needed anyway,
+since `@types/node` types `process.env` as a string dictionary.

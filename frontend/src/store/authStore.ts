@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import * as secureStorage from '@/utils/secureStorage';
-import { setAuthToken, extractErrorMessage } from '@/api/client';
+import { setAuthToken, extractErrorMessage, warmUpServer, isTransportFailure } from '@/api/client';
 import { signup as signupRequest, login as loginRequest, fetchSession } from '@/api/auth';
 import type { SignupPayload, LoginPayload } from '@/api/auth';
 import { getBusiness, createBusiness as createBusinessRequest } from '@/api/business';
@@ -86,6 +86,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   bootstrap: async () => {
     const token = await secureStorage.getItem(TOKEN_KEY);
     if (!token) {
+      // Signed out, so the login screen is what renders next and nothing else
+      // will touch the API until someone presses a button. Start waking the
+      // server now instead of then.
+      void warmUpServer();
       set({ isBootstrapping: false });
       return;
     }
@@ -102,9 +106,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           ? await getBusiness(activeBusinessId).catch(() => business)
           : business;
       set({ token, user, business: remembered, activeBusinessId, isBootstrapping: false });
-    } catch {
-      // Stored token is expired/invalid — drop it and fall back to login.
-      await secureStorage.deleteItem(TOKEN_KEY);
+    } catch (err) {
+      // Only a reply from the API proves the token is no longer good. A request
+      // that never got one — offline, or a hosted server still waking up — says
+      // nothing about it, and deleting it there signs people out for the sole
+      // reason that their server was cold.
+      if (!isTransportFailure(err)) {
+        await secureStorage.deleteItem(TOKEN_KEY);
+      }
       setAuthToken(null);
       set({ token: null, user: null, business: null, activeBusinessId: null, isBootstrapping: false });
     }

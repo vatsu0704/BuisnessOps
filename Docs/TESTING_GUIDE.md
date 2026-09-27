@@ -46,8 +46,18 @@ You run both servers yourself — nothing here starts them for you.
      `http://192.168.1.98:4000/api`. Windows Firewall must allow inbound
      connections for the exact `node.exe` running the backend.
 
-   `EXPO_PUBLIC_*` values are baked in when Metro starts, so after editing
-   `.env` restart Metro with the cache cleared (`npx expo start -c`).
+   - **A release APK against the hosted API**
+     (`https://buisnessops.onrender.com/api`): nothing has to be running on this
+     PC, and no cable or firewall rule is involved. The free instance sleeps
+     after a quiet spell and takes about half a minute to wake, so the first
+     sign-in then is slow rather than broken — the app starts waking it the
+     moment it opens, and sign-in, sign-up and session restore wait 45 seconds
+     before giving up while everything after them still fails fast at 15.
+
+   `EXPO_PUBLIC_*` values are baked in when Metro starts — and, for a release
+   APK, when `assembleRelease` bundles — so after editing `.env` restart Metro
+   with the cache cleared (`npx expo start -c`), or rebuild the APK. Nothing
+   re-reads `.env` at runtime.
 4. Open the app (the web build opens automatically in your browser; for
    `npm run android` open it on the device/emulator).
 5. If the database has no account you know the password for, start at Flow 1 —
