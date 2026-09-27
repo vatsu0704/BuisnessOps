@@ -3,7 +3,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing } from '@/theme';
 import type { AttendanceStatus } from '@/types/staffing';
 
-const TONE: Record<AttendanceStatus, { bg: string; fg: string }> = {
+/**
+ * One tone per status, shared with `AttendanceStatusPicker` — so the colour you
+ * press when marking a day is the colour the day wears afterwards.
+ */
+export const ATTENDANCE_TONE: Record<AttendanceStatus, { bg: string; fg: string }> = {
   PRESENT: { bg: '#DCFCE7', fg: colors.success },
   HALF_DAY: { bg: '#FEF3C7', fg: colors.warning },
   ABSENT: { bg: colors.errorBg, fg: colors.error },
@@ -12,7 +16,7 @@ const TONE: Record<AttendanceStatus, { bg: string; fg: string }> = {
 
 export default function AttendanceStatusPill({ status }: { status: AttendanceStatus }) {
   const { t } = useTranslation();
-  const tone = TONE[status];
+  const tone = ATTENDANCE_TONE[status];
   return (
     <View style={[styles.pill, { backgroundColor: tone.bg }]}>
       <Text style={[styles.label, { color: tone.fg }]}>{t(`attendanceStatus.${status}`)}</Text>

@@ -75,6 +75,14 @@ const styles = StyleSheet.create({
   gradient: {
     flexDirection: 'row',
     gap: spacing.sm,
+    // Horizontal padding was missing entirely. It never showed while every
+    // button was full width — the content is centred, so the space came from
+    // the button being wider than its label. The moment one is sized by its
+    // content instead, as the supply cart's tray does it, the label and its
+    // icon sit flush against both edges with nothing around them. A button
+    // has to look right at its own natural width, not only when something
+    // else is stretching it.
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md + 2,
     alignItems: 'center',
     justifyContent: 'center',

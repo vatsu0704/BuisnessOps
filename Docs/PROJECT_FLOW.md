@@ -4,7 +4,14 @@ This document translates the product requirements (PRD) into a buildable enginee
 
 The product is named **BizIQ** (Android package `com.biziq.app`), renamed from the earlier "BuisnessOps". The old name deliberately survives where changing it would be disruptive — the repository folder and the Postgres database name `buisnessops` — and those are not typos to fix.
 
-**Where the repo actually is:** Phases 0 and 1 (CSV path) are done. The app ships as an Expo **development build** rather than Expo Go, with its own icon, animated splash and a four-tab shell (Home, Reports, Alerts, Settings). Phase 3's UI i18n is done ahead of order; the rest of Phase 3 and all of Phase 2 are not started. An **Attendance & Salary Slip module** was also added outside the phase sequence, on request — backend and frontend both done (see 4a below).
+**Where the repo actually is:** Phases 0 and 1 (CSV path) are done. The app ships as an Expo **development build** rather than Expo Go, with its own icon, animated splash and a four-tab shell (Home, Staff, Reports, Settings). Phase 3's UI i18n is done ahead of order; the rest of Phase 3 and all of Phase 2 are not started. An **Attendance & Salary Slip module** was also added outside the phase sequence, on request — backend and frontend both done (see 4a below).
+
+**A second track is now running alongside this one.** *Branch Operations*
+(Section 13, driven by [REQUIREMENTS.md](REQUIREMENTS.md)) turns BizIQ from a
+product that analyses a business into one that runs it — counter billing,
+supply orders, expenses, net profit. Tasks 1-10 of that track have landed; Task 1
+amends Phase 0 (see the note under the Phase 0 exit criterion) and Task 8
+delivers part of Phase 4.
 
 ---
 
@@ -28,7 +35,7 @@ These decisions shape every phase and shouldn't be revisited per-feature:
 | 1 | Data ingestion: unified schema, CSV/Excel upload, first POS adapter | FR-04, FR-05 | ✅ CSV path done; live POS adapter deferred |
 | 2 | Core query engine: metrics catalog + NL → answer pipeline (English first) | FR-01, FR-06 | ⛔ blocked on an LLM provider |
 | 3 | Multi-language + voice | FR-02, FR-03 | 🟡 UI **and API message** i18n done (en/hi/gu/mr); voice and query-language work outstanding |
-| 4 | Reporting & cross-branch comparison | FR-06, FR-07 | ⏳ not started (tab exists, shows a planned notice) |
+| 4 | Reporting & cross-branch comparison | FR-06, FR-07 | 🟡 branch × month net profit and cross-business comparison done (Branch Operations Task 8); benchmarking against a company average, and city/region grouping, not started |
 | 5 | Proactive intelligence: alerts, benchmarking, wastage, cash-mix, seasonal correlation | FR-08–FR-12 | ⏳ not started (tab exists, shows a planned notice) |
 | 6 | Strategic & franchise: staff analytics, royalty automation, expansion what-if, forecasting | FR-13–FR-16 | ⏳ not started |
 | 7 | Hardening: security, compliance, performance, billing | NFRs (Section 7) | ⏳ not started |
@@ -45,12 +52,25 @@ Phases 0–4 are the MVP (PRD Phase 1). Phase 5 is PRD Phase 2. Phase 6 is PRD P
 
 **Deliverables**
 - Prisma schema: `Business`, `Branch`, `Membership` (user ↔ business ↔ branch ↔ role), replacing the standalone `User` model's implicit single-tenant assumption.
-- Roles per Section 8 of the PRD: `OWNER`, `MANAGER` (branch-scoped), `STAFF` (alerts-only), `ADMIN` (config-only).
+- Roles per Section 8 of the PRD: `OWNER`, `MANAGER` (branch-scoped), `STAFF` (alerts-only), `ADMIN` (config-only). **Superseded by Section 13** — there are now seven roles, and what each may do lives in a capability matrix rather than in role-name checks at each route.
 - Auth: JWT-based login/session (already have `jsonwebtoken` installed), password hashing, business signup flow that creates the first `Business` + `OWNER` membership.
 - Middleware: tenant-resolution (derive `businessId` from the authenticated session, never from client input) + role guard.
 - Environment/config split for dev/staging/prod; CI running `npm test` + Prisma migration check on both backend and frontend.
 
-**Exit criteria:** a manager account, scoped to one branch, cannot read another branch's data even if it guesses an ID — verified by a test, not just by inspection.
+**Exit criteria:** a branch-scoped account cannot read another branch's data even if it guesses an ID — verified by a test, not just by inspection.
+
+> **Amended 2026-09-23.** This criterion used to name the *manager* as the
+> branch-scoped role, and `tests/tenant-isolation.test.js` demonstrated it with
+> one. Requirement 14 of the Branch Operations track (Section 13) makes MANAGER
+> admin-equivalent and business-wide, so the role no longer carries the
+> property. **The property itself is unchanged and still enforced** — it is now
+> demonstrated with a `CASHIER`, and the same test file additionally asserts the
+> manager's new reach, so the widening is a decision on record rather than an
+> absence of coverage.
+>
+> A `MANAGER`'s `BranchAccess` rows still exist and can still be removed; they
+> simply no longer bound what that person can reach. The invite screen therefore
+> stops asking for branches when the role is MANAGER.
 
 ---
 
@@ -307,3 +327,1038 @@ What's actually next:
 - **Data privacy regulation differs by market** — no market launch without its own compliance review (Phase 7).
 - **Pricing model** — undefined; validate during Phase 4–5 user testing, not assumed upfront.
 - **PRD not yet validated with external owners** — treat Section 6 priorities (and thus this phase order) as provisional until early user interviews confirm them, especially the Phase 2/3 ordering of query-engine vs. voice.
+
+---
+
+## 13. Branch Operations (a separate track, started 2026-09-23)
+
+A second track, running alongside the phase sequence above rather than inside
+it. Where Phases 0–7 make BizIQ *analyse* a business, this track makes it *run*
+one: counter billing with tokens, branch-to-warehouse supply orders with
+payment and dispatch, branch expense logging, and net profit per branch per
+month across several businesses in one account.
+
+The requirements and the full task breakdown are in
+**[REQUIREMENTS.md](REQUIREMENTS.md)** — that document is the source of truth
+for what is being built and why. This section tracks only where each task has
+got to.
+
+| Task | Focus | Requirements | Status |
+|---|---|---|---|
+| 1 | Roles and the permission matrix | R14 | ✅ done |
+| 2 | One account, many businesses | R16 | ✅ done |
+| 3 | Product catalog, new Home, hide AI | R4, R7 | ✅ done |
+| 4 | Counter billing and tokens | R1, R17 | ✅ done |
+| 5 | Supply orders end to end | R3, R5, R5.1, R9, R11, R12, R21, R22, R23 | ✅ done |
+| 6 | Expenses and the daily log | R10 | ✅ done |
+| 7 | Firebase notifications | R2, R8 | ✅ done |
+| 8 | Analytics and net profit | R13, R15 | ✅ done |
+| 9 | Day-end and month-end export | R17 | ✅ done |
+| 10 | Restrictions that explain themselves | R18, R19 | ✅ done |
+
+### Task 1 — Roles and the permission matrix ✅
+
+**Why it had to come first.** Six of these requirements name a role that did not
+exist, and the role code could not carry them. Authorization was 27 duplicated
+`requireRole('OWNER','ADMIN')` lists plus four hand-written checks written as
+**deny-lists** — `if (role === 'STAFF') return false`. An allow-list fails
+*closed* when a new role appears, which is safe. A deny-list fails **open**:
+adding `DELIVERY_AGENT` would have handed it every colleague's HR record through
+`staffScope.js`, and `CASHIER` the ability to create staff in branches it cannot
+reach. Those four were inverted *before* the enum grew, so no window existed
+where the values were addable and the checks were wrong.
+
+**What landed:**
+
+- Seven roles: the existing `OWNER`, `ADMIN`, `MANAGER`, `STAFF` plus
+  `WAREHOUSE`, `CASHIER` and `DELIVERY_AGENT`.
+- A capability matrix — `backend/src/permissions/catalog.js` (pure data,
+  requires nothing) mirrored to `frontend/src/permissions/matrix.json`, with
+  `requirePermission('staff:create')` replacing `requireRole(...)` across all
+  seven business routers. Default-deny; `OWNER: '*'` is the one wildcard.
+- **MANAGER derives from ADMIN** minus an explicit (currently empty) exclusion
+  list, so R14's "all the access that admin has" cannot silently drift.
+- **`branch:allAccess` split from `staff:viewAllBranches`.** The
+  `req.branchAccess === null` sentinel used to mean both "every branch's data"
+  and "business-wide authority over people". Those were the same set while the
+  set was {OWNER, ADMIN}; `WAREHOUSE` needs the first and must not have the
+  second. Splitting them is what keeps the order desk out of HR records — and
+  the newly-reachable `.includes(null)` path needed a guard to return 403 rather
+  than crash with a 500.
+- `npm run lint:permissions` (`frontend/scripts/check-permission-parity.js`) in
+  CI, comparing the two matrices and the `MembershipRole` enum. `tsc` cannot see
+  this: it checks the mirror against itself, and a wrong mirror is still
+  internally consistent.
+- `MembershipRole` on the frontend is now *derived* from the matrix rather than
+  hand-written, which is how a new role used to arrive as a string the app
+  silently treated as having no permissions.
+- `INVITABLE_ROLES` derives from the matrix on both ends. Hand-listing it is the
+  trap that makes a whole feature look built and be unreachable — the role
+  exists, holds capabilities, and can be given to nobody.
+- The revoke guard generalised from "an ADMIN cannot revoke the OWNER" to a rank
+  comparison, so a manager cannot remove the admin who issued their account.
+  Existing outcomes are unchanged; peers can still remove each other.
+- `backend/tests/permissions.test.js` — 20 tests covering the matrix itself and
+  each new role over HTTP, including the two regressions the deny-lists would
+  have caused.
+
+**Migration:** `20260923171027_operations_roles` adds the three roles and
+`PaymentMethod.UNSPECIFIED`. Nothing in it *uses* the new values, deliberately:
+Postgres refuses a new enum value in the transaction that added it, and Prisma
+wraps each migration file in one — so any later data work writing `'CASHIER'`
+into a row needs its own migration directory.
+
+**Two error codes were renamed.** `PAY_SET_REQUIRES_OWNER_ADMIN` and
+`PAY_CHANGE_REQUIRES_OWNER_ADMIN` became `PAY_SET_NOT_PERMITTED` and
+`PAY_CHANGE_NOT_PERMITTED`, because a cashier sets pay now and naming two roles
+in the code was a statement that had stopped being true.
+
+### Task 2 — One account, many businesses ✅
+
+Most of this requirement was already built and unreachable. A `User` has always
+been able to hold memberships in several businesses, `Membership` has always
+been the join, and Settings has had a working switcher since the access-control
+pass. The one missing piece was any way to create the **second** business: a
+business could only come into existence through signup, so a second business
+meant a second account — exactly what R16 asks to stop.
+
+- `POST /api/businesses` — the only route in `business.routes.js` with no
+  tenant, because it creates the business there is no id for yet. Gated on
+  `requireAuth` alone and **deliberately on no capability**: the caller has no
+  role in a business that does not exist, and someone's ability to start their
+  own must not depend on a role they hold in somebody else's.
+- The creation itself is `businessService.createBusinessForUser`, **extracted
+  from signup rather than copied**, and both callers run it inside a
+  transaction. R16 is precisely that a second business should be the same
+  operation as the first; a copy is what lets the two drift.
+- `validateCreateBusiness` is stricter than signup's equivalent fields, which
+  are optional-if-present because a signup claiming a pending invite sends none
+  of them and only the service can tell. There is no such case here.
+- `authStore.addBusiness` creates, **re-reads the session**, then switches. The
+  session re-read matters: `user.memberships` is what the switcher renders and
+  what `switchBusiness` validates an id against, so appending the new membership
+  locally would be a second place that has to match the server's shape.
+- `AddBusinessScreen`, reached from Settings. Its entry sits **outside** the
+  switcher's render condition — `BusinessSwitcher` returns null below two
+  businesses, so putting it inside would have meant only people who already have
+  two could add a third. Fields default from the business being acted under,
+  since a second shop in the same country is the common case.
+- **Narrowed to owners afterwards.** Starting a business is the owner's act, not
+  a delegated one: an admin runs the business they were given, and a cashier or
+  a warehouse desk has no use for the entry. It is the capability
+  `business:create`, the second entry in `ADMIN_EXCLUDES` — so `MANAGER`, which
+  derives from `ADMIN`, does not get it either, and nothing checks a role name.
+
+  This is the one place where the app is deliberately **narrower than the API**,
+  which is worth stating because the usual rule is that they match. The gate is
+  about what Settings offers; the endpoint stays open because it has no tenant
+  to check a capability against, and deciding "which business's role?" would
+  stop an invited cashier from ever starting one of their own. The direction is
+  the safe one: a control that is hidden, never a control that 403s. The entry
+  also survives for someone whose every membership was revoked — no role is left
+  to hold a capability, and hiding it would leave an account that can do nothing.
+- `INDUSTRY_OPTIONS` moved to `frontend/src/constants/industries.ts` and
+  `INDUSTRIES` to `backend/src/validations/shared.js`, each of which had been
+  about to become a second copy.
+- `backend/tests/multi-business.test.js` — 7 tests, including that the two
+  businesses stay isolated (a branch in one is invisible from the other, and
+  owning both does not make one reachable through the other's id) and that a
+  rejected request leaves no orphan business behind.
+
+### Task 3 — Product catalog, new Home, role-aware navigation, hide AI ✅
+
+**The catalog (R4).** Two scopes in one table: a `Product` with no `branchId`
+belongs to the whole business and every branch sells it; one with a `branchId`
+exists only there. So "this branch's catalog" is a single filter rather than a
+union. Price works the same way — `Product.costPrice`/`sellPrice` are the
+business default and a `ProductBranchDetail` row overrides them for one branch,
+so a product priced the same everywhere needs no per-branch rows at all.
+
+- `withEffectivePricing` resolves "what does this cost *here*" in one place,
+  because three callers will need the same answer and disagreeing about a price
+  is the kind of bug nobody notices until the till is short: the catalog, the
+  counter order (Task 4) and the day-end export (Task 9).
+- `isActive` is an **AND**, not an override. A product withdrawn business-wide
+  is withdrawn everywhere; a branch may additionally withdraw one that others
+  still sell. There is deliberately no way for a branch to re-activate something
+  the business switched off.
+- Products are withdrawn, never deleted — `LineItem` rows point at them and a
+  past sale has to keep naming what was sold.
+- Scope changes are all-branch acts: a cashier can create and price their own
+  branch's products, and is refused both creating a business-wide one and
+  promoting theirs to the whole business. Otherwise one branch could push a
+  product into every other branch's catalog.
+- `ProductBranchDetail` finally has an API — it had been in the schema since
+  Phase 1 with nothing reading or writing it.
+- `backend/tests/product.test.js` — 17 tests, most of them about a scope
+  leaking: a branch seeing another branch's private products, or a cashier
+  quietly adding one everywhere.
+
+**Role-aware navigation.** The app had none — every tab and every route was
+reachable by every role, with gating only as conditional JSX inside four
+screens. Three tables now drive it, all keyed on the **same capability strings
+the backend guards the matching endpoints with**, so a control that renders is
+one whose request will succeed:
+
+- `TAB_CATALOGUE` in `TabNavigator` — a role mounts three to five of five tabs.
+- `ROUTE_CAPABILITY` in `navigation/routeAccess.ts` — `AppNavigator` registers
+  only the modal routes this person may open, so a stale deep link cannot open a
+  screen whose every request would 403.
+- `SECTIONS` in `HomeScreen` — Home is now fixed chrome plus a capability-
+  filtered, ordered list of section components, each fetching its own data.
+  **Adding a role adds zero screens**; Tasks 5 and 6 add the warehouse queue,
+  the delivery list and the expense-gap list as rows in that table.
+
+`AppStackParamList` stays complete and un-narrowed on purpose. Making the
+*type* depend on the role would force a generic param list onto every shared
+screen and every component that navigates — a far worse explosion, and in the
+type system where it hurts most. The type says what the app can do; the tables
+say what this person can do.
+
+Three interactions that are easy to miss, all handled:
+
+- **Role changes mid-session.** `useMembership` derives from the store, which
+  only refreshed on bootstrap and login — so demoting a cashier left them
+  holding the cashier's app until they force-closed it. `RootNavigator` now
+  refetches the session when the app returns to the foreground.
+- **Switching business changes the role.** One person can be ADMIN in one
+  business and CASHIER in another, which R16 makes normal. `<AppNavigator
+  key={membership?.role}>` forces a clean remount rather than changing the
+  screen list under a focused tab. The cost is in-flight form state, which is
+  business-scoped anyway.
+- **Navigating somewhere unregistered** is a red box in development and
+  **silence** in production. `onUnhandledAction` on `NavigationContainer` at
+  least logs it, and `resolveDeepLink` catches the case that genuinely arrives
+  from outside — a push for a screen the recipient has since lost (Task 7).
+
+**Hiding the AI surface (R7).** There is no AI to switch off; what existed was
+three pieces of static teaser UI promising one — Home's decorative ask bar
+(never even tappable), the "Ask your business anything" notice, and the
+chat-bubble icon the Home tab had borrowed from it. All three now sit behind
+`AI_CHAT_ENABLED` in `frontend/src/config/features.ts`. **Nothing is deleted**:
+the components and every `home.query*` string stay on disk, exactly as
+`AlertsScreen` is kept for Phase 5, so Phase 2 flips one constant rather than
+rebuilding the surface from screenshots.
+
+A role whose screens are not built yet — WAREHOUSE and DELIVERY_AGENT until
+Task 5 — would otherwise land on a blank Home and reasonably conclude the app
+is broken. Home says so instead.
+
+### Task 4 — Counter billing and tokens ✅
+
+Requirement 1: "as orders come in the cashier adds them, issues a token, and the
+money keeps counting — and once an order is taken they can edit it." Explicitly
+**not** a purchase flow: no cart, no payment step, no fulfilment.
+
+**It landed in two commits, and the order mattered.** First a pure refactor
+extracting `salesProjection.service.js` out of `ingestion.service.js` with no
+behaviour change, proven by `ingestion.test.js` passing untouched. Only then was
+the counter built on top. `ingestion.test.js` is one of very few real
+write-path tests in this repo; rewriting it in the same change that adds a
+feature would have thrown away the thing that made the refactor safe.
+
+**One sales fact table, still.** A `CounterOrder` is not a second source of
+sales — every mutation recomputes the total from its items and re-projects into
+`Transaction`/`LineItem` inside one `prisma.$transaction`. So `getSalesSummary`
+and every future metric keep reading one table, and because the projection is
+idempotent, requirement 1's "they can edit it" costs nothing: editing runs it
+again. `VOID` projects as `TransactionStatus.VOIDED`, which the existing
+`status: 'COMPLETED'` filter already excludes — **no new code anywhere** for the
+void case.
+
+**The token allocator is the project's first deliberate `$queryRaw`**, and the
+reason is worth keeping: Prisma cannot express `ON CONFLICT DO UPDATE SET x = x
++ 1`, and every alternative is worse. `MAX(tokenNumber) + 1` races two cashiers
+on one counter; adding a retry loop makes it degrade exactly when the counter is
+busiest, and the failure mode is a 500 while a customer stands there. A Postgres
+sequence is the wrong shape entirely — not per-branch-per-day, needs runtime
+DDL, never resets. One statement, atomic under READ COMMITTED. The
+`@@unique([branchId, tokenDate, tokenNumber])` on `CounterOrder` is **not** the
+allocator; it is the assertion that the allocator is correct, the same posture
+`Attendance` takes with its no-double-punch key. A test opens twelve orders
+concurrently and asserts twelve distinct tokens.
+
+`tokenDate` is the **branch's** local date via `todayKeyInZone`. Keyed on UTC, a
+branch in Asia/Kolkata restarts its numbering at 05:30 local, mid-breakfast.
+
+**Closing an order is not freezing it.** Requirement 1 wants orders editable
+after they are handed over, so `CLOSED` stays editable and can be reopened. The
+immutability floor is the **day** close, which requirement 17's export needs:
+without it, an edit after the export silently restates a number someone has
+already been shown — the exact failure `SalarySlip`'s FINALIZED rule exists to
+prevent. Closing a day refuses while orders are still open, and reopening is
+available, because a day closed by mistake at 18:00 with two hours of trading
+left must be recoverable or the floor is a trap.
+
+**Prices come from the catalog, never the caller.** A client-supplied
+`unitPrice` on a catalog line is ignored outright — a price the client can name
+is a price the client can invent. `name` + `unitPrice` is accepted only for a
+one-off with no product behind it.
+
+**The screen is laid out around the job**: the open order and its running total
+pinned under the thumb, the product grid above, the day's other tokens below.
+Tapping a product with nothing open starts a token rather than scolding, because
+that is what the cashier meant.
+
+**A tab-budget rule came out of this.** Adding Counter took owner/admin/manager
+to six tabs, and at 320dp the Gujarati, Hindi and Marathi labels truncate before
+the English ones — the languages most likely to be in use break first. Five is
+now the documented budget: `demoteWhen` gives up a tab slot for a role whose job
+it is not (an owner reaches the till from Home instead), and a `__DEV__` warning
+fires if any role ever exceeds five again.
+
+`backend/tests/counter-order.test.js` — 22 tests across tokens, the running
+total, editing, the projection, the day floor and access.
+
+### Task 5 — Supply orders end to end ✅
+
+Requirements 3, 5, 5.1, 9, 11 and 12, which are one feature: a branch orders raw
+material from a central warehouse desk, pays for it, the desk fulfils and
+dispatches it, an agent delivers it, and either end can say it is running late.
+
+**A supply order is deliberately NOT projected into the sales fact table.**
+This looks inconsistent beside Task 4 and is the whole point: a counter order is
+a *sale* — revenue — and a supply order is an internal transfer and a *cost*.
+Writing it into `Transaction`/`LineItem` would inflate every sales figure in the
+product by the value of the flour a branch bought from its own warehouse. Task 8
+reads it from `supply_orders` as a cost input to net profit instead.
+
+**The status machine is data, in one place.** `TRANSITIONS` in
+`supplyOrder.service.js` is the whole of what may follow what, and
+`assertTransition` is the only thing that enforces it. Written as `if`s at each
+endpoint, the rule would be whatever each handler remembered. `CANCELLED` is
+reachable from every stage the goods have not left the warehouse in and from
+none after: cancelling something already on a bike would leave a branch holding
+stock the system says was never sent.
+
+**Cancel and reject are two verbs for one end state, on purpose.** The branch
+withdrawing its own order and the warehouse saying it cannot fill one are
+different events with different people to tell. They carry different
+capabilities (`supplyOrder:create` vs `supplyOrder:fulfil`), allow different
+statuses, and the reason is required on a rejection and optional on a
+cancellation. One shared endpoint would have lost which happened.
+
+**Every change writes an event**, through the single `recordEvent` choke point.
+That is what makes requirement 5.1's four asks — material tracking, order
+tracking, dispatch and payment — one stream rather than four features, and it is
+where Task 7's push notifications hook in: one trigger there covers the whole of
+requirement 8's list, where six call sites would mean six things to keep in step
+and one silently missed. It is deliberately **not** stubbed with an empty
+notifier today, because a function that does nothing reads as a function that
+works.
+
+**Payment is recorded, never collected** — the decision in `REQUIREMENTS.md`. No
+gateway, no money through the app. `ONLINE` means the branch paid some other way
+and typed a reference; the warehouse checks it against its own records
+(`PENDING → PAID → VERIFIED | FAILED`). `COD` stays `PENDING` until the goods
+arrive and becomes `PAID` at the moment of delivery, because that is when the
+money actually changes hands. Verifying an order nobody has claimed to pay for
+is refused rather than quietly stamping it VERIFIED.
+
+**And the cash is confirmed, not assumed** (requirement 22). That `PAID` used to
+be a side effect of arriving: the goods reaching the branch was taken as
+evidence that the branch's money had reached the warehouse. They are two events,
+and only the person standing at the counter knows whether the second one
+happened — so marking a COD order delivered asks them, naming the amount and the
+branch, and the server refuses the delivery without the answer. "Not yet" leaves
+the order on the road and unpaid, which is the state it is actually in and the
+state somebody can still chase. Taking the cash writes its own `PAYMENT` row
+(`PAYMENT_COLLECTED`) with who took it, because before this a COD order's
+history showed it becoming `PAID` with nothing anywhere saying who had the
+money. An order with nothing outstanding is delivered with no question asked: a
+question whose answer cannot matter only teaches people to tap through it.
+
+**Order numbers use the same atomic allocator as tokens** (`INSERT … ON CONFLICT
+DO UPDATE … RETURNING`) and differ in two ways: they are per *business*, and
+they never reset. A token is shouted across a counter and has to stay small; an
+order number is quoted days later and has to stay unique. They are issued at
+`PLACED`, not at cart creation — numbering carts burns numbers on orders that
+never happened and leaves gaps the warehouse would ask about.
+
+**One cart per branch, not per cashier.** The branch is what orders, two people
+on a shift adding to one list is what a kitchen expects, and a per-person cart
+strands whatever someone had half-built when their shift ended. It is
+find-then-create rather than a partial unique index, following the precedent the
+`Holiday` model already sets: Prisma 5 cannot express one and hand-adding it in
+SQL would leave permanent drift against `schema.prisma`. Losing that race costs
+a second cart, which is visible and fixable.
+
+**Prices come from the catalog, never the caller** — same rule as the counter.
+An unpriced item is refused rather than ordered at zero, because free flour in
+the figures is worse than an error.
+
+**Three listings, three capabilities, one component.** The cashier's tracking
+list, the warehouse desk and the delivery queue are separate endpoints
+(`supply-orders`, `supply-desk`, `supply-deliveries`) so the capability required
+decides which cut a caller gets, instead of one endpoint re-deriving permission
+from a `?scope=` switch. On the device they are one `SupplyOrderList` with
+different props: three near-copies would drift, and the desk's would be the one
+that forgot the delay banner.
+
+**Dispatch names an agent, and the desk still never sees the team list**
+(requirement 21). The first pass left dispatch unassigned, reasoning that
+picking somebody meant listing the business's members and the warehouse holds no
+`team:view`. The premise was right and the conclusion was wrong: the answer to
+"this screen needs less than the team list" is a narrower endpoint, not a
+missing feature. `GET /supply-delivery-agents`, guarded by `supplyOrder:fulfil`,
+returns a membership id, a name, a duty state and a count — no email, no
+branches, no employment record.
+
+Who appears on it is a capability question asked carefully: an admin holds
+*every* capability, so filtering on `supplyOrder:deliver` alone would offer the
+owner and every admin as couriers. The list is `supplyOrder:deliver` **and not**
+`supplyOrder:fulfil` — someone who can run the desk is not who the desk is
+looking for. Both halves come off the matrix, so this is still an allow-list,
+and a role added later that carries but does not fulfil appears without an edit.
+
+**Availability is reported, never enforced.** "Free" comes from the attendance
+module — a punch-in with no punch-out — rather than from a second notion of
+availability invented for this screen. Attendance has nothing to say about an
+agent with no employment record, or about a business that does not punch in at
+all, so that state is `UNKNOWN` and sorts *above* off duty; blocking on
+availability would leave those businesses unable to assign anybody. Every agent
+stays selectable and the freest is preselected: the person at the desk knows
+things this process does not.
+
+**"Nobody yet" stays on offer**, so a business with no agent can still ship, and
+an unnamed run still reaches every agent covering that branch. **Assigning is
+its own verb** as well as a field on dispatch, because "who is taking it" and
+"it has left" are different facts with different timing — the named agent goes
+home an hour later, and with only the dispatch field the sole way to correct
+that would be to undo a dispatch that really happened. Each assignment writes an
+`ASSIGNMENT` event with the agent's name snapshotted; assigning the same person
+twice writes nothing, because a history that says a run was given to Ravi and
+then given to Ravi is one nobody reads twice.
+
+**A branch's delivery address is not its city and region.** Those describe where
+a branch *is*, for reporting; they are not somewhere a rider can go.
+`addressLine` is free text and multi-line, because an Indian address is not a
+fixed set of fields and forcing one drops the half that actually finds the place
+("behind the old post office"). It travels on the order itself rather than
+costing a second request, since the agent's order screen is the only thing they
+open and branch endpoints are not theirs to call. A branch with no address says
+so rather than showing a blank, and nothing fails.
+
+**Design.** Supply, Desk and Deliveries are tabs for the roles whose daily work
+they are. That took a cashier to six tabs, so `demoteWhen` grew an `unless`:
+Products is given up by anyone holding `supplyOrder:create` *unless* they also
+hold `analytics:viewBusiness`. A cashier trades the catalog for Supply and
+reaches it from Home; an admin, who holds the same capability, keeps it. Every
+role is back within the five-tab budget. Quantities are typed on the cart
+screen, not tapped up on the catalog: raw material is ordered in twenties, and
+reaching 20 kg by pressing a plus twenty times is not a design.
+
+**A warehouse is a `Branch` with a kind** (requirement 23), not a table of its
+own. Adding a staff member demanded a branch, and for a warehouse employee
+there was no true answer — the only locations a business had were the places it
+sells from, so there was nowhere to file them and therefore no way for them to
+punch in. Attendance, geofencing, payroll, rosters and staff records are every
+one of them already keyed on `branchId`, so as a Branch a warehouse gets all
+five the day it is created; a separate table would have meant teaching all five
+about a second kind of place first.
+
+What it earns is enforced where goods move, not merely left out of the pickers:
+`branchOf` in both counterOrder.service.js and supplyOrder.service.js refuses a
+WAREHOUSE with `BRANCH_IS_WAREHOUSE`. A warehouse has no till, and an order it
+placed on itself would reach the desk asking the desk to ship to the desk. On
+the device the split is one rule — **`tradingBranches` where goods move,
+`branches` where people are** — stated once in `useBranches` so the next picker
+lands on the right side of it.
+
+**Adding a staff member reads the role off the email.** The email field was only
+ever "link an account so they can punch in"; it is also the one thing on that
+form that identifies somebody the business already knows. So it now says who
+they are, and when their role reaches every branch the question changes from
+"which branch do they work at" to "where is their base", with a line saying that
+it only decides where attendance and payslips are filed. The location is chosen
+automatically in the two cases where there is nothing to choose — one location,
+or a person whose work spans every branch and a warehouse to base them at — and
+never guessed otherwise, because filing someone at the wrong shop silently is
+worse than a tap. The membership role is also offered as the job title, which a
+delivery agent otherwise types by hand. The lookup needs `team:view`, so for a
+cashier it simply does not happen and the screen behaves as it did.
+
+**The form was in the wrong order, which made all of that unreachable.** The
+email sat in the *last* card and the location picker in the first, so the
+recognition could never fire before the question it was meant to answer had
+already been asked — an owner adding a delivery agent was shown "WHICH BRANCH DO
+THEY WORK AT?" over a list of shops the agent works at none of. The screen now
+runs **who they are → where they are based → what they are paid**, which is the
+order the answers actually depend on each other in. The subtitle went with it:
+it opened "Every staff member belongs to one branch", which is the sentence that
+made the wrong answer sound like the only one.
+
+**Interface work in the same pass.**
+
+- **Destructive actions confirm, through one helper.** Three screens had
+  hand-written the same `Alert.alert(title, body, [cancel, destructive])` and
+  three more destructive actions had no question at all — cancelling a supply
+  order, withdrawing a product, withdrawing a raw material. `utils/confirm.ts`
+  is that shape once, resolving a promise so a caller reads as
+  `if (await confirm(...))`; it uses React Native's own `Alert`, falls back to
+  the browser dialog on web the way `utils/haptics.ts` no-ops there, and settles
+  `false` on an Android back press so a busy flag can never stick.
+- **`PrimaryButton` had no horizontal padding.** It never showed while every
+  button was full width, because the content is centred and the space came from
+  the button being wider than its label. The supply cart sized one by its
+  content and the label sat flush against both edges. Fixed in the component:
+  a button has to look right at its own natural width, not only when something
+  else is stretching it. The cart's tray also stopped being a row — the total
+  and the button shared one line, and every Indic translation of "Place order"
+  is longer than the English, so the figure was squeezed first in the languages
+  most likely to be used.
+- **Language is a dropdown**, built from `Modal` with `onRequestClose` for the
+  Android back button. Four stacked rows was a fifth of the Settings screen for
+  a setting most people touch once, and it grew with every language added.
+- **The business id is off the Settings screen.** It is a UUID; nobody reading
+  that screen can do anything with it.
+- **Home shows the cards for your job, not for your capabilities.** An admin
+  holds every capability in the matrix, so "Order raw material" and "Your
+  deliveries" were on an owner's Home — neither of which an owner does. Sections
+  gained the same `hideWhen: { holds, unless }` the tab bar uses. Hiding the
+  ordering card took away the only route an admin had to the raw-material
+  catalog, so a **Raw material catalog** card replaces it on
+  `supplyItem:manage` — which also gave the warehouse desk its first way in at
+  all: it holds that capability and had no screen to use it on.
+
+`backend/tests/supply-order.test.js` — 59 tests across the catalog, the cart,
+placing, the status machine, role separation, the desk, delays, delivery,
+handing a run to an agent, the destination address, cancelling and cross-tenant
+isolation.
+
+---
+
+### Task 6 — Expenses and the daily log ✅
+
+Requirement 10: "gas bill, electricity bill, petty expenses and everything else.
+Also daily cost: how much did I spend today? And how much did I sell today?
+Category-wise too. The person at the back office will call the branches that
+haven't logged their daily expenses."
+
+**The counterpart to Task 4, and deliberately not its mirror image.** A counter
+order is what a branch took in and is projected into `Transaction`; an expense is
+what it paid out and is projected nowhere. They meet in one endpoint —
+`GET /branches/:branchId/expense-day` — because the requirement asks them as one
+question, and answering them on two screens would make the comparison the reader's
+job.
+
+**Seeded categories are codes, not names.** Every business starts with the same
+eight, and they are read by a cashier who may have the app in Gujarati. The
+backend cannot translate, so a seeded category carries a `code` and the device
+renders `t('expenseCategory.GAS')`; the `name` column is the English fallback,
+playing exactly the role the English in `errors/catalog.js` plays. A category
+somebody types carries no code and is shown verbatim — their own words are not
+ours to translate, the same rule a delay note already follows.
+
+**Custom categories exist because the breakdown is the requirement.** The seeded
+eight cover what R10 names and not "Vegetables" or "Staff tea". Without a way to
+add one, everything specific lands in Other with a note — and "today I took
+₹2,000 of milk" stops being answerable about milk, which is the feature.
+
+**The double-count question is answered here, not in Task 8.** There is no
+raw-material category, on purpose: supply spend is already recorded in
+`supply_orders`, and a category inviting someone to log it again by hand would
+subtract it twice from net profit. §5 of `REQUIREMENTS.md` records the decision
+and what is left for Task 8 — a business can still name a custom category
+anything, so the export flags overlap rather than pretending the data shape
+prevents it.
+
+**`expense:view` is a new capability, and the reason is the warehouse desk.**
+R10 gives the back office the job of chasing branches, which means reading every
+branch's figures and recording none of them. `expense:log` and
+`expense:viewAllBranches` could not express that between them: one is the wrong
+authority and the other is a question of scope. This is the same narrowing that
+produced `GET /supply-delivery-agents` in Task 5 — when a screen needs less than
+a capability grants, the answer is a narrower capability, not the broader one.
+
+**"Who hasn't logged today" is a query, and every branch is asked about its own
+day.** A business with branches in two timezones has no single "today", so
+taking the server's would tell the back office to ring a branch whose day has
+not started. Two queries however many branches there are: the branch list, then
+one grouped count over the (branch, date) pairs it produced. Computed when the
+card loads, so it is exact — a job snapshotting at 20:00 is wrong by 20:05, and
+the requirement says a person makes the call anyway.
+
+**`localDayRange` is the new piece of `utils/datetime.js`.** Expenses are keyed
+on a branch-local date and need no conversion; sales are instants and do.
+`occurredAt::date` would have compared UTC days — counting every sale before
+05:30 IST against the day before — and could not have used the existing index,
+because a function over a column is not indexable. Task 9's day-end export wants
+the same window.
+
+**Design notes.** The category picker is a wrapping row of content-width chips
+rather than anything that divides the line evenly: the list is eight long before
+a business adds one of its own, which is well past where `SegmentedOption`
+stops working. The day card shows **two** money tiles and the difference as a
+full-width line — three equal shares of a 393dp phone leave each figure about
+75dp, which holds ₹2,000 and not ₹1,50,000, and the difference is the conclusion
+drawn from the two above it rather than a third peer.
+
+`backend/tests/expense.test.js` — 16 tests across seeding through both business
+creation paths, custom categories, refusing to rename a standard one, the
+positive-amount and future-date rules, correcting and removing an entry, the day
+and month views, the compliance list for today and for a past date, and the four
+permission boundaries (desk reads but cannot log, cashier cannot reach another
+branch by id or by route, cashier cannot see the business-wide list).
+
+---
+
+### Task 7 — Firebase notifications ✅
+
+Requirements 2 and 8, plus the pushes R3, R9, R11, R12 and R21 had been waiting
+for. Setup is `Docs/FIREBASE_SETUP.md`.
+
+**A notification is a row first and a push second.** `notifications` is written
+before anything is sent, and the send is best-effort on top of it. That ordering
+is what makes every awkward case ordinary rather than special: a phone that is
+off, a token FCM has retired, a worker who has never opened the app, a server
+with no Firebase credentials at all. Requirement 2 says in as many words that
+marking attendance succeeds for a worker who cannot be told; the same has to be
+true of a server that cannot tell anybody.
+
+**Without `FIREBASE_SERVICE_ACCOUNT` the whole feature still works, minus the
+push.** Rows are written, the in-app centre lists them, the badge counts them.
+The backend logs one line at startup and carries on. The 259-test suite runs in
+exactly that state, which is why the tests assert `sentAt === null` rather than
+mocking FCM: not sending is a supported mode, not a stub.
+
+**The backend renders prose here, and this is the one place it may.** CLAUDE.md
+forbids it because the backend cannot know the reader's language — and that
+premise is false for exactly this channel, twice over: Android draws the lock
+screen before any app code runs, and a device reports its own language when it
+registers its token (`DeviceToken.locale`). So the exception is not a hole, it
+is a place where the stated reason stops applying. Three things fence it:
+
+- Only `notifications/push.js` may require `notifications/labels.js`.
+  `lint:notification-prose` walks the backend tree and fails on any other
+  `require`. It replaces a looser substring scan that had been sitting inside
+  the permission gate, which could not tell a `require` from a comment about
+  the rule.
+- Every push carries `{ code, params }` in its data payload as well as the
+  rendered text, and the in-app centre renders `t('notifications.<code>')`. So
+  the history re-renders when the app language changes; only the already-drawn
+  lock-screen copy keeps the language it arrived in, which is correct — it was
+  written when it was sent.
+- `lint:backend-i18n` compares all four languages in **both** backend
+  dictionaries and checks every code the backend can send has an app key.
+  `payslip.labels.js` had carried four languages since Phase 4 with **nothing
+  comparing them** — a missing key there prints `undefined` on a document
+  somebody is handed with their pay.
+
+**Recipients are capabilities, never roles.** "Tell the warehouse" is "tell
+everyone in this business holding `supplyOrder:fulfil`", so a role added later
+that also fulfils orders is notified with no edit here. The actor is always
+excluded — an owner who both places and fulfils would otherwise notify
+themselves.
+
+**`DeviceToken.token` is globally unique on purpose.** A handset signing in as
+somebody else **moves** the row rather than adding a second one. Without that,
+the person who signed out keeps receiving notifications on a phone they have
+signed out of — a security property, not tidiness. A token FCM reports as dead
+is disabled; a transient failure is not, or one bad afternoon quietly
+unsubscribes the whole business.
+
+**Attendance notifications cannot be switched off**, and the switch says so
+rather than silently refusing. Requirement 2 exists so a worker finds out they
+were marked absent; a preference that hid it would defeat the requirement it was
+built for. Everything else — orders, delays, payments, deliveries — is a plain
+toggle, stored as rows meaning *muted* so that a category added later is on by
+default rather than silently off for everyone who registered before it existed.
+
+**A tap is re-checked before it is dispatched.** A notification outlives the
+access that justified it, so `resolveDeepLink` asks the capability matrix again
+and falls back to Home. Dispatching into a route the navigator never registered
+is a silent no-op — a tap that does nothing, which nobody reports.
+
+`backend/tests/notification.test.js` — 15 tests: the worker is told and a worker
+with no account still gets marked, the desk hears about an order and the person
+who placed it does not, a delay reaches the branch with its minutes as a param,
+the centre counts and marks read, one member cannot read another's, a shared
+handset moves rather than duplicates, and attendance refuses to be turned off.
+
+### Task 8 — Analytics and net profit ✅
+
+Requirements 13 and 15. `ReportsScreen` stops being a placeholder.
+
+**Nothing in this task writes, and nothing is cached.** `analytics.service.js` is
+the only read-only service in the backend: every figure is a sum over rows the
+other services created. That is requirement 13's acceptance criterion taken
+literally — *net profit must be reproducible by hand from the rows behind it* — so
+no number is derived from another derived number, and there is no stored total
+that could drift from what it totals. `backend/tests/analytics.test.js` therefore
+asserts exact figures against round inputs rather than checking a shape.
+
+**One formula, and a warehouse needs no special case.**
+
+```
+netProfit = sales − expenses − materialSpend − payroll
+```
+
+A warehouse has no till and orders nothing from itself, so its sales and material
+spend are structurally zero and the same expression collapses to
+`−(expenses + payroll)`. `isCostCentre` exists only so the screen can print "Cost
+centre" and omit the two figures rather than showing "₹0 of sales", which reports
+the shape of the model as though it were a fact about the business.
+
+**The branch column deliberately does not add up to the business total**, and this
+is the part worth reading before changing anything here. When a shop orders flour
+from the warehouse, the shop pays the warehouse: real money out of *that branch*,
+so it is subtracted from the shop's row and a branch manager sees their true cost.
+But the money never left the **business** — it moved from one pocket to another —
+so subtracting it again at the business level would make a business appear to lose
+money every time it supplied itself. Hence:
+
+```
+businessNetProfit  = customer sales − all expenses − all payroll
+Σ(branch netProfit) + internalTransfer === businessNetProfit
+```
+
+That identity is a test, in the same way the payroll week-off identity is. The
+response carries the whole reconciliation, and `NetProfitCard` prints it as a
+sentence — "your branches together made −₹42,000, add back the ₹30,000 they paid
+your own warehouse, the total is −₹12,000". **Hiding the gap would be the bug:**
+somebody adds the column up, gets a different number from the total, and stops
+believing either.
+
+The alternative — crediting the transfer to the warehouse as revenue, so the column
+simply adds up — was rejected because `SupplyOrder` records only the branch that
+*ordered*. There is no column for the warehouse that filled it, so the revenue
+cannot be attributed to a particular warehouse without a schema change, and the
+shortcut of "the one warehouse" stops being true the moment a business opens a
+second. It stays available if that day comes.
+
+**DRAFT payslips count, and the month says it is provisional.** Counting only
+FINALIZED slips would report zero wages, and therefore a wildly inflated profit,
+for any business that generates payslips and never finalises them — wrong in the
+flattering direction, which is the dangerous one. A month is flagged when a slip is
+still a draft, or when the branch has staff and payroll was never run at all. The
+flag reads today's head-count, so a branch that has hired since a long-closed month
+sees that month flagged too; that errs toward "go and look", which is the safe
+direction.
+
+**The query count is bounded by months, never by branches** — the thing that grows
+as a franchise grows must not multiply the query count. Expenses are one query
+(`expenseDate` is a `@db.Date` already holding the branch's own day, so the month
+bucket is a string prefix); payroll is one (`monthYear` is already 'YYYY-MM'); the
+head-count is one. Only sales and material spend need a timezone, because
+`occurredAt` and `placedAt` are *instants* — so branches are bucketed by timezone
+first, since branches sharing one share every window boundary. A six-month grid
+over forty branches is twelve queries, not two hundred and forty. `localMonthRange`
+is built out of `localDayRange` so the daylight-saving correction is written once.
+
+**One endpoint serves both audiences.** `GET …/analytics/branch-monthly` is guarded
+on the narrower `analytics:viewBranch`, which a CASHIER holds, and scoped by
+`req.branchAccess` — so a cashier gets their own branch and an admin gets all of
+them without a second endpoint existing. The **business roll-up is a separate
+decision**, attached only for `analytics:viewBusiness`, because a cashier reading
+their own branch must not be handed the business's net profit alongside it. The
+Reports **tab** stays gated on `analytics:viewBusiness`: a cashier already has five
+tabs, and five is the documented budget in `TabNavigator`. The scoping is therefore
+defence in depth rather than a surface, and it is tested as such.
+
+`GET /analytics/cross-business` mounts outside `/businesses/:businessId`, the same
+split `notification.routes.js` makes, because it spans businesses and there is no
+single tenant to resolve. It has no `requirePermission` for that reason and filters
+the caller's memberships against the same capability instead, so a business where
+they are only a cashier is **absent rather than refused** — they did not ask for it
+by name. Currencies are never added: when they differ, each business still shows its
+own total and the combined figure is withheld with a line saying why.
+
+**The grid is turned ninety degrees, because a matrix does not survive a phone.**
+Twelve month columns inside the 313dp a card has on a 393dp screen leaves 26dp
+each, which holds no rupee figure at all. So it is **one card per branch**, each
+carrying its whole window as a shape (`MonthBars`) and one month's figures in full,
+with the month strip moving every card at once — which is the column of the matrix
+a person was going to read anyway. It scales to any number of branches or months
+instead of degrading as either grows.
+
+The design arithmetic, done rather than guessed, at 393dp minus the 24dp gutters
+and a card's 16dp padding (313dp inside):
+
+- `MetricGrid` is **two to a row**, wrapping. Four across would give each 76dp —
+  the exact width at which `SegmentedOption` broke twice. Two gives 150dp, which
+  holds a label of a dozen characters and an amount up to twelve crore, and a
+  fifth metric added later starts a third row rather than squeezing the four
+  already there.
+- The three range chips get 110dp each; "12 months" and every Indic translation of
+  it fits on one line. The two scope chips get 168dp.
+- `MonthBars` lays its columns out with `flex: 1`, so twelve months share whatever
+  width there is rather than assuming a screen size. Bars grow **both ways from a
+  zero line**: net profit goes negative, and a loss drawn as a short upward bar
+  would read as a small profit.
+- Branch name gets `flex: 1` and may wrap; the net-profit figure sits on its own
+  line beneath. Side by side is the shape that breaks in Gujarati, where both
+  halves run longer than the English.
+
+Built from plain `View`s rather than a charting package: React Native draws a
+rectangle of a given height perfectly well, and twelve rectangles are not worth a
+dependency, a native build concern and a second set of styling conventions.
+
+**`analyticsStore` is keyed on the window, not just the business.** Every other
+store keys `loadedFor` on the business alone because its data has no parameters;
+this one is a *query*, so the same business with a different range is different
+data and business-equality would leave the previous range's figures on screen. It
+has no `refreshAnalytics()` twin of `refreshSalesSummary()` either, and that is
+deliberate: the convention exists because a mutating screen unmounts and leaves no
+effect to re-run, and Reports is only ever a tab — never pushed over another screen
+— so `useFocusEffect` re-reads it and every screen that moves a figure it sums is
+somewhere else. Reaching Reports refreshes it.
+
+`backend/tests/analytics.test.js` — 21 tests: the formula against round numbers, a
+warehouse as a cost centre with no special case, the reconciliation identity in one
+month and across several, a DRAFT cart and a CANCELLED order and a VOIDED and
+REFUNDED sale all excluded, a sale one minute into the local month landing in the
+right month (and one minute before it in the previous one), a declining branch
+marked DOWN, no percentage offered when the earlier month was zero, unsettled
+payroll flagged, a cashier scoped to one branch and handed no business total, a
+branch they cannot reach refused, a role with no analytics capability refused, the
+window's default and its two refusals, the cross-business roll-up agreeing with the
+same business's own grid, and a brand-new business with no branches returning a
+complete report of zeroes rather than a partial object the app would read
+`undefined` off.
+
+### Task 9 — Day-end and month-end export ✅
+
+Requirement 17. "Whatever entries were made across the whole day, they should be
+able to export it in the evening — and for the whole month too."
+
+**Six routes, three representations, one query.** `exports/day-end` and
+`exports/month-end` each answer bare (JSON), `/workbook` (.xlsx) and `/document`
+(HTML). The data is assembled once by `export.service.js` for all three, so the
+spreadsheet and the printed page cannot disagree — neither renderer does any
+arithmetic of its own. A representation is a path rather than a `?format=`, so the
+content type is decided by the route and a client cannot ask for a spreadsheet and
+be handed markup.
+
+**Read-only, nothing snapshotted**, for the same reason `analytics.service.js` is.
+That is what makes R17's "exports work for any past date, so losing the file is
+recoverable" true by construction rather than by a retention policy.
+
+**Four record types, two date shapes.** Counter orders, expenses and attendance are
+keyed on `@db.Date` columns already holding the branch's own calendar day, so a day
+is one value and a month a plain range. Supply orders are keyed on `placedAt`, an
+*instant*, so they need `localDayRange` / `localMonthRange`. Getting that wrong is
+silent: in IST a UTC-keyed window files everything before 05:30 against the day
+before, so an export run at 20:00 would omit the morning. Payroll is in the month
+export and not the day one, because there is no such thing as one day's payslip and
+a pro-rated fragment would invent a figure nobody could check.
+
+**Every branch is asked about its own day**, the rule `listExpenseCompliance`
+already follows: with no date each branch uses its own local today, and with one
+given every branch uses that date, which is what makes "what happened on Tuesday"
+answerable. With no branch the export covers every branch the caller can reach —
+which is what makes it *the whole day's entries* rather than one till's.
+
+**§5's last open question is closed here.** The seeded expense categories contain no
+raw-material category, so supply spend cannot normally be logged twice; but a
+business may add a category of its own and call it anything. The export flags
+**evidence, not wording**: an expense in a *custom* category whose amount exactly
+matches a supply order on the same branch and the same day. That is a fact about two
+rows. A name-based heuristic was rejected — it cannot work across four languages,
+and it would produce confident nonsense. Seeded categories are never flagged, so an
+electricity bill that happens to equal a flour order is left alone.
+
+The flag travels in the JSON as `{ code, params }` and is rendered by the app;
+only the printed document renders it as a sentence. That is the boundary the whole
+task is fenced on.
+
+**The prose fence went from two files to three, deliberately and with the reason
+written down.** `documents/export.labels.js` joins `notifications/labels.js` and
+`payslip.labels.js`: an `.xlsx` cell cannot hold a translation key and neither can a
+printed page, and the document is fetched with an explicit `?lang=` — exactly as
+`GET /salary-slips/:id/document` already is, so the backend is *told* the language
+rather than guessing it. `lint:backend-i18n` now compares 96 export labels across
+four languages alongside the other two dictionaries, and CLAUDE.md records that
+`?lang=` licenses a *document*, not an ordinary API response.
+
+**The spreadsheet holds numbers, not formatted text.** Every money cell is a
+JavaScript number; `"₹2,000.00"` is text to Excel and cannot be summed, sorted or
+charted, which is the entire reason somebody asked for a spreadsheet rather than a
+PDF. Dates go the other way — ISO strings, never date serials, because a serial is
+interpreted against the *reader's* locale and the same file would read 25/09 in
+India and 09/25 in the US. Both are asserted by reading the generated workbook back
+in the test. One flat table per record type with a Branch column, not a sheet per
+branch: that is what a pivot table wants, and a one-branch export and a forty-branch
+export are then the same shape. Sheet names are translated, and sanitised of the
+characters Excel refuses.
+
+**One endpoint, two audiences, no role names.** `export:dayEnd` and
+`export:monthEnd` were already in the matrix and are held by CASHIER as well as the
+admin roles. The capability says whether you may export; `req.branchAccess` says
+what. So a cashier asking for the whole business is scoped to their own branch, and
+no narrower endpoint is needed.
+
+**Device side reuses the existing print path and adds one helper.**
+`printDocument.ts` turns the HTML into a PDF; `downloadFile.ts` is new, for binary.
+Both fetch through `apiClient` because **`FileSystem.downloadAsync` does not reject
+on a non-2xx** — it once shipped a 403 JSON body inside a `.pdf`. The binary helper
+reads a `Blob` and base64-encodes it with `FileReader`, since `expo-file-system`
+writes text and `Buffer` is not in an Expo bundle; both are core APIs, so no
+polyfill. CLAUDE.md now has this as its own section, because the rule has already
+cost one bug and now has two call sites.
+
+**`ExportActions` is stacked rows, not two side-by-side buttons** — the shape that
+breaks in Gujarati, where both labels run longer than the English. Each row gets the
+full width for a label and a sentence saying what the file actually is, which
+matters because "spreadsheet" and "printable summary" are not self-evidently
+different to somebody who just wants the day's figures. It also says what it *would*
+export before you press: a count, or "nothing was entered", and the double-count
+warning up front rather than left to be discovered inside the file. At 393dp the
+text column is 257dp, which holds every label and hint in all four languages on one
+line.
+
+`backend/tests/export.test.js` — 25 tests: all four record types in one export with
+totals that add up, a voided token listed and not counted, every reachable branch
+when none is named, a past date, the overlap flagged from a custom category and
+*not* from a seeded one, the generated workbook read back and inspected (sheet
+names, amounts as numbers, dates as ISO text, a total row matching the JSON,
+translated headers, timestamps in the branch's own clock rather than UTC, a payslips
+sheet on the month export only), the document's CSP
+headers and its escaping of a branch named `<script>`, the overlap as a sentence
+there and a code in JSON, the month rolling up rather than one day of it, an invalid
+month refused, a cashier scoped to their own branch, a branch they cannot reach
+refused, and a role with no export capability refused on all three representations.
+
+### Task 10 — Restrictions that explain themselves ✅
+
+Requirements 18 and 19. Two halves of one idea: the app already hides what a role
+cannot use, and it should also **say why** when something is refused.
+
+#### R18 — one cashier per branch, one branch per cashier
+
+**The first restriction in this project that is not a capability at all.** Every
+other rule is "may this role do X?", answered from the matrix. This one is an
+invariant about who may *hold* a branch, which is exactly the kind of rule a
+generic "insufficient permissions" cannot explain — and exactly the kind a
+capability check cannot enforce.
+
+**It is a service, not a validator, and the distinction is the whole design.**
+Everything in `validations/` is a fact about the request body and can be decided
+without touching the database. This is a fact about the *world*: whether somebody
+else currently holds the branch. Two admins pressing Assign at the same moment
+both read a free branch and both write. So it lives in
+`services/cashierAssignment.service.js`, inside the transaction that makes the
+write, behind `SELECT … FOR UPDATE` on the membership and then the branch — always
+in that order, so two assignments touching the same pair cannot deadlock by taking
+the locks in opposite orders. The validator still pre-empts the half it can see (a
+cashier invited with no branch, or with two); that is a convenience, the lock is
+the guarantee. There is a test that runs two assignments concurrently and asserts
+the branch ends with exactly one cashier.
+
+**No database constraint can express it**, which is worth writing down so nobody
+goes looking for one. The condition is "at most one `BranchAccess` row per branch
+*whose membership's role is CASHIER*", and the role lives on `memberships` — a
+Postgres unique index cannot reach across a join. The `@@unique([membershipId,
+branchId])` that does exist is a different statement (no duplicate grants).
+
+**Three doors, one enforcement point.** Invite, claim-at-signup, and the
+branch-access edit all reach `business.service.js:addBranchAccess`, which now
+always runs in a transaction — given the bare Prisma singleton it opens one itself,
+given a `tx` it joins the caller's. Door two is the interesting one, because
+**nobody is present to be asked**: the branch was free when the invite was written
+and may be taken months later when its invitee signs up. Taking it from the current
+holder is the silent rewrite R18 forbids; refusing the signup would lock somebody
+out of their own account over an admin's scheduling problem. So the claim creates
+the membership, skips the branch, and the person lands as a cashier with no
+branch — a state the app names out loud.
+
+**The swap is the same request repeated**, with `confirm: true`, rather than a
+second endpoint. A confirmation that changed the URL would be a second code path
+to keep honest, and the thing being confirmed is this exact assignment. The 409
+carries the displaced cashier's **name** as a param — never baked into the
+sentence — because the admin's next action depends on knowing who. When a move both
+displaces somebody and vacates a branch, `currentBranch` rides along too and the
+app renders the second clause from its own key: one translated sentence cannot
+carry a clause that applies only sometimes.
+
+**A revoke frees the branch immediately.** `BranchAccess` rows deliberately survive
+a revoke so that re-inviting somebody restores their scope, so the rule counts only
+rows whose membership is `ACTIVE` — otherwise a revoked cashier would keep a branch
+occupied forever. Re-inviting a revoked cashier drops their vestigial rows, because
+the branch named in the new invite *is* the fresh decision, which is what the
+re-invite path's own comment already claimed.
+
+**Memberships that already break the rule are reported, never rewritten.**
+`GET …/cashier-conflicts` lists branches with more than one cashier and cashiers
+without exactly one branch, computed on demand so it is exact when read. The Team
+screen shows it as a panel that is deliberately **not actionable** — settling a
+shared branch means deciding who keeps it, and a one-tap fix would have to guess.
+
+**The one place in this codebase that acts on a role name, and it is not the
+anti-pattern it resembles.** `SINGLE_BRANCH_ROLE` lives in
+`permissions/catalog.js` beside the matrix, is mirrored into `matrix.json`, and is
+compared by `lint:permissions`. The deny-lists Task 1 removed asked "may this role
+do X?", which fails *open* for a role added later. This asks "which role is
+structurally tied to one place?" — a till belongs to a shop and a shop has one
+till — and a role added later is simply unconstrained, which is the safe default.
+
+#### R19 — every restriction says what it is
+
+**"Insufficient permissions" became a sentence, without the backend writing one.**
+`requirePermission` already put the refused capability in the error's params for the
+log; the app mirrors the capability matrix; so from that one string
+`permissions/explain.ts` builds the whole refusal — "Only Warehouse can accept,
+pack and dispatch a supply order" — with the holding roles **derived** from the
+matrix rather than written down. Move a capability between roles and every refusal
+that mentions it says the new answer.
+
+**Done in one place.** `translateApiError` special-cases `PERMISSION_DENIED`, and
+every screen already calls `extractErrorMessage`, so every refusal in the app
+explains itself — including the ones written before this task and the ones written
+after. Dozens of catch blocks were not touched.
+
+**`ACTION_KEYS` is a `Record<Capability, …>`**, so a capability added to the backend
+catalog fails `tsc` until somebody writes its phrase. Its *values* are i18n keys
+assembled at runtime and cast, which `tsc` cannot check — the same hole
+`check-error-parity.js` exists to close — so `lint:permissions` now also resolves
+every one of them against `en.json`. A capability cannot ship without being able to
+explain its own refusal.
+
+**The five refusals that only asserted a boundary exists were reworded** —
+`PERMISSION_DENIED`, `BRANCH_ACCESS_DENIED` and its destination variant,
+`STAFF_ACCESS_DENIED`, `SALARY_SLIP_ACCESS_DENIED`. "You do not have access to this
+branch" became "You can only work in the branches you have been assigned to. Ask an
+admin to assign this one." The non-permission restrictions R19 names were already
+specific: a closed day, an order too far along to cancel, an item with no price all
+state their rule.
+
+**A real bug fell out of it.** Home showed **Add your first branch** whenever the
+branch list was empty, which a cashier with no branch cannot do — tapping it opened
+a screen whose save would 403. The two cases are now told apart by `branch:create`:
+somebody who can add a branch is invited to, somebody who cannot is told to ask.
+That is also where R18's displaced cashier lands, so the notice was needed anyway.
+
+**The team moved into a store.** `TeamScreen` held members and invites in its own
+`useState`, which was right while it was the only reader. R18 gives it a second —
+the invite screen has to know which branches already have a cashier before offering
+a choice — so `teamStore` exists *before* the second private copy could, rather
+than after somebody noticed the invite screen offering a branch taken ten minutes
+ago. The branch hint degrades safely: the route is gated on `team:invite` while the
+member list needs `team:view`, and if those ever came apart the hint would just read
+"no cashier yet" while the server's 409 still names the holder.
+
+**A pre-existing conflict resolved first.** `supply-order.test.js` deliberately put
+two cashiers on one branch, to prove an order is credited to whoever placed it
+rather than whoever opened the cart. R18 makes that fixture illegal, so the second
+person is now the **owner** — who also holds `supplyOrder:create` — and it is a
+better test for it: owner-plus-cashier is the pairing that survives the rule, and it
+is the pairing the shared per-branch cart was really argued from.
+`revoke.test.js` had the same problem from the other end. Its "narrow a two-branch
+member to one" case ran on a cashier, which R18 makes an unreachable state, so it
+runs on a STAFF member — the role that is branch-scoped and unconstrained. That test
+has now changed vehicle twice for good reasons: MANAGER until requirement 14 made it
+business-wide, CASHIER until requirement 18 tied it to one branch.
+
+`backend/tests/cashier-assignment.test.js` — 20 tests: a cashier invited with no
+branch and with two, both refused before anything is created; a delivery agent
+still covering three; the occupied branch named rather than called taken; the
+confirmed swap leaving exactly one holder; the displaced cashier ACTIVE, reaching
+nothing, and still able to sign in; re-assigning their own branch a no-op rather
+than a conflict with themselves; a move refused and then made, vacating the branch
+behind it; both consequences stated when a move displaces and vacates at once; a
+non-boolean `confirm` refused rather than read as truthy; two concurrent assignments
+of one branch ending with exactly one cashier; a revoke freeing the branch with the
+row still in place; a re-invite taking the branch named now; the claim skipping a
+branch taken since the invite; the conflict report finding both shapes and changing
+nothing; and the two R19 assertions — the capability riding along on a 403, and a
+branch refusal whose sentence states the rule.

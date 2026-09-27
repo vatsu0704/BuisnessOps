@@ -8,6 +8,9 @@ const RUN_ID = Date.now();
 const password = 'TestPass123!';
 const ownerEmail = `att-owner.${RUN_ID}@test.buisnessops.dev`;
 const staffEmail = `att-staff.${RUN_ID}@test.buisnessops.dev`;
+// A delivery agent: no fixed place of work, so the geofence does not apply to
+// them and their coordinates are recorded instead.
+const riderEmail = `att-rider.${RUN_ID}@test.buisnessops.dev`;
 
 // A real branch location + a coordinate ~11m away (inside a 50m geofence)
 // and one ~1.4km away (outside it).
@@ -53,6 +56,7 @@ describe('Attendance & Salary Slip module', () => {
   let businessId;
   let branchId;
   let staffMemberId;
+  let riderToken;
   const businessIdsToClean = [];
   const userIdsToClean = [];
 
@@ -113,6 +117,31 @@ describe('Attendance & Salary Slip module', () => {
       .send({ branchId, email: staffEmail, name: 'Attendance Staff', role: 'Cashier', baseSalary: 30000 });
     expect(staffMember.statusCode).toBe(201);
     staffMemberId = staffMember.body.id;
+
+    // The rider is employed by this branch — that is their payroll home — but
+    // their work happens at every other branch, which is the case the
+    // punch-anywhere exemption exists for.
+    await request(app).post('/api/auth/signup').send({
+      email: riderEmail,
+      password,
+      name: 'Attendance Rider',
+      businessName: `Rider Solo ${RUN_ID}`,
+      industry: 'FOOD_BEVERAGE',
+      country: 'IN',
+      defaultCurrency: 'INR',
+      timezone: 'Asia/Kolkata',
+    });
+    await request(app)
+      .post(`/api/businesses/${businessId}/memberships`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: riderEmail, role: 'DELIVERY_AGENT' });
+    const riderLogin = await request(app).post('/api/auth/login').send({ email: riderEmail, password });
+    riderToken = riderLogin.body.token;
+
+    await request(app)
+      .post(`/api/businesses/${businessId}/staff`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ branchId, email: riderEmail, name: 'Attendance Rider', role: 'Delivery', baseSalary: 20000 });
   });
 
   afterAll(async () => {
@@ -136,6 +165,56 @@ describe('Attendance & Salary Slip module', () => {
       .send(FAR_AWAY);
     expect(res.statusCode).toBe(403);
     expect(res.body.message).toMatch(/outside the allowed/);
+  });
+
+  // The delivery agent's whole job is being somewhere else. The geofence is not
+  // applied to them — but the trade is that their coordinates stop being
+  // optional, so an admin can always see where the punch happened.
+  describe('punching with no fixed place of work', () => {
+    it('lets a delivery agent punch in far from the branch, and records where', async () => {
+      const res = await request(app)
+        .post(`/api/businesses/${businessId}/attendance/punch-in`)
+        .set('Authorization', `Bearer ${riderToken}`)
+        .send(FAR_AWAY);
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.punchInAt).toBeTruthy();
+      expect(Number(res.body.punchInLat)).toBeCloseTo(FAR_AWAY.latitude, 4);
+      expect(Number(res.body.punchInLng)).toBeCloseTo(FAR_AWAY.longitude, 4);
+    });
+
+    it('records where they punched out too', async () => {
+      const res = await request(app)
+        .post(`/api/businesses/${businessId}/attendance/punch-out`)
+        .set('Authorization', `Bearer ${riderToken}`)
+        .send(NEARBY);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.punchOutAt).toBeTruthy();
+      expect(Number(res.body.punchOutLat)).toBeCloseTo(NEARBY.latitude, 4);
+    });
+
+    // Without this the exemption would give away the geofence and record
+    // nothing in its place, which is the worst of both.
+    it('refuses a punch with no location at all', async () => {
+      const res = await request(app)
+        .post(`/api/businesses/${businessId}/attendance/punch-in`)
+        .set('Authorization', `Bearer ${riderToken}`)
+        .send({});
+      expect(res.statusCode).toBe(400);
+      // Its own code, not the geofence one: no radius is being checked here,
+      // the location itself is what the punch is meant to record.
+      expect(res.body.code).toBe('PUNCH_LOCATION_ALWAYS_REQUIRED');
+    });
+
+    // The exemption must not have leaked to everyone else.
+    it('still holds the geofence against a role that has a fixed branch', async () => {
+      const res = await request(app)
+        .post(`/api/businesses/${businessId}/attendance/punch-in`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send(FAR_AWAY);
+      expect(res.statusCode).toBe(403);
+    });
   });
 
   it('punches in and out within the geofence, and blocks a double punch', async () => {
@@ -359,11 +438,19 @@ describe('Attendance & Salary Slip module', () => {
     expect(res.statusCode).toBe(200);
     // The old implementation returned only existing Attendance rows, so this
     // person was simply invisible and "who hasn't punched in?" was unanswerable.
-    expect(res.body.entries).toHaveLength(2);
+    //
+    // Asserted by name rather than by a bare count: the point is that someone
+    // with no record still appears, and a count breaks the moment another test
+    // adds a fixture to this branch — which is exactly what happened when the
+    // delivery agent joined it.
+    const names = res.body.entries.map((e) => e.staffMember.name);
+    expect(names).toContain('Never Punched');
+    expect(names).toContain('Attendance Staff');
+
     const never = res.body.entries.find((e) => e.staffMember.name === 'Never Punched');
     expect(never.attendance).toBeNull();
     expect(res.body.summary.unmarked).toBe(1);
-    expect(res.body.summary.total).toBe(2);
+    expect(res.body.summary.total).toBe(res.body.entries.length);
   });
 
   it('does not let a STAFF member read a colleague through branch access', async () => {

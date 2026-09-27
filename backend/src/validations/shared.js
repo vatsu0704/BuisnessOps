@@ -58,7 +58,14 @@ const stringMaxLength = (field, max) => fieldError('FIELD_STRING_MAX_LENGTH', fi
 const mustBeOneOf = (field, options) => fieldError('FIELD_MUST_BE_ONE_OF', field, { options: options.join(', ') });
 const provideAtLeastOne = (fields) => fieldError('PROVIDE_AT_LEAST_ONE', null, { fields: fields.join(', ') });
 
+// The Industry enum's values, in one place because two validators need them:
+// signup creates the first business and POST /businesses creates the rest
+// (requirement 16). Two copies is how one of them ends up missing a value the
+// schema has.
+const INDUSTRIES = ['RETAIL', 'FOOD_BEVERAGE', 'SERVICES', 'FRANCHISE_OTHER'];
+
 module.exports = {
+  INDUSTRIES,
   isValidEmail,
   isIsoDate,
   isValidTimeZone,

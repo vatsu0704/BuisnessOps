@@ -1,5 +1,6 @@
 const prisma = require('../config/db');
 const { fail } = require('../errors');
+const { roleHas } = require('../permissions');
 
 // businessId arrives as a route param, but it is never trusted on its own:
 // this middleware always re-verifies it against a real, ACTIVE Membership
@@ -28,10 +29,19 @@ async function resolveTenant(req, res, next) {
       role: membership.role,
     };
 
-    // OWNER/ADMIN have implicit access to every branch in the business.
-    // MANAGER/STAFF are limited to whatever BranchAccess rows exist for them.
-    const hasFullAccess = membership.role === 'OWNER' || membership.role === 'ADMIN';
-    req.branchAccess = hasFullAccess ? null : membership.branchAccess.map((ba) => ba.branchId);
+    // `null` means "every branch in this business"; an array is the explicit
+    // list from the caller's BranchAccess rows.
+    //
+    // This is DATA scope, and only data scope. It used to double as
+    // "business-wide authority over people" too, because while the set was
+    // {OWNER, ADMIN} the two were the same set. WAREHOUSE separates them: the
+    // order desk ships to every branch, so it needs this, and has no business
+    // reading those branches' HR records, so it must not get that. Authority
+    // over people is `staff:viewAllBranches`, asked for separately in
+    // middleware/staffScope.js.
+    req.branchAccess = roleHas(membership.role, 'branch:allAccess')
+      ? null
+      : membership.branchAccess.map((ba) => ba.branchId);
 
     next();
   } catch (err) {

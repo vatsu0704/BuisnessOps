@@ -2,10 +2,27 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '@/theme';
 
+export type PillTone = 'brand' | 'muted' | 'success' | 'warning' | 'danger';
+
+const TONES: Record<PillTone, { tint: string; background: string }> = {
+  brand: { tint: colors.primary, background: colors.primaryLight },
+  muted: { tint: colors.textSecondary, background: '#F1F1F5' },
+  success: { tint: colors.success, background: '#E8F6ED' },
+  warning: { tint: colors.warning, background: '#FDF3E3' },
+  danger: { tint: colors.error, background: colors.errorBg },
+};
+
 type Props = {
   label: string;
   icon?: keyof typeof Ionicons.glyphMap;
-  tone?: 'brand' | 'muted';
+  /**
+   * Five tones rather than two, because a supply order's status and its
+   * payment state both need to say "fine", "waiting" and "went wrong" at a
+   * glance. Colour alone never carries the meaning — the label always says it
+   * too, so the pill still reads correctly to someone who cannot tell the
+   * amber from the green.
+   */
+  tone?: PillTone;
   /**
    * Turns the pill into a "remove this" control, used for the branch grants on
    * the Team screen. Omitted everywhere else, so the pill stays the plain
@@ -17,7 +34,7 @@ type Props = {
 };
 
 export default function Pill({ label, icon, tone = 'brand', onRemove, accessibilityLabel, testID }: Props) {
-  const tint = tone === 'brand' ? colors.primary : colors.textSecondary;
+  const { tint, background } = TONES[tone];
 
   const body = (
     <>
@@ -28,7 +45,7 @@ export default function Pill({ label, icon, tone = 'brand', onRemove, accessibil
   );
 
   if (!onRemove) {
-    return <View style={[styles.pill, tone === 'muted' && styles.pillMuted]}>{body}</View>;
+    return <View style={[styles.pill, { backgroundColor: background }]}>{body}</View>;
   }
 
   return (
@@ -37,7 +54,7 @@ export default function Pill({ label, icon, tone = 'brand', onRemove, accessibil
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       onPress={onRemove}
-      style={({ pressed }) => [styles.pill, tone === 'muted' && styles.pillMuted, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.pill, { backgroundColor: background }, pressed && styles.pressed]}
       // The pill is small, so extend the touch target past what is drawn
       // rather than making every branch chip on the screen bigger.
       hitSlop={6}
@@ -53,12 +70,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: spacing.xs + 2,
-    backgroundColor: colors.primaryLight,
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm - 1,
   },
-  pillMuted: { backgroundColor: '#F1F1F5' },
   pressed: { opacity: 0.6 },
   label: { fontSize: 12.5, fontWeight: '600' },
 });

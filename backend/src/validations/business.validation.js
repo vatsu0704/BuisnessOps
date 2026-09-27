@@ -1,4 +1,5 @@
 const {
+  INDUSTRIES,
   isValidEmail,
   isValidTimeZone,
   isWeekdayList,
@@ -11,9 +12,21 @@ const {
   required,
 } = require('./shared');
 const { fieldError } = require('../errors');
+const { ROLES, SINGLE_BRANCH_ROLE } = require('../permissions');
 
-const INVITABLE_ROLES = ['ADMIN', 'MANAGER', 'STAFF'];
+// Derived from the capability matrix rather than hand-listed, so a role added
+// there is invitable on the same commit. A hand-written list is the trap that
+// makes a whole feature look built and be unreachable: the role exists in the
+// database and in the matrix, and nobody can ever be given it.
+//
+// OWNER stays excluded deliberately, and business.service.js depends on that —
+// "OWNER is not in INVITABLE_ROLES, so the one created at signup is the only
+// one there will ever be" is what keeps a business from losing its only owner.
+const INVITABLE_ROLES = ROLES.filter((role) => role !== 'OWNER');
 const BRANCH_STATUSES = ['ACTIVE', 'INACTIVE', 'CLOSED'];
+// A location the business sells from, or the one it ships from. See BranchKind
+// in schema.prisma for why a warehouse is a Branch at all.
+const BRANCH_KINDS = ['BRANCH', 'WAREHOUSE'];
 
 // Shared by create and update rather than copied, so the two can't drift.
 // `requireRadiusCoordinates` is false on update, where the coordinates may
@@ -40,10 +53,46 @@ function validateGeofenceFields(body, errors, { requireRadiusCoordinates = true 
   }
 }
 
+/**
+ * Requirement 16 — adding a second business to an existing account.
+ *
+ * Stricter than signup's equivalent fields, deliberately. `validateSignup`
+ * treats these as optional-if-present, because a signup claiming a pending
+ * invite legitimately sends none of them and only the service can tell (it is
+ * the half with database access). There is no such case here: someone is
+ * explicitly creating a business, so every field it needs is required, and a
+ * bad timezone is caught before it becomes permanent.
+ */
+function validateCreateBusiness(body) {
+  const errors = [];
+  if (!body.name || typeof body.name !== 'string') errors.push(required('name'));
+  if (!body.industry || !INDUSTRIES.includes(body.industry)) errors.push(mustBeOneOf('industry', INDUSTRIES));
+  if (!body.country || typeof body.country !== 'string') errors.push(required('country'));
+  if (!body.defaultCurrency || typeof body.defaultCurrency !== 'string') {
+    errors.push(required('defaultCurrency'));
+  }
+  if (!body.timezone || typeof body.timezone !== 'string') errors.push(required('timezone'));
+  else if (!isValidTimeZone(body.timezone)) errors.push(fieldError('TIMEZONE_INVALID', 'timezone'));
+  return errors;
+}
+
+// Free text, and nullable, on both create and update. An address is not a
+// shape that validates: forcing one drops the half that actually finds the
+// place ("behind the old post office").
+const BRANCH_TEXT_FIELDS = ['city', 'region', 'country', 'addressLine', 'postalCode', 'currency'];
+
 function validateCreateBranch(body) {
   const errors = [];
   if (!body.name || typeof body.name !== 'string') errors.push(required('name'));
   if (!body.code || typeof body.code !== 'string') errors.push(required('code'));
+  if (body.kind !== undefined && !BRANCH_KINDS.includes(body.kind)) {
+    errors.push(mustBeOneOf('kind', BRANCH_KINDS));
+  }
+  for (const field of BRANCH_TEXT_FIELDS) {
+    if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'string') {
+      errors.push(mustBeString(field));
+    }
+  }
   if (!body.timezone || typeof body.timezone !== 'string') errors.push(required('timezone'));
   // Unvalidated before, which is why utils/datetime.js has to fall back rather
   // than trust Branch.timezone.
@@ -62,9 +111,12 @@ function validateUpdateBranch(body) {
   const errors = [];
   const allowed = [
     'name',
+    'kind',
     'city',
     'region',
     'country',
+    'addressLine',
+    'postalCode',
     'currency',
     'status',
     'timezone',
@@ -80,13 +132,16 @@ function validateUpdateBranch(body) {
   if (body.name !== undefined && (typeof body.name !== 'string' || !body.name.trim())) {
     errors.push(cannotBeEmpty('name'));
   }
-  for (const field of ['city', 'region', 'country', 'currency']) {
+  for (const field of BRANCH_TEXT_FIELDS) {
     if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'string') {
       errors.push(mustBeString(field));
     }
   }
   if (body.status !== undefined && !BRANCH_STATUSES.includes(body.status)) {
     errors.push(mustBeOneOf('status', BRANCH_STATUSES));
+  }
+  if (body.kind !== undefined && !BRANCH_KINDS.includes(body.kind)) {
+    errors.push(mustBeOneOf('kind', BRANCH_KINDS));
   }
   if (body.timezone !== undefined && !isValidTimeZone(body.timezone)) {
     errors.push(fieldError('TIMEZONE_INVALID', 'timezone'));
@@ -107,10 +162,28 @@ function validateCreateMembership(body) {
   if (!body.role || !INVITABLE_ROLES.includes(body.role)) {
     errors.push(mustBeOneOf('role', INVITABLE_ROLES));
   }
-  if (body.branchIds !== undefined) {
-    if (!Array.isArray(body.branchIds) || body.branchIds.some((id) => typeof id !== 'string')) {
-      errors.push(mustBeStringArray('branchIds'));
-    }
+  const branchIdsWellFormed =
+    body.branchIds === undefined ||
+    (Array.isArray(body.branchIds) && body.branchIds.every((id) => typeof id === 'string'));
+  if (!branchIdsWellFormed) errors.push(mustBeStringArray('branchIds'));
+
+  // Requirement 18 — a cashier works at exactly one branch.
+  //
+  // The count is the half of the rule that can be decided from the request body
+  // alone, so it is caught here, before an invite exists. Whether that one
+  // branch is FREE is a fact about the world and belongs in the service, under a
+  // lock — see cashierAssignment.service.js.
+  //
+  // `SINGLE_BRANCH_ROLE` rather than the literal 'CASHIER', and rather than a
+  // capability: the constraint is not "may this role do something" — it is which
+  // role is structurally tied to one place. The matrix holds it, and
+  // `lint:permissions` compares it with the app's mirror so the invite screen's
+  // picker and this check cannot disagree.
+  if (branchIdsWellFormed && body.role === SINGLE_BRANCH_ROLE && (body.branchIds ?? []).length !== 1) {
+    errors.push(fieldError('CASHIER_NEEDS_ONE_BRANCH', 'branchIds'));
+  }
+  if (body.confirm !== undefined && typeof body.confirm !== 'boolean') {
+    errors.push(mustBeBoolean('confirm'));
   }
   return errors;
 }
@@ -118,10 +191,18 @@ function validateCreateMembership(body) {
 function validateBranchAccess(body) {
   const errors = [];
   if (!body.branchId || typeof body.branchId !== 'string') errors.push(required('branchId'));
+  // The admin has been shown who the assignment displaces and said yes.
+  // Requirement 18's swap is one request repeated, not a second endpoint: a
+  // confirmation that changed the URL would be a second code path to keep
+  // honest, and the thing being confirmed is this exact assignment.
+  if (body.confirm !== undefined && typeof body.confirm !== 'boolean') {
+    errors.push(mustBeBoolean('confirm'));
+  }
   return errors;
 }
 
 module.exports = {
+  validateCreateBusiness,
   validateCreateBranch,
   validateUpdateBranch,
   validateCreateMembership,

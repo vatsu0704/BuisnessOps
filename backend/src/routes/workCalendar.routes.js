@@ -2,7 +2,7 @@ const express = require('express');
 const workCalendarController = require('../controllers/workCalendar.controller');
 const { requireAuth } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenant');
-const { requireRole } = require('../middleware/rbac');
+const { requirePermission } = require('../middleware/rbac');
 
 const router = express.Router();
 
@@ -14,11 +14,11 @@ scoped.use(requireAuth, resolveTenant);
 // someone on their day off. Changing it sets the payroll divisor, so it is
 // OWNER/ADMIN only.
 scoped.get('/work-week', workCalendarController.getWorkWeek);
-scoped.patch('/work-week', requireRole('OWNER', 'ADMIN'), workCalendarController.updateWorkWeek);
+scoped.patch('/work-week', requirePermission('workCalendar:manage'), workCalendarController.updateWorkWeek);
 
 scoped.get('/holidays', workCalendarController.listHolidays);
-scoped.post('/holidays', requireRole('OWNER', 'ADMIN'), workCalendarController.createHoliday);
-scoped.delete('/holidays/:holidayId', requireRole('OWNER', 'ADMIN'), workCalendarController.deleteHoliday);
+scoped.post('/holidays', requirePermission('workCalendar:manage'), workCalendarController.createHoliday);
+scoped.delete('/holidays/:holidayId', requirePermission('workCalendar:manage'), workCalendarController.deleteHoliday);
 
 router.use('/:businessId', scoped);
 

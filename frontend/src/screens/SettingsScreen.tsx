@@ -1,4 +1,4 @@
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import AnimatedEntrance from '@/components/AnimatedEntrance';
 import BusinessSwitcher from '@/components/BusinessSwitcher';
 import InfoCard from '@/components/InfoCard';
 import LanguageSelector from '@/components/LanguageSelector';
+import NotificationSettings from '@/components/NotificationSettings';
 import NoBusinessAccessNotice from '@/components/NoBusinessAccessNotice';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -27,11 +28,11 @@ function initials(name?: string | null, email?: string | null): string {
   return source.slice(0, 2).toUpperCase();
 }
 
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={[styles.rowValue, mono && styles.rowValueMono]} numberOfLines={1}>
+      <Text style={styles.rowValue} numberOfLines={1}>
         {value}
       </Text>
     </View>
@@ -52,6 +53,7 @@ export default function SettingsScreen() {
   const membership = useMembership();
   const canManageTeam = can.manageTeam(membership);
   const canManageWorkCalendar = can.manageWorkCalendar(membership);
+  const canAddBusiness = can.createBusiness(membership);
   const noAccess = hasNoActiveBusiness(user);
   // Decided here rather than inside the switcher: AnimatedEntrance carries the
   // block's top margin, so a switcher that renders null would still leave a
@@ -99,6 +101,30 @@ export default function SettingsScreen() {
             </AnimatedEntrance>
           ) : null}
 
+          {/* Owners only — starting a business is the owner's act, not a
+              delegated one (`business:create`, excluded from ADMIN and so from
+              MANAGER too). A cashier or a warehouse desk has no use for it.
+
+              Deliberately outside the switcher's condition. BusinessSwitcher
+              renders nothing until there are two businesses, so putting the
+              "add" entry inside it would mean the only people who could add a
+              second business are the ones who already have one.
+
+              `noAccess` keeps it for someone whose every membership was
+              revoked: there is no role left to hold a capability, and hiding it
+              from them would leave an account with nothing it can do. */}
+          {canAddBusiness || noAccess ? (
+            <AnimatedEntrance delay={step(3)} style={styles.block}>
+              <InfoCard
+                testID="settings-add-business"
+                icon="add-circle-outline"
+                title={t('settings.addBusiness')}
+                subtitle={t('settings.addBusinessSubtitle')}
+                onPress={() => navigation.navigate('AddBusiness')}
+              />
+            </AnimatedEntrance>
+          ) : null}
+
           {noAccess ? (
             <AnimatedEntrance delay={step(3)} style={styles.block}>
               <NoBusinessAccessNotice />
@@ -111,11 +137,15 @@ export default function SettingsScreen() {
                 <Text style={styles.sectionTitle}>{t('settings.business')}</Text>
                 <Row label={t('settings.name')} value={business.name} />
                 <Row label={t('settings.industry')} value={t(`industry.${business.industry}`)} />
-                <Row label={t('settings.branches')} value={String(stats.total)} />
+                <Row label={t('settings.branches')} value={String(stats.trading)} />
                 <Row label={t('settings.country')} value={business.country} />
                 <Row label={t('settings.currency')} value={business.defaultCurrency} />
                 <Row label={t('settings.timezone')} value={business.timezone} />
-                <Row label={t('settings.businessId')} value={business.id} mono />
+                {/* The business id used to sit here. It is a UUID: nobody
+                    reading this screen can do anything with it, and it made
+                    the card end on a line of machine text. It is still on
+                    every request and in every log, which is where it is
+                    actually useful. */}
               </View>
             </AnimatedEntrance>
           ) : null}
@@ -162,7 +192,14 @@ export default function SettingsScreen() {
             <LanguageSelector />
           </AnimatedEntrance>
 
+          {/* Requirement 8. Below the language picker on purpose: what
+              notifications say is decided by the language above, and the
+              switches only matter once you can read them. */}
           <AnimatedEntrance delay={step(9)} style={styles.block}>
+            <NotificationSettings />
+          </AnimatedEntrance>
+
+          <AnimatedEntrance delay={step(10)} style={styles.block}>
             <PressableScale testID="settings-logout" style={styles.logout} onPress={() => logout()}>
               <Ionicons name="log-out-outline" size={18} color={colors.error} />
               <Text style={styles.logoutText}>{t('settings.logout')}</Text>
@@ -226,10 +263,6 @@ const styles = StyleSheet.create({
   },
   rowLabel: { fontSize: 13.5, color: colors.textSecondary },
   rowValue: { fontSize: 13.5, fontWeight: '600', color: colors.text, flexShrink: 1, textAlign: 'right' },
-  rowValueMono: {
-    fontSize: 11.5,
-    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
-  },
   logout: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -69,4 +69,18 @@ export async function persistLanguage(code: LanguageCode): Promise<void> {
   await setItem(LANGUAGE_KEY, code);
 }
 
+/**
+ * The language showing right now, as a code.
+ *
+ * `i18n.language` can carry a region ('en-IN') depending on how it was set, so
+ * this narrows it to one of the four the app actually ships. Used when
+ * registering a push token: the server needs to know which language to compose
+ * a lock-screen notification in, and the lock screen is the one surface the app
+ * cannot re-render afterwards.
+ */
+export function currentLanguage(): LanguageCode {
+  const base = i18n.language?.split('-')[0];
+  return isLanguageCode(base) ? base : 'en';
+}
+
 export default i18n;

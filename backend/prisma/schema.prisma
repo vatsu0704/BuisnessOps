@@ -31,17 +31,46 @@ enum BranchStatus {
   CLOSED
 }
 
+// What a location IS, as opposed to where it is.
+//
+// A warehouse is a place the business occupies and staffs — people work there
+// and punch in there — but it does not sell and it does not order raw material
+// from itself. Modelling it as a Branch with a kind, rather than as its own
+// table, is what makes attendance, geofencing, payroll and rosters work there
+// on the day it is created: every one of those is already keyed on a branch,
+// and a second location table would need all of them taught about it.
+//
+// The distinction it earns is enforced where goods move — see
+// `assertTradingBranch` in counterOrder.service.js and supplyOrder.service.js.
+enum BranchKind {
+  BRANCH
+  WAREHOUSE
+}
+
 enum UserStatus {
   ACTIVE
   INVITED
   DISABLED
 }
 
+// What a role is ALLOWED to do lives in src/permissions/catalog.js, not here.
+// This enum is only the vocabulary; the capability matrix is the authority.
+//
+// Appended rather than ordered by seniority: nothing sorts by this column, and
+// relying on enum declaration order is a trap worth never setting.
 enum MembershipRole {
   OWNER
   ADMIN
   MANAGER
   STAFF
+  // The central order desk. Sees every branch's supply orders and none of their
+  // staff records — see branch:allAccess vs staff:viewAllBranches.
+  WAREHOUSE
+  // The branch operator: counter billing, supply orders, expenses, and their
+  // own branch's staff including pay.
+  CASHIER
+  // Carries supply orders, marks them delivered, posts delays with a reason.
+  DELIVERY_AGENT
 }
 
 enum MembershipStatus {
@@ -86,6 +115,13 @@ model Business {
   salarySlips           SalarySlip[]
   invites               Invite[]
   holidays              Holiday[]
+  counterOrders         CounterOrder[]
+  dayCloses             DayClose[]
+  supplyOrders          SupplyOrder[]
+  supplyOrderCounter    SupplyOrderCounter?
+  expenseCategories     ExpenseCategory[]
+  expenses              Expense[]
+  notifications         Notification[]
 
   @@map("businesses")
 }
@@ -103,14 +139,14 @@ enum InviteStatus {
 // joins that business with the stored role/branches instead of creating a
 // new one — see auth.service.js and invite.service.js.
 model Invite {
-  id         String       @id @default(uuid())
+  id         String         @id @default(uuid())
   businessId String
-  business   Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business   Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
   email      String
   role       MembershipRole
-  branchIds  String[]     @default([])
-  status     InviteStatus @default(PENDING)
-  invitedAt  DateTime     @default(now())
+  branchIds  String[]       @default([])
+  status     InviteStatus   @default(PENDING)
+  invitedAt  DateTime       @default(now())
   acceptedAt DateTime?
 
   @@unique([businessId, email])
@@ -119,22 +155,36 @@ model Invite {
 }
 
 model Branch {
-  id         String       @id @default(uuid())
+  id         String     @id @default(uuid())
   businessId String
-  business   Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business   Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
   name       String
   code       String
+  // Defaults to BRANCH, so every location that already exists stays exactly
+  // what it was and no backfill is needed.
+  kind       BranchKind @default(BRANCH)
   city       String?
   region     String?
   country    String?
-  latitude   Decimal?     @db.Decimal(9, 6)
-  longitude  Decimal?     @db.Decimal(9, 6)
-  timezone   String
-  currency   String?
-  status     BranchStatus @default(ACTIVE)
-  openedAt   DateTime?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+
+  // Where a delivery actually goes. city/region/country describe where the
+  // branch IS, for reporting; they are not an address anybody can ride to.
+  // A delivery agent carrying raw material to a branch they have never been to
+  // needs the street, the building and the landmark, which is what this holds —
+  // free text and multi-line, because an Indian address is not a fixed set of
+  // fields and forcing one drops the half that matters ("behind the old post
+  // office"). Nullable: every branch that existed before this column has none,
+  // and a branch whose own staff know where it is never needs one.
+  addressLine String?
+  postalCode  String?
+  latitude    Decimal?     @db.Decimal(9, 6)
+  longitude   Decimal?     @db.Decimal(9, 6)
+  timezone    String
+  currency    String?
+  status      BranchStatus @default(ACTIVE)
+  openedAt    DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   // Opt-in punch-in geofencing (Attendance module): both must be set for a
   // branch to enforce a radius. Nullable because most branches created
@@ -152,12 +202,21 @@ model Branch {
   branchAccess          BranchAccess[]
   dataSourceConnections DataSourceConnection[]
   productDetails        ProductBranchDetail[]
+  // Products that exist only at this branch (requirement 4). Business-wide
+  // products carry no branchId and are not in here.
+  ownProducts           Product[]
   transactions          Transaction[]
   inventoryUsages       InventoryUsage[]
   staffMembers          StaffMember[]
   attendanceRecords     Attendance[]
   salarySlips           SalarySlip[]
   holidays              Holiday[]
+  counterOrders         CounterOrder[]
+  tokenCounters         BranchTokenCounter[]
+  dayCloses             DayClose[]
+  supplyOrders          SupplyOrder[]
+  expenses              Expense[]
+  notifications         Notification[]
 
   @@unique([businessId, code])
   @@index([businessId])
@@ -204,8 +263,11 @@ model User {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  memberships  Membership[]
-  staffMembers StaffMember[]
+  memberships             Membership[]
+  staffMembers            StaffMember[]
+  deviceTokens            DeviceToken[]
+  notifications           Notification[]
+  notificationPreferences NotificationPreference[]
 
   @@map("users")
 }
@@ -225,15 +287,42 @@ model Membership {
 
   branchAccess    BranchAccess[]
   attendanceMarks Attendance[]
+  counterOrders   CounterOrder[]
+  dayCloses       DayClose[]
+
+  // Only the two membership links a QUERY needs are relations on SupplyOrder:
+  // the cashier who placed it (per-branch reporting) and the agent carrying it
+  // (their queue is a filter on this column). Who accepted, packed, dispatched
+  // or verified a payment lives in SupplyOrderEvent instead — that table is the
+  // audit trail, and repeating four more actor columns on the order would mean
+  // two records of the same fact that can disagree.
+  supplyOrdersPlaced SupplyOrder[]      @relation("SupplyOrderPlacedBy")
+  supplyDeliveries   SupplyOrder[]      @relation("SupplyOrderDeliveryAgent")
+  supplyOrderEvents  SupplyOrderEvent[] @relation("SupplyOrderEventActor")
+  expensesRecorded   Expense[]          @relation("ExpenseRecordedBy")
 
   @@unique([userId, businessId])
   @@index([businessId])
   @@map("memberships")
 }
 
-// Explicit branch scoping for MANAGER/STAFF roles. OWNER/ADMIN roles ignore
-// this table and have implicit all-branch access within their business
-// (enforced in the tenant-resolution middleware, not here).
+// Explicit branch scoping. A role holding `branch:allAccess` — OWNER, ADMIN,
+// MANAGER, WAREHOUSE, DELIVERY_AGENT — ignores this table and reaches every
+// branch in its business implicitly (enforced in the tenant-resolution
+// middleware, not here). What is left is STAFF and CASHIER.
+//
+// Requirement 18 constrains the CASHIER case to 1:1 — one cashier per branch,
+// one branch per cashier — and that rule CANNOT be a database constraint, which
+// is worth knowing before looking for one. The condition is "at most one row per
+// branch whose membership's ROLE is CASHIER", and the role lives on `memberships`;
+// a Postgres unique index cannot reach across the join. It is enforced instead in
+// services/cashierAssignment.service.js, under a `SELECT … FOR UPDATE` on the
+// branch and the membership, which is what makes the check-then-write atomic.
+//
+// Rows deliberately SURVIVE a membership being revoked, so re-inviting someone
+// restores the scope they had. The 1:1 rule therefore counts only rows whose
+// membership is ACTIVE — otherwise a revoked cashier would keep a branch occupied
+// forever.
 model BranchAccess {
   id           String     @id @default(uuid())
   membershipId String
@@ -277,12 +366,36 @@ enum PaymentMethod {
   WALLET
   OTHER
   MIXED
+  // A counter order has no payment step (requirement 1), but Transaction
+  // requires a payment method. Writing OTHER instead would put a permanent lie
+  // into the cash-vs-digital mix metric that Phase 5 is meant to compute, so
+  // "we did not ask" gets to say so.
+  UNSPECIFIED
 }
 
 enum TransactionStatus {
   COMPLETED
   REFUNDED
   VOIDED
+}
+
+enum TransactionSource {
+  // Came in through a CSV/Excel upload from someone's POS.
+  POS_IMPORT
+  // Rung up at the counter in this app (requirement 1).
+  COUNTER
+}
+
+enum CounterOrderStatus {
+  // Being rung up. Still editable, and the token is already issued so the
+  // customer can be called.
+  OPEN
+  // Handed over. Still editable until the day is closed, because requirement 1
+  // asks for exactly that.
+  CLOSED
+  // Cancelled. Projects as TransactionStatus.VOIDED, which the existing
+  // `status: 'COMPLETED'` filter in getSalesSummary already excludes.
+  VOID
 }
 
 enum InventoryUsageSource {
@@ -343,17 +456,46 @@ model Product {
   id         String   @id @default(uuid())
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  name       String
-  sku        String?
-  category   String?
-  unit       String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 
-  branchDetails ProductBranchDetail[]
-  lineItems     LineItem[]
+  // Requirement 4: "every branch can also add their own separate products".
+  // NULL means the product belongs to the whole business and every branch sees
+  // it; a branchId means only that branch does. Nullable rather than a separate
+  // table because the two are the same thing at different scopes — a join table
+  // would make "show me this branch's catalog" a union instead of one filter.
+  //
+  // SetNull rather than Cascade: deleting a branch should not silently delete
+  // products, and a branch-only product whose branch is gone becoming
+  // business-wide is a state someone can see and fix. Branches are closed via
+  // BranchStatus rather than deleted in practice, so this is a backstop.
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  name     String
+  sku      String?
+  category String?
+  unit     String
+
+  // The business-wide default price. ProductBranchDetail overrides it per
+  // branch, so a product priced the same everywhere needs one row rather than
+  // one row per branch. Nullable because products created by CSV ingestion are
+  // discovered from sales rows, which carry a unit price per line but no
+  // catalog price — see ingestion.service.js.
+  costPrice Decimal? @db.Decimal(12, 2)
+  sellPrice Decimal? @db.Decimal(12, 2)
+
+  // Withdraw a product from sale without deleting it. Deleting is not an option
+  // once LineItem rows point at it: past sales must keep naming what was sold.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branchDetails     ProductBranchDetail[]
+  lineItems         LineItem[]
+  counterOrderItems CounterOrderItem[]
 
   @@index([businessId])
+  @@index([businessId, branchId])
   @@map("products")
 }
 
@@ -391,9 +533,18 @@ model Transaction {
   currency               String
   paymentMethod          PaymentMethod
   status                 TransactionStatus     @default(COMPLETED)
-  createdAt              DateTime              @default(now())
 
-  lineItems LineItem[]
+  // Where this sale came from. Both sources write through
+  // salesProjection.service.js into this one table (Architecture Principle 4),
+  // so without a discriminator "counter sales vs imported sales" would be
+  // unanswerable — and the day-end export and the analytics grid both want to
+  // ask it. @default backfills every existing row, all of which are imports.
+  source TransactionSource @default(POS_IMPORT)
+
+  createdAt DateTime @default(now())
+
+  lineItems    LineItem[]
+  counterOrder CounterOrder?
 
   @@unique([branchId, externalId])
   @@index([businessId, branchId, occurredAt])
@@ -416,6 +567,12 @@ model LineItem {
   @@map("line_items")
 }
 
+// The raw-material catalog. Modelled in Phase 1 with no API at all until
+// requirement 5 gave it one: this is what a branch orders from the warehouse.
+//
+// Business-wide by design, unlike Product, which grew a nullable branchId in
+// requirement 4. A branch sells its own menu; it does not keep its own private
+// list of flour.
 model InventoryItem {
   id         String   @id @default(uuid())
   businessId String
@@ -424,9 +581,21 @@ model InventoryItem {
   unit       String
   category   String?
 
-  usageRecords InventoryUsage[]
+  // What the warehouse charges a branch for one `unit`. Nullable because an
+  // item can be tracked for usage (Phase 1's original purpose) long before
+  // anyone prices it — and an unpriced item cannot be ordered rather than
+  // being ordered at zero.
+  unitPrice Decimal? @db.Decimal(12, 2)
+
+  // Withdrawn from the catalog without deleting it. Deleting would orphan the
+  // history of every order that ever contained it.
+  isActive Boolean @default(true)
+
+  usageRecords     InventoryUsage[]
+  supplyOrderItems SupplyOrderItem[]
 
   @@index([businessId])
+  @@index([businessId, isActive])
   @@map("inventory_items")
 }
 
@@ -469,18 +638,18 @@ model StaffMember {
   baseSalary Decimal?    @db.Decimal(12, 2)
   status     StaffStatus @default(ACTIVE)
 
-  phone String?
+  phone         String?
   // Human-facing payroll id, printed on the payslip. Distinct from externalId,
   // which is the id this person carries in a POS system. Deliberately not
   // @unique: unique-with-NULLs in Postgres would still allow any number of
   // staff with no code, so it buys nothing here.
-  employeeCode String?
+  employeeCode  String?
   // Pro-rate a mid-month joiner or leaver. These shrink the NUMERATOR only —
   // days outside employment are excluded from present/absent but stay in
   // workingDays, so someone joining on the 15th earns roughly half a month.
   // Shrinking the divisor instead would pay them a full month, which is wrong.
-  hiredOn  DateTime? @db.Date
-  exitedOn DateTime? @db.Date
+  hiredOn       DateTime? @db.Date
+  exitedOn      DateTime? @db.Date
   // Pairs with status, so a deactivation is auditable rather than just a flag.
   deactivatedAt DateTime?
   notes         String?
@@ -598,4 +767,552 @@ model SalarySlip {
   @@index([businessId, monthYear])
   @@index([businessId, branchId, monthYear])
   @@map("salary_slips")
+}
+
+// ---------------------------------------------------------------------------
+// Counter billing — requirement 1
+//
+// "As orders come in the cashier adds them, issues a token, and the money keeps
+// counting. Once an order is taken they can also edit it."
+//
+// Explicitly NOT a purchase flow like the supply order: no cart, no payment
+// step, no fulfilment. It counts items, issues a token and shows a total.
+//
+// A CounterOrder is not a second sales fact table. Every mutation projects it
+// into Transaction/LineItem through salesProjection.service.js, so
+// getSalesSummary and every future metric keep reading one table — and because
+// that projection is idempotent, "editable after placing" costs nothing.
+// ---------------------------------------------------------------------------
+
+model CounterOrder {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  // What the customer is called by. Unique per branch per DAY, and restarting
+  // each day is the point — a token is shouted across a counter, so it has to
+  // stay small.
+  tokenNumber Int
+  // The branch's own local date, never UTC: a branch in Asia/Kolkata keyed on
+  // UTC would restart its numbering at 05:30 local, mid-breakfast.
+  tokenDate   DateTime @db.Date
+
+  status CounterOrderStatus @default(OPEN)
+
+  // Recomputed from the items on every mutation rather than adjusted, so it
+  // cannot drift from the lines it is meant to total.
+  totalAmount Decimal @db.Decimal(12, 2)
+  currency    String
+
+  // Optional. Requirement 1 has no payment step, so this defaults to
+  // UNSPECIFIED rather than being guessed at — writing OTHER would put a
+  // permanent lie into the cash-vs-digital mix metric Phase 5 computes.
+  paymentMethod PaymentMethod @default(UNSPECIFIED)
+
+  // Who rang it up, for the audit trail and for per-cashier figures later.
+  placedByMembershipId String?
+  placedByMembership   Membership? @relation(fields: [placedByMembershipId], references: [id], onDelete: SetNull)
+
+  // The projection. SetNull rather than Cascade so deleting a transaction could
+  // never silently orphan the order that explains it.
+  transactionId String?      @unique
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  openedAt  DateTime  @default(now())
+  closedAt  DateTime?
+  updatedAt DateTime  @updatedAt
+
+  items CounterOrderItem[]
+
+  // Not the allocator — BranchTokenCounter is. This is the assertion that the
+  // allocator is correct, the same posture Attendance takes with its
+  // no-double-punch unique key.
+  @@unique([branchId, tokenDate, tokenNumber])
+  @@index([businessId, branchId, tokenDate])
+  @@index([businessId, branchId, status])
+  @@map("counter_orders")
+}
+
+model CounterOrderItem {
+  id             String       @id @default(uuid())
+  counterOrderId String
+  counterOrder   CounterOrder @relation(fields: [counterOrderId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  // Snapshotted at the moment it was rung up. A product renamed or repriced
+  // next week must not rewrite what this receipt said.
+  productNameSnapshot String
+  quantity            Decimal @db.Decimal(12, 3)
+  unitPrice           Decimal @db.Decimal(12, 2)
+  lineTotal           Decimal @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now())
+
+  @@index([counterOrderId])
+  @@map("counter_order_items")
+}
+
+// The token allocator. One row per branch per day, incremented by a single
+// atomic `INSERT ... ON CONFLICT DO UPDATE ... RETURNING`.
+//
+// A MAX+1-and-retry would scan an index on every allocation and contend exactly
+// when the counter is busiest — the failure mode being a 500 while a customer
+// stands there. A Postgres sequence is the wrong shape: sequences are not
+// per-branch-per-day, would need runtime DDL, and never reset.
+model BranchTokenCounter {
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  tokenDate  DateTime @db.Date
+  lastNumber Int      @default(0)
+
+  @@id([branchId, tokenDate])
+  @@map("branch_token_counters")
+}
+
+// The floor on editing (requirement 17's day-end export).
+//
+// Requirement 1 asks for orders to stay editable after they are placed, but
+// editability needs a floor: once a day has been closed and exported, changing
+// one of its orders silently restates a number someone has already been shown.
+// That is exactly the failure SalarySlip's FINALIZED rule exists to prevent.
+model DayClose {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  // The branch's own local date, matching CounterOrder.tokenDate.
+  date DateTime @db.Date
+
+  closedAt             DateTime    @default(now())
+  closedByMembershipId String?
+  closedByMembership   Membership? @relation(fields: [closedByMembershipId], references: [id], onDelete: SetNull)
+
+  @@unique([branchId, date])
+  @@index([businessId, date])
+  @@map("day_closes")
+}
+
+// ---------------------------------------------------------------------------
+// Task 5 — Supply orders (requirements 3, 5, 5.1, 9, 11, 12)
+//
+// A branch orders raw material from one central warehouse desk, pays for it
+// (recorded, never collected — see SupplyPaymentMode), and the desk accepts,
+// packs and dispatches it. A delivery agent carries it and marks it delivered.
+// Either of them can post a delay, which the cashier sees.
+//
+// Unlike CounterOrder this is NOT projected into Transaction/LineItem. A
+// counter order is a sale — revenue, belonging in the sales fact table. A
+// supply order is an internal transfer and a cost; writing it into the same
+// table would inflate every sales figure in the product by the value of the
+// flour a branch bought. It is a cost input to net profit (requirement 13)
+// instead, and Task 8 reads it from here.
+// ---------------------------------------------------------------------------
+
+enum SupplyOrderStatus {
+  DRAFT // the cart — the only status a branch can edit freely
+  PLACED
+  ACCEPTED
+  PACKED
+  DISPATCHED
+  DELIVERED
+  CANCELLED
+}
+
+// Requirement 5 is "pay online or cash on delivery", and the decision recorded
+// in Docs/REQUIREMENTS.md is RECORD ONLY: no gateway, no money moving through
+// this app. ONLINE means the cashier paid by some other means and typed the
+// reference; the warehouse then confirms it against their own bank record.
+enum SupplyPaymentMode {
+  ONLINE
+  COD
+}
+
+enum SupplyPaymentStatus {
+  PENDING // nothing claimed yet — every COD order until it arrives
+  PAID // the branch says it paid, and gave a reference
+  VERIFIED // the warehouse found that reference in their own records
+  FAILED // the warehouse looked and it was not there
+}
+
+enum SupplyOrderEventType {
+  STATUS_CHANGE
+  DELAY
+  PAYMENT
+  // Who is carrying it. Not a STATUS_CHANGE: handing a run to a different
+  // agent moves nothing along the status machine, and recording it as one
+  // would put a row in the timeline claiming a transition that never happened.
+  ASSIGNMENT
+}
+
+model SupplyOrder {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  // The number people say out loud. Null while the order is still a DRAFT
+  // cart: numbering carts would burn numbers on things that never happened and
+  // leave visible gaps the warehouse would ask about.
+  orderNumber Int?
+
+  status SupplyOrderStatus @default(DRAFT)
+
+  // Recomputed from the items on every change, never adjusted, so it cannot
+  // drift from the lines it totals.
+  totalAmount Decimal @db.Decimal(12, 2)
+  currency    String
+
+  // Null on a DRAFT and required to leave it — placing an order is exactly the
+  // moment the branch has to say how it is paying.
+  paymentMode       SupplyPaymentMode?
+  paymentStatus     SupplyPaymentStatus @default(PENDING)
+  paymentReference  String?
+  paymentVerifiedAt DateTime?
+
+  // When the warehouse currently expects it to arrive. Optional: requirement 9
+  // only asks for relative delays ("+30 minutes, traffic"), which are recorded
+  // as events regardless. When a promise HAS been made, each delay pushes it,
+  // so the cashier sees one moving time rather than doing the arithmetic.
+  promisedAt DateTime?
+
+  placedByMembershipId String?
+  placedByMembership   Membership? @relation("SupplyOrderPlacedBy", fields: [placedByMembershipId], references: [id], onDelete: SetNull)
+
+  deliveryAgentMembershipId String?
+  deliveryAgentMembership   Membership? @relation("SupplyOrderDeliveryAgent", fields: [deliveryAgentMembershipId], references: [id], onDelete: SetNull)
+
+  placedAt     DateTime?
+  dispatchedAt DateTime?
+  deliveredAt  DateTime?
+  cancelledAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  items  SupplyOrderItem[]
+  events SupplyOrderEvent[]
+
+  @@unique([businessId, orderNumber])
+  // The warehouse desk's query (requirement 3): every branch's orders, by
+  // status, newest first.
+  @@index([businessId, status])
+  @@index([businessId, branchId, status])
+  // The delivery agent's queue (requirement 12).
+  @@index([deliveryAgentMembershipId, status])
+  @@map("supply_orders")
+}
+
+model SupplyOrderItem {
+  id            String      @id @default(uuid())
+  supplyOrderId String
+  supplyOrder   SupplyOrder @relation(fields: [supplyOrderId], references: [id], onDelete: Cascade)
+
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+
+  // Snapshotted, like CounterOrderItem: an item renamed or repriced next month
+  // must not rewrite what this order said at the time.
+  itemNameSnapshot String
+  unitSnapshot     String
+  quantity         Decimal @db.Decimal(12, 3)
+  unitPrice        Decimal @db.Decimal(12, 2)
+  lineTotal        Decimal @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now())
+
+  // One line per item, so adding the same thing twice raises the quantity
+  // rather than producing two lines a picker has to reconcile. This is a cart,
+  // not a till roll — which is why CounterOrderItem deliberately has no such
+  // constraint.
+  @@unique([supplyOrderId, inventoryItemId])
+  @@index([supplyOrderId])
+  @@map("supply_order_items")
+}
+
+// One table for material tracking, order tracking, the delays from BOTH the
+// warehouse and the delivery agent, and the audit trail — requirement 5.1's
+// whole list, which is one list because they are one stream of events.
+//
+// `reasonCode` is a CODE, never prose, for the same reason errors/catalog.js
+// is: the server cannot know whether the reader wants Gujarati. The device
+// renders `t('supplyDelay.' + reasonCode)`. `note` beside it is the actor's own
+// free text, which is theirs and is shown verbatim.
+model SupplyOrderEvent {
+  id            String      @id @default(uuid())
+  supplyOrderId String
+  supplyOrder   SupplyOrder @relation(fields: [supplyOrderId], references: [id], onDelete: Cascade)
+
+  type       SupplyOrderEventType
+  fromStatus SupplyOrderStatus?
+  toStatus   SupplyOrderStatus?
+
+  delayMinutes Int?
+  reasonCode   String?
+  note         String?
+
+  actorMembershipId String?
+  actorMembership   Membership? @relation("SupplyOrderEventActor", fields: [actorMembershipId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([supplyOrderId, createdAt])
+  @@map("supply_order_events")
+}
+
+// Order numbering, allocated by the same atomic `INSERT ... ON CONFLICT DO
+// UPDATE ... RETURNING` as BranchTokenCounter — see the note there for why a
+// read-then-write MAX+1 is wrong.
+//
+// Per BUSINESS and never reset, unlike a token: an order number is referred to
+// days later ("where is 214?"), so it has to stay unique over time rather than
+// staying small.
+model SupplyOrderCounter {
+  businessId String   @id
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  lastNumber Int      @default(0)
+
+  @@map("supply_order_counters")
+}
+
+// ---------------------------------------------------------------------------
+// Task 6 — Branch expenses (requirement 10)
+//
+// "Gas bill, electricity bill, petty expenses and everything else. Also daily
+// cost: how much did I spend today? And how much did I sell today?"
+//
+// The counterpart to CounterOrder: that table is what a branch took in, this is
+// what it paid out. Neither is projected into the other — a sale and a cost are
+// different facts — and Task 8 reads both to arrive at net profit.
+// ---------------------------------------------------------------------------
+
+// What a branch spends money on.
+//
+// Per business rather than global, because one business's "Milk" is another's
+// "Fuel" — and because a business that adds "Vegetables" must not add it to
+// everybody else's list.
+//
+// ## Why a code AND a name
+//
+// Every business starts with the same seven categories, and those are shown to
+// a cashier who may be reading the app in Gujarati. The backend cannot
+// translate — it does not know the reader's language, which is the whole reason
+// errors travel as codes. So a seeded category carries `code`, and the device
+// renders `t('expenseCategory.<code>')`; `name` is the English fallback, the
+// same role the English in errors/catalog.js plays.
+//
+// A category somebody types carries `code = null` and is shown verbatim,
+// because their own words are not ours to translate.
+//
+// ## What is deliberately NOT here
+//
+// There is no "raw material" or "stock" category, and that is the answer to the
+// double-count question REQUIREMENTS.md §5 raised: a supply order is already a
+// cost recorded in SupplyOrder, so a category inviting someone to log it again
+// by hand would subtract it twice from net profit. Task 8 reads supply spend
+// from supply orders; expenses are everything else.
+model ExpenseCategory {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Set for the seeded set, null for one somebody typed.
+  code String?
+  name String
+
+  // Withdrawn rather than deleted: a category is on expenses already logged,
+  // and deleting it would rewrite what those rows say they were for.
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expenses Expense[]
+
+  // Postgres treats NULLs as distinct, so this constrains the seeded set to one
+  // row per code per business while leaving custom categories (code = null)
+  // unconstrained by it — which is what the name key below is for.
+  @@unique([businessId, code])
+  @@unique([businessId, name])
+  @@index([businessId, isActive])
+  @@map("expense_categories")
+}
+
+model Expense {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  amount   Decimal @db.Decimal(12, 2)
+  currency String
+
+  // The branch's own local date, exactly as CounterOrder.tokenDate is, so
+  // "today's spend against today's sales" compares two figures drawn from the
+  // same day. Keyed on UTC, a branch in Asia/Kolkata would file everything
+  // spent before 05:30 against yesterday.
+  expenseDate DateTime @db.Date
+
+  // "Today I took ₹2,000 of milk" — the category carries the what, this
+  // carries the detail that is nobody else's to translate.
+  note String?
+
+  // Cash or UPI, for the same cash-mix figure CounterOrder.paymentMethod
+  // feeds. UNSPECIFIED rather than a guess, for the same reason.
+  paymentMethod PaymentMethod @default(UNSPECIFIED)
+
+  recordedByMembershipId String?
+  recordedByMembership   Membership? @relation("ExpenseRecordedBy", fields: [recordedByMembershipId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // The compliance query — "which branches logged nothing today" — is a
+  // left join on (branchId, expenseDate), and the day view reads the same key.
+  @@index([businessId, branchId, expenseDate])
+  @@index([businessId, expenseDate])
+  @@index([categoryId])
+  @@map("expenses")
+}
+
+// ---------------------------------------------------------------------------
+// Task 7 — Notifications (requirements 2 and 8)
+//
+// Every notification is a ROW first and a push second. The row is what the
+// in-app centre lists, what an unread badge counts, and what survives a push
+// that was never delivered — a phone that was off, a token that had expired, a
+// user with no device at all. Sending is best-effort on top of it.
+// ---------------------------------------------------------------------------
+
+enum PushPlatform {
+  ANDROID
+  IOS
+  WEB
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+}
+
+// One row per device per USER — not per membership.
+//
+// A phone belongs to a person, and that person may act under several businesses
+// (requirement 16). Keying this on a membership would register the same handset
+// two or three times and deliver every notification as many times over.
+//
+// `token` is globally unique so that re-registering after a logout/login MOVES
+// the row to the new user rather than leaving the previous one receiving pushes
+// on a handset they have signed out of. That is a security property, not a
+// tidiness one.
+model DeviceToken {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token    String       @unique
+  platform PushPlatform @default(ANDROID)
+
+  // The language THIS DEVICE is set to, reported when the token is registered.
+  //
+  // This column is what makes backend-rendered push text legitimate rather than
+  // a violation of the "the backend cannot know the reader's language" rule:
+  // for this one channel it can, because the device said so. It is deliberately
+  // NOT User.preferredLocale — a shared handset, or one whose owner changed the
+  // app language on a different phone, would otherwise show the wrong language
+  // on the lock screen, which is the one place the app cannot re-render it.
+  locale Locale @default(EN)
+
+  // Set when FCM reports the token is dead. Kept rather than deleted, so the
+  // same device registering again is an update and not a second row.
+  disabledAt DateTime?
+
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId, disabledAt])
+  @@map("device_tokens")
+}
+
+// What happened, addressed to one person.
+//
+// `code` + `params`, never a sentence — the same contract the error catalog
+// uses, and for the same reason: the row outlives the moment it was written and
+// the reader may change the app's language afterwards. The device renders
+// t('notifications.<code>', params) every time it draws the list, so an old
+// notification appears in today's language rather than the one it was sent in.
+//
+// The push that goes out alongside it carries BOTH: text rendered for the lock
+// screen, which Android draws before any app code runs, and the same code and
+// params in the data payload for the app to re-render from.
+model Notification {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // The recipient. A User, not a Membership — see DeviceToken.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  code   String
+  params Json   @default("{}")
+
+  // Where tapping it should go: { route, params }.
+  //
+  // Re-checked against the recipient's capabilities before it is dispatched — a
+  // notification outlives the access that justified it, and dispatching into a
+  // route the app never registered is a silent no-op, which is the kind of bug
+  // nobody reports.
+  deepLink Json?
+
+  status NotificationStatus @default(UNREAD)
+  readAt DateTime?
+
+  // What became of the push. `sentAt` null with no error means no device was
+  // registered, which is not a failure — requirement 2 says marking attendance
+  // still succeeds for a worker who has never opened the app.
+  sentAt        DateTime?
+  deliveryError String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, status, createdAt])
+  @@index([businessId, createdAt])
+  @@map("notifications")
+}
+
+// A category this person has switched OFF (requirement 8).
+//
+// A row means muted, and no row means on. Stored that way round because the
+// answer is almost always "I want all of them": the common case costs nothing,
+// and a category added later is on by default rather than silently off for
+// everybody who registered before it existed.
+//
+// Keyed on the user rather than the membership or the device — muting order
+// updates is a decision about what you want to hear, not about which business
+// you are looking at or which phone is in your hand.
+model NotificationPreference {
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category String
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, category])
+  @@map("notification_preferences")
 }

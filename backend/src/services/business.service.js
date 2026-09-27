@@ -1,18 +1,41 @@
 const prisma = require('../config/db');
+const expenseService = require('./expense.service');
+const cashierAssignment = require('./cashierAssignment.service');
 const { fail } = require('../errors');
 
 function createBranch(
   businessId,
-  { name, code, city, region, country, timezone, currency, latitude, longitude, geofenceRadiusMeters }
+  {
+    name,
+    code,
+    kind,
+    city,
+    region,
+    country,
+    addressLine,
+    postalCode,
+    timezone,
+    currency,
+    latitude,
+    longitude,
+    geofenceRadiusMeters,
+  }
 ) {
   return prisma.branch.create({
     data: {
       businessId,
       name,
       code,
+      // Undefined falls through to the column default, BRANCH. A WAREHOUSE is
+      // a place the business staffs but does not sell from — see BranchKind.
+      kind,
       city,
       region,
       country,
+      // Where a delivery goes, as opposed to where the branch is for reporting.
+      // Optional at creation and editable afterwards, like the geofence.
+      addressLine,
+      postalCode,
       timezone,
       currency,
       latitude,
@@ -41,9 +64,12 @@ async function updateBranch(businessId, branchId, patch) {
   const data = {};
   const fields = [
     'name',
+    'kind',
     'city',
     'region',
     'country',
+    'addressLine',
+    'postalCode',
     'currency',
     'status',
     'timezone',
@@ -97,10 +123,29 @@ function listMemberships(businessId) {
   });
 }
 
-// `client` defaults to the top-level prisma singleton but accepts a
-// `$transaction` callback's tx client too, so invite.service.js can grant
-// branch access atomically alongside the membership that needs it.
-async function addBranchAccess(businessId, membershipId, branchId, client = prisma) {
+/**
+ * Grant one member access to one branch.
+ *
+ * `client` defaults to the top-level prisma singleton but accepts a
+ * `$transaction` callback's tx client too, so invite.service.js can grant
+ * branch access atomically alongside the membership that needs it.
+ *
+ * It now ALWAYS runs in a transaction, because requirement 18's one-cashier-per-
+ * branch rule is a check followed by a write and the two must be atomic — see
+ * cashierAssignment.service.js. Given the bare singleton it opens one itself
+ * rather than making every call site remember to; given a tx it joins the
+ * caller's, so the invite path still grants membership and branch together or
+ * not at all.
+ *
+ * `confirm: true` is the admin having been shown who is displaced and having
+ * said yes. Without it an assignment that would break the rule is refused with a
+ * 409 naming the holder, and nothing is written.
+ */
+async function addBranchAccess(businessId, membershipId, branchId, client = prisma, { confirm = false } = {}) {
+  if (client === prisma) {
+    return prisma.$transaction((tx) => addBranchAccess(businessId, membershipId, branchId, tx, { confirm }));
+  }
+
   const membership = await client.membership.findFirst({ where: { id: membershipId, businessId } });
   if (!membership) {
     throw fail('MEMBERSHIP_NOT_FOUND', 404);
@@ -111,10 +156,27 @@ async function addBranchAccess(businessId, membershipId, branchId, client = pris
     throw fail('BRANCH_NOT_FOUND_IN_BUSINESS', 404);
   }
 
+  // Checked before the rule, so re-granting a branch somebody already holds
+  // stays the no-op it has always been rather than becoming a 409 about
+  // themselves. It also leaves a pre-existing two-branch cashier alone, which is
+  // what "reported, not silently rewritten" requires.
   const existing = await client.branchAccess.findUnique({
     where: { membershipId_branchId: { membershipId, branchId } },
   });
   if (existing) return existing;
+
+  const { release } = await cashierAssignment.planAssignment(client, {
+    businessId,
+    membership,
+    branch,
+    confirmed: confirm,
+  });
+
+  // Vacate first, then grant, inside the one transaction: at no point does the
+  // branch have two cashiers, and at no point does the moving cashier have none.
+  for (const access of release) {
+    await client.branchAccess.delete({ where: { id: access.id } });
+  }
 
   return client.branchAccess.create({ data: { membershipId, branchId } });
 }
@@ -171,6 +233,18 @@ function getBusiness(businessId) {
  * `actor` is the caller's own membership, and the two guards below are the
  * whole reason this isn't a one-line status update.
  */
+/**
+ * Privilege ranking, used only by revokeMembership.
+ *
+ * Not in the capability matrix, because "who outranks whom" is a record-level
+ * rule about two specific memberships, not a permission a role holds — the same
+ * reason canViewStaffMember lives beside the route rather than in the matrix.
+ * Anything unlisted ranks 0: a cashier, a delivery agent and a staff member can
+ * all be removed by anyone holding `team:revoke`.
+ */
+const REVOKE_RANK = { OWNER: 3, ADMIN: 2, MANAGER: 1 };
+const revokeRank = (role) => REVOKE_RANK[role] ?? 0;
+
 async function revokeMembership(businessId, membershipId, actor) {
   const target = await prisma.membership.findFirst({ where: { id: membershipId, businessId } });
   if (!target) {
@@ -188,11 +262,24 @@ async function revokeMembership(businessId, membershipId, actor) {
     throw fail('MEMBERSHIP_SELF_REVOKE', 400);
   }
 
-  // requireRole lets OWNER and ADMIN both reach this route, but an ADMIN
-  // removing the OWNER would be a privilege escalation — the lesser role
-  // seizing the business from the greater one.
-  if (target.role === 'OWNER' && actor.role !== 'OWNER') {
-    throw fail('MEMBERSHIP_OWNER_REVOKE_REQUIRES_OWNER', 403);
+  // Nobody may remove someone who outranks them — the lesser role seizing the
+  // business from the greater one.
+  //
+  // This was `target.role === 'OWNER' && actor.role !== 'OWNER'`, which was
+  // enough while only OWNER and ADMIN could reach the route. Requirement 14
+  // makes MANAGER admin-equivalent, and a manager removing the admin who issued
+  // their account is the same escalation one rung down. Expressed as a rank, it
+  // holds for whatever roles gain `team:revoke` later.
+  //
+  // Peers can still remove each other, exactly as an ADMIN could already remove
+  // another ADMIN — this deliberately changes no existing outcome.
+  if (revokeRank(target.role) > revokeRank(actor.role)) {
+    throw fail(
+      // The owner-specific message says more than the general one, so the case
+      // that already had its own code keeps it.
+      target.role === 'OWNER' ? 'MEMBERSHIP_OWNER_REVOKE_REQUIRES_OWNER' : 'MEMBERSHIP_REVOKE_OUTRANKED',
+      403
+    );
   }
 
   return prisma.membership.update({ where: { id: membershipId }, data: { status: 'REVOKED' } });
@@ -224,8 +311,69 @@ async function removeBranchAccess(businessId, membershipId, branchId) {
   return { id: existing.id, membershipId, branchId };
 }
 
+/**
+ * Create a business and make `userId` its OWNER.
+ *
+ * Takes a transaction client because both callers need it inside one: signup
+ * creates the user in the same transaction, and this endpoint must not leave a
+ * business with no owner if the membership insert fails. `client = prisma` is
+ * the same convention `addBranchAccess` already uses.
+ *
+ * Extracted from auth.service.js's signup rather than written twice.
+ * Requirement 16 is precisely that a second business should be the *same*
+ * operation as the first — a copy would be the thing that lets the two drift,
+ * and the first sign of that is a business created through one path missing a
+ * default the other path sets.
+ */
+async function createBusinessForUser(userId, data, client = prisma) {
+  const business = await client.business.create({
+    data: {
+      name: data.name,
+      industry: data.industry,
+      country: data.country,
+      defaultCurrency: data.defaultCurrency,
+      timezone: data.timezone,
+    },
+  });
+  const membership = await client.membership.create({
+    data: {
+      userId,
+      businessId: business.id,
+      role: 'OWNER',
+      status: 'ACTIVE',
+      joinedAt: new Date(),
+    },
+  });
+
+  // Requirement 10's starting categories, inside the same transaction as the
+  // business itself. A business with none cannot log an expense at all, so
+  // this is a default of the business rather than a step someone can skip —
+  // which is exactly the kind of drift between the two creation paths that
+  // this function exists to prevent.
+  await expenseService.seedCategories(business.id, client);
+
+  return { business, membership };
+}
+
+/**
+ * Requirement 16: one account holds many businesses, rather than one account
+ * per business.
+ *
+ * Most of this already existed and was unreachable — a User has always been
+ * able to hold memberships in several businesses, and Settings has had a
+ * working switcher. What was missing was any way to create the *second* one:
+ * a business could only ever come into existence through signup, so a second
+ * business meant a second account, which is the exact thing the requirement
+ * asks to stop.
+ */
+async function createBusiness(userId, data) {
+  return prisma.$transaction((tx) => createBusinessForUser(userId, data, tx));
+}
+
 module.exports = {
   getBusiness,
+  createBusiness,
+  createBusinessForUser,
   createBranch,
   updateBranch,
   listBranches,
@@ -233,6 +381,9 @@ module.exports = {
   listMemberships,
   addBranchAccess,
   removeBranchAccess,
+  // Requirement 18's audit: memberships that already break the 1:1 rule,
+  // reported for an admin to settle rather than rewritten.
+  listCashierConflicts: cashierAssignment.listCashierConflicts,
   revokeMembership,
   listTransactions,
   getSalesSummary,

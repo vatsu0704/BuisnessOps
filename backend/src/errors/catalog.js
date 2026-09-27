@@ -34,16 +34,90 @@ const API_MESSAGES = {
   // --- Tenancy and permissions --------------------------------------------
   TENANT_BUSINESS_ID_REQUIRED: 'businessId is required in the route',
   TENANT_ACCESS_DENIED: 'You do not have access to this business',
-  PERMISSION_DENIED: 'Insufficient permissions',
-  BRANCH_ACCESS_DENIED: 'You do not have access to this branch',
-  BRANCH_ACCESS_DENIED_DESTINATION: 'You do not have access to the destination branch',
-  STAFF_ACCESS_DENIED: 'You do not have access to this staff member',
-  SALARY_SLIP_ACCESS_DENIED: 'You do not have access to this salary slip',
-  PAY_SET_REQUIRES_OWNER_ADMIN: 'Only an owner or admin can set pay',
-  PAY_CHANGE_REQUIRES_OWNER_ADMIN: 'Only an owner or admin can change pay',
+  // Requirement 19: a refusal says what the RULE is, not that a rule exists.
+  //
+  // These five all used to assert the existence of a boundary and nothing else,
+  // which tells the reader nothing they can act on. The English here is the
+  // fallback — curl, the logs, and an app too old to know the code — so it says
+  // as much as a sentence with no parameters can. The app says more: for
+  // PERMISSION_DENIED it renders the refused capability and the roles that hold
+  // it, both derived from the matrix it already mirrors, so the sentence names
+  // the actual rule and whom to ask. The `capability` param is what makes that
+  // possible and is why it rides along on every refusal from requirePermission.
+  PERMISSION_DENIED: 'This is not something your role can do',
+  BRANCH_ACCESS_DENIED: 'You can only work in the branches you have been assigned to',
+  BRANCH_ACCESS_DENIED_DESTINATION:
+    'You can only move someone to a branch you have been assigned to',
+  STAFF_ACCESS_DENIED:
+    'You can only open the records of employees at your own branches',
+  SALARY_SLIP_ACCESS_DENIED: 'You can only open your own payslips',
+  // Renamed from PAY_{SET,CHANGE}_REQUIRES_OWNER_ADMIN: a cashier sets their
+  // own branch's salaries now, so naming two roles in the code was a statement
+  // that had stopped being true.
+  PAY_SET_NOT_PERMITTED: 'You are not allowed to set pay',
+  PAY_CHANGE_NOT_PERMITTED: 'You are not allowed to change pay',
+  MEMBERSHIP_REVOKE_OUTRANKED: 'You cannot remove someone with equal or greater access than your own',
+
+  // --- Counter billing ------------------------------------------------------
+  COUNTER_ORDER_NOT_FOUND: 'Order not found',
+  COUNTER_ORDER_VOIDED: 'This order was voided and can no longer be changed',
+  COUNTER_ORDER_DAY_CLOSED:
+    'This day has been closed, so its orders can no longer be changed',
+  COUNTER_ITEM_NOT_FOUND: 'That item is not on this order',
+  COUNTER_ITEM_NEEDS_PRODUCT_OR_PRICE:
+    'Choose a product, or give the item a name and a price',
+  PRODUCT_HAS_NO_PRICE: 'This product has no price set, so it cannot be rung up',
+  DAY_ALREADY_CLOSED: 'This day is already closed',
+  DAY_NOT_CLOSED: 'This day is not closed',
+  DAY_HAS_OPEN_ORDERS: 'Close or void the {{count}} open order(s) before closing the day',
+
+  // --- Supply orders --------------------------------------------------------
+  SUPPLY_ITEM_NOT_FOUND: 'That item is not in the raw-material catalog',
+  SUPPLY_ITEM_NAME_TAKEN: 'The catalog already has an item called {{name}}',
+  SUPPLY_ITEM_INACTIVE: '{{name}} is no longer supplied',
+  SUPPLY_ITEM_HAS_NO_PRICE: '{{name}} has no price set, so it cannot be ordered yet',
+  SUPPLY_ORDER_NOT_FOUND: 'Supply order not found',
+  SUPPLY_ORDER_ITEM_NOT_FOUND: 'That item is not on this order',
+  SUPPLY_ORDER_INVALID_TRANSITION: 'An order that is {{from}} cannot become {{to}}',
+  SUPPLY_ORDER_NOT_EDITABLE: 'This order is {{status}}, so its items can no longer be changed',
+  SUPPLY_ORDER_EMPTY: 'Add something to the order before placing it',
+  SUPPLY_ORDER_REFERENCE_REQUIRED: 'Paying online needs the payment reference so the warehouse can check it',
+  SUPPLY_ORDER_CANCEL_TOO_LATE:
+    'The warehouse has already started on this order — ask them to reject it instead',
+  SUPPLY_ORDER_DELAY_NOT_APPLICABLE: 'An order that is {{status}} cannot be delayed',
+  SUPPLY_ORDER_PAYMENT_NOT_CLAIMED: 'There is no payment to check on this order yet',
+  SUPPLY_ORDER_CASH_NOT_CONFIRMED:
+    'This order is cash on delivery — confirm you have taken the money before marking it delivered',
+  SUPPLY_ORDER_AGENT_NOT_FOUND: 'That delivery agent is not an active member of this business',
+  SUPPLY_ORDER_AGENT_NOT_PERMITTED: 'That member cannot be given a delivery, so the order would be stuck',
+  SUPPLY_ORDER_ASSIGN_NOT_APPLICABLE: 'An order that is {{status}} cannot be given to a delivery agent',
+  SUPPLY_ORDER_NOT_ASSIGNED: 'This delivery is assigned to someone else',
+
+  // --- Products -------------------------------------------------------------
+  PRODUCT_NOT_FOUND: 'Product not found',
+  PRODUCT_NOT_SOLD_AT_BRANCH: 'This product belongs to a different branch, so it cannot be priced here',
+  PRODUCT_BRANCH_PRICING_NOT_FOUND: 'This product has no price set for that branch',
+  PRODUCT_BUSINESS_WIDE_NOT_PERMITTED:
+    'Only someone with access to every branch can add or change a product the whole business sells',
+
+  // --- Expenses (Task 6, requirement 10) ----------------------------------
+  EXPENSE_NOT_FOUND: 'That expense no longer exists',
+  EXPENSE_DATE_IN_FUTURE: "An expense cannot be logged for a day that has not happened at this branch yet",
+  EXPENSE_CATEGORY_NOT_FOUND: 'That expense category no longer exists',
+  EXPENSE_CATEGORY_INACTIVE: '{{name}} has been withdrawn — pick another category',
+  EXPENSE_CATEGORY_DUPLICATE: 'There is already a category called {{name}}',
+  EXPENSE_CATEGORY_IS_STANDARD:
+    'This is one of the standard categories, so its name comes from the app and cannot be changed. It can be withdrawn instead',
+
+  // --- Notifications (Task 7, requirements 2 and 8) -----------------------
+  NOTIFICATION_NOT_FOUND: 'That notification no longer exists',
+  NOTIFICATION_CATEGORY_UNKNOWN: 'There is no notification category called {{category}}',
+  NOTIFICATION_CATEGORY_REQUIRED:
+    'Attendance notifications cannot be turned off — being told you were marked absent is the point of them',
 
   // --- Business and branches ----------------------------------------------
   BUSINESS_NOT_FOUND: 'Business not found',
+  BRANCH_IS_WAREHOUSE: 'This is a warehouse, not a branch — it does not sell or order raw material',
   BRANCH_NOT_FOUND: 'Branch not found',
   BRANCH_NOT_FOUND_IN_BUSINESS: 'Branch not found in this business',
   GEOFENCE_NEEDS_COORDINATES: 'A geofence radius needs the branch latitude and longitude to be set',
@@ -54,6 +128,15 @@ const API_MESSAGES = {
   MEMBERSHIP_SELF_REVOKE: 'You cannot revoke your own access',
   MEMBERSHIP_OWNER_REVOKE_REQUIRES_OWNER: 'Only an owner can revoke another owner',
   MEMBERSHIP_BRANCH_ACCESS_NOT_FOUND: 'This member does not have access to that branch',
+  // Requirement 18 — one cashier per branch, one branch per cashier. Both are
+  // 409: nothing is malformed and nobody is unauthorised, the world is simply in
+  // a state that conflicts with the request, and the same request sent again
+  // with `confirm: true` succeeds. The blocker travels as a param so the app can
+  // name them in the confirmation — the admin's next move depends on knowing who.
+  BRANCH_ALREADY_HAS_CASHIER:
+    'A branch can only have one cashier, and {{cashier}} is the cashier for {{branch}}. Confirm to move the branch to this cashier instead',
+  CASHIER_ALREADY_HAS_BRANCH:
+    'A cashier can only have one branch, and this one has {{currentBranch}}. Confirm to move them to {{branch}}',
   INVITE_BRANCHES_NOT_IN_BUSINESS: 'One or more branchIds do not belong to this business',
   INVITE_NOT_FOUND: 'Invite not found in this business',
   INVITE_ALREADY_ACCEPTED: 'This invite was already accepted — revoke the membership instead',
@@ -63,6 +146,10 @@ const API_MESSAGES = {
   NOT_A_STAFF_MEMBER: 'You are not registered as a staff member of this business',
   STAFF_HAS_NO_BRANCH: 'This staff member is not attached to a branch of this business',
   PUNCH_LOCATION_REQUIRED: 'This branch requires your location to punch in/out',
+  // A different reason from the one above, so it gets a different sentence: no
+  // geofence is being checked here, the location itself is the record.
+  PUNCH_LOCATION_ALWAYS_REQUIRED:
+    'Your punches record where you were, so location has to be switched on',
   PUNCH_OUTSIDE_GEOFENCE:
     'You are {{distance}}m from the branch, outside the allowed {{radius}}m radius',
   PUNCH_ALREADY_IN: 'Already punched in today',
@@ -107,6 +194,14 @@ const API_MESSAGES = {
   RECORD_NOT_FOUND: 'Record not found',
   RECORD_REFERENCE_MISSING: 'Referenced record does not exist',
   INTERNAL_ERROR: 'Internal Server Error',
+
+  // --- Export (requirement 17) ---------------------------------------------
+  EXPORT_NO_BRANCHES: 'There is no branch to export',
+  EXPORT_MONTH_INVALID: 'That is not a real month',
+
+  // --- Analytics and net profit (requirements 13 and 15) -------------------
+  ANALYTICS_RANGE_REVERSED: 'The last month cannot come before the first',
+  ANALYTICS_RANGE_TOO_LONG: 'A report can cover at most {{max}} months at a time',
 };
 
 /**
@@ -128,9 +223,16 @@ const FIELD_MESSAGES = {
   FIELD_CANNOT_BE_EMPTY: '{{field}} cannot be empty',
   FIELD_MUST_BE_BOOLEAN: '{{field}} must be a boolean',
   FIELD_MUST_BE_ONE_OF: '{{field}} must be one of {{options}}',
+  QUANTITY_MUST_BE_POSITIVE: 'quantity must be more than zero',
   FIELD_MUST_BE_NON_NEGATIVE: '{{field}} must be a non-negative number',
   FIELD_MUST_BE_DATE: '{{field}} must be a real calendar date in YYYY-MM-DD form',
+  FIELD_MUST_BE_MONTH: '{{field}} must be a month in YYYY-MM form',
+  DATETIME_INVALID: '{{field}} must be a valid date and time',
+  DATETIME_IN_PAST: '{{field}} cannot be in the past',
+  DELAY_MINUTES_RANGE: 'delayMinutes must be a whole number of minutes between 1 and {{max}}',
   FIELD_MAX_LENGTH: '{{field}} must be {{max}} characters or fewer',
+  // Requirement 18, caught before an invite is created rather than at the write.
+  CASHIER_NEEDS_ONE_BRANCH: 'a cashier works at exactly one branch, so choose one',
 
   // Per-row diagnostics from a CSV/Excel upload. `column` is the literal
   // header in the uploaded file, so it stays untranslated in every language —
@@ -167,6 +269,13 @@ const FIELD_MESSAGES = {
   WORK_WEEK_NOTHING_TO_UPDATE: 'provide weeklyOffDays or unmarkedWorkingDayStatus',
   BRANCH_ID_OR_NULL: 'branchId must be a string, or null for a business-wide holiday',
   PROVIDER_REQUIRED: 'provider is required (e.g. CSV_UPLOAD)',
+
+  AMOUNT_POSITIVE: 'amount must be a number greater than zero',
+  CATEGORY_NAME_LENGTH: 'name must be between 1 and {{max}} characters',
+  EXPENSE_NOTHING_TO_UPDATE: 'provide categoryId, amount, date, note or paymentMethod',
+  CATEGORY_NOTHING_TO_UPDATE: 'provide name or isActive',
+  DEVICE_TOKEN_REQUIRED: 'token is required',
+  NOTIFICATION_ENABLED_REQUIRED: 'enabled is required as true or false',
 };
 
 module.exports = { API_MESSAGES, FIELD_MESSAGES };

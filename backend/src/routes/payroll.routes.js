@@ -2,31 +2,34 @@ const express = require('express');
 const payrollController = require('../controllers/payroll.controller');
 const { requireAuth } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenant');
-const { requireRole } = require('../middleware/rbac');
+const { requirePermission } = require('../middleware/rbac');
 
 const router = express.Router();
 
 const scoped = express.Router({ mergeParams: true });
 scoped.use(requireAuth, resolveTenant);
 
-// Generating pay is OWNER/ADMIN-only — a MANAGER runs attendance, not payroll.
-// Listing is open to MANAGER too, scoped to their branches inside the
-// controller now that SalarySlip carries branchId. Viewing one specific slip is
-// additionally open to the staff member it belongs to.
+// Running payroll and viewing payslips are two capabilities, and a third —
+// staff:setPay — covers deciding someone's salary in the first place.
+// Requirement 14 is what pulled them apart: a CASHIER sets their own branch's
+// salaries without running anyone's payroll.
+//
+// Viewing one specific slip is additionally open to the staff member it belongs
+// to, checked inside the controller rather than here.
 scoped.post(
   '/staff/:staffMemberId/salary-slips/generate',
-  requireRole('OWNER', 'ADMIN'),
+  requirePermission('payroll:run'),
   payrollController.generateSalarySlip
 );
 scoped.post(
   '/salary-slips/:slipId/finalize',
-  requireRole('OWNER', 'ADMIN'),
+  requirePermission('payroll:run'),
   payrollController.finalizeSalarySlip
 );
-scoped.get('/payroll/preview', requireRole('OWNER', 'ADMIN'), payrollController.previewPayrollRun);
-scoped.post('/payroll/run', requireRole('OWNER', 'ADMIN'), payrollController.runPayroll);
+scoped.get('/payroll/preview', requirePermission('payroll:run'), payrollController.previewPayrollRun);
+scoped.post('/payroll/run', requirePermission('payroll:run'), payrollController.runPayroll);
 
-scoped.get('/salary-slips', requireRole('OWNER', 'ADMIN', 'MANAGER'), payrollController.listSalarySlips);
+scoped.get('/salary-slips', requirePermission('payroll:view'), payrollController.listSalarySlips);
 scoped.get('/staff/:staffMemberId/salary-slips', payrollController.listStaffSalarySlips);
 scoped.get('/staff/:staffMemberId/attendance/summary', payrollController.getStaffMonthSummary);
 

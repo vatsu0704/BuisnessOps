@@ -97,13 +97,23 @@ One row per (user, business) — carries the role. Replaces a naive `User.busine
 | id | String (uuid) | PK |
 | userId | String | FK → User |
 | businessId | String | FK → Business |
-| role | Enum: `OWNER, ADMIN, MANAGER, STAFF` | per PRD Section 8 |
+| role | Enum: `OWNER, ADMIN, MANAGER, STAFF, WAREHOUSE, CASHIER, DELIVERY_AGENT` | The vocabulary only — **what each role may do is not in the database.** It lives in `backend/src/permissions/catalog.js`, mirrored to `frontend/src/permissions/matrix.json` and gated by `npm run lint:permissions` in CI. The last three arrived with the Branch Operations track; see section 11. |
 | status | Enum: `INVITED, ACTIVE, REVOKED` | `REVOKED` is what "remove this person" writes (`POST /memberships/:id/revoke`) — a soft revoke, because deleting the row would null `Attendance.markedByMembershipId` on every day they ever marked. `resolveTenant` requires `ACTIVE`, so a revoke takes effect on the person's very next request without any token invalidation. Re-inviting the same email flips the row back to `ACTIVE` with the new invite's role, which is the only way back in. `INVITED` is still set by no code path — "invited, no account yet" is modeled by `Invite` below instead, since a Membership row requires a real `userId`. Kept for a future self-serve accept/decline step on an *existing* account being invited to a *new* business, which isn't built yet either. |
 | invitedAt / joinedAt | DateTime, nullable | |
 | unique | (userId, businessId) | one role per person per business |
 
 ### `BranchAccess`
-Explicit branch scoping for `MANAGER`/`STAFF` roles (a manager can cover more than one branch). `OWNER`/`ADMIN` roles ignore this table — they have implicit all-branch access within the business.
+Explicit branch scoping for the branch-scoped roles — `CASHIER`, `DELIVERY_AGENT` and `STAFF`. The last two can cover more than one branch; `CASHIER` cannot, and that rule is not enforceable here — see below.
+
+Which roles ignore this table is **not a hardcoded list**: it is whoever holds the `branch:allAccess` capability, read by `resolveTenant` to decide the `req.branchAccess === null` sentinel. Today that is `OWNER`, `ADMIN`, `MANAGER` and `WAREHOUSE`.
+
+Two things worth knowing:
+
+- **`MANAGER` left this table's audience in requirement 14.** A manager's rows still exist and can still be removed, but they no longer bound what that person reaches. The invite screen stops asking for branches for that role.
+- **`branch:allAccess` is not authority over people.** `WAREHOUSE` holds it — the order desk ships to every branch — and deliberately does not hold `staff:viewAllBranches`, so it cannot read any branch's staff records or attendance. The sentinel used to conflate the two, which was safe only while the set was {OWNER, ADMIN}.
+- **`CASHIER` is 1:1, and the rule is not in the database** (requirement 18). One cashier per branch, one branch per cashier. **Do not go looking for a constraint**: the condition is "at most one row per branch *whose membership's role is CASHIER*", and the role lives on `Membership`, so a Postgres unique index cannot reach across the join. It is enforced in `services/cashierAssignment.service.js` behind `SELECT … FOR UPDATE` on the membership and then the branch, inside the transaction that writes the row. The `@@unique([membershipId, branchId])` below is a different statement — no duplicate grants — and stays as the assertion that the allocator is correct, the same posture `Attendance.@@unique` takes.
+- **Rows survive a revoke, so the rule counts only `ACTIVE` memberships.** Keeping them is deliberate: re-inviting somebody restores the scope they had. But a revoked cashier must not keep a branch occupied forever, so `cashierHolding` filters on status — the branch is free the moment they lose access, with the row still on the table. Re-inviting a cashier drops those vestigial rows, because the branch named in the new invite is the fresh decision.
+- **`DELIVERY_AGENT` and `STAFF` are unconstrained** and can still cover several branches. R18 applies to `CASHIER` alone, named once as `SINGLE_BRANCH_ROLE` in `permissions/catalog.js` and mirrored to the app.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -160,27 +170,34 @@ Append-only ingestion job log — needed to show "last synced: 2 hours ago" and 
 | sourceFileName | String, nullable | for CSV/manual uploads |
 
 ### `Product`
-Business-level catalog (shared across branches; price/availability varies per branch via `ProductBranchDetail`).
+The catalog. Two scopes in one table, per requirement 4 — see section 11.
 
 | Column | Type | Notes |
 |---|---|---|
 | id | String (uuid) | PK |
 | businessId | String | FK → Business |
+| branchId | String, nullable | **NULL = the whole business sells it**; a value = only that branch does ("every branch can add their own separate products"). One nullable column rather than a join table, so "this branch's catalog" is one filter instead of a union. `ON DELETE SET NULL`: deleting a branch must not silently delete products |
 | name | String | |
 | sku / externalId | String, nullable | POS-native identifier, used for de-dup on re-sync |
-| category | String, nullable | |
+| category | String, nullable | groups the catalog on screen |
 | unit | String | e.g. `piece`, `kg`, `litre` |
+| costPrice / sellPrice | Decimal, nullable | the **business-wide default**, overridden per branch by `ProductBranchDetail`. Nullable because CSV ingestion discovers products from sales rows, which carry a line's unit price but no catalog price |
+| isActive | Boolean, default true | withdraw from sale without deleting. Deleting is not available once `LineItem` rows reference it — a past sale must keep naming what was sold |
 | createdAt / updatedAt | DateTime | |
 
 ### `ProductBranchDetail`
+One branch's **override** of the business-wide price, not the only place a price can live. A product priced the same everywhere therefore needs no rows here at all, which is what stops this table growing to products × branches for no reason.
+
 | Column | Type | Notes |
 |---|---|---|
 | id | String (uuid) | PK |
 | productId | String | FK → Product |
 | branchId | String | FK → Branch |
-| costPrice / sellPrice | Decimal | for margin/wastage-cost calculations |
-| isActive | Boolean | |
-| unique | (productId, branchId) | |
+| costPrice / sellPrice | Decimal | required here, unlike on `Product`: an override exists precisely to state a price, and a half-stated one would silently fall back for the other half — which reads as the override not working |
+| isActive | Boolean | **AND-ed** with `Product.isActive`, never an override of it. A branch may withdraw something others still sell; it cannot re-activate something the business has switched off |
+| unique | (productId, branchId) | one override per branch, which is also what lets the upsert be race-free |
+
+`product.service.js`'s `withEffectivePricing` resolves the fallback in one place — the catalog screen, the counter order (Task 4) and the day-end export (Task 9) all need the same answer, and disagreeing about a price is the kind of bug nobody notices until the till is short.
 
 ### `Transaction`
 The core sales fact table. Every metric in the catalog (Phase 2) ultimately aggregates this.
@@ -196,7 +213,7 @@ The core sales fact table. Every metric in the catalog (Phase 2) ultimately aggr
 | staffMemberId | String, nullable | FK → StaffMember |
 | totalAmount / taxAmount / discountAmount | Decimal | |
 | currency | String | |
-| paymentMethod | Enum: `CASH, CARD, UPI, WALLET, OTHER, MIXED` | drives cash/digital mix anomaly detection (FR-12) from day one, even though nothing reads it until Phase 5 |
+| paymentMethod | Enum: `CASH, CARD, UPI, WALLET, OTHER, MIXED, UNSPECIFIED` | drives cash/digital mix anomaly detection (FR-12) from day one, even though nothing reads it until Phase 5. `UNSPECIFIED` exists because a counter order (Branch Operations Task 4) has no payment step while this column is required — writing `OTHER` instead would put a permanent lie into the very metric the column exists for |
 | status | Enum: `COMPLETED, REFUNDED, VOIDED` | never hard-deleted |
 | createdAt | DateTime | |
 | unique | (branchId, externalId) | idempotent re-sync |
@@ -576,4 +593,508 @@ Two layers, per the NFR (no cross-tenant leakage under any condition):
 | 2–4 — Query Engine & Reporting | `Conversation`, `QueryLog`, `QueryFeedback` |
 | 5 — Proactive Intelligence | `Alert`, `AlertNotification`, `ExternalSignal` |
 | 6 — Strategic & Franchise | `DemandForecast`, `FranchiseAgreement`, `RoyaltyStatement`, `CandidateLocation` |
+| Branch Operations (a separate track — see section 11) | `CounterOrder`, `CounterOrderItem`, `BranchTokenCounter`, `DayClose`, `SupplyOrder`, `SupplyOrderItem`, `SupplyOrderEvent`, `Expense`, `ExpenseCategory`, `DeviceToken`, `Notification` |
 | Cross-cutting | `AuditLog` (from Phase 0) |
+
+---
+
+## 11. Branch Operations — planned tables
+
+A second track running alongside the phase sequence, driven by
+[REQUIREMENTS.md](REQUIREMENTS.md), which turns BizIQ from a product that
+analyses a business into one that runs it. **None of these tables exist yet** —
+they are listed here so the tables that do exist are designed not to need
+breaking changes when they arrive, which is the same reason sections 5–7 are
+written ahead of their phases.
+
+Task 1 of that track (roles and the capability matrix) has landed, and its two
+schema changes are recorded in place above: the three new `MembershipRole`
+values on `Membership`, and `PaymentMethod.UNSPECIFIED` on `Transaction`.
+
+**Counter billing (R1) — ✅ built, see the tables in section 12.**
+
+**Supply orders (R3, R5, R9, R11, R12).** `SupplyOrder` carries the status
+machine (`DRAFT → PLACED → ACCEPTED → PACKED → DISPATCHED → DELIVERED`, with
+`CANCELLED` before dispatch), the payment mode and its reference string, and the
+promised arrival. `DRAFT` **is** the cart, so it survives closing the app.
+`SupplyOrderEvent` is append-only and covers order tracking, material tracking,
+the dispatch record, the "+30 minutes, traffic" delays from both the warehouse
+and the delivery agent, and the audit trail — one table rather than four
+half-overlapping ones. The raw-material catalog reuses `InventoryItem`, which
+has been in the schema since Phase 1 with no API on it.
+
+**Expenses (R10).** `Expense` + `ExpenseCategory`, per branch per day.
+"Which branches haven't logged today" needs no table — it is a left join
+computed when someone opens the screen, and therefore exact, where a nightly
+snapshot would be wrong minutes after it ran.
+
+**Notifications (R2, R8).** `DeviceToken` is per device per **user**, not per
+membership: a phone belongs to a person, and one person acts under several
+businesses. Its `token` is unique so that re-registering after a logout *moves*
+the row rather than leaving the previous user receiving pushes on a phone they
+signed out of. It also carries the **device's** locale, which is what lets the
+push sender render text in the right language without violating the rule that
+the backend does not translate — see the notification section of
+[REQUIREMENTS.md](REQUIREMENTS.md). `Notification` stores `code` + `params`,
+never prose, exactly as the error catalog does.
+
+---
+
+## 12. Counter billing — built (Branch Operations Task 4)
+
+Requirement 1's tables. Migration `20260924163804_counter_billing`.
+
+### `CounterOrder`
+One customer's order at a counter. **Not** a sales fact table — see the projection note below.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId / branchId | String | FK |
+| tokenNumber | Int | what the customer is called by |
+| tokenDate | Date | the **branch's** local date, via `todayKeyInZone`. Keyed on UTC, a branch in `Asia/Kolkata` restarts its numbering at 05:30 local, mid-breakfast |
+| status | Enum `OPEN, CLOSED, VOID` | `CLOSED` means handed over, **not** frozen — requirement 1 asks for orders to stay editable after they are taken. The freeze is `DayClose` |
+| totalAmount | Decimal(12,2) | recomputed from the items on every mutation, never adjusted, so it cannot drift from the lines it totals |
+| currency | String | branch currency, falling back to the business default |
+| paymentMethod | Enum `PaymentMethod` | defaults `UNSPECIFIED`: requirement 1 has no payment step, and writing `OTHER` would corrupt the cash-mix metric |
+| placedByMembershipId | String, nullable | who rang it up. From the session, never the request body |
+| transactionId | String, nullable, **unique** | the projection. One order, one transaction. `SetNull` so deleting a transaction cannot orphan the order that explains it |
+| openedAt / closedAt / updatedAt | DateTime | |
+| unique | (branchId, tokenDate, tokenNumber) | **not the allocator** — the assertion that the allocator is correct, the same posture `Attendance` takes with its no-double-punch key |
+
+### `CounterOrderItem`
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| counterOrderId | String | FK, Cascade |
+| productId | String, nullable | null for a one-off with no catalog entry |
+| productNameSnapshot | String | snapshotted at ring-up. Renaming or repricing a product next week must not rewrite what this receipt said |
+| quantity | Decimal(12,3) | |
+| unitPrice / lineTotal | Decimal(12,2) | the price comes from the catalog, resolved for this branch — a price the client can name is a price the client can invent |
+
+### `BranchTokenCounter`
+The allocator. Composite PK `(branchId, tokenDate)`, incremented by one atomic statement:
+
+```sql
+INSERT INTO branch_token_counters ("branchId", "tokenDate", "lastNumber")
+VALUES ($1::uuid, $2::date, 1)
+ON CONFLICT ("branchId", "tokenDate")
+DO UPDATE SET "lastNumber" = branch_token_counters."lastNumber" + 1
+RETURNING "lastNumber"
+```
+
+The project's first deliberate `$queryRaw`, because Prisma cannot express `ON CONFLICT DO UPDATE SET x = x + 1` and every alternative is worse: `MAX+1` races two cashiers on one counter, a retry loop degrades exactly when the counter is busiest (a 500 while a customer stands there), and a Postgres sequence is not per-branch-per-day, needs runtime DDL and never resets.
+
+### `DayClose`
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId / branchId | String | FK |
+| date | Date | matches `CounterOrder.tokenDate` |
+| closedAt / closedByMembershipId | | |
+| unique | (branchId, date) | |
+
+The floor on editing. Requirement 1 wants orders editable after they are placed; requirement 17 exports the day. Without a floor, an edit after the export silently restates a number someone has already been shown. Closing refuses while orders are still `OPEN`, and reopening is deliberately available — a day closed by mistake with hours of trading left must be recoverable, or the guard is a trap.
+
+### The projection
+
+Every counter mutation runs `salesProjection.service.js`'s `writeTransaction` inside the same `prisma.$transaction`, under `externalId = "counter:<orderId>"` against the existing `@@unique([branchId, externalId])`. Upsert + delete-lines + recreate makes it **idempotent**, which is what makes editing free — it just runs again. `VOID` projects as `TransactionStatus.VOIDED`, which `getSalesSummary`'s existing `status: 'COMPLETED'` filter already excludes with no new code.
+
+`Transaction.source` (`TransactionSource`: `POS_IMPORT | COUNTER`) tells the two sources apart. `@default(POS_IMPORT)` backfilled every existing row correctly — everything already in there arrived by CSV upload.
+
+One consequence worth knowing: `LineItem.id` is unstable across edits and the table churns. At a counter's volume that is nothing.
+
+---
+
+## 13. Supply orders — built (Branch Operations Task 5)
+
+Requirements 3, 5, 5.1, 9, 11 and 12. A branch orders raw material from one central warehouse desk, the desk fulfils and dispatches it, an agent delivers it, and either end can post a delay the cashier sees.
+
+**These tables are deliberately NOT projected into `Transaction`/`LineItem`.** A counter order is a *sale*; a supply order is an internal transfer and a *cost*. Writing it into the sales fact table would inflate every sales figure in the product by the value of the flour a branch bought from its own warehouse. Task 8 reads it from here as a cost input to net profit.
+
+### `InventoryItem` — extended
+
+Modelled in Phase 1 to track usage, with no API at all until requirement 5 gave it the job it was shaped for: this is the list a branch orders from.
+
+| Column | Type | Notes |
+|---|---|---|
+| unitPrice | Decimal(12,2)? | **New.** What the warehouse charges for one `unit`. Nullable on purpose: items have existed here since Phase 1 without a price, and an unpriced item must be un-orderable rather than orderable at zero |
+| isActive | Boolean | **New.** Withdrawn without deleting — deleting would orphan the history of every order that ever contained it |
+
+Business-wide by design, unlike `Product`, which grew a nullable `branchId` in requirement 4. A branch sells its own menu; it does not keep a private list of flour.
+
+Name uniqueness is a **service-level** check (case-insensitive), not a unique index — the same trade the `Holiday` model documents. Prisma 5 cannot express a functional unique index and hand-adding one in SQL would leave permanent drift against `schema.prisma`. Two simultaneous creates can still both land; that costs a duplicate row someone can withdraw.
+
+### `SupplyOrder`
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId / branchId | String | FK |
+| orderNumber | Int? | Null while it is a `DRAFT` cart. Issued at `PLACED` from `SupplyOrderCounter` |
+| status | `SupplyOrderStatus` | `DRAFT | PLACED | ACCEPTED | PACKED | DISPATCHED | DELIVERED | CANCELLED` |
+| totalAmount / currency | Decimal(12,2) / String | Recomputed from the items on every change, never adjusted |
+| paymentMode | `SupplyPaymentMode?` | `ONLINE | COD`. Null on a draft; required to leave one |
+| paymentStatus | `SupplyPaymentStatus` | `PENDING | PAID | VERIFIED | FAILED` |
+| paymentReference | String? | What the warehouse checks against its own records |
+| paymentVerifiedAt | DateTime? | |
+| promisedAt | DateTime? | When it is currently expected. Each delay pushes it, when one was given |
+| placedByMembershipId | String? | FK, `SetNull`. **Null until `PLACED`**, then whoever placed it. Kept because per-cashier reporting filters on it |
+| deliveryAgentMembershipId | String? | FK, `SetNull`. Kept because the agent's queue filters on it |
+| placedAt / dispatchedAt / deliveredAt / cancelledAt | DateTime? | |
+| unique | (businessId, orderNumber) | |
+| indexes | (businessId, status), (businessId, branchId, status), (deliveryAgentMembershipId, status) | the desk's query, the branch's, and the agent's |
+
+**Only two membership columns, and both exist because a query filters on them.** Who accepted, packed, dispatched or verified the payment lives in `SupplyOrderEvent` — that table *is* the audit trail, and four more actor columns here would be a second record of the same fact, free to disagree with the first.
+
+It is filled in at `PLACED` and not before, and that matters because the cart is shared: whoever opens it is often not whoever sends it. Stamping the opener made an order's header claim it was "placed by Hari" while its own history said Deep placed it — one act, two names.
+
+`DRAFT` is the cart, one per **branch** rather than per cashier: the branch is what orders, and a per-person cart strands whatever someone had half-built when their shift ended. Find-then-create, for the same partial-index reason as above.
+
+### `SupplyOrderItem`
+
+| Column | Type | Notes |
+|---|---|---|
+| supplyOrderId | String | FK, `Cascade` |
+| inventoryItemId | String? | FK, `SetNull` |
+| itemNameSnapshot / unitSnapshot | String | Snapshotted, like `CounterOrderItem` — a rename next month must not rewrite what this order said |
+| quantity | Decimal(12,3) | |
+| unitPrice / lineTotal | Decimal(12,2) | Price taken from the catalog, never from the caller |
+| unique | (supplyOrderId, inventoryItemId) | |
+
+That unique key is the difference between a cart and a till roll: adding the same item twice raises the quantity instead of producing two lines a picker has to reconcile. `CounterOrderItem` deliberately has no equivalent.
+
+### `SupplyOrderEvent`
+
+| Column | Type | Notes |
+|---|---|---|
+| supplyOrderId | String | FK, `Cascade` |
+| type | `SupplyOrderEventType` | `STATUS_CHANGE | DELAY | PAYMENT | ASSIGNMENT` |
+| fromStatus / toStatus | `SupplyOrderStatus?` | |
+| delayMinutes | Int? | requirement 9's "+30 minutes" |
+| reasonCode | String? | A **code**, never prose |
+| note | String? | The actor's own words, shown exactly as typed |
+| actorMembershipId | String? | FK, `SetNull` |
+| index | (supplyOrderId, createdAt) | |
+
+One table covers requirement 5.1's whole list — material tracking, order tracking, dispatch and payment — because they are one stream of events. `reasonCode` follows the error catalog's contract for the same reason: the server cannot know whether the cashier reading it has the app in Gujarati, so the device renders `t('supplyDelay.<CODE>')`. The delay reasons are `TRAFFIC`, `STOCK_OUT`, `VEHICLE_ISSUE`, `WEATHER`, `STAFF_SHORTAGE`, `OTHER`; the payment codes are `PAYMENT_CLAIMED`, `PAYMENT_ON_DELIVERY`, `PAYMENT_VERIFIED`, `PAYMENT_FAILED`, `PAYMENT_COLLECTED`.
+
+`PAYMENT_COLLECTED` (R22) is the cash-on-delivery entry in that story: the agent confirming the branch's money is in their hand, written beside the delivery rather than inside it. Before it, a COD order's `paymentStatus` moved to `PAID` as a side effect of arriving, with nothing anywhere recording who had taken the money. The delivery endpoint refuses to close a COD order without that confirmation, so the row is never missing from an order that claims to be paid.
+
+`ASSIGNMENT` (R21) is who is carrying it, and is deliberately **not** a `STATUS_CHANGE`: handing a run to a different agent moves nothing along the status machine, and filing it as one would put a row in the timeline claiming a transition that never happened. Its `note` holds the agent's **name**, snapshotted the way `SupplyOrderItem.itemNameSnapshot` holds the item's, so the history still reads correctly after that person is renamed or leaves. That is not the backend writing prose — there is no sentence, only a name the device puts inside one of its own (`t('supply.assignedTo', { name })`). The *current* assignee is always `SupplyOrder.deliveryAgentMembershipId`; these rows are how it got there.
+
+### `SupplyOrderCounter`
+
+| Column | Type | Notes |
+|---|---|---|
+| businessId | String | PK, FK `Cascade` |
+| lastNumber | Int | |
+
+Allocated by the same atomic `INSERT … ON CONFLICT DO UPDATE … RETURNING` as `BranchTokenCounter`. Two differences: per **business**, and it never resets. A token is shouted across a counter and has to stay small; an order number is quoted days later ("where has 214 got to?") and has to stay unique over time.
+
+---
+
+## 14. Punch location — who fills it, and why (R20)
+
+No schema change: `Attendance` has carried `punchInLat/Lng` and `punchOutLat/Lng` since the attendance module was built. What changed is that they stopped being incidental.
+
+| Policy | Chosen by | Geofence | Coordinates |
+|---|---|---|---|
+| Fixed place of work | the default | applied where the branch configures one | needed only to check against it |
+| `attendance:punchAnywhere` | `DELIVERY_AGENT` | **not applied** | **required** |
+
+The second row is a trade, not a privilege. A delivery agent is at a different branch every hour, so a radius around one of them is meaningless — but accepting the punch without a location would remove the check and record nothing in its place. Requiring the coordinates is what keeps the day auditable, and it is why the capability is in `ADMIN_EXCLUDES`: an admin holding everything else would inherit the cost without needing the exemption.
+
+`Attendance.branchId` still comes from `StaffMember.branchId`, and that stays true for an agent — it is their payroll home, not a claim about where they worked. Where they actually were is the coordinates.
+
+These rows have a second reader now. `GET /supply-delivery-agents` (R21) reads today's attendance for each agent to answer "who is free": a `punchInAt` with no `punchOutAt` is `ON_DUTY`, a row that has been punched out of — or no row at all — is `OFF_DUTY`, and an agent with no `StaffMember` record is `UNKNOWN`, because attendance genuinely has nothing to say about them. "Today" is the branch's own calendar day, as everywhere else that reads attendance. `UNKNOWN` sorts *above* off duty on purpose: it is the state every agent is in at a business that does not use punch-in, and sinking them would bury the whole list.
+
+---
+
+## 15. `BranchKind` — a warehouse is a location (R23)
+
+| Column | Type | Notes |
+|---|---|---|
+| `Branch.kind` | `BranchKind` | `BRANCH | WAREHOUSE`, `@default(BRANCH)` |
+
+Adding a staff member requires a branch, because `Attendance`, `SalarySlip`, `StaffMember` and every roster query are keyed on `branchId`. A warehouse employee had nowhere to be filed — the only locations a business had were the places it sells from — so there was no way for them to punch in at all.
+
+**A warehouse is therefore a `Branch`, distinguished by a kind, rather than a table of its own.** That is the whole point: as a Branch it has a timezone, coordinates, a geofence, staff, attendance, payslips and a roster on the day it is created. A separate `Warehouse` table would have needed all five of those modules taught about a second kind of place before anyone could punch in anywhere.
+
+The column defaults to `BRANCH`, so every location that already existed stays what it was and there is no backfill.
+
+What a warehouse may **not** do is enforced in the two services where goods move, not merely omitted from the pickers: `branchOf` in `counterOrder.service.js` and `supplyOrder.service.js` both throw `BRANCH_IS_WAREHOUSE` (400). A warehouse has no till, and an order it placed on itself would arrive at the desk asking the desk to ship to the desk. On the device the same split is one rule stated in `useBranches`: **`tradingBranches` where goods move, `branches` where people are.**
+
+---
+
+## 16. Branch delivery address (R21)
+
+| Column | Type | Notes |
+|---|---|---|
+| `Branch.addressLine` | String? | Street, building, landmark. Free text and **multi-line** |
+| `Branch.postalCode` | String? | |
+
+`city`, `region` and `country` already existed and describe where a branch **is**, for reporting. They are not an address anybody can ride to, which is why these are separate columns rather than a stricter use of those. `addressLine` is deliberately unstructured: an Indian address is not a fixed set of fields, and forcing one drops the half that actually finds the place ("behind the old post office").
+
+Both nullable. Every branch that existed before this column has neither, and a branch whose own staff know where it is never needs one — an order to such a branch shows "No address saved for this branch" rather than failing.
+
+The destination travels on the supply order (`ORDER_INCLUDE.branch` selects it alongside `latitude`/`longitude`), because the delivery agent's order screen is the only thing they open and branch endpoints are not theirs to call. The map link prefers the coordinates when the branch has them and falls back to the written address.
+
+
+---
+
+## 17. Branch expenses — built (Branch Operations Task 6)
+
+Requirement 10's tables. Migration `20260925210000_branch_expenses`.
+
+The counterpart to section 12: `CounterOrder` is what a branch took **in**,
+`Expense` is what it paid **out**. Neither projects into the other — a sale and
+a cost are different facts — and Task 8 reads both to arrive at net profit.
+
+### `ExpenseCategory`
+
+What a branch spends money on. Per business, not global: one business's "Milk"
+is another's "Fuel", and a business that adds "Vegetables" must not add it to
+everybody else's list.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId | String | FK, cascade |
+| code | String, nullable | set for the eight seeded categories, `null` for one somebody typed |
+| name | String | the **English fallback** for a coded category, and the only name a custom one has |
+| isActive | Boolean | withdrawn, never deleted: a category is attached to expenses already logged, and removing it would rewrite what those rows say they were for |
+| sortOrder | Int | seeded 10–80; a custom category sorts at 100, after all of them |
+| unique | (businessId, code) | Postgres treats NULLs as distinct, so this constrains the seeded set to one row per code and leaves custom rows unconstrained by it |
+| unique | (businessId, name) | which is what stops two "Vegetables" |
+
+**Why a code *and* a name.** Every business starts with the same eight
+categories, and those are shown to a cashier who may be reading the app in
+Gujarati. The backend cannot translate — it does not know the reader's language,
+which is the whole reason errors travel as codes — so a seeded category sends
+its `code` and the device renders `t('expenseCategory.<CODE>')`. `name` plays
+exactly the role the English in `errors/catalog.js` plays: what curl and the
+logs see. A category somebody typed has `code: null` and is shown verbatim,
+because their own words are not ours to translate.
+
+The seeded set is `MILK, GAS, ELECTRICITY, RENT, REPAIRS, TRANSPORT, PETTY,
+OTHER`. It is written in **two** places by necessity — `SEEDED_CATEGORIES` in
+`expense.service.js`, which runs inside the transaction that creates a business,
+and the backfill in the migration, which seeds the businesses that already
+existed. Adding a category later therefore needs a new migration as well as an
+edit, or businesses will differ by age.
+
+**There is deliberately no raw-material category.** See section 5 of
+`REQUIREMENTS.md`: a supply order is already a cost recorded in `supply_orders`,
+and a category inviting someone to log it again by hand would subtract it twice
+from net profit.
+
+### `Expense`
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId / branchId | String | FK, cascade |
+| categoryId | String | FK, **Restrict** — a category with spending against it cannot be deleted out from under it |
+| amount | Decimal(12,2) | strictly positive. Zero is a half-typed form; a negative is a refund, which this table does not model |
+| currency | String | branch currency, falling back to the business default |
+| expenseDate | Date | the **branch's** own local date, exactly as `CounterOrder.tokenDate` is — which is what makes "today's spend against today's sales" compare two figures from the same day |
+| note | String, nullable | "two cans of milk". The category carries the what; this carries the detail, and is shown as typed |
+| paymentMethod | Enum `PaymentMethod` | defaults `UNSPECIFIED`, feeding the same cash-mix figure `CounterOrder.paymentMethod` does |
+| recordedByMembershipId | String, nullable | from the session, never the body. `SetNull` |
+| index | (businessId, branchId, expenseDate) | the day and month views |
+| index | (businessId, expenseDate) | the compliance query |
+
+**A WAREHOUSE may have expenses.** `expense.service.js`'s `branchOf` is the one
+that does *not* raise `BRANCH_IS_WAREHOUSE`, unlike its counterparts in
+`counterOrder.service.js` and `supplyOrder.service.js`. A warehouse has no till
+and orders no raw material from itself, but it does pay an electricity bill — a
+location with costs and no way to record them is a hole in the figures, not a
+rule being enforced.
+
+### Reading the day against the day: `localDayRange`
+
+`expenseDate` is already a branch-local calendar day, so the expense side of
+"what did I spend today?" needs no conversion. The sales side does:
+`Transaction.occurredAt` is an *instant*, so `utils/datetime.js` gained
+`localDayRange(key, timeZone)`, which returns the half-open `[start, end)` UTC
+window a branch's calendar day occupied.
+
+Asking Postgres for `occurredAt::date` instead would have compared **UTC** days
+— counting every sale before 05:30 IST against the day before — and could not
+have used the `(businessId, branchId, occurredAt)` index either, because a
+function over a column is not indexable. The helper samples the zone offset
+twice so a daylight-saving day is still 23 or 25 hours long; India never shifts,
+so the second read is a no-op there and correct elsewhere. Task 9's day-end
+export needs the same window.
+
+---
+
+## 18. Notifications — built (Branch Operations Task 7)
+
+Requirements 2 and 8. Migrations `20260926090000_notifications` and
+`20260926091500_notification_preferences`. Setup is `Docs/FIREBASE_SETUP.md`.
+
+### `DeviceToken`
+
+One row per device per **User** — not per membership.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| userId | String | FK, cascade |
+| token | String, **unique** | the raw FCM token |
+| platform | Enum `ANDROID, IOS, WEB` | |
+| locale | Enum `Locale` | the language **this device** is showing |
+| disabledAt | DateTime? | set when FCM says the token is dead, or on logout |
+| lastSeenAt | DateTime | refreshed on every registration |
+| index | (userId, disabledAt) | "every live device for this person" |
+
+**Why per user and not per membership.** A phone belongs to a person, and that
+person may act under several businesses (R16). Keying this on a membership
+would register the same handset two or three times and deliver every
+notification as many times over.
+
+**Why `token` is globally unique.** Re-registering after a logout/login **moves**
+the row to the new user rather than leaving the previous one subscribed to a
+handset they have signed out of. That is a security property, not tidiness.
+
+**Why `locale` is here and not read from `User.preferredLocale`.** This column
+is the thing that makes backend-rendered push text legitimate instead of a
+violation of the "the backend cannot know the reader's language" rule: for this
+one channel it was *told*. A shared handset, or one whose owner changed the app
+language on a different phone, would otherwise show the wrong language on the
+lock screen — the one surface the app cannot re-render afterwards.
+
+### `Notification`
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId | String | FK, cascade. The list is scoped to it, so switching business changes what the centre shows |
+| userId | String | the recipient. A User, not a Membership |
+| branchId | String? | `SetNull` |
+| code | String | one of `NOTIFICATION_CODES` in `notifications/labels.js` |
+| params | Json | everything the sentence needs. **Never a sentence** |
+| deepLink | Json? | `{ route, params }`, re-checked against capabilities before dispatch |
+| status | Enum `UNREAD, READ` | |
+| sentAt | DateTime? | null with no error means nobody had a device — not a failure |
+| deliveryError | String? | first FCM error, truncated |
+| index | (userId, status, createdAt) | the centre and the badge |
+
+**`code` + `params`, for the same reason the error catalog uses them.** The row
+outlives the moment it was written and the reader may change the app's language
+afterwards, so the device renders `t('notifications.<code>', params)` every time
+it draws the list. The push carries rendered text as well, because Android draws
+the lock screen before any app code runs.
+
+**The row is written first and the push attempted second.** Every awkward case —
+a phone that is off, a retired token, a worker with no app account, a server
+with no Firebase credentials — is then ordinary rather than special.
+
+### `NotificationPreference`
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| userId | String | FK, cascade |
+| category | String | one of `attendance, orders, delays, payments, deliveries` |
+| unique | (userId, category) | |
+
+**A row means MUTED; no row means on.** Stored that way round because the answer
+is almost always "I want all of them": the common case costs nothing, and a
+category added later is on by default rather than silently off for everybody who
+registered before it existed.
+
+**`attendance` is refused rather than ignored.** Requirement 2 exists so a worker
+finds out they were marked absent; a switch that hid that would defeat the
+requirement it was built for, and one that appears to work and does not is worse
+than one that says no.
+
+Keyed on the **user**, not the membership or the device: muting order updates is
+a decision about what you want to hear, not about which business you are looking
+at or which phone is in your hand.
+
+---
+
+## 19. Analytics and net profit — built (Branch Operations Task 8)
+
+**This section adds no tables, and that is the point worth recording.**
+`analytics.service.js` is a read over rows the other services already write:
+`Transaction` for sales, `Expense` for spending, `SupplyOrder` for raw material,
+`SalarySlip` for wages, `Branch` for what each location is. There is no
+`BranchMonthlySummary` and no cached total.
+
+The reason is requirement 13's acceptance criterion — *net profit must be
+reproducible by hand from the rows behind it*. A stored aggregate is a second
+copy of a number, and a second copy is a number that can disagree with the rows
+it came from. Every figure Reports shows is therefore computed on request, and the
+cost of that is bounded deliberately: see the query-count note in
+`PROJECT_FLOW.md`'s Task 8 section, and `MAX_MONTHS` in the service.
+
+### Which columns each figure comes from
+
+| Figure | Source | Date column | Needs a timezone? |
+| --- | --- | --- | --- |
+| `sales` | `Transaction.totalAmount`, `status = COMPLETED` | `occurredAt` | **Yes** — it is an instant |
+| `expenses` | `Expense.amount` | `expenseDate` | No — already the branch's own day |
+| `materialSpend` | `SupplyOrder.totalAmount`, status in PLACED…DELIVERED | `placedAt` | **Yes** — it is an instant |
+| `payroll` | `SalarySlip.netPay`, DRAFT and FINALIZED | `monthYear` | No — already 'YYYY-MM' |
+
+`materialSpend` is keyed on **`placedAt`, not `deliveredAt`**. Delivery would drop
+every order still in flight out of the figures entirely, and would move an order
+placed in September and delivered in October into the wrong month. A `DRAFT` is a
+cart nobody committed to and a `CANCELLED` order is money never spent, so both are
+excluded by status rather than by date.
+
+### Two columns that do not exist, and what that costs
+
+- **`SupplyOrder` has no supplying-warehouse column.** It records the branch that
+  ordered. So the money a shop pays the warehouse can be subtracted from the shop
+  but cannot be credited to a particular warehouse as revenue — which is why the
+  business roll-up treats it as an untraced *internal transfer* and a warehouse
+  reads as a cost centre. Adding `supplyingBranchId` is what would let a warehouse
+  be reported as a profit centre instead; it is not needed while a business has one.
+- **There is no purchase or supplier model at all.** A warehouse buying flour from
+  the outside world has nowhere to record it except as an ordinary `Expense`
+  against the warehouse branch — which is exactly why `expense.service.js`
+  deliberately permits a `WAREHOUSE` where the trading services refuse one. Without
+  that, the business's largest real cost would be invisible.
+
+---
+
+## 20. Day-end and month-end export — built (Branch Operations Task 9)
+
+**No tables again**, and for the same reason §19 gives: an export is a statement
+about what was entered, so it has to be re-derivable from the rows at any later
+date. Storing one would be a second copy of numbers that could disagree with the
+rows they came from, and it would put a retention policy between somebody and
+"exports work for any past date, so losing the file is recoverable" (R17).
+
+### What each period reads, and which date column decides
+
+| Record type | Model | Date column | Shape |
+| --- | --- | --- | --- |
+| Counter orders | `CounterOrder` | `tokenDate` `@db.Date` | branch-local already; a day is one value, a month a range |
+| Expenses | `Expense` | `expenseDate` `@db.Date` | same |
+| Attendance | `Attendance` | `date` `@db.Date` | same |
+| Supply orders | `SupplyOrder` | `placedAt` **DateTime** | an instant — needs `localDayRange` / `localMonthRange` |
+| Payslips | `SalarySlip` | `monthYear` `'YYYY-MM'` | month export only |
+
+The mixed shapes are the trap. Three of these need no timezone work at all and one
+needs it absolutely: in Asia/Kolkata a UTC-keyed window files everything before
+05:30 against the day before, so a day-end export run at 20:00 would quietly omit
+the morning's supply orders and nothing would look wrong.
+
+`SalarySlip` is deliberately absent from the **day** export. A payslip is a monthly
+document; there is no one day's payslip, and a pro-rated fragment would be a figure
+nobody could check against anything.
+
+### The double-count flag reads two tables, not a name
+
+`Expense.category.code` is null for a category somebody typed and set for the
+seeded eight. The flag looks only at the null ones, and only for an `amount` that
+exactly equals a `SupplyOrder.totalAmount` on the same branch and the same day.
+That keeps it a statement about two rows rather than a guess about wording — which
+could not work across four languages. It is the last piece of §5 of
+`REQUIREMENTS.md`.

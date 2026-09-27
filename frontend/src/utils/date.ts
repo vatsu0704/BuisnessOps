@@ -68,6 +68,40 @@ export function monthLabel(month: number, year: number, t: TFunction): string {
   return `${monthName(month, t)} ${year}`;
 }
 
+/**
+ * 'YYYY-MM' — the month form the analytics grid and `SalarySlip.monthYear` both
+ * use, as opposed to the (month, year) pair `useMonthCursor` carries.
+ *
+ * A string is the right shape for a *range*: two of them compare and sort with
+ * `<`, which a pair of numbers does not without arithmetic at every call site.
+ */
+export function thisMonthKey(): string {
+  const now = new Date();
+  return monthKey(now.getMonth() + 1, now.getFullYear());
+}
+
+/** The month key `count` months earlier. `monthKeyMinus('2026-03', 9)` is '2025-06'. */
+export function monthKeyMinus(key: string, count: number): string {
+  const [year, month] = key.split('-').map(Number);
+  const moved = addMonths(month, year, -count);
+  return monthKey(moved.month, moved.year);
+}
+
+/** "September 2026", translated. */
+export function monthKeyLabel(key: string, t: TFunction): string {
+  const [year, month] = key.split('-').map(Number);
+  return monthLabel(month, year, t);
+}
+
+/**
+ * "Sep 2026" — the short form, for a row of month chips where the long name
+ * would make each chip wide enough that only two fit on screen.
+ */
+export function monthKeyShortLabel(key: string, t: TFunction): string {
+  const [year, month] = key.split('-').map(Number);
+  return `${t(`month.short.${month}` as 'month.short.1')} ${year}`;
+}
+
 export function weekdayName(weekday: number, t: TFunction): string {
   return t(`weekday.${weekday}` as 'weekday.0');
 }
@@ -82,4 +116,29 @@ export function formatDate(iso: string, t: TFunction): string {
 export function formatDateLong(iso: string, t: TFunction): string {
   const [y, m, d] = iso.split('-').map(Number);
   return `${d} ${monthName(m, t)} ${y}`;
+}
+
+/**
+ * "9:05 AM" — a clock time in the reader's language.
+ *
+ * Deliberately not `toLocaleTimeString({ hour12: true })`. Hermes ships
+ * without a dependable Intl, so that call falls back to a fixed format and
+ * ignores the option — which is why every clock time in the app rendered as
+ * 24-hour whatever the device was set to. The meridiem is looked up from the
+ * translation files for the same reason month and weekday names are, and the
+ * two halves are assembled by `time.ofDay` rather than concatenated here, so a
+ * locale that puts the marker before the figure can say so.
+ *
+ * Accepts null and returns an empty string, because most callers are reading a
+ * punch that may not have happened yet.
+ */
+export function formatTime(iso: string | null | undefined, t: TFunction): string {
+  if (!iso) return '';
+  const at = new Date(iso);
+  const hours = at.getHours();
+  return t('time.ofDay', {
+    // Midnight and noon are 12, not 0 — the one case a plain `% 12` gets wrong.
+    time: `${hours % 12 === 0 ? 12 : hours % 12}:${pad(at.getMinutes())}`,
+    meridiem: hours < 12 ? t('time.am') : t('time.pm'),
+  });
 }

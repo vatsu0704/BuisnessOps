@@ -24,7 +24,30 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
+      <NavigationContainer
+        /**
+         * Routes are registered per role now, so a navigate() to one this
+         * person cannot open reaches no navigator. React Navigation's default
+         * for that is a red box in development and **silence** in production —
+         * a button that does nothing, which nobody thinks to report.
+         *
+         * Logging it at least puts it somewhere findable. Screens should not
+         * rely on this: the call site belongs inside something the same
+         * capability already gated, and routeAccess.resolveDeepLink is what
+         * catches the one case that genuinely arrives from outside — a push
+         * notification for a screen the recipient has since lost.
+         */
+        onUnhandledAction={(action) => {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[navigation] "${action.type}" reached no navigator — ` +
+                `the target route is probably not registered for this role. ` +
+                `Payload: ${JSON.stringify('payload' in action ? action.payload : {})}`
+            );
+          }
+        }}
+      >
         <RootNavigator />
         <StatusBar style={splashDone ? 'auto' : 'light'} />
       </NavigationContainer>

@@ -1,7 +1,7 @@
 const attendanceService = require('../services/attendance.service');
 const { fail, validationFailure } = require('../errors');
 const staffService = require('../services/staff.service');
-const { canViewStaffMember, canManageStaffMember, scopeOf } = require('../middleware/staffScope');
+const { canViewStaffMember, canMarkAttendanceFor, scopeOf } = require('../middleware/staffScope');
 const {
   validatePunch,
   validateMarkAttendance,
@@ -24,7 +24,14 @@ async function punchIn(req, res, next) {
 
     const staffMember = await requireOwnStaffMember(req);
 
-    const attendance = await attendanceService.punchIn(req.tenant.businessId, staffMember, req.body);
+    const attendance = await attendanceService.punchIn(
+      req.tenant.businessId,
+      staffMember,
+      req.body,
+      // The location policy is a capability, and the capability comes from the
+      // session — never from the body.
+      req.tenant.role
+    );
     res.status(201).json(attendance);
   } catch (err) {
     next(err);
@@ -38,7 +45,14 @@ async function punchOut(req, res, next) {
 
     const staffMember = await requireOwnStaffMember(req);
 
-    const attendance = await attendanceService.punchOut(req.tenant.businessId, staffMember, req.body);
+    const attendance = await attendanceService.punchOut(
+      req.tenant.businessId,
+      staffMember,
+      req.body,
+      // The location policy is a capability, and the capability comes from the
+      // session — never from the body.
+      req.tenant.role
+    );
     res.json(attendance);
   } catch (err) {
     next(err);
@@ -97,7 +111,7 @@ async function markAttendance(req, res, next) {
 
     const staffMember = await staffService.getStaffMember(req.tenant.businessId, req.params.staffMemberId);
     if (!staffMember) throw fail('STAFF_NOT_FOUND', 404);
-    if (!canManageStaffMember(scopeOf(req), staffMember)) {
+    if (!canMarkAttendanceFor(scopeOf(req), staffMember)) {
       throw fail('BRANCH_ACCESS_DENIED', 403);
     }
 

@@ -4,6 +4,23 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { spring } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
 
+/**
+ * The pressable itself is animated — `style` and the press-scale land on the
+ * *same* node, so this can be laid out as a flex or grid child.
+ *
+ * It used to wrap a Pressable in an unstyled `Animated.View` and put `style` on
+ * the inner one. That reads as harmless, and is fatal for any caller sizing it
+ * relative to its parent: the wrapper had no width of its own, so a
+ * `width: '31%'` on the inner Pressable resolved against an indefinite width,
+ * collapsed to the minimum intrinsic size, and rendered the counter's product
+ * tiles one character per line. `flex: 1` failed the same way, silently.
+ *
+ * Keep it one node. Every other animated component here (`AnimatedEntrance`,
+ * `SegmentedOption`) already puts the caller's style on the element that
+ * actually participates in layout.
+ */
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 type Props = Omit<PressableProps, 'style'> & {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -23,20 +40,18 @@ export default function PressableScale({ children, style, scaleTo = 0.95, onPres
   }
 
   return (
-    <Animated.View style={animatedStyle}>
-      <Pressable
-        onPressIn={() => {
-          pressed.value = withSpring(1, spring.snappy);
-        }}
-        onPressOut={() => {
-          pressed.value = withSpring(0, spring.snappy);
-        }}
-        onPress={handlePress}
-        style={style}
-        {...rest}
-      >
-        {children}
-      </Pressable>
-    </Animated.View>
+    <AnimatedPressable
+      onPressIn={() => {
+        pressed.value = withSpring(1, spring.snappy);
+      }}
+      onPressOut={() => {
+        pressed.value = withSpring(0, spring.snappy);
+      }}
+      onPress={handlePress}
+      style={[style, animatedStyle]}
+      {...rest}
+    >
+      {children}
+    </AnimatedPressable>
   );
 }

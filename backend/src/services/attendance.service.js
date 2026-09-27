@@ -1,6 +1,8 @@
 const prisma = require('../config/db');
 const { fail } = require('../errors');
+const triggers = require('../notifications/triggers');
 const { distanceMeters } = require('../utils/geo');
+const { roleHas } = require('../permissions');
 const { dateOnly, dateKeyOf, todayInZone, todayKeyInZone } = require('../utils/datetime');
 const workCalendar = require('./workCalendar.service');
 
@@ -15,10 +17,32 @@ async function branchOf(businessId, staffMember) {
   return branch;
 }
 
-function assertWithinGeofence(branch, latitude, longitude) {
+/**
+ * Where this punch is allowed to happen, and what has to be recorded about it.
+ *
+ * Two policies, chosen by capability rather than by role name:
+ *
+ * - **Fixed place of work** (the default). The branch's geofence applies where
+ *   one is configured, and coordinates are needed only to check it against.
+ * - **`attendance:punchAnywhere`** — a job with no fixed location, i.e. the
+ *   delivery agent, who is at a different branch every hour. The radius is not
+ *   applied, and the trade for that is that coordinates become **required**:
+ *   the whole point of letting someone punch from anywhere is that where they
+ *   were is on the record for an admin or manager to look at afterwards.
+ *   Accepting the punch without a location would give away the check and
+ *   record nothing in its place.
+ */
+function assertPunchLocation(branch, latitude, longitude, role) {
+  const hasLocation = latitude !== undefined && latitude !== null && longitude !== undefined && longitude !== null;
+
+  if (roleHas(role, 'attendance:punchAnywhere')) {
+    if (!hasLocation) throw fail('PUNCH_LOCATION_ALWAYS_REQUIRED', 400);
+    return;
+  }
+
   if (!branch.geofenceRadiusMeters || branch.latitude === null || branch.longitude === null) return;
 
-  if (latitude === undefined || longitude === undefined) {
+  if (!hasLocation) {
     throw fail('PUNCH_LOCATION_REQUIRED', 400);
   }
 
@@ -34,9 +58,9 @@ function assertWithinGeofence(branch, latitude, longitude) {
   }
 }
 
-async function punchIn(businessId, staffMember, { latitude, longitude }) {
+async function punchIn(businessId, staffMember, { latitude, longitude }, role) {
   const branch = await branchOf(businessId, staffMember);
-  assertWithinGeofence(branch, latitude, longitude);
+  assertPunchLocation(branch, latitude, longitude, role);
 
   const date = todayInZone(branch.timezone);
   const existing = await prisma.attendance.findUnique({
@@ -71,7 +95,7 @@ async function punchIn(businessId, staffMember, { latitude, longitude }) {
   });
 }
 
-async function punchOut(businessId, staffMember, { latitude, longitude }) {
+async function punchOut(businessId, staffMember, { latitude, longitude }, role) {
   const branch = await branchOf(businessId, staffMember);
   const date = todayInZone(branch.timezone);
 
@@ -85,7 +109,7 @@ async function punchOut(businessId, staffMember, { latitude, longitude }) {
     throw fail('PUNCH_ALREADY_OUT', 409);
   }
 
-  assertWithinGeofence(branch, latitude, longitude);
+  assertPunchLocation(branch, latitude, longitude, role);
 
   return prisma.attendance.update({
     where: { staffMemberId_date: { staffMemberId: staffMember.id, date } },
@@ -124,7 +148,7 @@ async function markAttendance(businessId, staffMember, { date, status, notes }, 
       }
     : {};
 
-  return prisma.attendance.upsert({
+  const record = await prisma.attendance.upsert({
     where: { staffMemberId_date: { staffMemberId: staffMember.id, date: day } },
     create: {
       businessId,
@@ -137,6 +161,19 @@ async function markAttendance(businessId, staffMember, { date, status, notes }, 
     },
     update: { status, notes, markedByMembershipId, ...clearPunch },
   });
+
+  // Requirement 2 — "send text to worker for present and absent", confirmed as
+  // a push. Only a MANUAL mark notifies: this function is not on the punch-in
+  // path, so nobody is told about their own punch. A worker with no app account
+  // is simply not told and the mark still succeeds, which the requirement says
+  // in as many words.
+  await triggers.attendanceMarked(businessId, {
+    staffMemberId: staffMember.id,
+    status,
+    date,
+  });
+
+  return record;
 }
 
 function getMonthlyAttendance(businessId, staffMemberId, month, year) {

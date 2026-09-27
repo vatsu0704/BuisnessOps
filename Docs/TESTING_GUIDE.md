@@ -7,9 +7,14 @@ assume branches and data already exist from earlier steps.
 This covers the app as it exists today: Phases 0–1 (auth, branches, CSV
 ingestion), Team & permissions (inviting, revoking, and switching between
 businesses), and Attendance, Payroll & Salary Slips. Every message the server
-sends is translated too, which Flow 18 checks. Reports and the "ask a question" bar are intentionally unfinished
-(Phase 2 is blocked on an LLM provider) — you'll see a "planned" notice there,
-not a bug. Alerts (Phase 5) no longer has a tab at all; the Staff tab took its
+sends is translated too, which Flow 18 checks. Reports is now the real branch ×
+month grid with net profit (Flow 17r), and compares every business one account
+holds (Flow 17s); the day and the month export to a spreadsheet and a printable
+summary (Flow 17t). A branch has one cashier and a cashier has one branch, swapped
+with a confirmation that names who is displaced, and every refusal now says what the
+rule is rather than that a rule exists (Flow 17u). The AI "ask a
+question" bar is gone from Home entirely (requirement 7), hidden behind a flag
+until Phase 2's query engine exists. Alerts (Phase 5) has no tab at all; the Staff tab took its
 slot.
 
 ---
@@ -45,8 +50,18 @@ You run both servers yourself — nothing here starts them for you.
      `http://192.168.1.98:4000/api`. Windows Firewall must allow inbound
      connections for the exact `node.exe` running the backend.
 
-   `EXPO_PUBLIC_*` values are baked in when Metro starts, so after editing
-   `.env` restart Metro with the cache cleared (`npx expo start -c`).
+   - **A release APK against the hosted API**
+     (`https://buisnessops.onrender.com/api`): nothing has to be running on this
+     PC, and no cable or firewall rule is involved. The free instance sleeps
+     after a quiet spell and takes about half a minute to wake, so the first
+     sign-in then is slow rather than broken — the app starts waking it the
+     moment it opens, and sign-in, sign-up and session restore wait 45 seconds
+     before giving up while everything after them still fails fast at 15.
+
+   `EXPO_PUBLIC_*` values are baked in when Metro starts — and, for a release
+   APK, when `assembleRelease` bundles — so after editing `.env` restart Metro
+   with the cache cleared (`npx expo start -c`), or rebuild the APK. Nothing
+   re-reads `.env` at runtime.
 4. Open the app (the web build opens automatically in your browser; for
    `npm run android` open it on the device/emulator).
 5. If the database has no account you know the password for, start at Flow 1 —
@@ -74,9 +89,11 @@ or two different browsers. Flows 7 and 8 call this out explicitly.
    - Country, Currency, Timezone — prefilled (`IN`, `INR`, `Asia/Kolkata`),
      edit if you want
 3. Tap **"Create account & continue."**
-4. ✅ **Expected:** you land on **Home**, greeted by name, showing your
-   business name, and stat tiles for Sales / Orders / Branches (all zero —
-   nothing uploaded yet).
+4. ✅ **Expected:** you land on **Home**, greeted by name and your business
+   name, and the **first** thing under the greeting is the stat tiles for
+   Sales / Orders / Branches (all zero — nothing uploaded yet), then **Your
+   branches**, then **Open the counter**. The numbers lead because they are
+   what Home is read for; everything below them is somewhere to go.
 
 **Try the validation, too:** type a malformed email (e.g. `not-an-email`) —
 a red "Enter a valid email address" message appears under the field and the
@@ -107,7 +124,10 @@ appears under Confirm Password.
    - Currency / Timezone — prefilled from your business
 3. Tap **"Create branch."**
 4. ✅ **Expected:** you're back on Home, the branch now appears under "Your
-   branches," and the Branches stat tile went up by one.
+   branches," and the Branches stat tile went up by one — **without** closing
+   and reopening the app. Every screen reads one shared branch list, so it
+   should also be in the branch pickers on Products, Counter and Supply
+   straight away, and in the Settings branch count.
 5. Repeat once or twice more with different codes — several of the later
    flows (Upload, Add staff) are more interesting with 2+ branches.
 
@@ -160,14 +180,21 @@ you'll get a clean "already exists" error, not a crash.
 
    Staff & payroll used to live here too. It is now its own **Staff tab**,
    because it is used daily rather than configured once — see Flow 13.
-   - A language selector (English / Hindi / Gujarati / Marathi)
+   - A language **dropdown**, showing the language you are in
    - **"Log out"**
-3. Tap a different language in the language selector.
-4. ✅ **Expected:** the whole app's text switches immediately (try Home,
-   Settings, Upload — everything should be translated, not just this
-   screen). Switch back to English when you're done, or continue testing in
-   another language if you want to spot-check translations (the Hindi/
-   Gujarati/Marathi files are machine-quality, not reviewed by native
+
+   The business id used to sit at the bottom of the business card. It is gone:
+   it is a UUID and there was nothing anyone could do with it.
+3. Tap the language dropdown.
+4. ✅ **Expected:** a sheet slides up from the bottom with all four languages,
+   the current one ticked. Press the Android back button — it closes and
+   nothing changes. Tap outside it — the same.
+5. Open it again and choose a different language.
+6. ✅ **Expected:** the sheet closes and the whole app's text switches
+   immediately (try Home, Settings, Upload — everything should be translated,
+   not just this screen). Switch back to English when you're done, or continue
+   testing in another language if you want to spot-check translations (the
+   Hindi/Gujarati/Marathi files are machine-quality, not reviewed by native
    speakers — wording roughness there is expected, not a bug to report).
 
 ---
@@ -303,6 +330,12 @@ Continuing from the staff record you created in Flow 8:
    section.
 5. In **"Mark a day,"** the date defaults to today — change it to an earlier
    date this month (type it as `YYYY-MM-DD`), tap **Absent**, tap **Save**.
+   - ✅ **Expected:** under **Status**, four chips — Present, Absent, Half day,
+     Leave — each as wide as its own label, wrapping onto a second line rather
+     than squeezing. No label breaks mid-word in any of the four languages.
+   - ✅ **Expected:** the chosen chip takes that status's own colour — green for
+     Present, red for Absent, amber for Half day — which is the colour the day
+     then wears in the list above.
 6. ✅ **Expected:** that date now appears in the attendance list above with
    an **Absent** badge.
 7. In **"Payroll,"** optionally enter a **Deductions** amount, then tap
@@ -374,8 +407,9 @@ person with Sundays off could only ever earn about 87% of their salary.
    today's date and "Not punched in yet", with a **Punch in** button.
    - An owner with no staff record sees **no card at all** — not an empty one.
 3. Tap **Punch in**. Allow location if asked.
-   - ✅ **Expected:** the card flips to "Punched in at HH:MM" and the button
-     becomes **Punch out**.
+   - ✅ **Expected:** the card flips to "Punched in at 9:12 AM" and the button
+     becomes **Punch out**. Every clock time in the app is 12-hour with AM/PM —
+     never 24-hour, in any of the four languages.
    - If the branch has a geofence and you are outside it, the punch is refused
      with the distance in the message.
 4. Tap **Punch out**. The button disappears; the card reads "In at … · out at …".
@@ -396,9 +430,13 @@ the empty Alerts placeholder.
    marked". The summary strip counts Present / Absent / Unmarked.
    - This is the fix for the old roster, which returned only people who already
      had a record — so "who hasn't punched in yet?" was unanswerable.
-3. **Tap a person's row** → status chips appear inline. Tap **Half day**.
-   - ✅ **Expected:** the row's pill updates without leaving the tab. Marking a
-     day used to take four taps into the detail screen.
+3. **Tap a person's row** → the same four status chips appear inline. Tap
+   **Half day**.
+   - ✅ **Expected:** the row's pill updates without leaving the tab, in the
+     colour of the chip you pressed. Marking a day used to take four taps into
+     the detail screen.
+   - ✅ **Expected:** the chip already matching that person's marked status is
+     shown as chosen, so you can see what you are changing.
 4. On a weekly off or a holiday, the section shows a calm one-line notice
    instead of a wall of "Not marked".
 5. Scroll to **Staff** → tap a person → their detail screen opens, now with a
@@ -461,6 +499,38 @@ the empty Alerts placeholder.
 
 ---
 
+## Flow 15a — The operations roles (CASHIER, WAREHOUSE, DELIVERY_AGENT)
+
+Three roles were added for the Branch Operations track. Most of what they *do*
+is not built yet (Tasks 2–9 in [REQUIREMENTS.md](REQUIREMENTS.md)) — what you
+can check today is that each one can be created and that its boundaries hold.
+
+**Setup.** As the owner, Settings → Team → Invite, three times. Note that the
+branch picker appears for **CASHIER** and **DELIVERY_AGENT** but **not** for
+MANAGER or WAREHOUSE, because those two reach every branch.
+
+1. **A cashier sets salary, which used to be owner/admin-only.**
+   Log in as the cashier → Staff tab → pick someone at *their* branch → Edit.
+   - ✅ **Expected:** the monthly salary field is there and saves.
+   - ✅ **Expected:** the same person at a branch the cashier was *not* granted
+     is not reachable at all.
+2. **A cashier cannot run payroll.** No "Run payroll" card on the Staff tab.
+3. **The warehouse desk sees branches but not people.**
+   Log in as the warehouse user.
+   - ✅ **Expected:** Home lists **every** branch, even though you granted it
+     none.
+   - ✅ **Expected:** it cannot open anyone's staff record or attendance. Via
+     the API, `GET /businesses/:id/branches/<any>/attendance` returns **403**,
+     not 500. (A 500 here would mean the guard added for this case is missing.)
+4. **A delivery agent sees only themselves.** Staff tab shows their own
+   attendance and nothing else — no roster, no colleague.
+5. **A manager now reaches every branch.** This *changed*: a manager used to be
+   limited to granted branches.
+   - ✅ **Expected:** Home lists every branch, and Settings shows the Team and
+     Work Calendar cards that used to be owner/admin-only.
+
+---
+
 ## Flow 16 — Take access away again
 
 Everything up to here only ever *granted* access. This is the other direction.
@@ -499,8 +569,9 @@ Do it as the OWNER, from **Settings → Team & permissions**.
 ## Flow 17 — Switch between two businesses
 
 Needs an account that belongs to more than one business. The quickest way to
-get one: sign up a fresh account with its own business (Flow 1), then, as the
-OWNER from Flow 1, invite that same email into your business (Flow 6).
+get one is now Flow 17a below — add a second business to the account you are
+already signed in as. (The older route still works: sign up a fresh account
+with its own business, then invite that email into your first business.)
 
 1. Log in as that second account and open **Settings**.
    - ✅ **Expected:** a **Business** card listing both businesses by name, with
@@ -521,6 +592,508 @@ OWNER from Flow 1, invite that same email into your business (Flow 6).
    return to this device and reopen the app.
    - ✅ **Expected:** it falls back to the business they still belong to rather
      than getting stuck on the one they were removed from.
+
+---
+
+## Flow 17a — Add a second business to the same account
+
+Requirement 16: one account, several businesses, rather than one account each.
+
+1. Signed in as an **owner**, open **Settings**.
+   - ✅ **Expected:** an **Add another business** row. It is there even if you
+     own only one business — that is the point of it.
+   - ✅ **Expected:** log in as an **admin, manager, cashier, warehouse user or
+     delivery agent** and the row is **not** there. Starting a business is the
+     owner's act; an admin runs the business they were given.
+   - ✅ **Expected:** an owner who is also a cashier in someone else's business
+     sees it while switched to their own and not while switched to the other.
+     Settings means "this business". Switch back to add a third.
+2. Tap it.
+   - ✅ **Expected:** a form with the same fields signup asked for, already
+     filled in with the current business's industry, country, currency and
+     timezone. Only the name is blank.
+3. Enter a name and tap **Create business**.
+   - ✅ **Expected:** the sheet closes and the app is now acting under the new
+     business. Settings shows its name, and Home shows **no branches** — it is
+     brand new, not a copy of the first.
+4. Open **Settings** again.
+   - ✅ **Expected:** the **Business** card has appeared, listing both, with the
+     tick on the new one. You are OWNER of both.
+5. Switch back to the first business.
+   - ✅ **Expected:** its branches, sales and staff return. Nothing you did in
+     the new business is visible here.
+6. Add a branch to one of them, then switch to the other.
+   - ✅ **Expected:** the branch belongs only to the business it was created in.
+7. Try to create a business with a blank name, or type a nonsense timezone like
+   `Mars/Olympus`.
+   - ✅ **Expected:** it is refused with a message naming the field, and no
+     half-made business appears in the switcher.
+
+---
+
+## Flow 17b — Products, and what each branch charges
+
+Requirement 4: the catalog on Home after login, and each branch able to add its
+own products and set its own prices. Needs at least two branches.
+
+1. As an owner, open the app.
+   - ✅ **Expected:** **Your products** appears on Home, above the branch list.
+     With nothing added yet it offers to add the first one.
+   - ✅ **Expected:** the Home tab's icon is a house, not a speech bubble, and
+     there is no "ask" bar at the bottom of the screen (requirement 7).
+2. Open the **Products** tab → **Add**.
+   - ✅ **Expected:** a scope choice — *The whole business* or *One branch only* —
+     each explaining what it means.
+3. Add a product to **the whole business** (say Masala Chai, sold by `cup`,
+   sells for 20).
+   - ✅ **Expected:** it appears in the Products tab, and on Home.
+4. Switch the Products tab to your other branch.
+   - ✅ **Expected:** Masala Chai is there too, at the same 20.
+5. Open Masala Chai → **Price at one branch**. Set 25 for the first branch and
+   save.
+   - ✅ **Expected:** the Products tab shows **25** with a *Branch price* label
+     at that branch, and still **20** at the other. This is the whole point of
+     the override.
+6. Open it again, clear both price fields and save.
+   - ✅ **Expected:** back to 20 at both.
+7. Add a product with **One branch only**, pointed at your first branch.
+   - ✅ **Expected:** it is labelled **Branch only**, appears at that branch, and
+     does **not** appear when you switch the Products tab to the other branch.
+8. Open any product → **Withdraw from sale**.
+   - ✅ **Expected:** it disappears from the catalog at every branch, and is not
+     deleted — putting it back on sale restores it.
+
+---
+
+## Flow 17c — What each role's app actually looks like
+
+The tab bar and the screens behind it are now decided by role. Use the accounts
+from Flow 15a.
+
+1. Log in as the **cashier**.
+   - ✅ **Expected:** tabs **Home · Products · Staff · Settings**. No Reports.
+   - ✅ **Expected:** Home leads with their branch's numbers, then the counter,
+     then **Today's expenses**, then the catalog for their branch. No **Your
+     branches** card — they do not edit branches, and no **Branches to chase**
+     card — their own branch is the only one they can see.
+   - ✅ **Expected:** in Products they can add a product for *their* branch, and
+     the whole-business option is not offered at all — not offered-and-refused.
+2. Log in as the **warehouse** user or the **delivery agent**.
+   - ✅ **Expected:** tabs **Home · Staff · Settings** — no Products, no Reports.
+   - ✅ **Expected:** the warehouse user gets **Branches to chase** on Home
+     (requirement 10) and the delivery agent does not. Chasing branches for
+     their daily expenses is the back office's job, and carrying orders is not.
+3. Log in as an **owner or manager**.
+   - ✅ **Expected:** all five tabs, and Home runs sales tiles → branch list →
+     counter → catalog, with the upload card at the foot.
+   - ✅ **Expected:** Home does **not** offer "Order raw material" or "Your
+     deliveries". An owner holds every capability in the app, but a branch
+     orders and an agent delivers — neither is the owner's job. What they get
+     instead is **Raw material catalog**, which is where prices are set.
+   - ✅ **Expected:** the cashier still has "Order raw material", and the
+     delivery agent still has "Your deliveries". Same capabilities, different
+     jobs.
+4. With an account in two businesses (Flow 17a), switch business in Settings
+   where your role differs between the two.
+   - ✅ **Expected:** the tab bar changes to match the role in the business you
+     switched to. Anything half-typed in a form is discarded — that is
+     deliberate, since forms belong to the business you were in.
+5. Have an owner change that person's role on another device, then background
+   this app and bring it back.
+   - ✅ **Expected:** the tabs update to the new role without a force-close.
+
+---
+
+## Flow 17d — The counter: tokens, the running total, and editing
+
+Requirement 1. Log in as the **cashier** (Flow 15a) — they get a **Counter**
+tab. An owner or manager reaches the same screen from Home instead, since the
+tab bar only has room for five; opened that way it carries an **✕** in the
+corner, which the cashier's tab does not (there would be nothing to close).
+
+Needs at least one product with a price at that branch (Flow 17b).
+
+1. Open **Counter**.
+   - ✅ **Expected:** today's takings, the token count and how many are still
+     open across the top; a grid of products below; a bar at the bottom.
+   - ✅ **Expected:** every product tile is wide enough to read — a name over at
+     most two lines and the price beneath it. Three across on a normal phone,
+     two on a small one, more on a tablet. Nothing reading as a vertical column
+     of single letters.
+2. Tap a product with nothing open.
+   - ✅ **Expected:** a token is issued **immediately** and the item goes on it.
+     The bottom bar shows the token number and the total. You should not have
+     had to press "New order" first.
+   - ✅ **Expected:** that product's tile turns blue and shows **1**.
+3. Tap two more products, and use the + / − next to a line.
+   - ✅ **Expected:** the total changes with every tap, and each tile's badge
+     counts up with it. Pressing − down to zero takes the line off entirely and
+     clears that tile's badge.
+   - ✅ **Expected:** put a dozen different items on one token — the bottom bar
+     stops growing and scrolls instead, so the product grid stays reachable.
+4. Press **Hand over**.
+   - ✅ **Expected:** the token moves to *Today's tokens* marked "Handed over",
+     and the bottom bar goes back to "New order".
+5. Tap that handed-over token in the list, then add another item to it.
+   - ✅ **Expected:** it works. Closing an order hands it over; it does **not**
+     freeze it. This is the "they can edit it" half of requirement 1.
+6. Ring up a few more tokens.
+   - ✅ **Expected:** the numbers go up by one each time and never repeat.
+7. Go to **Home** (or Reports later) and look at the sales figure.
+   - ✅ **Expected:** it has gone up by exactly what you rang up. Counter sales
+     and uploaded CSV sales land in the same place.
+8. Press and hold a token → **Void**.
+   - ✅ **Expected:** it is marked Voided, the day's takings drop by its amount,
+     and that token number is never handed out again. The row stays in the list
+     but greys out with its amount struck through — a void is information, not
+     a deletion.
+9. Switch to your other branch at the top.
+   - ✅ **Expected:** its tokens number independently — a quiet branch is still
+     on low numbers while a busy one is high.
+   - ✅ **Expected:** with three branches, the odd one sits across its own row
+     rather than leaving a half-width gap beside it.
+10. Switch the app to Gujarati or Hindi (Settings → language) and come back.
+    - ✅ **Expected:** the three tiles across the top still line their numbers up
+      with each other even where a label needs two lines, and no product tile
+      has collapsed. Indic labels run longer than the English ones, so this is
+      where a layout that only just fits stops fitting.
+
+---
+
+## Flow 17e — Closing the day
+
+The floor that stops an edit quietly rewriting a number you have already been
+shown.
+
+1. With at least one token still **Open**, try to close the day.
+   - ✅ **Expected:** refused, telling you how many are still open.
+2. Hand over or void everything, then close the day.
+   - ✅ **Expected:** it closes, and a **Day closed** badge appears.
+3. Try to edit any of that day's tokens, or start a new one.
+   - ✅ **Expected:** both refused, saying the day has been closed. **New order**
+     is visibly greyed out rather than failing only once you press it.
+4. Reopen the day.
+   - ✅ **Expected:** editing works again. Closing by mistake has to be
+     recoverable, or the guard becomes a trap.
+
+---
+
+## Flow 17f — Stock the raw-material catalog
+
+Requirement 5's first half. Log in as the **warehouse** person (Flow 15a) — they
+get a **Desk** tab. An owner or admin does this from Home → *Order raw material*.
+
+The catalog is **business-wide**, not per branch: one warehouse, one list, one
+price. That is the opposite of Products (Flow 17b), and deliberate — a branch
+sells its own menu but does not keep a private list of flour.
+
+1. Open the catalog and press **Add an item**.
+   - ✅ **Expected:** name, unit, category and price. Only name and unit are
+     required.
+2. Add three: `Flour / kg / 45`, `Milk / litre / 60`, and one with **no price** at
+   all, say `Saffron / gram`.
+   - ✅ **Expected:** all three save. The unpriced one is listed with "No price
+     yet" rather than ₹0.
+3. Try to add `flour` again, in lower case.
+   - ✅ **Expected:** refused — the catalog already has one. Case does not make it
+     a different sack.
+4. Open Flour and press **Stop supplying this**.
+   - ✅ **Expected:** marked withdrawn. It stays in the desk's list so it can be
+     brought back, and disappears from what a cashier can order.
+5. Bring it back with **Supply it again**.
+   - ✅ **Expected:** orderable once more. Withdrawing is never a delete: every
+     past order still names what was on it.
+
+---
+
+## Flow 17g — A branch orders raw material
+
+Requirement 5. Log in as the **cashier** — they get a **Supply** tab. Needs
+Flow 17f done first.
+
+1. Open **Supply** and tap **+** beside Flour, then beside Milk.
+   - ✅ **Expected:** each tile's chip shows what is now on the order, and a bar
+     appears at the bottom with the count and the running total.
+2. Tap **+** on Flour again.
+   - ✅ **Expected:** the quantity goes to 2 — one line, not two. A picker should
+     never have to add two rows of flour together.
+3. Try to add the unpriced item.
+   - ✅ **Expected:** refused, naming it. An unpriced item is un-orderable rather
+     than free.
+4. Press **Review order**, then type `20` into the Flour quantity.
+   - ✅ **Expected:** the line total and the order total follow. Quantities are
+     typed here rather than tapped up in the catalog, because raw material is
+     ordered in twenties.
+5. Press **−** on Milk until it reaches zero.
+   - ✅ **Expected:** the line comes off entirely.
+6. Choose **Cash on delivery** and press **Place order**.
+   - ✅ **Expected:** it becomes an order with a number, and the screen moves to
+     its detail. Payment reads "Cash on delivery" — nothing is outstanding, that
+     is simply how it will be paid.
+7. Go back to Supply and add something again.
+   - ✅ **Expected:** a **fresh** cart. The old one is an order now.
+8. Start another order, choose **Paid online**, and try to place it with the
+   reference box empty.
+   - ✅ **Expected:** refused. A reference the warehouse can check against its own
+     records is the whole content of "paid online" in a system that deliberately
+     never takes the money.
+9. Type a reference and place it.
+   - ✅ **Expected:** payment shows **Paid** — claimed, not settled. The warehouse
+     confirms it in Flow 17h.
+
+---
+
+## Flow 17h — The warehouse desk
+
+Requirement 3: "one person can see all the branches' incoming supply orders."
+Log in as the **warehouse** person. Ideally place orders from two different
+branches first (Flow 17g, once as each branch's cashier).
+
+1. Open **Desk**.
+   - ✅ **Expected:** orders from **every** branch, oldest first, each saying which
+     branch it came from. A queue read newest-first starves the order the branch
+     is already on the phone about.
+   - ✅ **Expected:** no carts. A branch still adding things is not an order, and a
+     queue where some rows are not real work stops being trusted.
+2. Open the online-paid order and press **Found it** under the payment.
+   - ✅ **Expected:** payment becomes **Verified**, and the history records who
+     checked it.
+3. Open the COD order and try the same.
+   - ✅ **Expected:** refused — there is nothing to check yet. Cash on delivery is
+     paid on delivery.
+4. Press **Accept** and choose **+60 min**.
+   - ✅ **Expected:** accepted, and an expected time appears.
+5. Press **Mark packed**, then **Dispatch**.
+   - ✅ **Expected:** each step moves one place. There is no way to skip one: the
+     status machine refuses it on the server, not just in the buttons.
+   - ✅ **Expected:** **Dispatch** asks who is taking it before it goes — see
+     Flow 17k, which is that panel on its own.
+6. On another placed order, press **Cannot supply**, choose *Out of stock*, add a
+   note, and submit.
+   - ✅ **Expected:** cancelled, with the reason and your note on its history. This
+     is the desk's verb; the branch's own **Cancel order** is a different act and
+     is recorded differently.
+7. As the **cashier**, open that order.
+   - ✅ **Expected:** they see the rejection and the reason, in their own language.
+     The reason travels as a code, so it reads in Gujarati for a Gujarati device
+     even though the warehouse person typed nothing in Gujarati.
+
+---
+
+## Flow 17i — Delays, delivery, and what the cashier sees
+
+Requirements 9, 11 and 12.
+
+1. As the **warehouse**, open an accepted order and press **Report a delay**.
+   Enter `30`, choose *Out of stock*, and submit.
+   - ✅ **Expected:** the order's history gains "+30 min — Out of stock", and if a
+     time was promised it moves by exactly thirty minutes.
+2. As the **cashier**, open **Supply orders** from Home (or the order from your
+   tracking list).
+   - ✅ **Expected:** the delay shows on the card without opening it, and the full
+     history is on the detail. This is requirement 9's whole point — the branch
+     finds out without ringing anyone.
+   - ✅ **Expected:** every time down the right-hand side of **What has happened**
+     reads as `4:35 PM`, as does the **Expected by** pill above it. Switch the
+     language and the figures stay 12-hour.
+3. As the **delivery agent** (Flow 15a), open **Deliveries**. For this step,
+   dispatch the order with **Nobody yet** chosen in the panel.
+   - ✅ **Expected:** the dispatched order is there even though nobody was named:
+     an unassigned dispatch goes to every agent covering that branch, which is
+     how it gets picked up. Naming one is Flow 17k.
+4. Press **Report a delay**, choose *Traffic*, submit.
+   - ✅ **Expected:** it lands on the same history as the warehouse's delay.
+     Requirement 9 has two ends and both write to one stream.
+5. Press **Mark delivered** on a **cash on delivery** order.
+   - ✅ **Expected:** it asks first — *"Have you taken ₹… from the … cashier?"* —
+     naming the amount and the branch. The goods arriving is not evidence the
+     money did, and only you at the counter know.
+6. Press **Not yet**.
+   - ✅ **Expected:** nothing happens. The order stays dispatched and unpaid,
+     which is where it actually is and where somebody can still chase it.
+7. Press **Mark delivered** again and answer **Yes, I have the money**.
+   - ✅ **Expected:** delivered, payment becomes **Paid**, and the history gains
+     its own line — *Cash taken on delivery* — saying who took it.
+8. Do the same on an **online** order.
+   - ✅ **Expected:** no question, because nothing is outstanding. Its payment
+     state is left exactly as the warehouse left it: delivering something is not
+     evidence that its payment cleared.
+9. Try to report a delay on the delivered order now.
+   - ✅ **Expected:** refused. A delivered order cannot be late.
+10. As the **cashier**, place a new order and immediately press **Cancel order**.
+    - ✅ **Expected:** withdrawn — the warehouse has not taken it on yet.
+11. Have the warehouse **Accept** another one, then try to cancel it as the cashier.
+    - ✅ **Expected:** refused, telling you to ask the warehouse to reject it
+      instead. Somebody has started picking it.
+
+---
+
+## Flow 17j — The delivery agent punches from the road
+
+Requirement 20. A geofence assumes a fixed place of work; a delivery agent has
+none, so the radius does not apply to them — and the trade is that their
+location stops being optional.
+
+Needs a branch with a geofence (Flow 19) and a **delivery agent** who also has a
+staff record at some branch, so they have attendance at all.
+
+1. Invite a delivery agent (Flow 15a).
+   - ✅ **Expected:** the invite screen does **not** ask which branches. They are
+     not tied to one — they deliver to all of them.
+2. As that agent, open Home and punch in while nowhere near the branch.
+   - ✅ **Expected:** it works. A cashier standing in the same spot is refused
+     (Flow 19), and that is the intended difference.
+3. Turn the phone's location off and try to punch out.
+   - ✅ **Expected:** refused, saying your punches record where you were. The
+     exemption is not "no location" — it is "location instead of a radius".
+4. Turn location back on and punch out.
+   - ✅ **Expected:** it works.
+5. As the **admin or manager**, open Staff → that agent → their attendance.
+   - ✅ **Expected:** the day shows the in and out times, and a **Punched here**
+     chip. Tapping it opens the spot in a map.
+6. Look at a day someone was marked present by hand rather than punching.
+   - ✅ **Expected:** no times and no chip — there is nothing to show, and the row
+     stays as it was.
+7. As the agent, open **Deliveries** with an order dispatched to a branch nobody
+   assigned them to.
+   - ✅ **Expected:** it is in their queue. They carry to every branch.
+8. As the agent, try to open a branch roster or a colleague's record.
+   - ✅ **Expected:** refused. All-branch scope covers **data**, never people —
+     the same line the warehouse desk sits on.
+
+---
+
+## Flow 17k — Giving the run to an agent, and telling them where to go
+
+Requirement 21. Two halves of one job: somebody has to be named, and the person
+named has to be able to find the place.
+
+Needs two delivery agents (Flow 15a, twice) and a branch with an address. Set
+the address first: **Settings → the branch → Branch settings → Delivery
+address**. Type a street line *and* a landmark on a second line, add the PIN
+code, and save.
+
+1. As the **warehouse**, take an order to **packed** (Flow 17h) and press
+   **Dispatch**.
+   - ✅ **Expected:** a panel asking *Who is taking it?*, listing your delivery
+     agents — and **nobody else**. The owner, you at the desk, and every cashier
+     are absent: they can all technically close a delivery, but carrying is not
+     their job.
+   - ✅ **Expected:** each row says whether they are on duty and how much they
+     are already carrying, and the freest one is already selected. One press
+     from here.
+2. Look at an agent who has not punched in today.
+   - ✅ **Expected:** "Not punched in today", sorted below the ones who have —
+     but still selectable. Availability is a caption, not a lock; you know
+     things the app does not.
+3. Have one agent punch in (Flow 17j) and reopen the panel.
+   - ✅ **Expected:** they now say **On duty since HH:MM** and have moved to the
+     top. That is the attendance module answering, not a second idea of "free".
+4. Choose an agent and press **Dispatch**.
+   - ✅ **Expected:** dispatched, the order header says **Given to *name***, and
+     the history gains a row saying the same with a time.
+5. Press **Change the agent** and pick the other one.
+   - ✅ **Expected:** it moves. The order appears in the new agent's
+     **Deliveries** and disappears from the first agent's — a run belongs to one
+     person at a time.
+6. Press **Change the agent** and pick the *same* person again.
+   - ✅ **Expected:** nothing new on the history. A timeline saying a run was
+     given to Ravi and then given to Ravi is one nobody reads twice.
+7. As the **delivery agent** who now has it, open the order.
+   - ✅ **Expected:** a **Deliver to** card near the top with the branch name,
+     the street line exactly as it was typed — including the second line — and
+     the city and PIN code beneath.
+   - ✅ **Expected:** an **Open in maps** chip. Tapping it opens the branch in
+     whichever map app the phone has: at its coordinates if the branch has them
+     (Flow 19), at the written address otherwise.
+8. Open an order for a branch whose address was never filled in.
+   - ✅ **Expected:** "No address saved for this branch", and no map chip.
+     Nothing fails — the agent has the branch name and can ring the shop.
+9. As the **cashier** who placed it, open the same order.
+   - ✅ **Expected:** the same **Deliver to** card. This is the one place the
+     address a rider will be sent to is visible, which is how a wrong one gets
+     noticed before somebody is standing in the wrong street.
+10. As the cashier, try to find **Change the agent**.
+    - ✅ **Expected:** it is not there. Who carries it is the warehouse's call.
+
+---
+
+## Flow 17l — A warehouse is a location, and who a staff member is
+
+Requirement 23. Adding a staff member used to demand a branch, and a warehouse
+employee had no true answer — so there was nowhere to file them and no way for
+them to punch in.
+
+1. As the **owner**, Home → **Branches** → **Add branch**.
+   - ✅ **Expected:** the form opens by asking **what this place is** — Branch
+     (sells and orders) or Warehouse (supplies the branches).
+2. Choose **Warehouse**, name it, give it a code, press **Use my current
+   location**, set a radius, and save.
+   - ✅ **Expected:** created. It appears in the branch list marked as a
+     warehouse, so the list and the "branches" count in Settings agree with
+     each other — the count is the selling network, and the warehouse is not
+     part of it.
+3. Open the **Counter** and the **supply catalog** and look at their branch
+   pickers.
+   - ✅ **Expected:** the warehouse is **not** offered in either. It has no till
+     and it does not order raw material from itself. (The server refuses both
+     as well, so this is a tidy screen rather than the only defence.)
+4. Staff → **Add staff**.
+   - ✅ **Expected:** the first card is **"Who are they?"**, and the **account
+     email is its first field** — before the location question, not after it.
+     That order is the whole fix: the email is what decides whether "which
+     branch do they work at" is even the right question.
+5. Type the email of the person you invited as a **delivery agent**
+   (Flow 15a) — the case that exposed this.
+   - ✅ **Expected:** a line appears saying they are already on the team as
+     Delivery agent, and the **job title fills in as "Delivery agent"**. Type
+     over it and your text wins; clear the email and the suggestion goes.
+   - ✅ **Expected:** the location question becomes **"Where is their base?"**
+     with a sentence saying it only decides where attendance and payslips are
+     filed — and the **warehouse is already selected**. A delivery agent works
+     at none of the branches, so being asked to pick one was the bug.
+6. Do the same with the **warehouse** person's email.
+   - ✅ **Expected:** identical behaviour. Both reach every branch, and the
+     screen asks the matrix rather than naming either role.
+7. Type a **cashier's** email instead.
+   - ✅ **Expected:** it names them, and the question stays "which branch do
+     they work at" with nothing preselected. A branch-scoped person is never
+     guessed at: being filed at the wrong shop silently is worse than a tap.
+8. Do the same as a **cashier** rather than the owner.
+   - ✅ **Expected:** no recognition line at all — reading the team needs a
+     permission a cashier does not have — and the screen behaves as it always
+     did.
+9. Save the delivery agent, then log in as them and **punch in from anywhere**.
+   - ✅ **Expected:** it works, with no geofence and the location recorded
+     (Flow 17j). Their attendance and payslip are filed against the warehouse.
+     Without the staff record made in step 5 there is no attendance at all —
+     that chain is what "so they will do punch-in punch-out" needs.
+10. As the warehouse person, punch in while at the warehouse.
+    - ✅ **Expected:** it works, against the warehouse's own radius.
+11. Try to change the warehouse back to a branch in **Branch settings**.
+    - ✅ **Expected:** allowed. A location created as the wrong kind would
+      otherwise be stuck as one forever.
+
+---
+
+## Flow 17m — Asking before something cannot be undone
+
+1. As a **cashier**, place a supply order and press **Cancel order**.
+   - ✅ **Expected:** it asks first, and **nothing happens** if you back out.
+     Withdrawing cannot be undone — placing it again means rebuilding the cart.
+2. As the **warehouse**, open the raw-material catalog, edit an item and press
+   **Stop supplying this**.
+   - ✅ **Expected:** it asks. Press the same button again afterwards to restore
+     it.
+   - ✅ **Expected:** restoring does **not** ask. A question in front of an undo
+     is only friction.
+3. Do the same with **Withdraw** on a product (Flow 17b), **Void** on a token
+   (Flow 17d), removing a team member (Flow 16) and deactivating a staff member.
+   - ✅ **Expected:** every one asks, in the same shape and the same language.
+4. On any of those dialogs, press the Android **back button** rather than either
+   choice.
+   - ✅ **Expected:** it closes and nothing happens — and the button you pressed
+     is usable again rather than stuck spinning.
 
 ---
 
@@ -598,8 +1171,478 @@ radius — see Flow 18 step 6 for what that message should look like.
 
 ---
 
+## Flow 17n — Expenses: what went out against what came in
+
+Requirement 10. Log in as the **cashier** (Flow 15a). Ring up a token or two in
+Flow 17d first, or "Sold" will read zero and the comparison has nothing to show.
+
+1. On **Home**, tap **Today's expenses**.
+   - ✅ **Expected:** a **Spent** and a **Sold** tile side by side, and
+     **Difference** on its own full-width line below them. The difference is the
+     conclusion drawn from the two figures, not a third number of the same kind,
+     and it turns red when the branch is down on the day.
+2. Tap **Log an expense**.
+   - ✅ **Expected:** eight categories as chips — Milk, Gas, Electricity, Rent,
+     Repairs, Transport, Petty cash, Other — each as wide as its own label,
+     wrapping onto more rows rather than squeezing. No label breaks mid-word in
+     any of the four languages.
+   - ✅ **Expected:** there is **no raw-material or stock category**, on purpose.
+     A supply order is already recorded as a cost; logging it again by hand would
+     subtract it twice from net profit.
+3. Choose **Milk**, enter `2000`, note "two cans", leave the date on today, pick
+   **Cash**, and save.
+   - ✅ **Expected:** back on the expense screen, **Spent** has moved by ₹2,000,
+     **Difference** has moved the other way by the same amount, and a "Milk"
+     chip showing ₹2,000 appears under the tiles. That chip is requirement 10's
+     "today I took ₹2,000 of milk".
+4. Try to save an expense of `0`, and one of `-50`.
+   - ✅ **Expected:** refused both times. Zero is a half-typed form; a negative
+     is a refund, which this does not model.
+5. Set the date to some day **next year** and save.
+   - ✅ **Expected:** refused — that day has not happened at this branch yet.
+     The mistake it usually catches is a mistyped year, and an expense filed
+     into the future never appears in any day anybody looks at.
+6. Tap **Add a category** in the picker, type `Vegetables`, and add it.
+   - ✅ **Expected:** it appears as a chip and is **already chosen** — somebody
+     who just typed it wants this expense to be that. Adding it a second time is
+     refused by name.
+7. Log a second expense against **Gas**, then scroll to **This month**.
+   - ✅ **Expected:** the month total, the category breakdown biggest-first, and
+     a line per day that has any spending. Step the month back — an empty month
+     says so rather than showing a total of zero.
+8. Press the bin on one of today's entries.
+   - ✅ **Expected:** it asks first, naming the amount and the category, and
+     backing out changes nothing. There is no day-close floor on expenses: a gas
+     bill that arrives a week late is the normal case, not the exception.
+
+---
+
+## Flow 17o — The back office rings the branches that have not logged
+
+Requirement 10's last line. Needs two branches, with the cashier of only one of
+them having logged something today (Flow 17n).
+
+1. Log in as the **warehouse** user and look at **Home**.
+   - ✅ **Expected:** a **Branches to chase** card directly under the numbers,
+     saying how many branches have logged no expense today and naming them.
+   - ✅ **Expected:** it is a **list, not a link**. The action here is a phone
+     call, and the only thing needed to make it is the name.
+2. Have the other branch's cashier log an expense, then pull Home down to
+   refresh.
+   - ✅ **Expected:** that branch drops off the list. The answer is computed
+     when the card loads, so it is right at the moment it is read — not as of
+     whenever some job last ran.
+3. Once every branch has logged, look at the card again.
+   - ✅ **Expected:** it turns green, says so, and lists what each branch spent
+     instead — so it is still worth reading on a day when nobody needs ringing.
+4. Tap a branch row.
+   - ✅ **Expected:** that branch's expense screen opens, and there is **no
+     "Log an expense" button on it**. The desk chases branches; it does not
+     spend their money. Reading and recording are separate capabilities, and
+     this is the difference showing up on screen.
+5. As the **cashier**, check Home.
+   - ✅ **Expected:** no **Branches to chase** card. Their own branch is the
+     only one they can see, and a one-row list of yourself answers nothing.
+6. With branches in **two different timezones**, check the card near midnight.
+   - ✅ **Expected:** each branch is judged against **its own** local date. A
+     business spanning timezones has no single "today", and ringing a branch
+     whose day has not started is the failure this avoids.
+
+---
+
+## Flow 17p — Notifications
+
+Requirements 2 and 8. **`Docs/FIREBASE_SETUP.md` first** — without it, everything
+below still works except the push itself: the rows are written, the bell counts
+them and the centre lists them. That is a supported mode, not a broken one, so
+run this flow either way.
+
+1. As any role, look at **Home**'s top bar.
+   - ✅ **Expected:** a bell between the language chip and the branch count. No
+     badge yet.
+2. As the **owner**, mark a staff member **absent** — one whose staff record
+   carries the email of a real app account (Flow 13).
+3. Log in as **that worker** on another device or browser profile.
+   - ✅ **Expected:** the bell shows a red **1**. Open it: *"You were marked
+     absent for 20 Sep at Andheri West."*
+   - ✅ **Expected with Firebase set up:** it also arrived as a notification on
+     the phone, in the language **that phone's app** is set to.
+4. Mark somebody who has a staff record but **no app account**.
+   - ✅ **Expected:** marking succeeds exactly as before. Nobody is notified and
+     nothing fails — requirement 2 says this in as many words.
+5. Tap the notification in the centre.
+   - ✅ **Expected:** it opens **My attendance**, the row loses its tint, and
+     the badge drops by one.
+6. **Change the app language** and reopen the centre.
+   - ✅ **Expected:** the whole history re-renders in the new language, including
+     notifications received days ago. They are stored as a code and its values,
+     not as a sentence. An Android notification already on the lock screen keeps
+     the language it arrived in, which is correct — it was written when it was
+     sent.
+7. As the **cashier**, place a supply order (Flow 17g).
+   - ✅ **Expected:** the **warehouse** user's bell goes up; the cashier's does
+     not. You are not told about your own actions.
+   - ✅ **Expected:** the **delivery agent** hears nothing about it. Who is told
+     is decided by capability — everyone holding `supplyOrder:fulfil` — and
+     carrying an order is not fulfilling one.
+8. As the **warehouse**, accept it and post a **+30 minute** delay.
+   - ✅ **Expected:** the cashier gets both, and the delay names the minutes.
+     This is requirement 9 finally arriving without anyone opening a screen.
+9. Dispatch it, naming an agent (Flow 17k).
+   - ✅ **Expected:** **the agent is told** — *"Order #214 to Andheri West is
+     yours to carry."* Until this task, the run appeared in their queue and
+     nothing announced it.
+10. Tap **Mark all read** in the centre.
+    - ✅ **Expected:** the badge clears and stays cleared after a refresh.
+
+---
+
+## Flow 17q — Turning notifications down
+
+Requirement 8's last line.
+
+1. Open **Settings** and scroll to **What to send me**.
+   - ✅ **Expected:** a line saying whether **this device** will receive
+     notifications at all, above the switches. If Android's permission was
+     refused it says so and tells you to fix it in the phone's settings —
+     Android only ever asks once, so an in-app button could not re-prompt.
+2. Turn **Order updates** off. Have a cashier place an order.
+   - ✅ **Expected:** no push, and no new row in the centre either. Muting stops
+     it being recorded, not just delivered.
+3. Turn it back on and place another.
+   - ✅ **Expected:** it comes through again.
+4. Look at **Attendance**.
+   - ✅ **Expected:** it has no switch — it reads **Always on**, with a sentence
+     saying why. Requirement 2 exists so a worker finds out they were marked
+     absent; a switch that hid that would defeat the requirement it was built
+     for, and one that looked operable and refused would be worse.
+5. Switch business (Flow 17) and open Settings again.
+   - ✅ **Expected:** the same switches. A preference belongs to the person, not
+     to the business or the phone.
+6. **Log out.**
+   - ✅ **Expected:** the logout completes normally. This device is unregistered
+     server-side, so the next person to sign in on it does not inherit the
+     previous account's notifications.
+
+---
+
+## Flow 17r — Reports: every branch, month by month, with net profit
+
+Requirements 13 and 15. **Sign in as the owner, admin or manager** — the Reports
+tab is theirs. A cashier does not get the tab; the endpoint behind it would scope
+them to their own branch if they did, which the backend tests cover.
+
+Do Flows 17a–17q first, or at least ring up a counter sale (17d), log an expense
+(17n), place a supply order (17g) and generate a payslip (Flow 14). Reports adds
+up what those created; with none of them there is nothing to read.
+
+1. Tap the **Reports** tab.
+   - ✅ **Expected:** the title, then a row of **three chips — 3 / 6 / 12
+     months** — with 6 selected. Each label sits on one line in all four
+     languages; none breaks mid-word.
+   - ✅ **Expected:** a horizontal strip of month chips ("Sep 2026"), the most
+     recent selected, scrolled to the right-hand end. Swipe it — it scrolls, and
+     no chip is clipped.
+2. Look at the **Net profit** card at the top.
+   - ✅ **Expected:** one large figure, red if it is negative, and under it four
+     boxes **two to a row**: Customer sales, Expenses, Wages, Moved internally.
+     Four across one row would give each about 76dp and break every label — if
+     you see that, it is a bug.
+   - ✅ **Expected:** if wages have not been finalised for the month, a line
+     saying so. Profit computed from unrun payroll is too flattering, and the
+     card says as much rather than looking confident.
+3. **Check the arithmetic by hand.** This is requirement 13's actual acceptance
+   criterion, so it is worth doing once properly.
+   - Customer sales − Expenses − Wages should equal the Net profit shown.
+   - ✅ **Expected:** it does, exactly. Note that **"Moved internally" is not
+     subtracted** here.
+4. Read the sentence at the bottom of the card, if there is one.
+   - ✅ **Expected:** it appears only when a branch has bought material from your
+     own warehouse, and it reads like "Your branches together made −₹42,000. Add
+     back the ₹30,000 they paid your own warehouse for material — money that never
+     left the business — and the total is −₹12,000."
+   - Now add up the **net profit of every branch card below**, then add the
+     internal transfer. ✅ **Expected:** you get the business total on this card,
+     to the rupee. That difference is deliberate and this sentence is why: the
+     money left the shop and did not leave the business.
+5. Look at **Needs attention**.
+   - ✅ **Expected:** either "No branch fell against the month before", or the
+     branches that did, **worst first**, each with a red downward pill showing
+     how far it fell. A branch that moved less than 2% is not listed — a section
+     that flags everything is a section nobody reads.
+6. Scroll to the **branch cards**.
+   - ✅ **Expected:** one card per branch, **best first**, with any warehouse
+     last. Each shows the branch name, a trend pill, the month's net profit, four
+     figures two-to-a-row, and a row of small bars.
+   - ✅ **Expected:** the bars grow **upward in green for a profit and downward
+     in red for a loss**, from a line in the middle. A loss drawn as a short
+     upward bar would read as a small profit.
+7. Tap a bar in one branch's row.
+   - ✅ **Expected:** the month strip at the top moves to that month and **every
+     card on the screen changes together**, because that is the column of the
+     grid you just asked for. The cards re-sort, because the ranking is for the
+     month in focus.
+8. Find your **warehouse** card.
+   - ✅ **Expected:** a grey **"Cost centre"** pill, **no sales figure and no raw
+     material figure at all** — just Expenses and Wages — and a net profit that is
+     simply minus what it spent. A warehouse has no till, so a "₹0 of sales" row
+     would be reporting the model rather than the business.
+9. Switch the range to **12 months**, then back to **3**.
+   - ✅ **Expected:** the month strip grows and shrinks, re-scrolls to the most
+     recent month, and the figures change with it. Twelve bars still fit inside a
+     card without overlapping.
+10. Change the app language to Gujarati and come back.
+    - ✅ **Expected:** every label, chip and sentence is translated, and nothing
+      wraps mid-word. The reconciliation sentence puts its three amounts in the
+      right places — they travel as parameters, not baked into the sentence.
+11. Pull down to refresh.
+    - ✅ **Expected:** a spinner at the top, the figures stay on screen while it
+      loads, and they update. Now turn the backend off and pull again: ✅ an error
+      appears **beside** the figures rather than replacing them. A screen that was
+      reading correctly a moment ago should not empty itself.
+12. Ring up a counter sale (Flow 17d), then return to Reports.
+    - ✅ **Expected:** the figure has already moved. Reports re-reads whenever the
+      tab regains focus, so there is nothing to press.
+
+---
+
+## Flow 17s — Comparing every business one account holds
+
+Requirements 13 and 16. **You need two businesses** where you are owner, admin or
+manager — Flow 17 creates the second one.
+
+1. On **Reports**, look above the month strip.
+   - ✅ **Expected:** a second row of two chips, **"This business" / "All
+     businesses"**. With only one business this row is absent, and that is
+     correct — there is nothing to compare.
+2. Tap **All businesses**.
+   - ✅ **Expected:** the month strip and the branch cards disappear. In their
+     place: a combined total across every business, then one card per business
+     with its own net profit, sales, expenses, wages and internal transfer.
+   - ✅ **Expected:** **no branch rows anywhere.** Requirement 13 asks for
+     "amount only"; the branches of whichever business turns out to need
+     attention are one business-switch away.
+3. Check the range still says what it said.
+   - ✅ **Expected:** changing 3 / 6 / 12 changes both views. Switching scope must
+     never silently change the period being compared.
+4. Sign in as a **cashier** who belongs to one of those businesses and open
+   Reports.
+   - ✅ **Expected:** there is no Reports tab at all. Five tabs is the budget
+     (see `TabNavigator`), and a cashier's five are Home, Counter, Supply, Staff
+     and Settings.
+5. If your two businesses use **different currencies**, look at the top card.
+   - ✅ **Expected:** no combined figure, and a line explaining that the
+     currencies differ. Each business still shows its own total. A number that
+     added ₹ to د.إ would be worse than no number.
+
+---
+
+## Flow 17t — Exporting the day and the month
+
+Requirement 17. **Two places to try it**, because two different people want it: the
+branch expense screen exports *today at this branch*, and Reports exports *the month
+in focus across every branch*. A cashier gets the first and not the second, which is
+correct — they hold `export:dayEnd` but have no Reports tab.
+
+You need something entered first. Do Flow 17d (a counter sale), 17g (a supply order)
+and 17n (an expense) if you have not.
+
+### The day, from the expense screen
+
+1. Open **Expenses** (from Home, or the Staff/branch route) and scroll to the
+   bottom.
+   - ✅ **Expected:** an **Export** card saying how many entries today has — e.g.
+     "6 entries for Today." Two rows under it: **Spreadsheet** and **Printable
+     summary**, each with a sentence saying what the file is.
+   - ✅ **Expected:** each row is a full-width row, *not* two buttons side by side.
+     Switch to Gujarati and check again — both labels and both hints stay on one
+     line.
+2. On a branch where nothing has been logged today, look at the same card.
+   - ✅ **Expected:** "Nothing was entered for Today, so there is nothing to
+     export", and **both rows greyed out and unpressable.** Handing over an empty
+     spreadsheet would be worse than refusing.
+3. Tap **Spreadsheet**.
+   - ✅ **Expected:** a spinner on that row, then the Android share sheet offering
+     `day-end-<date>-branch.xlsx`. Save it to Drive or Files.
+4. Open the file in Excel, Google Sheets or WPS.
+   - ✅ **Expected:** five sheets — Summary, Counter orders, Supply orders,
+     Expenses, Attendance — with their names **in the app's language**.
+   - ✅ **Expected, and this is the one that matters:** select the Amount column and
+     the spreadsheet gives you a **sum**. If the amounts arrive as text ("₹250.00"
+     left-aligned, no sum), that is a bug — the whole point of a spreadsheet over a
+     PDF is being able to total it.
+   - ✅ **Expected:** dates read `2026-09-27`, not `27/09/2026` or `09/27/2026`. An
+     ISO string means the same thing in every locale; a date serial does not.
+   - ✅ **Expected:** the **Summary** sheet's last row is a Total, and its Counter
+     sales figure equals the one the app showed.
+5. Tap **Printable summary**.
+   - ✅ **Expected:** the Android print preview opens, then the share sheet offers
+     `day-end-<date>.pdf`. The page leads with the totals, then lists each record
+     type, and is entirely in the app's language.
+   - ✅ **Expected:** a "Cash movement" figure with a line under it saying it is
+     *not* net profit. It is sales less expenses and material; net profit subtracts
+     wages too, and that is Reports.
+
+### The month, from Reports
+
+6. Open **Reports**, pick a month in the strip, and scroll past the branch cards'
+   start.
+   - ✅ **Expected:** the same Export card, now saying how many entries that month
+     has across every branch, and exporting `month-end-<month>-all-branches.xlsx`.
+7. Open that spreadsheet.
+   - ✅ **Expected:** a **sixth sheet, Payslips**, which the day export does not
+     have. Each row is a person, their days worked, gross, deductions and net pay.
+   - ✅ **Expected:** every sheet has a **Branch** column, and one row per record —
+     not a sheet per branch. That is what lets you pivot it.
+8. Switch the range chips and pick a different month, then export again.
+   - ✅ **Expected:** the count and the file change with the month. Any past month
+     works — losing a file is meant to be recoverable.
+
+### The double-count warning
+
+9. This is the check that closes the last open question in `REQUIREMENTS.md` §5.
+   At one branch, on one day: place a supply order for exactly **₹5,000** (Flow
+   17g), then add an expense of exactly **₹5,000** under a **category you created
+   yourself** — Expenses → Log an expense → add a category called e.g. "Flour".
+10. Go back to the Export card for that day.
+    - ✅ **Expected:** an amber **"Worth checking first"** panel naming the amount,
+      your category, the date and the order number, and saying that if it was the
+      same payment it is counted twice. It appears *before* you export, not inside
+      the file.
+    - ✅ **Expected:** the same sentence appears in the printable summary under
+      "Worth checking".
+11. Now log ₹5,000 against **Gas** — a seeded category — on a day with a ₹5,000
+    supply order.
+    - ✅ **Expected:** **no warning.** The seeded eight are known not to be raw
+      material, so that is a coincidence rather than a double entry. A warning here
+      would be a false alarm, and false alarms teach people to ignore the panel.
+
+### Permissions
+
+12. Sign in as a **staff** member and look for any of this.
+    - ✅ **Expected:** no Export card anywhere. `STAFF` holds neither export
+      capability, and the endpoints refuse all three representations — the
+      spreadsheet and the document too, not only the JSON.
+13. As a **cashier**, open the Expenses export and check the file.
+    - ✅ **Expected:** only your own branch is in it, even though the request asks
+      for the whole business. The capability says whether you may export; your
+      branch access says what.
+
+---
+
+## Flow 17u — One cashier per branch, and refusals that explain themselves
+
+Requirements 18 and 19. **You need three branches and two spare email addresses**
+for this one. Sign in as the owner or an admin.
+
+### Inviting a cashier
+
+1. **Team → Invite someone**, enter an address, and choose **Cashier**.
+   - ✅ **Expected:** the branch section is a **stacked list with a tick**, not a
+     row of tick-boxes, and a line above it saying a cashier works at exactly one
+     branch. Every other branch-scoped role still gets the old multi-select grid —
+     switch to **Delivery agent** and back to check.
+   - ✅ **Expected:** each branch row says who its cashier is, or "No cashier yet",
+     **before** you choose. That is the point: you should not have to pick and be
+     refused to find out.
+2. Tap a second branch.
+   - ✅ **Expected:** the first one un-ticks. One branch, always.
+3. Pick a **free** branch and send it.
+   - ✅ **Expected:** it goes through. Back on Team, that person's card shows one
+     branch as a solid pill with "One branch, and one cashier on it." under it —
+     and **no × to remove it**, because removing a cashier's only branch from here
+     would be a worse version of moving them.
+
+### The swap
+
+4. Invite a **second** cashier and pick the branch the first one now holds.
+   - ✅ **Expected:** a confirmation naming the person, not an error — "Hari is the
+     cashier for Shop A. Moving it to … leaves Hari with no branch."
+   - ✅ **Expected:** cancelling changes nothing at all. Check Team: the first
+     cashier still has the branch and the second was never created.
+5. Do it again and confirm.
+   - ✅ **Expected:** the branch moves in one step. The new cashier has it; the old
+     one's card now says **"No branch yet — give them one before they can open a
+     till."** in amber.
+   - ✅ **Expected:** the displaced person is *not* removed. Their row is not
+     struck through and they can still sign in — they just reach nothing.
+
+### Moving somebody
+
+6. On a cashier's card, tap **Change branch**, and pick a branch **another** cashier
+   holds.
+   - ✅ **Expected:** a confirmation with **two sentences** — the one it displaces,
+     and the branch this person is leaving behind with no cashier. Confirm, and
+     check Team: exactly one cashier on each, and one branch now empty.
+7. Tap **Change branch** and pick the branch they already have.
+   - ✅ **Expected:** nothing happens and no error. Re-assigning the branch somebody
+     already holds is a no-op, not a conflict with themselves. Their own branch
+     reads **"Their branch"** rather than showing them as the blocker.
+8. Remove a cashier's branch from the server side if you want to see the empty
+   state: **Change branch** cannot produce it, which is deliberate.
+
+### A cashier with no branch
+
+9. Sign in **as the displaced cashier** from step 5.
+   - ✅ **Expected:** Home says **"You have not been given a branch"** and explains
+     that the account and role are fine but nothing is attached yet, and to ask an
+     owner or admin. It does **not** show "Add your first branch" — that card used
+     to appear here and led to a screen whose save returns 403.
+   - ✅ **Expected:** you do not also get the "Your tools are still being built"
+     notice. One notice, the one that is true.
+
+### The conflict report
+
+10. This one needs a state the app cannot create, so make it in Prisma Studio
+    (`npm run prisma:studio` in `backend/`): add a second `branch_access` row so two
+    ACTIVE cashiers hold one branch.
+    - ✅ **Expected:** Team shows an amber **"Needs a decision"** panel naming the
+      branch, the count and both people, and saying nothing has been changed for
+      you.
+    - ✅ **Expected:** it has **no fix button**. Deciding who keeps a branch is not
+      something the app can guess, so the fix is **Change branch** on the row it
+      names. Use it, and the panel disappears.
+
+### Refusals that say what the rule is (requirement 19)
+
+11. Sign in as a **staff** member and try to reach something they cannot — the
+    simplest is to let a screen make a request that is refused.
+    - ✅ **Expected:** the message names the rule and who can lift it — "Only Owner,
+      Admin, Manager or Cashier can record what a branch spent." — not "Your role
+      does not allow this."
+    - ✅ **Expected:** switch the language and the sentence is fully translated,
+      including the role names. The server sends no prose here at all: it sends the
+      capability, and the app builds the sentence from the matrix it already
+      mirrors.
+12. As a **cashier**, ask for a branch that is not yours (a deep link, or another
+    branch's id).
+    - ✅ **Expected:** "You can only work in the branches you have been assigned to.
+      Ask an admin to assign this one." — the rule and the next step, rather than
+      the bare fact that a boundary exists.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
+- **A cashier's branch can be taken away but not from the Team screen.** "Change
+  branch" moves a cashier between branches; it cannot leave them with none, because
+  the useful action from that screen is always a move. Leaving somebody branchless is
+  supported by the API (it is where a displaced cashier lands) and shows as a clear
+  notice on their Home, but reaching it deliberately means removing their membership
+  and re-inviting them.
+- **Memberships that already break the one-cashier rule are reported, not fixed.**
+  A branch with two cashiers, or a cashier with two branches, appears in Team's
+  "Needs a decision" panel and stays there until somebody moves one. That is the
+  decision: nothing but a person knows which cashier is the one still turning up.
+- **An invite can promise a branch that is gone by the time it is claimed.** If the
+  branch is taken in the interval, the person joins as a cashier with **no branch**
+  rather than the invite failing or the current holder being displaced silently. It
+  shows in the conflict panel.
+- **A refusal names roles, not people.** "Only Owner, Admin or Manager can …" says
+  which roles can lift a restriction, not which colleague to go and find — the app
+  is not going to list your admins to a staff member. R18's refusals are the
+  exception, and name the cashier being displaced, because the admin reading them can
+  already see the whole team.
 - **No overtime, leave balances or statutory deductions**: hours from
   punch-in/out are stored but do not affect pay; `LEAVE` is unpaid with no
   entitlement tracking; and deductions are one manually-entered amount — there
@@ -612,13 +1655,85 @@ radius — see Flow 18 step 6 for what that message should look like.
 - **Removed rows are never cleaned up**: a membership revoked years ago still
   appears in the team list, because the row carries the audit trail of the
   attendance days that person marked.
-- **Reports and Alerts tabs** intentionally show a "planned" notice — they're
-  Phase 4/5 work, not started yet.
+- **The printable export summary caps each section at 60 rows.** Past that it prints
+  the totals and a line saying how many rows were left out; the spreadsheet always
+  has every one. A forty-page PDF of counter tokens is not a summary, and silently
+  truncating would make the page disagree with the file for no visible reason.
+- **The export is .xlsx only, not CSV.** Every spreadsheet app opens .xlsx and it
+  carries several sheets, which a single CSV cannot. If somebody needs CSV they can
+  save it from Excel.
+- **Nothing exports on a schedule or by email.** There is no cron and no queue in
+  this project (see the note in `REQUIREMENTS.md`), so an export happens when a
+  person asks for it. That is also why it works for any past date.
+- **The day export has no payroll.** A payslip is a monthly document; there is no
+  one day's payslip, and a pro-rated fragment would be a figure nobody could check.
+  The month export has a Payslips sheet.
+- **The double-count flag only catches an exact amount match.** An expense logged
+  under a custom category for precisely the same rupees as a supply order on the
+  same branch and day is flagged. A payment split across two expense rows, or
+  rounded, or logged a day later, is not — the flag is deliberately evidence rather
+  than a guess, so it is quiet rather than noisy. It never looks at the seeded
+  categories at all.
+- **Spreadsheet timestamps are in the branch's timezone**, which is correct but worth
+  knowing if you compare a file from a Kolkata branch with one from elsewhere: the
+  clock differs between them by design, because each is the clock the people there
+  were working to.
+- **The Alerts tab** intentionally shows a "planned" notice — Phase 5 work, not
+  started. Reports is no longer one of these: it is the branch × month grid with
+  net profit (Flow 17r). Its old "planned" strings are still on disk, because
+  Phase 5's benchmarking notice will want them.
+- **Notifications need Firebase set up to leave the device** (`Docs/FIREBASE_SETUP.md`).
+  Without it the rows are still written and the in-app centre still lists them —
+  that is a supported mode, and the whole test suite runs in it — but nothing
+  reaches a lock screen.
+- **iOS gets no pushes.** BizIQ ships as an Android development build; iOS needs
+  its own Firebase app registration, a `GoogleService-Info.plist` and an APNs
+  key before any of this reaches an iPhone.
+- **A notification is never re-sent.** If the push fails, the row stays and the
+  person sees it the next time they open the app. There is no retry queue and no
+  scheduler to run one — see the note on scheduling in `REQUIREMENTS.md`.
+- **A branch created before this build has no delivery address**, so an order to
+  it shows "No address saved for this branch" until somebody fills one in under
+  Settings → branch → Branch settings. Nothing fails; the agent simply has the
+  branch name and no street.
+- **Cash stops being tracked once the agent has it.** A cash-on-delivery order
+  records that the agent took the money from the branch (Flow 17i), which is
+  what makes it Paid. Nothing records the agent then handing it in at the
+  warehouse — there is no cash-in-hand figure per agent and no hand-over step.
+  If that matters, it is a feature, not a bug report.
+- **A warehouse is a row in Reports, marked "Cost centre", and shows no sales.**
+  Decided in Task 8: it has an electricity bill and a wage bill, so leaving it
+  out would overstate profit by everything it spends — but it has no till, so
+  printing "Customer sales ₹0" would be reporting a fact about the data model as
+  if it were a fact about the business. It therefore shows what it spends and
+  nothing it cannot earn. It is still deliberately absent from the branch pickers
+  for selling and ordering.
+- **"Available" only means punched in.** An agent who does not use punch-in, or
+  has no staff record, shows as "Attendance not tracked" forever. They are still
+  selectable — availability is a caption, not a lock — but the desk gets no help
+  from it at a business that does not run attendance.
+- **An expense cannot be edited from the app, only removed and logged again.**
+  The endpoint takes a correction (`PATCH /expenses/:id`) and the backend tests
+  cover it; the screen offers the bin and not a pencil. Removing and re-adding
+  reaches the same place in two taps more.
+- **The warehouse is counted in "branches to chase".** It is a location with an
+  electricity bill, so it can log expenses and is expected to — but it has no
+  till, so opening its expense screen shows a **Sold** of zero and a difference
+  that is simply its spending. That is right for cash movement, and Reports now
+  labels the same location a **cost centre** and omits the sales figure rather
+  than printing a zero — see Flow 17r.
+- **The "ask a question" bar and the AI notice are gone from Home**, along with
+  the chat-bubble Home tab icon — requirement 7. They are hidden behind a flag,
+  not deleted, and come back when the query engine does (Phase 2).
+- **A manager's or delivery agent's branch grants no longer do anything.**
+  Requirement 14 made the manager business-wide and requirement 20 did the same
+  for the delivery agent, who delivers to every branch. The Team screen still lets you remove a manager's branch
+  access and the request succeeds, but it changes nothing about what they can
+  reach. The invite screen already stops asking for branches for that role; the
+  Team screen's removal affordance is the remaining loose end.
 - **Salary changes overwrite with no history**: editing a staff member's monthly
   salary replaces the old figure outright. Regenerating an *unfinalized* payslip
   for a past month will therefore use the new salary — finalize a slip to lock it.
-- **The "ask a question" bar on Home** is intentionally inactive — Phase 2
-  (the query engine) is blocked on an LLM provider being connected.
 - **Some text from the server stays English by design**: CSV column names
   inside upload row errors (they are the literal headings in your file), the
   payslip document's own labels, and the occasional message that comes from a

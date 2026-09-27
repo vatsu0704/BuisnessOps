@@ -6,13 +6,15 @@ import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { listBranches, updateBranch, type UpdateBranchPayload } from '@/api/business';
+import { refreshBranches } from '@/store/branchStore';
 import { extractErrorMessage } from '@/api/client';
-import type { Branch } from '@/types/branch';
+import type { Branch, BranchKind } from '@/types/branch';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import FormInput from '@/components/FormInput';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
+import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
@@ -40,7 +42,10 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
   const { branchId } = route.params;
 
   const [branch, setBranch] = useState<Branch | null>(null);
+  const [kind, setKind] = useState<BranchKind>('BRANCH');
   const [timezone, setTimezone] = useState('');
+  const [addressLine, setAddressLine] = useState('');
+  const [postalCode, setPostalCode] = useState('');
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [radius, setRadius] = useState('');
@@ -61,7 +66,10 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
       const found = (await listBranches(businessId)).find((b) => b.id === branchId) ?? null;
       setBranch(found);
       if (found) {
+        setKind(found.kind);
         setTimezone(found.timezone);
+        setAddressLine(found.addressLine ?? '');
+        setPostalCode(found.postalCode ?? '');
         setLatitude(found.latitude ?? '');
         setLongitude(found.longitude ?? '');
         setRadius(found.geofenceRadiusMeters === null ? '' : String(found.geofenceRadiusMeters));
@@ -118,7 +126,12 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
     setError(null);
     try {
       const payload: UpdateBranchPayload = {
+        kind,
         timezone: timezone.trim(),
+        // Emptied means cleared, the same way the geofence fields below work —
+        // an address someone deleted has to actually go.
+        addressLine: addressLine.trim() || null,
+        postalCode: postalCode.trim() || null,
         // null is meaningful to the backend — it clears the value — which is
         // how "turn off geofencing" and "forget this location" are expressed.
         latitude: hasCoordinates ? Number(latitude) : null,
@@ -126,6 +139,9 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
         geofenceRadiusMeters: parsedRadius,
       };
       await updateBranch(businessId, branch!.id, payload);
+      // A renamed or re-zoned branch is read by every branch picker in the app,
+      // all of which share one list — refresh it before leaving.
+      await refreshBranches();
       haptics.success();
       navigation.goBack();
     } catch (err) {
@@ -169,6 +185,32 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
 
             {branch ? (
               <>
+                {/* Changeable, not write-once: a location created as the
+                    wrong kind would otherwise be stuck as one, and the only
+                    way back would be a second location and a staff transfer. */}
+                <AnimatedEntrance delay={step(0)} style={styles.block}>
+                  <View style={styles.card}>
+                    <Text style={styles.sectionTitle}>{t('addBranch.kind')}</Text>
+                    <Text style={styles.hint}>{t('branchSettings.kindHint')}</Text>
+                    <View style={styles.kindRow}>
+                      <SegmentedOption
+                        testID="branch-settings-kind-BRANCH"
+                        title={t('addBranch.kindBranch')}
+                        icon="storefront-outline"
+                        selected={kind === 'BRANCH'}
+                        onPress={() => setKind('BRANCH')}
+                      />
+                      <SegmentedOption
+                        testID="branch-settings-kind-WAREHOUSE"
+                        title={t('addBranch.kindWarehouse')}
+                        icon="cube-outline"
+                        selected={kind === 'WAREHOUSE'}
+                        onPress={() => setKind('WAREHOUSE')}
+                      />
+                    </View>
+                  </View>
+                </AnimatedEntrance>
+
                 <AnimatedEntrance delay={step(0)} style={styles.block}>
                   <View style={styles.card}>
                     <Text style={styles.sectionTitle}>{t('branchSettings.timezone')}</Text>
@@ -185,7 +227,35 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
                   </View>
                 </AnimatedEntrance>
 
+                {/* The delivery address, next to the coordinates rather than
+                    with the reporting fields: both answer "where is this
+                    branch", and a rider reads one while the geofence checks the
+                    other. */}
                 <AnimatedEntrance delay={step(1)} style={styles.block}>
+                  <View style={styles.card}>
+                    <Text style={styles.sectionTitle}>{t('branchSettings.address')}</Text>
+                    <Text style={styles.hint}>{t('branchSettings.addressHint')}</Text>
+                    <FormInput
+                      testID="branch-settings-address"
+                      label={t('branchSettings.address')}
+                      icon="navigate-circle-outline"
+                      placeholder={t('branchSettings.addressPlaceholder')}
+                      multiline
+                      value={addressLine}
+                      onChangeText={setAddressLine}
+                    />
+                    <FormInput
+                      testID="branch-settings-postal-code"
+                      label={t('branchSettings.postalCode')}
+                      icon="mail-outline"
+                      keyboardType="number-pad"
+                      value={postalCode}
+                      onChangeText={setPostalCode}
+                    />
+                  </View>
+                </AnimatedEntrance>
+
+                <AnimatedEntrance delay={step(2)} style={styles.block}>
                   <View style={styles.card}>
                     <Text style={styles.sectionTitle}>{t('branchSettings.geofence')}</Text>
                     <Text style={styles.hint}>{t('branchSettings.geofenceHint')}</Text>
@@ -259,7 +329,7 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
                   </View>
                 </AnimatedEntrance>
 
-                <AnimatedEntrance delay={step(2)} style={styles.block}>
+                <AnimatedEntrance delay={step(3)} style={styles.block}>
                   <PrimaryButton
                     testID="branch-settings-save"
                     title={isSaving ? t('branchSettings.saving') : t('branchSettings.save')}
@@ -309,6 +379,7 @@ const styles = StyleSheet.create({
     ...shadow.sm,
   },
   sectionTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
+  kindRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   subLabel: {
     fontSize: 12,
     fontWeight: '700',

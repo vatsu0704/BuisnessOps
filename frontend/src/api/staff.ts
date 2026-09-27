@@ -16,8 +16,9 @@ export interface CreateStaffPayload {
 
 /**
  * Every field optional. `email: null` unlinks the app account; omitting the key
- * leaves it alone. `baseSalary` is OWNER/ADMIN-only and the server 403s a
- * MANAGER who sends it.
+ * leaves it alone. `baseSalary` needs the `staff:setPay` capability and the
+ * server 403s anyone without it who sends the key at all — so omit it rather
+ * than sending undefined, or the whole update fails and not just the pay.
  */
 export type UpdateStaffPayload = Partial<CreateStaffPayload> & {
   email?: string | null;

@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, AUTH_TIMEOUT_MS } from './client';
 import type { Locale, User } from '@/types/user';
 import type { Business, Industry } from '@/types/business';
 
@@ -32,17 +32,23 @@ export interface SessionResponse {
 }
 
 export async function signup(payload: SignupPayload): Promise<AuthResponse> {
-  const { data } = await apiClient.post<AuthResponse>('/auth/signup', payload);
+  const { data } = await apiClient.post<AuthResponse>('/auth/signup', payload, {
+    timeout: AUTH_TIMEOUT_MS,
+  });
   return data;
 }
 
 export async function login(payload: LoginPayload): Promise<AuthResponse> {
-  const { data } = await apiClient.post<AuthResponse>('/auth/login', payload);
+  const { data } = await apiClient.post<AuthResponse>('/auth/login', payload, {
+    timeout: AUTH_TIMEOUT_MS,
+  });
   return data;
 }
 
 export async function fetchSession(): Promise<SessionResponse> {
-  const { data } = await apiClient.get<SessionResponse>('/auth/me');
+  // Also the first call after the app returns to the foreground, by which
+  // time the server may have gone back to sleep — so it waits like the rest.
+  const { data } = await apiClient.get<SessionResponse>('/auth/me', { timeout: AUTH_TIMEOUT_MS });
   return data;
 }
 

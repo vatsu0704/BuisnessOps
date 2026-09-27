@@ -1,6 +1,7 @@
 const prisma = require('../config/db');
 const { fail } = require('../errors');
 const { addBranchAccess } = require('./business.service');
+const cashierAssignment = require('./cashierAssignment.service');
 
 function normalizeEmail(email) {
   return email.toLowerCase().trim();
@@ -14,6 +15,29 @@ async function assertBranchesBelongToBusiness(businessId, branchIds, client = pr
   }
 }
 
+/**
+ * Requirement 18, for the one door where no BranchAccess row is written.
+ *
+ * `addBranchAccess` enforces the rule under a row lock wherever a grant
+ * actually happens; this is the same question asked of an invite that will not
+ * be granted until its invitee signs up. It is advisory by nature — the branch
+ * can be taken in the interval, which is what `claimableBranchIds` is for — so
+ * it exists to tell the admin now rather than to guarantee anything.
+ *
+ * The 409 carries the holder's name as a param, so the app can offer the swap.
+ */
+async function assertCashierBranchesFree(businessId, role, branchIds, confirmed) {
+  if (confirmed || role !== cashierAssignment.SINGLE_BRANCH_ROLE) return;
+  for (const branchId of branchIds) {
+    const holder = await cashierAssignment.cashierHolding(prisma, businessId, branchId);
+    if (!holder) continue;
+    throw fail('BRANCH_ALREADY_HAS_CASHIER', 409, {
+      branch: holder.branch.name,
+      cashier: holder.membership.user.name || holder.membership.user.email,
+    });
+  }
+}
+
 // The single "add someone to my team" entry point (business.controller.js's
 // createMembership route handler). Whether the target already has a BizIQ
 // account decides what actually happens:
@@ -22,13 +46,22 @@ async function assertBranchesBelongToBusiness(businessId, branchIds, client = pr
 //    it automatically if that email ever signs up (see claimPendingInvites).
 // Either way the caller never has to know or care which happened up front —
 // the response's `pending` flag says which one it got.
-async function inviteMember(businessId, { email, role, branchIds = [] }) {
+async function inviteMember(businessId, { email, role, branchIds = [], confirm = false }) {
   const normalizedEmail = normalizeEmail(email);
   await assertBranchesBelongToBusiness(businessId, branchIds);
 
   const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
   if (!user) {
+    // Requirement 18, checked here as well as at the write.
+    //
+    // A pending invite grants nothing yet, so the invariant cannot be broken by
+    // storing one — but an admin who names an occupied branch has made a mistake
+    // they should hear about now, not weeks later when the invitee signs up and
+    // silently gets no branch. Refusing at the point of the decision is the
+    // whole difference between a rule and a surprise.
+    await assertCashierBranchesFree(businessId, role, branchIds, confirm);
+
     const invite = await prisma.invite.upsert({
       where: { businessId_email: { businessId, email: normalizedEmail } },
       update: { role, branchIds, status: 'PENDING', invitedAt: new Date(), acceptedAt: null },
@@ -54,8 +87,12 @@ async function inviteMember(businessId, { email, role, branchIds = [] }) {
           where: { id: existingMembership.id },
           data: { role, status: 'ACTIVE', joinedAt: new Date() },
         });
+        // A revoked cashier's old BranchAccess rows are vestigial — they occupy
+        // no branch, because the rule only counts ACTIVE memberships — and the
+        // branch named in this invite is the fresh decision. See clearBranches.
+        await cashierAssignment.clearBranches(tx, membership);
         for (const branchId of branchIds) {
-          await addBranchAccess(businessId, membership.id, branchId, tx);
+          await addBranchAccess(businessId, membership.id, branchId, tx, { confirm });
         }
         return membership;
       }),
@@ -71,7 +108,7 @@ async function inviteMember(businessId, { email, role, branchIds = [] }) {
       data: { userId: user.id, businessId, role, status: 'ACTIVE', joinedAt: new Date() },
     });
     for (const branchId of branchIds) {
-      await addBranchAccess(businessId, membership.id, branchId, tx);
+      await addBranchAccess(businessId, membership.id, branchId, tx, { confirm });
     }
     return membership;
   });
@@ -138,7 +175,17 @@ async function claimPendingInvites(tx, userId, invites) {
     const membership = await tx.membership.create({
       data: { userId, businessId: invite.businessId, role: invite.role, status: 'ACTIVE', joinedAt: new Date() },
     });
-    for (const branchId of invite.branchIds) {
+    // Requirement 18's third door, and the one with nobody to ask.
+    //
+    // The branch was free when the invite was written and may not be now. This
+    // is a signup: refusing it would lock someone out of their own account over
+    // an admin's scheduling problem, and taking the branch from whoever holds it
+    // is precisely the silent rewrite the requirement forbids. So the account
+    // and the membership are created, the occupied branch is skipped, and the
+    // person lands as a cashier with no branch — a state the app names, an admin
+    // can fix, and `listCashierConflicts` reports.
+    const grantable = await cashierAssignment.claimableBranchIds(tx, invite.businessId, membership, invite.branchIds);
+    for (const branchId of grantable) {
       await addBranchAccess(invite.businessId, membership.id, branchId, tx);
     }
     await tx.invite.update({ where: { id: invite.id }, data: { status: 'ACCEPTED', acceptedAt: new Date() } });

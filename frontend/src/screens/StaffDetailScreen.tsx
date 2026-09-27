@@ -18,11 +18,12 @@ import { parseOptionalNumber } from '@/utils/validation';
 import type { AttendanceRecord, AttendanceStatus, MonthSummary, SalarySlip, StaffMember } from '@/types/staffing';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import AttendanceStatusPill from '@/components/AttendanceStatusPill';
+import AttendanceStatusPicker from '@/components/AttendanceStatusPicker';
+import PunchTrace from '@/components/PunchTrace';
 import FormInput from '@/components/FormInput';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
-import SegmentedOption from '@/components/SegmentedOption';
 import DateField from '@/components/DateField';
 import MonthSummaryStrip from '@/components/MonthSummaryStrip';
 import Pill from '@/components/Pill';
@@ -34,8 +35,6 @@ import { can } from '@/utils/permissions';
 import { dateKeyFromApi, formatDate, fromISODate, daysInMonth, todayISO } from '@/utils/date';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StaffDetail'>;
-
-const MARKABLE: AttendanceStatus[] = ['PRESENT', 'ABSENT', 'HALF_DAY', 'LEAVE'];
 
 export default function StaffDetailScreen({ route, navigation }: Props) {
   const { staffMemberId } = route.params;
@@ -256,8 +255,13 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
               ) : (
                 records.map((record, index) => (
                   <View key={record.id} style={[styles.dayRow, index > 0 && styles.dayRowDivided]}>
-                    <Text style={styles.dayDate}>{formatDate(dateKeyFromApi(record.date), t)}</Text>
-                    <AttendanceStatusPill status={record.status} />
+                    <View style={styles.dayHead}>
+                      <Text style={styles.dayDate}>{formatDate(dateKeyFromApi(record.date), t)}</Text>
+                      <AttendanceStatusPill status={record.status} />
+                    </View>
+                    {/* When and where. Renders nothing for a day that was
+                        marked by hand, so those rows stay as they were. */}
+                    <PunchTrace record={record} />
                   </View>
                 ))
               )}
@@ -275,17 +279,13 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
                 minimumDate={fromISODate(monthStart)}
                 maximumDate={fromISODate(markMax)}
               />
-              <View style={styles.chipRow}>
-                {MARKABLE.map((s) => (
-                  <SegmentedOption
-                    key={s}
-                    testID={`staff-detail-mark-${s}`}
-                    title={t(`attendanceStatus.${s}`)}
-                    selected={markStatus === s}
-                    onPress={() => setMarkStatus(s)}
-                  />
-                ))}
-              </View>
+              <AttendanceStatusPicker
+                testIDPrefix="staff-detail-mark"
+                label={t('staffDetail.status')}
+                value={markStatus}
+                onChange={setMarkStatus}
+                style={styles.chipRow}
+              />
               <PrimaryButton
                 testID="staff-detail-mark-submit"
                 title={t('staffDetail.markSubmit')}
@@ -430,10 +430,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   monthLabel: { fontSize: 14.5, fontWeight: '700', color: colors.text, minWidth: 140, textAlign: 'center' },
-  dayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md },
+  // A column now: the date and its status pill sit on one line, and the punch
+  // trace goes underneath rather than competing with them for width.
+  dayRow: { paddingVertical: spacing.md },
+  dayHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   dayRowDivided: { borderTopWidth: 1, borderTopColor: colors.border },
   dayDate: { fontSize: 13.5, color: colors.text, fontWeight: '600' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
+  chipRow: { marginBottom: spacing.lg },
   markButton: { marginTop: spacing.sm },
   slipRow: {
     flexDirection: 'row',

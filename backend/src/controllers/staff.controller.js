@@ -1,6 +1,12 @@
 const staffService = require('../services/staff.service');
 const { fail, validationFailure } = require('../errors');
-const { canViewStaffMember, canManageStaffMember, canViewPayroll, scopeOf } = require('../middleware/staffScope');
+const {
+  canViewStaffMember,
+  canManageStaffMember,
+  canSetPay,
+  canReachBranch,
+  scopeOf,
+} = require('../middleware/staffScope');
 const { validateCreateStaff, validateUpdateStaff } = require('../validations/staff.validation');
 
 async function createStaffMember(req, res, next) {
@@ -8,12 +14,17 @@ async function createStaffMember(req, res, next) {
     const errors = validateCreateStaff(req.body);
     if (errors.length) return res.status(400).json(validationFailure(errors));
 
-    // MANAGER can only staff branches they themselves have access to.
-    if (req.tenant.role === 'MANAGER' && req.branchAccess !== null && !req.branchAccess.includes(req.body.branchId)) {
+    // A branch-scoped role can only staff branches it has access to. This used
+    // to name MANAGER explicitly, which meant the check was skipped entirely
+    // for any other branch-scoped role — a CASHIER could have created a staff
+    // record in a branch they cannot reach. Keyed on the scope, it holds for
+    // whatever roles exist.
+    const scope = scopeOf(req);
+    if (!canReachBranch(scope, req.body.branchId)) {
       throw fail('BRANCH_ACCESS_DENIED', 403);
     }
-    if (req.body.baseSalary !== undefined && req.body.baseSalary !== null && !canViewPayroll(scopeOf(req))) {
-      throw fail('PAY_SET_REQUIRES_OWNER_ADMIN', 403);
+    if (req.body.baseSalary !== undefined && req.body.baseSalary !== null && !canSetPay(scope)) {
+      throw fail('PAY_SET_NOT_PERMITTED', 403);
     }
 
     const staffMember = await staffService.createStaffMember(req.tenant.businessId, req.body);
@@ -91,12 +102,13 @@ async function updateStaffMember(req, res, next) {
     if (!canManageStaffMember(scope, staffMember)) {
       throw fail('STAFF_ACCESS_DENIED', 403);
     }
-    // A MANAGER runs their branch's people; they do not set anyone's pay.
-    if (req.body.baseSalary !== undefined && !canViewPayroll(scope)) {
-      throw fail('PAY_CHANGE_REQUIRES_OWNER_ADMIN', 403);
+    // Setting pay is its own capability. Requirement 14 gives it to a CASHIER
+    // for their own branch, so this is no longer "owner and admin only".
+    if (req.body.baseSalary !== undefined && !canSetPay(scope)) {
+      throw fail('PAY_CHANGE_NOT_PERMITTED', 403);
     }
     // Moving someone requires reaching the destination as well as the origin.
-    if (req.body.branchId !== undefined && req.branchAccess !== null && !req.branchAccess.includes(req.body.branchId)) {
+    if (req.body.branchId !== undefined && !canReachBranch(scope, req.body.branchId)) {
       throw fail('BRANCH_ACCESS_DENIED_DESTINATION', 403);
     }
 

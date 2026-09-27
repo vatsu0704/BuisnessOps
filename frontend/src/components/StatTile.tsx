@@ -10,16 +10,28 @@ type Props = {
   formatValue?: (value: number) => string;
 };
 
+/**
+ * One number in a row of them.
+ *
+ * The number sits at the **bottom** of the tile rather than directly under its
+ * label: tiles in a row stretch to a common height, so a label that wraps to
+ * two lines ("Today's takings" beside "Tokens") would otherwise push its number
+ * a line lower than its neighbours'. Bottom alignment keeps the figures on one
+ * line however the labels fall — which matters most in Hindi, Gujarati and
+ * Marathi, where they wrap sooner than the English ones do.
+ */
 export default function StatTile({ label, value, caption, accent, formatValue }: Props) {
   return (
     <View style={styles.tile}>
       <Text style={styles.label}>{label}</Text>
-      <AnimatedCount
-        value={value}
-        formatValue={formatValue}
-        style={[styles.value, accent ? { color: accent } : null]}
-      />
-      {caption ? <Text style={styles.caption}>{caption}</Text> : null}
+      <View>
+        <AnimatedCount
+          value={value}
+          formatValue={formatValue}
+          style={[styles.value, accent ? { color: accent } : null]}
+        />
+        {caption ? <Text style={styles.caption}>{caption}</Text> : null}
+      </View>
     </View>
   );
 }
@@ -27,6 +39,7 @@ export default function StatTile({ label, value, caption, accent, formatValue }:
 const styles = StyleSheet.create({
   tile: {
     flex: 1,
+    justifyContent: 'space-between',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,

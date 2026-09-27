@@ -2,11 +2,42 @@ const businessService = require('../services/business.service');
 const { fail, validationFailure } = require('../errors');
 const inviteService = require('../services/invite.service');
 const {
+  validateCreateBusiness,
   validateCreateBranch,
   validateUpdateBranch,
   validateCreateMembership,
   validateBranchAccess,
 } = require('../validations/business.validation');
+
+/**
+ * Requirement 16 — one account holds many businesses.
+ *
+ * The only controller in this file with no `req.tenant`: it runs before the
+ * business it creates exists, so it is gated on `requireAuth` alone and takes
+ * the owner from `req.userId`. There is deliberately no capability check —
+ * anyone with an account may start a business of their own, exactly as signup
+ * already allows, and gating it would mean someone's ability to start a
+ * business depended on a role they hold in someone else's.
+ *
+ * The APP hides the entry point from anyone but an owner (`business:create`,
+ * excluded from ADMIN and therefore from MANAGER). That is a decision about
+ * what Settings offers, not a permission boundary, and the two are different
+ * on purpose: the capability is per-business and this operation belongs to no
+ * business. Adding `requirePermission('business:create')` here would need a
+ * tenant that does not exist, and answering "which business's role?" would
+ * stop an invited cashier from ever starting one of their own.
+ */
+async function createBusiness(req, res, next) {
+  try {
+    const errors = validateCreateBusiness(req.body);
+    if (errors.length) return res.status(400).json(validationFailure(errors));
+
+    const { business, membership } = await businessService.createBusiness(req.userId, req.body);
+    res.status(201).json({ business, membership });
+  } catch (err) {
+    next(err);
+  }
+}
 
 async function createBranch(req, res, next) {
   try {
@@ -96,9 +127,30 @@ async function addBranchAccess(req, res, next) {
     const access = await businessService.addBranchAccess(
       req.tenant.businessId,
       req.params.membershipId,
-      req.body.branchId
+      req.body.branchId,
+      undefined,
+      // Requirement 18: the swap is this same request repeated once the admin has
+      // been told whom it displaces. `undefined` keeps the service's own default
+      // Prisma client, which is what opens the transaction the row lock needs.
+      { confirm: req.body.confirm === true }
     );
     res.status(201).json(access);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Requirement 18's audit — memberships that already break the one-cashier rule.
+ *
+ * Read under `team:view` rather than `team:manageBranchAccess`: it answers "who
+ * is where", which is the same question the Team screen it appears on already
+ * answers, and seeing a conflict is what makes someone go and fix it.
+ */
+async function listCashierConflicts(req, res, next) {
+  try {
+    const conflicts = await businessService.listCashierConflicts(req.tenant.businessId);
+    res.json(conflicts);
   } catch (err) {
     next(err);
   }
@@ -181,6 +233,7 @@ async function revokeInvite(req, res, next) {
 }
 
 module.exports = {
+  createBusiness,
   getBusiness,
   createBranch,
   updateBranch,
@@ -191,6 +244,7 @@ module.exports = {
   listInvites,
   revokeInvite,
   addBranchAccess,
+  listCashierConflicts,
   removeBranchAccess,
   revokeMembership,
   listTransactions,
