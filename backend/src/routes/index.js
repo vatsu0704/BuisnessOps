@@ -12,6 +12,7 @@ const counterOrderRoutes = require('./counterOrder.routes');
 const supplyRoutes = require('./supply.routes');
 const expenseRoutes = require('./expense.routes');
 const notificationRoutes = require('./notification.routes');
+const analyticsRoutes = require('./analytics.routes');
 const inviteRoutes = require('./invite.routes');
 
 const router = express.Router();
@@ -28,6 +29,11 @@ router.use('/businesses', productRoutes);
 router.use('/businesses', counterOrderRoutes);
 router.use('/businesses', supplyRoutes);
 router.use('/businesses', expenseRoutes);
+// Requirements 13 and 15. Two mounts for the same reason notifications has
+// two: the branch grid belongs to one business, the cross-business roll-up
+// spans them and has no businessId to resolve a tenant from.
+router.use('/businesses', analyticsRoutes.scoped);
+router.use('/analytics', analyticsRoutes.router);
 // Requirement 8. The business-scoped half mounts beside the others; the device
 // and preference half does not, because a phone is registered before a business
 // is chosen — see the header of notification.routes.js.

@@ -170,6 +170,19 @@ scoped.post('/staff', requirePermission('staff:create'), staffController.createS
   `utils/datetime.js`. Never reach for `occurredAt::date`: it compares **UTC**
   days, which files every sale before 05:30 IST against the day before, and a
   function over a column cannot use the index behind it.
+- **Money a branch pays its own warehouse is an internal transfer, and the two
+  levels of a report treat it differently on purpose.** It is subtracted from the
+  branch — real money out of that shop — and **not** from the business, because it
+  never left the business. So `Σ(branch netProfit) + internalTransfer ===
+  businessNetProfit`, an identity asserted in `analytics.test.js` and printed on
+  the screen as a sentence. Subtracting it at both levels is the easy mistake and
+  makes a business appear to lose money every time it supplies itself; hiding the
+  gap is the other one, and leaves someone adding the column up and disbelieving
+  both figures. A warehouse is a **cost centre** in those reports: real costs, and
+  its sales and material figures omitted rather than shown as zero, since it has no
+  till. `SupplyOrder` records only the branch that *ordered* — there is no column
+  for the warehouse that filled it, which is precisely why the transfer cannot be
+  credited as warehouse revenue.
 - Adding a role means a Postgres enum change, and `ALTER TYPE … ADD VALUE`
   cannot be *used* in the transaction that added it — Prisma wraps each
   migration file in one, so data work using a new value needs its own migration

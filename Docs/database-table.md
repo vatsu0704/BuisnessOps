@@ -1011,3 +1011,49 @@ than one that says no.
 Keyed on the **user**, not the membership or the device: muting order updates is
 a decision about what you want to hear, not about which business you are looking
 at or which phone is in your hand.
+
+---
+
+## 19. Analytics and net profit — built (Branch Operations Task 8)
+
+**This section adds no tables, and that is the point worth recording.**
+`analytics.service.js` is a read over rows the other services already write:
+`Transaction` for sales, `Expense` for spending, `SupplyOrder` for raw material,
+`SalarySlip` for wages, `Branch` for what each location is. There is no
+`BranchMonthlySummary` and no cached total.
+
+The reason is requirement 13's acceptance criterion — *net profit must be
+reproducible by hand from the rows behind it*. A stored aggregate is a second
+copy of a number, and a second copy is a number that can disagree with the rows
+it came from. Every figure Reports shows is therefore computed on request, and the
+cost of that is bounded deliberately: see the query-count note in
+`PROJECT_FLOW.md`'s Task 8 section, and `MAX_MONTHS` in the service.
+
+### Which columns each figure comes from
+
+| Figure | Source | Date column | Needs a timezone? |
+| --- | --- | --- | --- |
+| `sales` | `Transaction.totalAmount`, `status = COMPLETED` | `occurredAt` | **Yes** — it is an instant |
+| `expenses` | `Expense.amount` | `expenseDate` | No — already the branch's own day |
+| `materialSpend` | `SupplyOrder.totalAmount`, status in PLACED…DELIVERED | `placedAt` | **Yes** — it is an instant |
+| `payroll` | `SalarySlip.netPay`, DRAFT and FINALIZED | `monthYear` | No — already 'YYYY-MM' |
+
+`materialSpend` is keyed on **`placedAt`, not `deliveredAt`**. Delivery would drop
+every order still in flight out of the figures entirely, and would move an order
+placed in September and delivered in October into the wrong month. A `DRAFT` is a
+cart nobody committed to and a `CANCELLED` order is money never spent, so both are
+excluded by status rather than by date.
+
+### Two columns that do not exist, and what that costs
+
+- **`SupplyOrder` has no supplying-warehouse column.** It records the branch that
+  ordered. So the money a shop pays the warehouse can be subtracted from the shop
+  but cannot be credited to a particular warehouse as revenue — which is why the
+  business roll-up treats it as an untraced *internal transfer* and a warehouse
+  reads as a cost centre. Adding `supplyingBranchId` is what would let a warehouse
+  be reported as a profit centre instead; it is not needed while a business has one.
+- **There is no purchase or supplier model at all.** A warehouse buying flour from
+  the outside world has nowhere to record it except as an ordinary `Expense`
+  against the warehouse branch — which is exactly why `expense.service.js`
+  deliberately permits a `WAREHOUSE` where the trading services refuse one. Without
+  that, the business's largest real cost would be invisible.

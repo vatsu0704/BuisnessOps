@@ -171,6 +171,74 @@ function isRealDateKey(key) {
   return dateKeyOf(dateOnly(key)) === key;
 }
 
+/**
+ * The half-open [start, end) UTC instants of one local calendar MONTH.
+ *
+ * Built out of `localDayRange` rather than beside it, so the daylight-saving
+ * correction is written once: a month is the instant its first day began to the
+ * instant the next month's first day began.
+ *
+ * Needed for exactly the same reason the day version is. `Transaction.occurredAt`
+ * and `SupplyOrder.placedAt` are instants, so "what did this branch sell in
+ * September" is the window of real time September occupied *at that branch* —
+ * which is not the same window for a branch in Asia/Kolkata and one in Dubai.
+ */
+function localMonthRange(key, timeZone) {
+  const [year, month] = String(key).split('-').map(Number);
+  const nextKey = month === 12 ? `${year + 1}-01` : `${year}-${String(month + 1).padStart(2, '0')}`;
+  return {
+    start: localDayRange(`${key}-01`, timeZone).start,
+    end: localDayRange(`${nextKey}-01`, timeZone).start,
+  };
+}
+
+/** Calendar-valid 'YYYY-MM', the form SalarySlip.monthYear is stored in. */
+function isRealMonthKey(key) {
+  if (!/^\d{4}-\d{2}$/.test(String(key))) return false;
+  const month = Number(String(key).slice(5, 7));
+  return month >= 1 && month <= 12;
+}
+
+/**
+ * ['2026-04', '2026-05', … '2026-09'] inclusive of both ends.
+ *
+ * Returns an empty array when `to` precedes `from`, so a reversed window is a
+ * grid with no columns rather than an infinite loop.
+ */
+function eachMonthBetween(fromKey, toKey) {
+  if (!isRealMonthKey(fromKey) || !isRealMonthKey(toKey)) return [];
+  const keys = [];
+  let year = Number(fromKey.slice(0, 4));
+  let month = Number(fromKey.slice(5, 7));
+  while (`${year}-${String(month).padStart(2, '0')}` <= toKey) {
+    keys.push(`${year}-${String(month).padStart(2, '0')}`);
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+  return keys;
+}
+
+/** How many months `to` is after `from`, used to cap a requested window. */
+function monthsBetween(fromKey, toKey) {
+  const fromMonths = Number(fromKey.slice(0, 4)) * 12 + Number(fromKey.slice(5, 7));
+  const toMonths = Number(toKey.slice(0, 4)) * 12 + Number(toKey.slice(5, 7));
+  return toMonths - fromMonths;
+}
+
+/** The month key `count` months before `key`, for a default window. */
+function monthKeyMinus(key, count) {
+  const total = Number(key.slice(0, 4)) * 12 + (Number(key.slice(5, 7)) - 1) - count;
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`;
+}
+
+/** 'YYYY-MM' of the current month in `timeZone`. */
+function thisMonthKeyInZone(timeZone) {
+  return todayKeyInZone(timeZone).slice(0, 7);
+}
+
 module.exports = {
   isValidTimeZone,
   safeZone,
@@ -178,11 +246,17 @@ module.exports = {
   dateOnly,
   dateKeyOf,
   localDayRange,
+  localMonthRange,
   todayKeyInZone,
+  thisMonthKeyInZone,
   todayInZone,
   weekdayOf,
   monthKey,
   daysInMonth,
   eachDayOfMonth,
+  eachMonthBetween,
+  monthsBetween,
+  monthKeyMinus,
   isRealDateKey,
+  isRealMonthKey,
 };

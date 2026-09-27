@@ -382,14 +382,33 @@ scoped by `BranchAccess` rows.
 | **Who** | `ADMIN`, `OWNER`, `MANAGER` (`analytics:viewBusiness`) |
 | **Task** | [Task 8](#task-8--analytics-and-net-profit) |
 
-**Proposed formula — see [Open decisions](#5-open-decisions) before building:**
+**The formula, as built in Task 8.** Per branch:
 
 ```
-netProfit = counter sales (COMPLETED)
+netProfit = sales (COMPLETED transactions)
           − branch expenses
-          − supply-order spend
-          − payroll (net pay)
+          − raw-material spend (supply orders this branch placed)
+          − payroll (net pay on its payslips)
 ```
+
+A warehouse needs no special case: it has no till and orders nothing from itself,
+so its sales and material spend are zero and the same expression collapses to
+`−(expenses + payroll)`.
+
+**The business total is deliberately not the sum of those rows.** Money a shop
+pays its own warehouse left the shop and did not leave the business, so the
+business total subtracts expenses and payroll across every location and does
+**not** subtract the internal transfer:
+
+```
+businessNetProfit = customer sales − all expenses − all payroll
+
+Σ(branch netProfit) + internalTransfer === businessNetProfit
+```
+
+That identity is asserted in `backend/tests/analytics.test.js` and stated on the
+screen, because somebody will add the branch column up and has to be able to see
+why it differs.
 
 **Acceptance criteria**
 
@@ -883,11 +902,20 @@ and every other task assumes its roles exist.
 ### Task 8 — Analytics and net profit
 *Requirements: R13, R15.*
 
-1. The branch × month aggregation endpoint.
-2. The net-profit formula — **confirm the double-count question in §5 first**.
-3. Reports becomes the real grid.
-4. The admin's cross-business view.
-5. Charts and Indian-format currency, reusing what exists.
+1. `GET …/analytics/branch-monthly?from=&to=&branchId=` — the branch × month
+   aggregation. Guarded on the narrower `analytics:viewBranch` and scoped by
+   `req.branchAccess`, so one endpoint answers "how is my branch doing?" and "how is
+   every branch doing?"; the business roll-up is attached separately, for
+   `analytics:viewBusiness` only.
+2. The net-profit formula, the cost-centre treatment of a warehouse, and the
+   reconciliation identity — all three settled in §5.
+3. Reports becomes the real grid: a month strip, the net-profit card with its
+   reconciling sentence, "Needs attention", and one ranked card per branch carrying its
+   whole window as a row of bars.
+4. `GET /analytics/cross-business` — every business the account can read, totals only,
+   mounted outside `/businesses/:businessId` because it spans them.
+5. Indian-format currency through the existing `formatAmount`; the month bars are plain
+   Views rather than a charting dependency.
 
 ### Task 9 — Day-end and month-end export
 *Requirement: R17.*
@@ -962,6 +990,31 @@ everything else.
 What remains for Task 8 is the part a category list cannot enforce: a business may add a
 category of its own and call it anything, so the export flags overlap it finds rather
 than pretending the shape of the data prevents it.
+
+**Is a warehouse a row in the reports, and what happens to the money shops pay it?**
+(R13, Task 8.) **Decided in Task 8, by Vatsal, from three options.** A warehouse *is* a
+row, marked as a **cost centre**: it has an electricity bill and a wage bill, so leaving
+it out would overstate profit by everything it spends — but it has no till, so its sales
+and material figures are omitted rather than printed as zeroes, which would report the
+shape of the data as though it were a fact about the business.
+
+The money a shop pays the warehouse is an **internal transfer**. It is subtracted from
+the shop, because it is real money out of that branch, and not from the business, because
+it never left it. The two levels therefore differ by exactly that amount, and the screen
+prints the reconciling line rather than hiding the gap.
+
+The alternative considered and rejected — crediting the transfer to the warehouse as
+revenue so the branch column simply adds up — needs a column recording *which* warehouse
+filled each order. `SupplyOrder` records only the branch that ordered, so that option
+costs a schema change and is only unambiguous while a business has one warehouse. It
+remains available if a business ever runs two and wants the warehouse read as a profit
+centre.
+
+**Do DRAFT payslips count as payroll cost?** (R13, Task 8.) **Decided in Task 8: yes,
+flagged.** Counting only FINALIZED slips would report zero wages — and therefore a wildly
+inflated profit — for any business that generates payslips and never finalises them, which
+is the wrong answer in the flattering direction. So both count, and a month whose payroll
+is unsettled is marked provisional on the card instead.
 
 **Does a counter order record how it was paid?** R1 says no payment step, so the default
 is "unspecified". But cash-vs-digital mix is a named Phase 5 metric, and it costs one

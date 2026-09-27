@@ -7,8 +7,9 @@ assume branches and data already exist from earlier steps.
 This covers the app as it exists today: Phases 0–1 (auth, branches, CSV
 ingestion), Team & permissions (inviting, revoking, and switching between
 businesses), and Attendance, Payroll & Salary Slips. Every message the server
-sends is translated too, which Flow 18 checks. Reports is intentionally
-unfinished — you'll see a "planned" notice there, not a bug. The AI "ask a
+sends is translated too, which Flow 18 checks. Reports is now the real branch ×
+month grid with net profit (Flow 17r), and compares every business one account
+holds (Flow 17s). The AI "ask a
 question" bar is gone from Home entirely (requirement 7), hidden behind a flag
 until Phase 2's query engine exists. Alerts (Phase 5) has no tab at all; the Staff tab took its
 slot.
@@ -1322,6 +1323,117 @@ Requirement 8's last line.
 
 ---
 
+## Flow 17r — Reports: every branch, month by month, with net profit
+
+Requirements 13 and 15. **Sign in as the owner, admin or manager** — the Reports
+tab is theirs. A cashier does not get the tab; the endpoint behind it would scope
+them to their own branch if they did, which the backend tests cover.
+
+Do Flows 17a–17q first, or at least ring up a counter sale (17d), log an expense
+(17n), place a supply order (17g) and generate a payslip (Flow 14). Reports adds
+up what those created; with none of them there is nothing to read.
+
+1. Tap the **Reports** tab.
+   - ✅ **Expected:** the title, then a row of **three chips — 3 / 6 / 12
+     months** — with 6 selected. Each label sits on one line in all four
+     languages; none breaks mid-word.
+   - ✅ **Expected:** a horizontal strip of month chips ("Sep 2026"), the most
+     recent selected, scrolled to the right-hand end. Swipe it — it scrolls, and
+     no chip is clipped.
+2. Look at the **Net profit** card at the top.
+   - ✅ **Expected:** one large figure, red if it is negative, and under it four
+     boxes **two to a row**: Customer sales, Expenses, Wages, Moved internally.
+     Four across one row would give each about 76dp and break every label — if
+     you see that, it is a bug.
+   - ✅ **Expected:** if wages have not been finalised for the month, a line
+     saying so. Profit computed from unrun payroll is too flattering, and the
+     card says as much rather than looking confident.
+3. **Check the arithmetic by hand.** This is requirement 13's actual acceptance
+   criterion, so it is worth doing once properly.
+   - Customer sales − Expenses − Wages should equal the Net profit shown.
+   - ✅ **Expected:** it does, exactly. Note that **"Moved internally" is not
+     subtracted** here.
+4. Read the sentence at the bottom of the card, if there is one.
+   - ✅ **Expected:** it appears only when a branch has bought material from your
+     own warehouse, and it reads like "Your branches together made −₹42,000. Add
+     back the ₹30,000 they paid your own warehouse for material — money that never
+     left the business — and the total is −₹12,000."
+   - Now add up the **net profit of every branch card below**, then add the
+     internal transfer. ✅ **Expected:** you get the business total on this card,
+     to the rupee. That difference is deliberate and this sentence is why: the
+     money left the shop and did not leave the business.
+5. Look at **Needs attention**.
+   - ✅ **Expected:** either "No branch fell against the month before", or the
+     branches that did, **worst first**, each with a red downward pill showing
+     how far it fell. A branch that moved less than 2% is not listed — a section
+     that flags everything is a section nobody reads.
+6. Scroll to the **branch cards**.
+   - ✅ **Expected:** one card per branch, **best first**, with any warehouse
+     last. Each shows the branch name, a trend pill, the month's net profit, four
+     figures two-to-a-row, and a row of small bars.
+   - ✅ **Expected:** the bars grow **upward in green for a profit and downward
+     in red for a loss**, from a line in the middle. A loss drawn as a short
+     upward bar would read as a small profit.
+7. Tap a bar in one branch's row.
+   - ✅ **Expected:** the month strip at the top moves to that month and **every
+     card on the screen changes together**, because that is the column of the
+     grid you just asked for. The cards re-sort, because the ranking is for the
+     month in focus.
+8. Find your **warehouse** card.
+   - ✅ **Expected:** a grey **"Cost centre"** pill, **no sales figure and no raw
+     material figure at all** — just Expenses and Wages — and a net profit that is
+     simply minus what it spent. A warehouse has no till, so a "₹0 of sales" row
+     would be reporting the model rather than the business.
+9. Switch the range to **12 months**, then back to **3**.
+   - ✅ **Expected:** the month strip grows and shrinks, re-scrolls to the most
+     recent month, and the figures change with it. Twelve bars still fit inside a
+     card without overlapping.
+10. Change the app language to Gujarati and come back.
+    - ✅ **Expected:** every label, chip and sentence is translated, and nothing
+      wraps mid-word. The reconciliation sentence puts its three amounts in the
+      right places — they travel as parameters, not baked into the sentence.
+11. Pull down to refresh.
+    - ✅ **Expected:** a spinner at the top, the figures stay on screen while it
+      loads, and they update. Now turn the backend off and pull again: ✅ an error
+      appears **beside** the figures rather than replacing them. A screen that was
+      reading correctly a moment ago should not empty itself.
+12. Ring up a counter sale (Flow 17d), then return to Reports.
+    - ✅ **Expected:** the figure has already moved. Reports re-reads whenever the
+      tab regains focus, so there is nothing to press.
+
+---
+
+## Flow 17s — Comparing every business one account holds
+
+Requirements 13 and 16. **You need two businesses** where you are owner, admin or
+manager — Flow 17 creates the second one.
+
+1. On **Reports**, look above the month strip.
+   - ✅ **Expected:** a second row of two chips, **"This business" / "All
+     businesses"**. With only one business this row is absent, and that is
+     correct — there is nothing to compare.
+2. Tap **All businesses**.
+   - ✅ **Expected:** the month strip and the branch cards disappear. In their
+     place: a combined total across every business, then one card per business
+     with its own net profit, sales, expenses, wages and internal transfer.
+   - ✅ **Expected:** **no branch rows anywhere.** Requirement 13 asks for
+     "amount only"; the branches of whichever business turns out to need
+     attention are one business-switch away.
+3. Check the range still says what it said.
+   - ✅ **Expected:** changing 3 / 6 / 12 changes both views. Switching scope must
+     never silently change the period being compared.
+4. Sign in as a **cashier** who belongs to one of those businesses and open
+   Reports.
+   - ✅ **Expected:** there is no Reports tab at all. Five tabs is the budget
+     (see `TabNavigator`), and a cashier's five are Home, Counter, Supply, Staff
+     and Settings.
+5. If your two businesses use **different currencies**, look at the top card.
+   - ✅ **Expected:** no combined figure, and a line explaining that the
+     currencies differ. Each business still shows its own total. A number that
+     added ₹ to د.إ would be worse than no number.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
 - **No overtime, leave balances or statutory deductions**: hours from
@@ -1336,8 +1448,10 @@ Requirement 8's last line.
 - **Removed rows are never cleaned up**: a membership revoked years ago still
   appears in the team list, because the row carries the audit trail of the
   attendance days that person marked.
-- **Reports and Alerts tabs** intentionally show a "planned" notice — they're
-  Phase 4/5 work, not started yet.
+- **The Alerts tab** intentionally shows a "planned" notice — Phase 5 work, not
+  started. Reports is no longer one of these: it is the branch × month grid with
+  net profit (Flow 17r). Its old "planned" strings are still on disk, because
+  Phase 5's benchmarking notice will want them.
 - **Notifications need Firebase set up to leave the device** (`Docs/FIREBASE_SETUP.md`).
   Without it the rows are still written and the in-app centre still lists them —
   that is a supported mode, and the whole test suite runs in it — but nothing
@@ -1357,11 +1471,13 @@ Requirement 8's last line.
   what makes it Paid. Nothing records the agent then handing it in at the
   warehouse — there is no cash-in-hand figure per agent and no hand-over step.
   If that matters, it is a feature, not a bug report.
-- **A warehouse location is not in the reports.** It is a place with staff,
-  attendance and payslips, and it is deliberately left out of the branch
-  pickers for selling and ordering — which also means it is not a row in
-  anything that compares branches. That is right for sales and will need
-  deciding again when Task 8 works out net profit, since a warehouse has costs.
+- **A warehouse is a row in Reports, marked "Cost centre", and shows no sales.**
+  Decided in Task 8: it has an electricity bill and a wage bill, so leaving it
+  out would overstate profit by everything it spends — but it has no till, so
+  printing "Customer sales ₹0" would be reporting a fact about the data model as
+  if it were a fact about the business. It therefore shows what it spends and
+  nothing it cannot earn. It is still deliberately absent from the branch pickers
+  for selling and ordering.
 - **"Available" only means punched in.** An agent who does not use punch-in, or
   has no staff record, shows as "Attendance not tracked" forever. They are still
   selectable — availability is a caption, not a lock — but the desk gets no help
@@ -1373,8 +1489,9 @@ Requirement 8's last line.
 - **The warehouse is counted in "branches to chase".** It is a location with an
   electricity bill, so it can log expenses and is expected to — but it has no
   till, so opening its expense screen shows a **Sold** of zero and a difference
-  that is simply its spending. That is right for cash movement and will need
-  deciding again when Task 8 works out net profit.
+  that is simply its spending. That is right for cash movement, and Reports now
+  labels the same location a **cost centre** and omits the sales figure rather
+  than printing a zero — see Flow 17r.
 - **The "ask a question" bar and the AI notice are gone from Home**, along with
   the chat-bubble Home tab icon — requirement 7. They are hidden behind a flag,
   not deleted, and come back when the query engine does (Phase 2).

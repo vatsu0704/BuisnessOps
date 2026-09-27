@@ -173,6 +173,10 @@ const API_MESSAGES = {
   RECORD_NOT_FOUND: 'Record not found',
   RECORD_REFERENCE_MISSING: 'Referenced record does not exist',
   INTERNAL_ERROR: 'Internal Server Error',
+
+  // --- Analytics and net profit (requirements 13 and 15) -------------------
+  ANALYTICS_RANGE_REVERSED: 'The last month cannot come before the first',
+  ANALYTICS_RANGE_TOO_LONG: 'A report can cover at most {{max}} months at a time',
 };
 
 /**
@@ -197,6 +201,7 @@ const FIELD_MESSAGES = {
   QUANTITY_MUST_BE_POSITIVE: 'quantity must be more than zero',
   FIELD_MUST_BE_NON_NEGATIVE: '{{field}} must be a non-negative number',
   FIELD_MUST_BE_DATE: '{{field}} must be a real calendar date in YYYY-MM-DD form',
+  FIELD_MUST_BE_MONTH: '{{field}} must be a month in YYYY-MM form',
   DATETIME_INVALID: '{{field}} must be a valid date and time',
   DATETIME_IN_PAST: '{{field}} cannot be in the past',
   DELAY_MINUTES_RANGE: 'delayMinutes must be a whole number of minutes between 1 and {{max}}',

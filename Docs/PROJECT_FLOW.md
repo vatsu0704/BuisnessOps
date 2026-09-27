@@ -9,8 +9,9 @@ The product is named **BizIQ** (Android package `com.biziq.app`), renamed from t
 **A second track is now running alongside this one.** *Branch Operations*
 (Section 13, driven by [REQUIREMENTS.md](REQUIREMENTS.md)) turns BizIQ from a
 product that analyses a business into one that runs it — counter billing,
-supply orders, expenses, net profit. Task 1 of that track has landed and it
-amends Phase 0: see the note under the Phase 0 exit criterion.
+supply orders, expenses, net profit. Tasks 1-8 of that track have landed; Task 1
+amends Phase 0 (see the note under the Phase 0 exit criterion) and Task 8
+delivers part of Phase 4.
 
 ---
 
@@ -34,7 +35,7 @@ These decisions shape every phase and shouldn't be revisited per-feature:
 | 1 | Data ingestion: unified schema, CSV/Excel upload, first POS adapter | FR-04, FR-05 | ✅ CSV path done; live POS adapter deferred |
 | 2 | Core query engine: metrics catalog + NL → answer pipeline (English first) | FR-01, FR-06 | ⛔ blocked on an LLM provider |
 | 3 | Multi-language + voice | FR-02, FR-03 | 🟡 UI **and API message** i18n done (en/hi/gu/mr); voice and query-language work outstanding |
-| 4 | Reporting & cross-branch comparison | FR-06, FR-07 | ⏳ not started (tab exists, shows a planned notice) |
+| 4 | Reporting & cross-branch comparison | FR-06, FR-07 | 🟡 branch × month net profit and cross-business comparison done (Branch Operations Task 8); benchmarking against a company average, and city/region grouping, not started |
 | 5 | Proactive intelligence: alerts, benchmarking, wastage, cash-mix, seasonal correlation | FR-08–FR-12 | ⏳ not started (tab exists, shows a planned notice) |
 | 6 | Strategic & franchise: staff analytics, royalty automation, expansion what-if, forecasting | FR-13–FR-16 | ⏳ not started |
 | 7 | Hardening: security, compliance, performance, billing | NFRs (Section 7) | ⏳ not started |
@@ -351,7 +352,7 @@ got to.
 | 5 | Supply orders end to end | R3, R5, R5.1, R9, R11, R12, R21, R22, R23 | ✅ done |
 | 6 | Expenses and the daily log | R10 | ✅ done |
 | 7 | Firebase notifications | R2, R8 | ✅ done |
-| 8 | Analytics and net profit | R13, R15 | ⏳ not started |
+| 8 | Analytics and net profit | R13, R15 | ✅ done |
 | 9 | Day-end and month-end export | R17 | ⏳ not started |
 | 10 | Restrictions that explain themselves | R18, R19 | ⏳ not started |
 
@@ -974,3 +975,144 @@ with no account still gets marked, the desk hears about an order and the person
 who placed it does not, a delay reaches the branch with its minutes as a param,
 the centre counts and marks read, one member cannot read another's, a shared
 handset moves rather than duplicates, and attendance refuses to be turned off.
+
+### Task 8 — Analytics and net profit ✅
+
+Requirements 13 and 15. `ReportsScreen` stops being a placeholder.
+
+**Nothing in this task writes, and nothing is cached.** `analytics.service.js` is
+the only read-only service in the backend: every figure is a sum over rows the
+other services created. That is requirement 13's acceptance criterion taken
+literally — *net profit must be reproducible by hand from the rows behind it* — so
+no number is derived from another derived number, and there is no stored total
+that could drift from what it totals. `backend/tests/analytics.test.js` therefore
+asserts exact figures against round inputs rather than checking a shape.
+
+**One formula, and a warehouse needs no special case.**
+
+```
+netProfit = sales − expenses − materialSpend − payroll
+```
+
+A warehouse has no till and orders nothing from itself, so its sales and material
+spend are structurally zero and the same expression collapses to
+`−(expenses + payroll)`. `isCostCentre` exists only so the screen can print "Cost
+centre" and omit the two figures rather than showing "₹0 of sales", which reports
+the shape of the model as though it were a fact about the business.
+
+**The branch column deliberately does not add up to the business total**, and this
+is the part worth reading before changing anything here. When a shop orders flour
+from the warehouse, the shop pays the warehouse: real money out of *that branch*,
+so it is subtracted from the shop's row and a branch manager sees their true cost.
+But the money never left the **business** — it moved from one pocket to another —
+so subtracting it again at the business level would make a business appear to lose
+money every time it supplied itself. Hence:
+
+```
+businessNetProfit  = customer sales − all expenses − all payroll
+Σ(branch netProfit) + internalTransfer === businessNetProfit
+```
+
+That identity is a test, in the same way the payroll week-off identity is. The
+response carries the whole reconciliation, and `NetProfitCard` prints it as a
+sentence — "your branches together made −₹42,000, add back the ₹30,000 they paid
+your own warehouse, the total is −₹12,000". **Hiding the gap would be the bug:**
+somebody adds the column up, gets a different number from the total, and stops
+believing either.
+
+The alternative — crediting the transfer to the warehouse as revenue, so the column
+simply adds up — was rejected because `SupplyOrder` records only the branch that
+*ordered*. There is no column for the warehouse that filled it, so the revenue
+cannot be attributed to a particular warehouse without a schema change, and the
+shortcut of "the one warehouse" stops being true the moment a business opens a
+second. It stays available if that day comes.
+
+**DRAFT payslips count, and the month says it is provisional.** Counting only
+FINALIZED slips would report zero wages, and therefore a wildly inflated profit,
+for any business that generates payslips and never finalises them — wrong in the
+flattering direction, which is the dangerous one. A month is flagged when a slip is
+still a draft, or when the branch has staff and payroll was never run at all. The
+flag reads today's head-count, so a branch that has hired since a long-closed month
+sees that month flagged too; that errs toward "go and look", which is the safe
+direction.
+
+**The query count is bounded by months, never by branches** — the thing that grows
+as a franchise grows must not multiply the query count. Expenses are one query
+(`expenseDate` is a `@db.Date` already holding the branch's own day, so the month
+bucket is a string prefix); payroll is one (`monthYear` is already 'YYYY-MM'); the
+head-count is one. Only sales and material spend need a timezone, because
+`occurredAt` and `placedAt` are *instants* — so branches are bucketed by timezone
+first, since branches sharing one share every window boundary. A six-month grid
+over forty branches is twelve queries, not two hundred and forty. `localMonthRange`
+is built out of `localDayRange` so the daylight-saving correction is written once.
+
+**One endpoint serves both audiences.** `GET …/analytics/branch-monthly` is guarded
+on the narrower `analytics:viewBranch`, which a CASHIER holds, and scoped by
+`req.branchAccess` — so a cashier gets their own branch and an admin gets all of
+them without a second endpoint existing. The **business roll-up is a separate
+decision**, attached only for `analytics:viewBusiness`, because a cashier reading
+their own branch must not be handed the business's net profit alongside it. The
+Reports **tab** stays gated on `analytics:viewBusiness`: a cashier already has five
+tabs, and five is the documented budget in `TabNavigator`. The scoping is therefore
+defence in depth rather than a surface, and it is tested as such.
+
+`GET /analytics/cross-business` mounts outside `/businesses/:businessId`, the same
+split `notification.routes.js` makes, because it spans businesses and there is no
+single tenant to resolve. It has no `requirePermission` for that reason and filters
+the caller's memberships against the same capability instead, so a business where
+they are only a cashier is **absent rather than refused** — they did not ask for it
+by name. Currencies are never added: when they differ, each business still shows its
+own total and the combined figure is withheld with a line saying why.
+
+**The grid is turned ninety degrees, because a matrix does not survive a phone.**
+Twelve month columns inside the 313dp a card has on a 393dp screen leaves 26dp
+each, which holds no rupee figure at all. So it is **one card per branch**, each
+carrying its whole window as a shape (`MonthBars`) and one month's figures in full,
+with the month strip moving every card at once — which is the column of the matrix
+a person was going to read anyway. It scales to any number of branches or months
+instead of degrading as either grows.
+
+The design arithmetic, done rather than guessed, at 393dp minus the 24dp gutters
+and a card's 16dp padding (313dp inside):
+
+- `MetricGrid` is **two to a row**, wrapping. Four across would give each 76dp —
+  the exact width at which `SegmentedOption` broke twice. Two gives 150dp, which
+  holds a label of a dozen characters and an amount up to twelve crore, and a
+  fifth metric added later starts a third row rather than squeezing the four
+  already there.
+- The three range chips get 110dp each; "12 months" and every Indic translation of
+  it fits on one line. The two scope chips get 168dp.
+- `MonthBars` lays its columns out with `flex: 1`, so twelve months share whatever
+  width there is rather than assuming a screen size. Bars grow **both ways from a
+  zero line**: net profit goes negative, and a loss drawn as a short upward bar
+  would read as a small profit.
+- Branch name gets `flex: 1` and may wrap; the net-profit figure sits on its own
+  line beneath. Side by side is the shape that breaks in Gujarati, where both
+  halves run longer than the English.
+
+Built from plain `View`s rather than a charting package: React Native draws a
+rectangle of a given height perfectly well, and twelve rectangles are not worth a
+dependency, a native build concern and a second set of styling conventions.
+
+**`analyticsStore` is keyed on the window, not just the business.** Every other
+store keys `loadedFor` on the business alone because its data has no parameters;
+this one is a *query*, so the same business with a different range is different
+data and business-equality would leave the previous range's figures on screen. It
+has no `refreshAnalytics()` twin of `refreshSalesSummary()` either, and that is
+deliberate: the convention exists because a mutating screen unmounts and leaves no
+effect to re-run, and Reports is only ever a tab — never pushed over another screen
+— so `useFocusEffect` re-reads it and every screen that moves a figure it sums is
+somewhere else. Reaching Reports refreshes it.
+
+`backend/tests/analytics.test.js` — 21 tests: the formula against round numbers, a
+warehouse as a cost centre with no special case, the reconciliation identity in one
+month and across several, a DRAFT cart and a CANCELLED order and a VOIDED and
+REFUNDED sale all excluded, a sale one minute into the local month landing in the
+right month (and one minute before it in the previous one), a declining branch
+marked DOWN, no percentage offered when the earlier month was zero, unsettled
+payroll flagged, a cashier scoped to one branch and handed no business total, a
+branch they cannot reach refused, a role with no analytics capability refused, the
+window's default and its two refusals, the cross-business roll-up agreeing with the
+same business's own grid, and a brand-new business with no branches returning a
+complete report of zeroes rather than a partial object the app would read
+`undefined` off.
