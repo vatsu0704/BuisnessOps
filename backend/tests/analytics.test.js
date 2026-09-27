@@ -514,6 +514,26 @@ describe('Branch analytics and net profit', () => {
       expect(mine.branches).toBeUndefined();
     });
 
+    // Every business must be asked about the SAME months. Each one defaulting an
+    // omitted window from its own first branch's timezone would compare a
+    // business in Auckland's October against one in Kolkata's September on the
+    // day they disagree, and label both with the first one's months.
+    it('asks every business for one shared window when none is given', async () => {
+      const res = await request(app).get('/api/analytics/cross-business').set(auth(ownerToken));
+      expect(res.statusCode).toBe(200);
+
+      expect(res.body.from).toBeTruthy();
+      expect(res.body.to).toBeTruthy();
+
+      for (const business of res.body.businesses) {
+        expect(business.from).toBe(res.body.from);
+        expect(business.to).toBe(res.body.to);
+        expect(business.months.map((cell) => cell.month)).toEqual(
+          res.body.businesses[0].months.map((cell) => cell.month)
+        );
+      }
+    });
+
     it('omits a business where the caller is only a cashier', async () => {
       const res = await request(app)
         .get(`/api/analytics/cross-business?from=${MONTH}&to=${MONTH}`)

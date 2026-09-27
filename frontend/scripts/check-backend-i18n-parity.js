@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * The gate on the backend's two prose dictionaries.
+ * The gate on the backend's three prose dictionaries.
  *
  * The backend is not supposed to write user-facing prose at all, and almost
  * never does — an error is a code and the device renders it. Two files are
@@ -14,6 +14,10 @@ const path = require('path');
  *   backend is told rather than guessing.
  * - `documents/payslip.labels.js` — a payslip is rendered to PDF on the
  *   server, where the app cannot reach it.
+ * - `documents/export.labels.js` — a day-end or month-end spreadsheet and its
+ *   printable summary (requirement 17). An .xlsx cell cannot hold a translation
+ *   key and neither can a printed page, and the document is fetched with an
+ *   explicit `?lang=`, so the backend is told the language rather than guessing.
  *
  * Neither had a gate before this. `payslip.labels.js` has carried four
  * languages since Phase 4 and could have drifted apart silently for months:
@@ -88,7 +92,7 @@ function checkDictionary(label, dictionary) {
   return enKeys.length;
 }
 
-// --- 1 & 2: the two backend dictionaries -----------------------------------
+// --- 1, 2 & 3: the three backend dictionaries ------------------------------
 
 const { LABELS: NOTIFICATION_LABELS, NOTIFICATION_CODES } = require(
   path.join(BACKEND, 'notifications', 'labels.js')
@@ -98,6 +102,9 @@ const notificationKeys = checkDictionary('notifications/labels.js', NOTIFICATION
 const payslipModule = require(path.join(BACKEND, 'documents', 'payslip.labels.js'));
 const payslipLabels = payslipModule.LABELS ?? payslipModule;
 const payslipKeys = checkDictionary('documents/payslip.labels.js', payslipLabels);
+
+const { LABELS: EXPORT_LABELS } = require(path.join(BACKEND, 'documents', 'export.labels.js'));
+const exportKeys = checkDictionary('documents/export.labels.js', EXPORT_LABELS);
 
 // --- 3: every code the backend sends is renderable in the app --------------
 
@@ -131,7 +138,7 @@ if (failures.length) {
 }
 
 console.log(
-  `backend i18n parity OK — ${notificationKeys} notification and ${payslipKeys} payslip ` +
-    `labels match across ${Object.keys(NOTIFICATION_LABELS).length} languages, and all ` +
-    `${NOTIFICATION_CODES.length} codes render in the app.`
+  `backend i18n parity OK — ${notificationKeys} notification, ${payslipKeys} payslip and ` +
+    `${exportKeys} export labels match across ${Object.keys(NOTIFICATION_LABELS).length} ` +
+    `languages, and all ${NOTIFICATION_CODES.length} codes render in the app.`
 );

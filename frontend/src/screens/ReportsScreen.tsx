@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import ScreenBackground from '@/components/ScreenBackground';
 import SegmentedOption from '@/components/SegmentedOption';
+import ExportActions from '@/components/ExportActions';
 import AttentionSection from '@/components/reports/AttentionSection';
 import BranchProfitCard from '@/components/reports/BranchProfitCard';
 import CrossBusinessSection from '@/components/reports/CrossBusinessSection';
@@ -17,6 +18,13 @@ import {
   useCrossBusinessAnalytics,
   type RangeMonths,
 } from '@/hooks/useBranchAnalytics';
+import { useExportPreview } from '@/hooks/useExportPreview';
+import {
+  shareMonthEndDocument,
+  shareMonthEndWorkbook,
+} from '@/api/exports';
+import { monthKeyLabel } from '@/utils/date';
+import { useBusinessId } from '@/hooks/useBusinessId';
 import { useAuthStore } from '@/store/authStore';
 import { roleHas } from '@/permissions';
 import { colors, spacing } from '@/theme';
@@ -60,7 +68,7 @@ import type { BranchMonthlyRow } from '@/types/analytics';
 export default function ReportsScreen() {
   const { t } = useTranslation();
 
-  const { report, isLoading, error, monthsBack, setMonthsBack, refresh, window } =
+  const { report, isLoading, error, monthsBack, setMonthsBack, refresh, range } =
     useBranchAnalytics();
 
   // Which month every card is showing. Defaults to the most recent in the
@@ -81,7 +89,7 @@ export default function ReportsScreen() {
     [user]
   );
 
-  const cross = useCrossBusinessAnalytics(window, scope === 'all' && readableBusinessCount > 1);
+  const cross = useCrossBusinessAnalytics(range, scope === 'all' && readableBusinessCount > 1);
 
   const months = report?.months ?? [];
   const month = focusMonth && months.includes(focusMonth) ? focusMonth : (months[months.length - 1] ?? '');
@@ -100,6 +108,12 @@ export default function ReportsScreen() {
   }, [report, month]);
 
   const businessCell = report?.business?.months.find((candidate) => candidate.month === month);
+
+  // Requirement 17's month-end export, for the month in focus. Only fetched for
+  // the per-business scope: "all businesses" spans tenants and an export belongs
+  // to one, so there is nothing sensible to hand over there.
+  const businessId = useBusinessId();
+  const exportPreview = useExportPreview('MONTH', { month }, scope === 'business' && !!month);
 
   return (
     <View style={styles.container}>
@@ -208,6 +222,17 @@ export default function ReportsScreen() {
               {/* The stagger is capped, as it is on every other list screen: an
                   uncapped one over forty branches is a 2.8-second wait for the
                   last card, which turns an entrance into a delay. */}
+              {report && month ? (
+                <AnimatedEntrance delay={step(5)} style={styles.block}>
+                  <ExportActions
+                    report={exportPreview.report}
+                    periodLabel={monthKeyLabel(month, t)}
+                    onExportWorkbook={() => shareMonthEndWorkbook(businessId!, { month })}
+                    onExportDocument={() => shareMonthEndDocument(businessId!, { month })}
+                  />
+                </AnimatedEntrance>
+              ) : null}
+
               {ranked.map((row, index) => (
                 <AnimatedEntrance
                   key={row.branchId}

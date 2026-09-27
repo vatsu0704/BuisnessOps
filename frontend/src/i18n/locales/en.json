@@ -120,7 +120,9 @@
       "NOTIFICATION_CATEGORY_UNKNOWN": "There is no notification category called {{category}}",
       "NOTIFICATION_CATEGORY_REQUIRED": "Attendance notifications cannot be turned off — being told you were marked absent is the point of them",
       "ANALYTICS_RANGE_REVERSED": "The last month cannot come before the first",
-      "ANALYTICS_RANGE_TOO_LONG": "A report can cover at most {{max}} months at a time"
+      "ANALYTICS_RANGE_TOO_LONG": "A report can cover at most {{max}} months at a time",
+      "EXPORT_NO_BRANCHES": "There is no branch to export",
+      "EXPORT_MONTH_INVALID": "That is not a real month"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} is required",
@@ -211,7 +213,8 @@
       "addressLine": "Delivery address",
       "postalCode": "PIN code",
       "deliveryAgentMembershipId": "Delivery agent"
-    }
+    },
+    "downloadFailed": "That file could not be downloaded. Try again."
   },
   "language": {
     "title": "Language",
@@ -1121,5 +1124,18 @@
     "categoryDeliveries": "Your deliveries",
     "categoryDeliveriesHint": "When a run is given to you.",
     "required": "Always on"
+  },
+  "exports": {
+    "title": "Export",
+    "loading": "Counting what there is to export…",
+    "recordCount": "{{count}} entry for {{period}}.",
+    "recordCount_plural": "{{count}} entries for {{period}}.",
+    "nothingToExport": "Nothing was entered for {{period}}, so there is nothing to export.",
+    "spreadsheet": "Spreadsheet",
+    "spreadsheetHint": "Every record, one row each. Opens in Excel.",
+    "printable": "Printable summary",
+    "printableHint": "Totals and the records, as a PDF you can share.",
+    "worthChecking": "Worth checking first",
+    "overlapExpenseMatchesSupplyOrder": "{{amount}} under \"{{category}}\" on {{date}} matches supply order #{{orderNumber}} for the same amount. If it was the same payment, it is counted twice."
   }
 }

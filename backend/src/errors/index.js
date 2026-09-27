@@ -78,4 +78,7 @@ function validationFailure(details) {
   };
 }
 
-module.exports = { ApiError, fail, fieldError, validationFailure, renderMessage };
+// `interpolate` is exported for the document templates, which fill the same
+// `{{name}}` placeholders from the same shaped params. One implementation, so a
+// payslip and an export cannot disagree about what a placeholder looks like.
+module.exports = { ApiError, fail, fieldError, validationFailure, renderMessage, interpolate };

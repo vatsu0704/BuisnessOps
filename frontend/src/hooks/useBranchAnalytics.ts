@@ -28,7 +28,7 @@ export function useBranchAnalytics(initialRange: RangeMonths = 6) {
   // Computed from the device's clock only to *ask* for a window. Every figure
   // inside it is bucketed in the branch's own timezone by the server, which is
   // the only place that knows each branch's zone.
-  const window = useMemo(() => {
+  const range = useMemo(() => {
     const to = thisMonthKey();
     return { from: monthKeyMinus(to, monthsBack - 1), to };
   }, [monthsBack]);
@@ -37,15 +37,15 @@ export function useBranchAnalytics(initialRange: RangeMonths = 6) {
   const refresh = useAnalyticsStore((s) => s.refresh);
   const error = useAnalyticsStore((s) => s.error);
 
-  const key = businessId ? `${businessId}|${window.from}|${window.to}` : null;
+  const key = businessId ? `${businessId}|${range.from}|${range.to}` : null;
   // Checked in the selector rather than closed over, so a report from the
   // previous business or the previous window never renders for a frame.
   const report = useAnalyticsStore((s) => (s.loadedFor === key ? s.report : null));
   const isLoading = useAnalyticsStore((s) => (key ? s.isLoading || s.loadedFor !== key : false));
 
   useEffect(() => {
-    void load(businessId, window);
-  }, [businessId, window, load]);
+    void load(businessId, range);
+  }, [businessId, range, load]);
 
   // Reports is a tab screen and never unmounts, so the effect above will not run
   // again on its own. Without this, a sale rung up after Reports was last opened
@@ -56,7 +56,7 @@ export function useBranchAnalytics(initialRange: RangeMonths = 6) {
     }, [refresh])
   );
 
-  return { report, isLoading, error, monthsBack, setMonthsBack, refresh, window };
+  return { report, isLoading, error, monthsBack, setMonthsBack, refresh, range };
 }
 
 /**
@@ -67,18 +67,28 @@ export function useBranchAnalytics(initialRange: RangeMonths = 6) {
  * one — the two views must move together when the range changes, or switching
  * scope would silently change the period being compared.
  */
-export function useCrossBusinessAnalytics(window: { from: string; to: string }, enabled: boolean) {
+export function useCrossBusinessAnalytics(range: { from: string; to: string }, enabled: boolean) {
   const loadCross = useAnalyticsStore((s) => s.loadCross);
   const refreshCross = useAnalyticsStore((s) => s.refreshCross);
   const crossError = useAnalyticsStore((s) => s.crossError);
 
-  const key = `${window.from}|${window.to}`;
+  const key = `${range.from}|${range.to}`;
   const cross = useAnalyticsStore((s) => (s.crossLoadedFor === key ? s.cross : null));
   const isLoading = useAnalyticsStore((s) => s.isCrossLoading || s.crossLoadedFor !== key);
 
   useEffect(() => {
-    if (enabled) void loadCross(window);
-  }, [enabled, window, loadCross]);
+    if (enabled) void loadCross(range);
+  }, [enabled, range, loadCross]);
+
+  // The grid refreshes on focus and this has to as well, or switching to Reports
+  // with the cross-business scope already selected would show whatever was
+  // fetched the last time it was opened. `loadCross` will not do it — the key
+  // still matches, so it returns early by design.
+  useFocusEffect(
+    useCallback(() => {
+      if (enabled) void refreshCross();
+    }, [enabled, refreshCross])
+  );
 
   return { cross, isLoading: enabled ? isLoading : false, error: crossError, refresh: refreshCross };
 }

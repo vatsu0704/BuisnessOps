@@ -9,7 +9,8 @@ ingestion), Team & permissions (inviting, revoking, and switching between
 businesses), and Attendance, Payroll & Salary Slips. Every message the server
 sends is translated too, which Flow 18 checks. Reports is now the real branch ×
 month grid with net profit (Flow 17r), and compares every business one account
-holds (Flow 17s). The AI "ask a
+holds (Flow 17s); the day and the month export to a spreadsheet and a printable
+summary (Flow 17t). The AI "ask a
 question" bar is gone from Home entirely (requirement 7), hidden behind a flag
 until Phase 2's query engine exists. Alerts (Phase 5) has no tab at all; the Staff tab took its
 slot.
@@ -1434,6 +1435,99 @@ manager — Flow 17 creates the second one.
 
 ---
 
+## Flow 17t — Exporting the day and the month
+
+Requirement 17. **Two places to try it**, because two different people want it: the
+branch expense screen exports *today at this branch*, and Reports exports *the month
+in focus across every branch*. A cashier gets the first and not the second, which is
+correct — they hold `export:dayEnd` but have no Reports tab.
+
+You need something entered first. Do Flow 17d (a counter sale), 17g (a supply order)
+and 17n (an expense) if you have not.
+
+### The day, from the expense screen
+
+1. Open **Expenses** (from Home, or the Staff/branch route) and scroll to the
+   bottom.
+   - ✅ **Expected:** an **Export** card saying how many entries today has — e.g.
+     "6 entries for Today." Two rows under it: **Spreadsheet** and **Printable
+     summary**, each with a sentence saying what the file is.
+   - ✅ **Expected:** each row is a full-width row, *not* two buttons side by side.
+     Switch to Gujarati and check again — both labels and both hints stay on one
+     line.
+2. On a branch where nothing has been logged today, look at the same card.
+   - ✅ **Expected:** "Nothing was entered for Today, so there is nothing to
+     export", and **both rows greyed out and unpressable.** Handing over an empty
+     spreadsheet would be worse than refusing.
+3. Tap **Spreadsheet**.
+   - ✅ **Expected:** a spinner on that row, then the Android share sheet offering
+     `day-end-<date>-branch.xlsx`. Save it to Drive or Files.
+4. Open the file in Excel, Google Sheets or WPS.
+   - ✅ **Expected:** five sheets — Summary, Counter orders, Supply orders,
+     Expenses, Attendance — with their names **in the app's language**.
+   - ✅ **Expected, and this is the one that matters:** select the Amount column and
+     the spreadsheet gives you a **sum**. If the amounts arrive as text ("₹250.00"
+     left-aligned, no sum), that is a bug — the whole point of a spreadsheet over a
+     PDF is being able to total it.
+   - ✅ **Expected:** dates read `2026-09-27`, not `27/09/2026` or `09/27/2026`. An
+     ISO string means the same thing in every locale; a date serial does not.
+   - ✅ **Expected:** the **Summary** sheet's last row is a Total, and its Counter
+     sales figure equals the one the app showed.
+5. Tap **Printable summary**.
+   - ✅ **Expected:** the Android print preview opens, then the share sheet offers
+     `day-end-<date>.pdf`. The page leads with the totals, then lists each record
+     type, and is entirely in the app's language.
+   - ✅ **Expected:** a "Cash movement" figure with a line under it saying it is
+     *not* net profit. It is sales less expenses and material; net profit subtracts
+     wages too, and that is Reports.
+
+### The month, from Reports
+
+6. Open **Reports**, pick a month in the strip, and scroll past the branch cards'
+   start.
+   - ✅ **Expected:** the same Export card, now saying how many entries that month
+     has across every branch, and exporting `month-end-<month>-all-branches.xlsx`.
+7. Open that spreadsheet.
+   - ✅ **Expected:** a **sixth sheet, Payslips**, which the day export does not
+     have. Each row is a person, their days worked, gross, deductions and net pay.
+   - ✅ **Expected:** every sheet has a **Branch** column, and one row per record —
+     not a sheet per branch. That is what lets you pivot it.
+8. Switch the range chips and pick a different month, then export again.
+   - ✅ **Expected:** the count and the file change with the month. Any past month
+     works — losing a file is meant to be recoverable.
+
+### The double-count warning
+
+9. This is the check that closes the last open question in `REQUIREMENTS.md` §5.
+   At one branch, on one day: place a supply order for exactly **₹5,000** (Flow
+   17g), then add an expense of exactly **₹5,000** under a **category you created
+   yourself** — Expenses → Log an expense → add a category called e.g. "Flour".
+10. Go back to the Export card for that day.
+    - ✅ **Expected:** an amber **"Worth checking first"** panel naming the amount,
+      your category, the date and the order number, and saying that if it was the
+      same payment it is counted twice. It appears *before* you export, not inside
+      the file.
+    - ✅ **Expected:** the same sentence appears in the printable summary under
+      "Worth checking".
+11. Now log ₹5,000 against **Gas** — a seeded category — on a day with a ₹5,000
+    supply order.
+    - ✅ **Expected:** **no warning.** The seeded eight are known not to be raw
+      material, so that is a coincidence rather than a double entry. A warning here
+      would be a false alarm, and false alarms teach people to ignore the panel.
+
+### Permissions
+
+12. Sign in as a **staff** member and look for any of this.
+    - ✅ **Expected:** no Export card anywhere. `STAFF` holds neither export
+      capability, and the endpoints refuse all three representations — the
+      spreadsheet and the document too, not only the JSON.
+13. As a **cashier**, open the Expenses export and check the file.
+    - ✅ **Expected:** only your own branch is in it, even though the request asks
+      for the whole business. The capability says whether you may export; your
+      branch access says what.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
 - **No overtime, leave balances or statutory deductions**: hours from
@@ -1448,6 +1542,29 @@ manager — Flow 17 creates the second one.
 - **Removed rows are never cleaned up**: a membership revoked years ago still
   appears in the team list, because the row carries the audit trail of the
   attendance days that person marked.
+- **The printable export summary caps each section at 60 rows.** Past that it prints
+  the totals and a line saying how many rows were left out; the spreadsheet always
+  has every one. A forty-page PDF of counter tokens is not a summary, and silently
+  truncating would make the page disagree with the file for no visible reason.
+- **The export is .xlsx only, not CSV.** Every spreadsheet app opens .xlsx and it
+  carries several sheets, which a single CSV cannot. If somebody needs CSV they can
+  save it from Excel.
+- **Nothing exports on a schedule or by email.** There is no cron and no queue in
+  this project (see the note in `REQUIREMENTS.md`), so an export happens when a
+  person asks for it. That is also why it works for any past date.
+- **The day export has no payroll.** A payslip is a monthly document; there is no
+  one day's payslip, and a pro-rated fragment would be a figure nobody could check.
+  The month export has a Payslips sheet.
+- **The double-count flag only catches an exact amount match.** An expense logged
+  under a custom category for precisely the same rupees as a supply order on the
+  same branch and day is flagged. A payment split across two expense rows, or
+  rounded, or logged a day later, is not — the flag is deliberately evidence rather
+  than a guess, so it is quiet rather than noisy. It never looks at the seeded
+  categories at all.
+- **Spreadsheet timestamps are in the branch's timezone**, which is correct but worth
+  knowing if you compare a file from a Kolkata branch with one from elsewhere: the
+  clock differs between them by design, because each is the clock the people there
+  were working to.
 - **The Alerts tab** intentionally shows a "planned" notice — Phase 5 work, not
   started. Reports is no longer one of these: it is the branch × month grid with
   net profit (Flow 17r). Its old "planned" strings are still on disk, because

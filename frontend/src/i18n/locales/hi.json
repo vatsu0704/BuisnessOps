@@ -120,7 +120,9 @@
       "NOTIFICATION_CATEGORY_UNKNOWN": "{{category}} नाम की कोई श्रेणी नहीं है",
       "NOTIFICATION_CATEGORY_REQUIRED": "हाज़िरी की सूचनाएँ बंद नहीं हो सकतीं — गैरहाज़िर लगने की ख़बर मिलना ही इनका मक़सद है",
       "ANALYTICS_RANGE_REVERSED": "आख़िरी महीना पहले महीने से पहले का नहीं हो सकता",
-      "ANALYTICS_RANGE_TOO_LONG": "एक रिपोर्ट में एक बार में ज़्यादा से ज़्यादा {{max}} महीने आ सकते हैं"
+      "ANALYTICS_RANGE_TOO_LONG": "एक रिपोर्ट में एक बार में ज़्यादा से ज़्यादा {{max}} महीने आ सकते हैं",
+      "EXPORT_NO_BRANCHES": "निर्यात करने के लिए कोई शाखा नहीं है",
+      "EXPORT_MONTH_INVALID": "यह कोई वास्तविक महीना नहीं है"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} आवश्यक है",
@@ -211,7 +213,8 @@
       "addressLine": "डिलीवरी का पता",
       "postalCode": "पिन कोड",
       "deliveryAgentMembershipId": "डिलीवरी एजेंट"
-    }
+    },
+    "downloadFailed": "वह फ़ाइल डाउनलोड नहीं हो सकी। फिर कोशिश करें।"
   },
   "language": {
     "title": "भाषा",
@@ -1121,5 +1124,18 @@
     "categoryDeliveries": "आपकी डिलीवरी",
     "categoryDeliveriesHint": "जब कोई डिलीवरी आपको दी जाए।",
     "required": "हमेशा चालू"
+  },
+  "exports": {
+    "title": "निर्यात",
+    "loading": "निर्यात के लिए क्या है, गिना जा रहा है…",
+    "recordCount": "{{period}} के लिए {{count}} प्रविष्टि।",
+    "recordCount_plural": "{{period}} के लिए {{count}} प्रविष्टियाँ।",
+    "nothingToExport": "{{period}} के लिए कुछ दर्ज नहीं हुआ, इसलिए निर्यात करने को कुछ नहीं है।",
+    "spreadsheet": "स्प्रेडशीट",
+    "spreadsheetHint": "हर रिकॉर्ड, एक-एक पंक्ति में। Excel में खुलती है।",
+    "printable": "छापने लायक सारांश",
+    "printableHint": "कुल और रिकॉर्ड, PDF के रूप में साझा करने योग्य।",
+    "worthChecking": "पहले जाँच लें",
+    "overlapExpenseMatchesSupplyOrder": "{{date}} को \"{{category}}\" के अंतर्गत {{amount}} उतनी ही राशि के सप्लाई ऑर्डर #{{orderNumber}} से मेल खाता है। अगर वही भुगतान था, तो यह दो बार गिना गया है।"
   }
 }

@@ -1057,3 +1057,41 @@ excluded by status rather than by date.
   against the warehouse branch — which is exactly why `expense.service.js`
   deliberately permits a `WAREHOUSE` where the trading services refuse one. Without
   that, the business's largest real cost would be invisible.
+
+---
+
+## 20. Day-end and month-end export — built (Branch Operations Task 9)
+
+**No tables again**, and for the same reason §19 gives: an export is a statement
+about what was entered, so it has to be re-derivable from the rows at any later
+date. Storing one would be a second copy of numbers that could disagree with the
+rows they came from, and it would put a retention policy between somebody and
+"exports work for any past date, so losing the file is recoverable" (R17).
+
+### What each period reads, and which date column decides
+
+| Record type | Model | Date column | Shape |
+| --- | --- | --- | --- |
+| Counter orders | `CounterOrder` | `tokenDate` `@db.Date` | branch-local already; a day is one value, a month a range |
+| Expenses | `Expense` | `expenseDate` `@db.Date` | same |
+| Attendance | `Attendance` | `date` `@db.Date` | same |
+| Supply orders | `SupplyOrder` | `placedAt` **DateTime** | an instant — needs `localDayRange` / `localMonthRange` |
+| Payslips | `SalarySlip` | `monthYear` `'YYYY-MM'` | month export only |
+
+The mixed shapes are the trap. Three of these need no timezone work at all and one
+needs it absolutely: in Asia/Kolkata a UTC-keyed window files everything before
+05:30 against the day before, so a day-end export run at 20:00 would quietly omit
+the morning's supply orders and nothing would look wrong.
+
+`SalarySlip` is deliberately absent from the **day** export. A payslip is a monthly
+document; there is no one day's payslip, and a pro-rated fragment would be a figure
+nobody could check against anything.
+
+### The double-count flag reads two tables, not a name
+
+`Expense.category.code` is null for a category somebody typed and set for the
+seeded eight. The flag looks only at the null ones, and only for an `amount` that
+exactly equals a `SupplyOrder.totalAmount` on the same branch and the same day.
+That keeps it a statement about two rows rather than a guess about wording — which
+could not work across four languages. It is the last piece of §5 of
+`REQUIREMENTS.md`.

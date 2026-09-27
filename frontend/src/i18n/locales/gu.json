@@ -120,7 +120,9 @@
       "NOTIFICATION_CATEGORY_UNKNOWN": "{{category}} નામની કોઈ શ્રેણી નથી",
       "NOTIFICATION_CATEGORY_REQUIRED": "હાજરીની સૂચનાઓ બંધ કરી શકાતી નથી — ગેરહાજર નોંધાયાની જાણ થવી એ જ એનો હેતુ છે",
       "ANALYTICS_RANGE_REVERSED": "છેલ્લો મહિનો પહેલા મહિના કરતાં પહેલાંનો હોઈ શકે નહીં",
-      "ANALYTICS_RANGE_TOO_LONG": "એક રિપોર્ટમાં એક સાથે વધુમાં વધુ {{max}} મહિના આવી શકે"
+      "ANALYTICS_RANGE_TOO_LONG": "એક રિપોર્ટમાં એક સાથે વધુમાં વધુ {{max}} મહિના આવી શકે",
+      "EXPORT_NO_BRANCHES": "નિકાસ કરવા માટે કોઈ શાખા નથી",
+      "EXPORT_MONTH_INVALID": "આ કોઈ વાસ્તવિક મહિનો નથી"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} જરૂરી છે",
@@ -211,7 +213,8 @@
       "addressLine": "ડિલિવરીનું સરનામું",
       "postalCode": "પિન કોડ",
       "deliveryAgentMembershipId": "ડિલિવરી એજન્ટ"
-    }
+    },
+    "downloadFailed": "એ ફાઇલ ડાઉનલોડ થઈ શકી નથી. ફરી પ્રયાસ કરો."
   },
   "language": {
     "title": "ભાષા",
@@ -1121,5 +1124,18 @@
     "categoryDeliveries": "તમારી ડિલિવરી",
     "categoryDeliveriesHint": "જ્યારે કોઈ ડિલિવરી તમને સોંપાય.",
     "required": "હંમેશા ચાલુ"
+  },
+  "exports": {
+    "title": "નિકાસ",
+    "loading": "નિકાસ કરવા માટે શું છે, ગણાઈ રહ્યું છે…",
+    "recordCount": "{{period}} માટે {{count}} નોંધ.",
+    "recordCount_plural": "{{period}} માટે {{count}} નોંધો.",
+    "nothingToExport": "{{period}} માટે કંઈ નોંધાયું નથી, તેથી નિકાસ કરવા જેવું કંઈ નથી.",
+    "spreadsheet": "સ્પ્રેડશીટ",
+    "spreadsheetHint": "દરેક રેકોર્ડ, એક-એક પંક્તિમાં. Excel માં ખૂલે છે.",
+    "printable": "છાપવા લાયક સારાંશ",
+    "printableHint": "કુલ અને રેકોર્ડ, PDF તરીકે શેર કરી શકાય.",
+    "worthChecking": "પહેલાં તપાસી લો",
+    "overlapExpenseMatchesSupplyOrder": "{{date}} એ \"{{category}}\" હેઠળના {{amount}} એ જ રકમના સપ્લાય ઓર્ડર #{{orderNumber}} સાથે મેળ ખાય છે. જો એ જ ચુકવણી હોય, તો તે બે વાર ગણાઈ છે."
   }
 }

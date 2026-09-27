@@ -335,17 +335,29 @@ user-facing string** — render it with `t('section.key')` from
 - The Hindi, Gujarati and Marathi files were written without a native-speaker
   review. Treat wording fixes from a speaker as expected, not as defects.
 
-**Two files are allowed to break this, and both are fenced.** `notifications/labels.js`
-and `documents/payslip.labels.js` render prose on the server because the device
-cannot: Android draws a notification before app code runs, and a payslip PDF is
-built where the app cannot reach it. A push is legitimate rather than a guess
-because the device reports its own language when it registers its token
-(`DeviceToken.locale`) — the rule's premise stops being true, rather than being
-quietly violated. `npm run lint:notification-prose` fails if anything but
-`notifications/push.js` requires the label file, and `npm run lint:backend-i18n`
-compares all four languages in both dictionaries and checks every code the
-backend can send has an app key. **Do not widen this**: everywhere else, send a
-code and let the device render it.
+**Three files are allowed to break this, and all of them are fenced.** Each one
+earns it the same way — the rule's premise stops being true, rather than being
+quietly violated:
+
+- `notifications/labels.js` — Android draws a notification before app code runs,
+  so there is no moment in which the device could render it. The device reports
+  its own language when it registers its token (`DeviceToken.locale`), so the
+  backend is told rather than guessing.
+- `documents/payslip.labels.js` — a payslip PDF is built where the app cannot
+  reach it, and it is fetched with an explicit `?lang=`.
+- `documents/export.labels.js` — the day-end and month-end spreadsheet and its
+  printable summary (R17). An `.xlsx` cell cannot hold a translation key and
+  neither can a printed page, and this too is fetched with `?lang=`.
+
+`npm run lint:notification-prose` fails if anything but `notifications/push.js`
+requires the notification label file, and `npm run lint:backend-i18n` compares all
+four languages in **all three** dictionaries, checks no translation drops a
+placeholder the English uses, and checks every code the backend can send has an
+app key. **Do not widen this further**: everywhere else, send a code and let the
+device render it — the export's double-count warning travels in its JSON as
+`{ code, params }` for exactly that reason, and only the printed document renders
+it as a sentence. `?lang=` is what makes a *document* the exception; it does not
+license prose in an ordinary API response.
 
 **This applies to the backend too, which does not translate and must not try.**
 It cannot know the reader's language — the choice lives on the device and may
@@ -391,9 +403,38 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
   therefore the `EXPO_PUBLIC_API_URL` that was in `.env` at build time, compiled
   in. Without `frontend/keystore.properties` it is signed with the debug key —
   fine for sideloading, not acceptable for the Play Store.
+- **`frontend/tsconfig.json` must keep excluding `android` and `ios`**, and its
+  `exclude` list must keep repeating the four entries from `expo/tsconfig.base` —
+  `exclude` replaces that list rather than merging with it. `expo/tsconfig.base`
+  sets `allowJs: true` and does not exclude the native directories, so a Gradle
+  build drops 1.4MB of bundled dev-menu JS into `android/app/build`, and that
+  bundle contains `process = this.process || {}`. TypeScript infers it, merges it
+  with the global `process`, and `process.env` loses its index signature. The only
+  symptom is `Property 'EXPO_PUBLIC_API_URL' does not exist on type 'typeof env'`
+  in `api/client.ts` — a file nobody edited, breaking because somebody ran
+  `npm run android`, and clean again the moment `android/` is deleted. Hunting it
+  in the frontend source finds nothing, because it is not there.
 - On Android 12+ the OS draws its own splash before app code runs. It needs
   `windowSplashScreenBackground`, which Expo SDK 51 does not emit — the config
   plugin above supplies it. Without it the launch starts on a black screen.
+
+## Downloading a file to the device
+
+**Never `FileSystem.downloadAsync`.** It does not reject on a non-2xx status, so a
+403 writes `{"message":"Insufficient permissions"}` into the file and shares a
+corrupt one under a `.pdf` or `.xlsx` name. That shipped once already. Fetch
+through `apiClient` — axios rejects, and the caller's existing catch reports it —
+and hand the body to one of the two helpers that exist for this:
+
+- `utils/printDocument.ts` for server-rendered HTML the device prints to PDF
+  (payslips, the export summary).
+- `utils/downloadFile.ts` for binary (the export spreadsheet). It reads the
+  response as a `Blob` and base64-encodes it with `FileReader`, because
+  `expo-file-system` writes text and Node's `Buffer` is not in an Expo bundle —
+  both are core APIs, so this needs no polyfill.
+
+Both split on `Platform.OS === 'web'`, where the useful action is a print dialog
+or an anchor download rather than a share sheet.
 
 ## Environment
 

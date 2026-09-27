@@ -192,6 +192,23 @@ function localMonthRange(key, timeZone) {
   };
 }
 
+/**
+ * 'YYYY-MM-DD HH:MM' as seen in `timeZone` — sortable, unambiguous, and the
+ * branch's own wall clock rather than the server's.
+ *
+ * For a day-end export this is the difference between a sale reading 09:05 and
+ * the same sale reading 03:35: `toISOString()` gives UTC, and `Intl` with no
+ * `timeZone` gives whatever the *server* is set to, which is a third wrong
+ * answer. A report about a branch's day has to be in that branch's clock.
+ */
+function localTimestampKey(instant, timeZone) {
+  const parts = wallClockFormatter(safeZone(timeZone)).formatToParts(instant);
+  const at = (type) => parts.find((p) => p.type === type).value;
+  // Some ICU builds render midnight as hour 24 under hour12: false.
+  const hour = String(Number(at('hour')) % 24).padStart(2, '0');
+  return `${at('year')}-${at('month')}-${at('day')} ${hour}:${at('minute')}`;
+}
+
 /** Calendar-valid 'YYYY-MM', the form SalarySlip.monthYear is stored in. */
 function isRealMonthKey(key) {
   if (!/^\d{4}-\d{2}$/.test(String(key))) return false;
@@ -247,6 +264,7 @@ module.exports = {
   dateKeyOf,
   localDayRange,
   localMonthRange,
+  localTimestampKey,
   todayKeyInZone,
   thisMonthKeyInZone,
   todayInZone,

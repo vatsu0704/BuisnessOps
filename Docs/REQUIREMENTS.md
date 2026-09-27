@@ -920,12 +920,20 @@ and every other task assumes its roles exist.
 ### Task 9 — Day-end and month-end export
 *Requirement: R17.*
 
-1. Day-end and month-end export endpoints covering all four record types.
-2. Spreadsheet output using the library already present for import; a printable summary
-   using the existing document toolkit rather than a second layout system.
-3. Device-side sharing, reusing the existing print path and its hard-won warning about
-   downloads that do not fail on an error status.
-4. Export actions on Reports and the branch day view.
+1. `GET …/exports/day-end` and `…/exports/month-end`, each answering in three
+   representations — bare (JSON), `/workbook` (.xlsx) and `/document` (HTML) — over
+   counter orders, supply orders, expenses, attendance, and payslips for a month.
+   Guarded on `export:dayEnd` / `export:monthEnd` and scoped by `req.branchAccess`, so a
+   cashier exports their own branch through the same endpoint an admin uses.
+2. Spreadsheet output through the `xlsx` package already present for import, with
+   **amounts as numbers** so Excel can sum them; a printable summary through the existing
+   `src/documents/` toolkit rather than a second layout system.
+3. Device-side sharing: `printDocument.ts` for the HTML, and a new `downloadFile.ts` for
+   binary — both fetching through `apiClient`, because `FileSystem.downloadAsync` does not
+   reject on an error status and once shipped a 403 body inside a `.pdf`.
+4. Export actions on Reports (the month) and the branch expense view (the day).
+5. **The double-count flag** §5 left for this task, and the third fenced prose file the
+   documents need — see §5 and the Task 9 section of `PROJECT_FLOW.md`.
 
 ### Task 10 — Restrictions that explain themselves
 *Requirements: R18, R19.*
@@ -987,9 +995,14 @@ stock category** — `MILK, GAS, ELECTRICITY, RENT, REPAIRS, TRANSPORT, PETTY, O
 and supply spend is read from `supply_orders`, where it already is. Expenses are
 everything else.
 
-What remains for Task 8 is the part a category list cannot enforce: a business may add a
-category of its own and call it anything, so the export flags overlap it finds rather
-than pretending the shape of the data prevents it.
+What remained was the part a category list cannot enforce: a business may add a category
+of its own and call it anything. **Closed in Task 9.** The export flags *evidence* — an
+expense in a **custom** category whose amount exactly matches a supply order on the same
+branch and the same day — rather than guessing from the wording, which cannot work across
+four languages and would produce confident nonsense. Seeded categories are never flagged,
+so an electricity bill that happens to equal a flour order is left alone. The flag travels
+as `{ code, params }` in the JSON and is rendered as a sentence only by the printed
+document.
 
 **Is a warehouse a row in the reports, and what happens to the money shops pay it?**
 (R13, Task 8.) **Decided in Task 8, by Vatsal, from three options.** A warehouse *is* a

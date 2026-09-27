@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { FlatList, Pressable, StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing } from '@/theme';
@@ -30,15 +30,19 @@ export default function MonthStrip({
   const { t } = useTranslation();
   const listRef = useRef<FlatList<string>>(null);
 
-  // Keyed on the COUNT, not the array. A pull-to-refresh replaces the report
-  // object and therefore the array, and re-scrolling on that would yank the
-  // strip back to the right just as somebody was reading an earlier month.
-  // Only a change of range changes how many months there are.
-  useEffect(() => {
-    // Not animated: on first paint there is nothing to animate from, and a
-    // visible slide on every range change reads as the screen reloading.
-    listRef.current?.scrollToEnd({ animated: false });
-  }, [months.length]);
+  // Driven by `onContentSizeChange` rather than by an effect on the data.
+  //
+  // `scrollToEnd` in an effect fires as soon as the prop changes, which on a
+  // horizontal list can be *before* it has measured its own content — and an
+  // unmeasured list scrolls nowhere and reports no error, so the strip would
+  // simply sit at the left some of the time and not others. The content-size
+  // callback runs once the width is known, which is the earliest moment the
+  // scroll can actually happen.
+  //
+  // The ref is what keeps it to once per range: that callback also fires on a
+  // pull-to-refresh, and re-scrolling then would yank the strip back to the
+  // right just as somebody was reading an earlier month.
+  const scrolledFor = useRef(0);
 
   return (
     <FlatList
@@ -48,6 +52,13 @@ export default function MonthStrip({
       keyExtractor={(month) => month}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.content}
+      onContentSizeChange={() => {
+        if (scrolledFor.current === months.length) return;
+        scrolledFor.current = months.length;
+        // Not animated: on first paint there is nothing to animate from, and a
+        // visible slide on every range change reads as the screen reloading.
+        listRef.current?.scrollToEnd({ animated: false });
+      }}
       renderItem={({ item }) => {
         const isSelected = item === selected;
         return (

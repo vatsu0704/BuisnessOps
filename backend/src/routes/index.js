@@ -13,6 +13,7 @@ const supplyRoutes = require('./supply.routes');
 const expenseRoutes = require('./expense.routes');
 const notificationRoutes = require('./notification.routes');
 const analyticsRoutes = require('./analytics.routes');
+const exportRoutes = require('./export.routes');
 const inviteRoutes = require('./invite.routes');
 
 const router = express.Router();
@@ -34,6 +35,8 @@ router.use('/businesses', expenseRoutes);
 // spans them and has no businessId to resolve a tenant from.
 router.use('/businesses', analyticsRoutes.scoped);
 router.use('/analytics', analyticsRoutes.router);
+// Requirement 17.
+router.use('/businesses', exportRoutes);
 // Requirement 8. The business-scoped half mounts beside the others; the device
 // and preference half does not, because a phone is registered before a business
 // is chosen — see the header of notification.routes.js.

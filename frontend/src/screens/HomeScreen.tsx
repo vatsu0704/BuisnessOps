@@ -299,11 +299,11 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={styles.wordmark}>BizIQ</Text>
           <View style={styles.topBarSpacer} />
           <LanguageToggle />
-          <NotificationBell />
           <View style={styles.branchChip}>
             <Ionicons name="git-branch-outline" size={13} color={colors.primary} />
             <Text style={styles.branchChipText}>{t('home.branchCount', { count: stats.total })}</Text>
           </View>
+          <NotificationBell />
           <PressableScale testID="home-open-settings" onPress={() => navigation.navigate('Settings')}>
             <LinearGradient
               colors={[colors.primary, colors.primaryDark]}

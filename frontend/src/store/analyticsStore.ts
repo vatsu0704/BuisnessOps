@@ -39,7 +39,10 @@ import type { BranchMonthlyReport, CrossBusinessReport } from '@/types/analytics
  * happened.
  */
 
-type Window = { from?: string; to?: string };
+/** The month window a report was asked for. Named for what it is rather than
+ *  `Window`, which shadows the DOM lib type and turns a mistake here into an
+ *  error message about the browser global. */
+type MonthRange = { from?: string; to?: string };
 
 type AnalyticsStore = {
   loadedFor: string | null;
@@ -52,29 +55,29 @@ type AnalyticsStore = {
   isCrossLoading: boolean;
   crossError: string | null;
 
-  load: (businessId: string | null | undefined, window: Window) => Promise<void>;
+  load: (businessId: string | null | undefined, range: MonthRange) => Promise<void>;
   refresh: () => Promise<void>;
-  loadCross: (window: Window) => Promise<void>;
+  loadCross: (range: MonthRange) => Promise<void>;
   refreshCross: () => Promise<void>;
   reset: () => void;
 };
 
-const keyOf = (businessId: string, { from, to }: Window) => `${businessId}|${from ?? ''}|${to ?? ''}`;
-const crossKeyOf = ({ from, to }: Window) => `${from ?? ''}|${to ?? ''}`;
+const keyOf = (businessId: string, { from, to }: MonthRange) => `${businessId}|${from ?? ''}|${to ?? ''}`;
+const crossKeyOf = ({ from, to }: MonthRange) => `${from ?? ''}|${to ?? ''}`;
 
 /** Bookkeeping, not state — a pending promise in the store re-renders every subscriber twice. */
 let pending: { key: string; promise: Promise<void> } | null = null;
 let crossPending: { key: string; promise: Promise<void> } | null = null;
 
 export const useAnalyticsStore = create<AnalyticsStore>((set, get) => {
-  async function fetchGrid(businessId: string, window: Window) {
-    const key = keyOf(businessId, window);
+  async function fetchGrid(businessId: string, range: MonthRange) {
+    const key = keyOf(businessId, range);
     if (pending?.key === key) return pending.promise;
 
     const promise = (async () => {
       set({ isLoading: true, error: null });
       try {
-        const report = await getBranchMonthly(businessId, window);
+        const report = await getBranchMonthly(businessId, range);
         set({ report, loadedFor: key, isLoading: false, error: null });
       } catch (err) {
         // `report` is deliberately left alone.
@@ -88,14 +91,14 @@ export const useAnalyticsStore = create<AnalyticsStore>((set, get) => {
     return promise;
   }
 
-  async function fetchCross(window: Window) {
-    const key = crossKeyOf(window);
+  async function fetchCross(range: MonthRange) {
+    const key = crossKeyOf(range);
     if (crossPending?.key === key) return crossPending.promise;
 
     const promise = (async () => {
       set({ isCrossLoading: true, crossError: null });
       try {
-        const cross = await getCrossBusiness(window);
+        const cross = await getCrossBusiness(range);
         set({ cross, crossLoadedFor: key, isCrossLoading: false, crossError: null });
       } catch (err) {
         set({ isCrossLoading: false, crossError: extractErrorMessage(err) });
@@ -119,13 +122,13 @@ export const useAnalyticsStore = create<AnalyticsStore>((set, get) => {
     isCrossLoading: false,
     crossError: null,
 
-    async load(businessId, window) {
+    async load(businessId, range) {
       if (!businessId) {
         get().reset();
         return;
       }
-      if (get().loadedFor === keyOf(businessId, window)) return;
-      await fetchGrid(businessId, window);
+      if (get().loadedFor === keyOf(businessId, range)) return;
+      await fetchGrid(businessId, range);
     },
 
     /** Re-fetch whatever is currently loaded, keeping the same window. */
@@ -136,9 +139,9 @@ export const useAnalyticsStore = create<AnalyticsStore>((set, get) => {
       await fetchGrid(businessId, { from: from || undefined, to: to || undefined });
     },
 
-    async loadCross(window) {
-      if (get().crossLoadedFor === crossKeyOf(window)) return;
-      await fetchCross(window);
+    async loadCross(range) {
+      if (get().crossLoadedFor === crossKeyOf(range)) return;
+      await fetchCross(range);
     },
 
     async refreshCross() {

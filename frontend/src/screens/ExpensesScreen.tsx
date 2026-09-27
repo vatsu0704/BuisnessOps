@@ -8,6 +8,9 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { deleteExpense, getExpenseDay, getExpenseMonth } from '@/api/expenses';
 import { extractErrorMessage } from '@/api/client';
+import { shareDayEndDocument, shareDayEndWorkbook } from '@/api/exports';
+import { useExportPreview } from '@/hooks/useExportPreview';
+import { hasCapability as canDo } from '@/utils/permissions';
 import { useBranches } from '@/hooks/useBranches';
 import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
 import { useMonthCursor } from '@/hooks/useMonthCursor';
@@ -18,6 +21,7 @@ import { categoryLabel } from '@/utils/expenseCategory';
 import { dateKeyFromApi, formatDate, formatTime } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import ExportActions from '@/components/ExportActions';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -61,6 +65,16 @@ export default function ExpensesScreen({ navigation, route }: Props) {
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const activeBranchId = branchId ?? branches[0]?.id ?? null;
+
+  // Requirement 17's day-end export, for today at the branch being looked at.
+  // This is "the branch day view" the requirement names; the month-end half lives
+  // on Reports, where the month cursor already is.
+  const canExport = canDo(membership, 'export:dayEnd');
+  const exportPreview = useExportPreview(
+    'DAY',
+    { branchId: activeBranchId ?? undefined },
+    canExport && !!activeBranchId
+  );
 
   const load = useCallback(async () => {
     if (!businessId || !activeBranchId) return;
@@ -333,6 +347,21 @@ export default function ExpensesScreen({ navigation, route }: Props) {
                   )}
                 </View>
               </AnimatedEntrance>
+
+              {canExport && activeBranchId && businessId ? (
+                <AnimatedEntrance delay={step(4)} style={styles.block}>
+                  <ExportActions
+                    report={exportPreview.report}
+                    periodLabel={t('expenses.todaySection')}
+                    onExportWorkbook={() =>
+                      shareDayEndWorkbook(businessId, { branchId: activeBranchId })
+                    }
+                    onExportDocument={() =>
+                      shareDayEndDocument(businessId, { branchId: activeBranchId })
+                    }
+                  />
+                </AnimatedEntrance>
+              ) : null}
             </>
           )}
         </ScrollView>

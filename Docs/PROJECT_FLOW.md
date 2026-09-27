@@ -9,7 +9,7 @@ The product is named **BizIQ** (Android package `com.biziq.app`), renamed from t
 **A second track is now running alongside this one.** *Branch Operations*
 (Section 13, driven by [REQUIREMENTS.md](REQUIREMENTS.md)) turns BizIQ from a
 product that analyses a business into one that runs it — counter billing,
-supply orders, expenses, net profit. Tasks 1-8 of that track have landed; Task 1
+supply orders, expenses, net profit. Tasks 1-9 of that track have landed; Task 1
 amends Phase 0 (see the note under the Phase 0 exit criterion) and Task 8
 delivers part of Phase 4.
 
@@ -353,7 +353,7 @@ got to.
 | 6 | Expenses and the daily log | R10 | ✅ done |
 | 7 | Firebase notifications | R2, R8 | ✅ done |
 | 8 | Analytics and net profit | R13, R15 | ✅ done |
-| 9 | Day-end and month-end export | R17 | ⏳ not started |
+| 9 | Day-end and month-end export | R17 | ✅ done |
 | 10 | Restrictions that explain themselves | R18, R19 | ⏳ not started |
 
 ### Task 1 — Roles and the permission matrix ✅
@@ -1116,3 +1116,105 @@ window's default and its two refusals, the cross-business roll-up agreeing with 
 same business's own grid, and a brand-new business with no branches returning a
 complete report of zeroes rather than a partial object the app would read
 `undefined` off.
+
+### Task 9 — Day-end and month-end export ✅
+
+Requirement 17. "Whatever entries were made across the whole day, they should be
+able to export it in the evening — and for the whole month too."
+
+**Six routes, three representations, one query.** `exports/day-end` and
+`exports/month-end` each answer bare (JSON), `/workbook` (.xlsx) and `/document`
+(HTML). The data is assembled once by `export.service.js` for all three, so the
+spreadsheet and the printed page cannot disagree — neither renderer does any
+arithmetic of its own. A representation is a path rather than a `?format=`, so the
+content type is decided by the route and a client cannot ask for a spreadsheet and
+be handed markup.
+
+**Read-only, nothing snapshotted**, for the same reason `analytics.service.js` is.
+That is what makes R17's "exports work for any past date, so losing the file is
+recoverable" true by construction rather than by a retention policy.
+
+**Four record types, two date shapes.** Counter orders, expenses and attendance are
+keyed on `@db.Date` columns already holding the branch's own calendar day, so a day
+is one value and a month a plain range. Supply orders are keyed on `placedAt`, an
+*instant*, so they need `localDayRange` / `localMonthRange`. Getting that wrong is
+silent: in IST a UTC-keyed window files everything before 05:30 against the day
+before, so an export run at 20:00 would omit the morning. Payroll is in the month
+export and not the day one, because there is no such thing as one day's payslip and
+a pro-rated fragment would invent a figure nobody could check.
+
+**Every branch is asked about its own day**, the rule `listExpenseCompliance`
+already follows: with no date each branch uses its own local today, and with one
+given every branch uses that date, which is what makes "what happened on Tuesday"
+answerable. With no branch the export covers every branch the caller can reach —
+which is what makes it *the whole day's entries* rather than one till's.
+
+**§5's last open question is closed here.** The seeded expense categories contain no
+raw-material category, so supply spend cannot normally be logged twice; but a
+business may add a category of its own and call it anything. The export flags
+**evidence, not wording**: an expense in a *custom* category whose amount exactly
+matches a supply order on the same branch and the same day. That is a fact about two
+rows. A name-based heuristic was rejected — it cannot work across four languages,
+and it would produce confident nonsense. Seeded categories are never flagged, so an
+electricity bill that happens to equal a flour order is left alone.
+
+The flag travels in the JSON as `{ code, params }` and is rendered by the app;
+only the printed document renders it as a sentence. That is the boundary the whole
+task is fenced on.
+
+**The prose fence went from two files to three, deliberately and with the reason
+written down.** `documents/export.labels.js` joins `notifications/labels.js` and
+`payslip.labels.js`: an `.xlsx` cell cannot hold a translation key and neither can a
+printed page, and the document is fetched with an explicit `?lang=` — exactly as
+`GET /salary-slips/:id/document` already is, so the backend is *told* the language
+rather than guessing it. `lint:backend-i18n` now compares 96 export labels across
+four languages alongside the other two dictionaries, and CLAUDE.md records that
+`?lang=` licenses a *document*, not an ordinary API response.
+
+**The spreadsheet holds numbers, not formatted text.** Every money cell is a
+JavaScript number; `"₹2,000.00"` is text to Excel and cannot be summed, sorted or
+charted, which is the entire reason somebody asked for a spreadsheet rather than a
+PDF. Dates go the other way — ISO strings, never date serials, because a serial is
+interpreted against the *reader's* locale and the same file would read 25/09 in
+India and 09/25 in the US. Both are asserted by reading the generated workbook back
+in the test. One flat table per record type with a Branch column, not a sheet per
+branch: that is what a pivot table wants, and a one-branch export and a forty-branch
+export are then the same shape. Sheet names are translated, and sanitised of the
+characters Excel refuses.
+
+**One endpoint, two audiences, no role names.** `export:dayEnd` and
+`export:monthEnd` were already in the matrix and are held by CASHIER as well as the
+admin roles. The capability says whether you may export; `req.branchAccess` says
+what. So a cashier asking for the whole business is scoped to their own branch, and
+no narrower endpoint is needed.
+
+**Device side reuses the existing print path and adds one helper.**
+`printDocument.ts` turns the HTML into a PDF; `downloadFile.ts` is new, for binary.
+Both fetch through `apiClient` because **`FileSystem.downloadAsync` does not reject
+on a non-2xx** — it once shipped a 403 JSON body inside a `.pdf`. The binary helper
+reads a `Blob` and base64-encodes it with `FileReader`, since `expo-file-system`
+writes text and `Buffer` is not in an Expo bundle; both are core APIs, so no
+polyfill. CLAUDE.md now has this as its own section, because the rule has already
+cost one bug and now has two call sites.
+
+**`ExportActions` is stacked rows, not two side-by-side buttons** — the shape that
+breaks in Gujarati, where both labels run longer than the English. Each row gets the
+full width for a label and a sentence saying what the file actually is, which
+matters because "spreadsheet" and "printable summary" are not self-evidently
+different to somebody who just wants the day's figures. It also says what it *would*
+export before you press: a count, or "nothing was entered", and the double-count
+warning up front rather than left to be discovered inside the file. At 393dp the
+text column is 257dp, which holds every label and hint in all four languages on one
+line.
+
+`backend/tests/export.test.js` — 25 tests: all four record types in one export with
+totals that add up, a voided token listed and not counted, every reachable branch
+when none is named, a past date, the overlap flagged from a custom category and
+*not* from a seeded one, the generated workbook read back and inspected (sheet
+names, amounts as numbers, dates as ISO text, a total row matching the JSON,
+translated headers, timestamps in the branch's own clock rather than UTC, a payslips
+sheet on the month export only), the document's CSP
+headers and its escaping of a branch named `<script>`, the overlap as a sentence
+there and a code in JSON, the month rolling up rather than one day of it, an invalid
+month refused, a cashier scoped to their own branch, a branch they cannot reach
+refused, and a role with no export capability refused on all three representations.

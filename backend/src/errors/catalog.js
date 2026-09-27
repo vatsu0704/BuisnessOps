@@ -174,6 +174,10 @@ const API_MESSAGES = {
   RECORD_REFERENCE_MISSING: 'Referenced record does not exist',
   INTERNAL_ERROR: 'Internal Server Error',
 
+  // --- Export (requirement 17) ---------------------------------------------
+  EXPORT_NO_BRANCHES: 'There is no branch to export',
+  EXPORT_MONTH_INVALID: 'That is not a real month',
+
   // --- Analytics and net profit (requirements 13 and 15) -------------------
   ANALYTICS_RANGE_REVERSED: 'The last month cannot come before the first',
   ANALYTICS_RANGE_TOO_LONG: 'A report can cover at most {{max}} months at a time',

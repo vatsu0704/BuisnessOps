@@ -601,6 +601,29 @@ function businessRollUp(rows, months) {
  * reports its own total and the combined figure is withheld rather than summed
  * into a number that means nothing.
  */
+/**
+ * One window for every business being compared.
+ *
+ * With both ends given there is nothing to resolve. With either missing, the
+ * default is anchored to the timezone of the **first** readable business that has
+ * a branch — an arbitrary choice, but arbitrary and *shared* beats each business
+ * picking its own, which is the bug this exists to prevent.
+ */
+async function resolveCrossBusinessWindow(readable, { from, to }) {
+  if (from && to) return { from, to };
+
+  const branch = readable.length
+    ? await prisma.branch.findFirst({
+        where: { businessId: { in: readable.map((membership) => membership.businessId) } },
+        orderBy: { createdAt: 'asc' },
+        select: { timezone: true },
+      })
+    : null;
+
+  const resolved = resolveWindow({ from, to }, safeZone(branch?.timezone, 'UTC'));
+  return { from: resolved.from, to: resolved.to };
+}
+
 async function getCrossBusiness(userId, { from, to } = {}) {
   const memberships = await prisma.membership.findMany({
     where: { userId, status: 'ACTIVE' },
@@ -610,14 +633,26 @@ async function getCrossBusiness(userId, { from, to } = {}) {
 
   const readable = memberships.filter((membership) => roleHas(membership.role, 'analytics:viewBusiness'));
 
+  // **Resolved once, here, and passed down as concrete months.**
+  //
+  // `getBranchMonthly` defaults an omitted window from its own business's first
+  // branch, which is right when one business is being read and wrong the moment
+  // several are compared: a business in Auckland rolls into a new month some
+  // seventeen hours before one in Kolkata, so on that day the two would resolve
+  // *different* six-month windows. Every row would then be labelled with the
+  // first business's months while holding another's, and the combined total
+  // would add September to October. Passing explicit months makes every business
+  // answer the same question.
+  const window = await resolveCrossBusinessWindow(readable, { from, to });
+
   const businesses = [];
   for (const membership of readable) {
     // Sequential on purpose: each call already fans out internally, and running
     // every business's fan-out at once would multiply the peak connection count
     // by the number of businesses for no gain a person would notice.
     const grid = await getBranchMonthly(membership.businessId, {
-      from,
-      to,
+      from: window.from,
+      to: window.to,
       accessibleBranchIds: null,
       includeBusiness: true,
     });
@@ -642,8 +677,10 @@ async function getCrossBusiness(userId, { from, to } = {}) {
   const comparable = currencies.size <= 1;
 
   return {
-    from: businesses[0]?.from ?? null,
-    to: businesses[0]?.to ?? null,
+    // The window every business was asked for, not whatever the first row
+    // happened to resolve.
+    from: window.from,
+    to: window.to,
     businessCount: businesses.length,
     currency: comparable ? (businesses[0]?.currency ?? null) : null,
     // False when the businesses do not share a currency, which is when the
