@@ -24,11 +24,11 @@
       "USER_NOT_FOUND": "આ ખાતું હવે અસ્તિત્વમાં નથી.",
       "TENANT_BUSINESS_ID_REQUIRED": "કોઈ વ્યવસાય પસંદ કરેલ નથી.",
       "TENANT_ACCESS_DENIED": "હવે આ વ્યવસાય પર તમારી પહોંચ નથી.",
-      "PERMISSION_DENIED": "તમારી ભૂમિકા આની પરવાનગી આપતી નથી.",
-      "BRANCH_ACCESS_DENIED": "આ શાખા પર તમારી પહોંચ નથી.",
-      "BRANCH_ACCESS_DENIED_DESTINATION": "જે શાખામાં તમે ખસેડી રહ્યા છો તેના પર તમારી પહોંચ નથી.",
-      "STAFF_ACCESS_DENIED": "આ કર્મચારી પર તમારી પહોંચ નથી.",
-      "SALARY_SLIP_ACCESS_DENIED": "આ પગાર પર્ચી પર તમારી પહોંચ નથી.",
+      "PERMISSION_DENIED": "આ તમારી ભૂમિકાના દાયરામાં નથી.",
+      "BRANCH_ACCESS_DENIED": "તમે ફક્ત તમને સોંપાયેલી શાખાઓમાં જ કામ કરી શકો છો. આ શાખા સોંપવા માટે વ્યવસ્થાપકને કહો.",
+      "BRANCH_ACCESS_DENIED_DESTINATION": "તમે કોઈને ફક્ત તમને સોંપાયેલી શાખામાં જ મોકલી શકો છો.",
+      "STAFF_ACCESS_DENIED": "તમે ફક્ત તમારી શાખાઓના કર્મચારીઓનો રેકોર્ડ ખોલી શકો છો.",
+      "SALARY_SLIP_ACCESS_DENIED": "તમે ફક્ત તમારી જ પગાર સ્લિપ ખોલી શકો છો.",
       "PAY_SET_NOT_PERMITTED": "તમને પગાર નક્કી કરવાની પરવાનગી નથી.",
       "PAY_CHANGE_NOT_PERMITTED": "તમને પગાર બદલવાની પરવાનગી નથી.",
       "MEMBERSHIP_REVOKE_OUTRANKED": "તમારા જેટલી કે તેથી વધુ પહોંચ ધરાવતી વ્યક્તિને તમે દૂર કરી શકતા નથી.",
@@ -122,7 +122,9 @@
       "ANALYTICS_RANGE_REVERSED": "છેલ્લો મહિનો પહેલા મહિના કરતાં પહેલાંનો હોઈ શકે નહીં",
       "ANALYTICS_RANGE_TOO_LONG": "એક રિપોર્ટમાં એક સાથે વધુમાં વધુ {{max}} મહિના આવી શકે",
       "EXPORT_NO_BRANCHES": "નિકાસ કરવા માટે કોઈ શાખા નથી",
-      "EXPORT_MONTH_INVALID": "આ કોઈ વાસ્તવિક મહિનો નથી"
+      "EXPORT_MONTH_INVALID": "આ કોઈ વાસ્તવિક મહિનો નથી",
+      "BRANCH_ALREADY_HAS_CASHIER": "એક શાખામાં ફક્ત એક જ કેશિયર હોઈ શકે, અને {{branch}} ના કેશિયર {{cashier}} છે.",
+      "CASHIER_ALREADY_HAS_BRANCH": "{{branch}} ઉમેરી શકાતી નથી — એક કેશિયર પાસે એક જ શાખા હોય છે, અને તેમની પાસે {{currentBranch}} છે."
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} જરૂરી છે",
@@ -171,7 +173,8 @@
       "CATEGORY_NOTHING_TO_UPDATE": "નામ બદલો, અથવા શ્રેણી પાછી ખેંચો",
       "DEVICE_TOKEN_REQUIRED": "આ ડિવાઇસ સૂચનાઓ માટે નોંધાઈ શક્યું નહીં",
       "NOTIFICATION_ENABLED_REQUIRED": "પસંદ કરો કે આ ચાલુ કરવું છે કે બંધ",
-      "FIELD_MUST_BE_MONTH": "{{field}} YYYY-MM સ્વરૂપમાં મહિનો હોવો જોઈએ"
+      "FIELD_MUST_BE_MONTH": "{{field}} YYYY-MM સ્વરૂપમાં મહિનો હોવો જોઈએ",
+      "CASHIER_NEEDS_ONE_BRANCH": "એક કેશિયર બરાબર એક જ શાખામાં કામ કરે છે, તેથી એક પસંદ કરો."
     },
     "field": {
       "name": "નામ",
@@ -364,7 +367,10 @@
     "expensesTitle": "આજના ખર્ચ",
     "expensesSubtitle": "શું ગયું, શું આવ્યું",
     "expenseGapsTitle": "જે શાખાઓને પૂછવાનું છે",
-    "expenseGapsSubtitle": "કોણે આજનો ખર્ચ નોંધ્યો નથી"
+    "expenseGapsSubtitle": "કોણે આજનો ખર્ચ નોંધ્યો નથી",
+    "noBranchBadge": "હજુ કોઈ શાખા નથી",
+    "noBranchTitle": "તમને કોઈ શાખા સોંપાઈ નથી",
+    "noBranchBody": "તમારું ખાતું અને ભૂમિકા સાચાં છે — ફક્ત તેમની સાથે કોઈ શાખા જોડાયેલી નથી, તેથી અહીં બતાવવા માટે કંઈ નથી. માલિક કે વ્યવસ્થાપકને એક શાખા સોંપવા કહો."
   },
   "phase": {
     "examplesLabel": "તમે શું પૂછી શકશો"
@@ -745,7 +751,25 @@
     "removeBranchTitle": "શાખાની પહોંચ દૂર કરવી?",
     "removeBranchBody": "{{name}} હવે {{branch}} જોઈ શકશે નહીં.",
     "removeBranchHint": "પહોંચ દૂર કરવા માટે શાખા પર ટેપ કરો",
-    "removeBranchAccessibility": "{{branch}} ની પહોંચ દૂર કરો"
+    "removeBranchAccessibility": "{{branch}} ની પહોંચ દૂર કરો",
+    "cashierRule": "એક શાખા, અને તેના પર એક કેશિયર.",
+    "assignBranch": "શાખા સોંપો",
+    "changeBranch": "શાખા બદલો",
+    "pickBranch": "કઈ શાખા?",
+    "branchHeldBy": "કેશિયર: {{name}}",
+    "branchFree": "હજુ કોઈ કેશિયર નથી",
+    "cashierNoBranch": "હજુ કોઈ શાખા નથી — ગલ્લો ખોલતાં પહેલાં તેમને એક શાખા આપો.",
+    "swapTitle": "શાખા બદલવી?",
+    "swapBody": "{{branch}} ના કેશિયર {{cashier}} છે. તે {{name}} ને આપવાથી {{cashier}} પાસે કોઈ શાખા રહેશે નહીં.",
+    "swapAlsoVacates": "પછી {{currentBranch}} માં પણ કોઈ કેશિયર રહેશે નહીં.",
+    "swapConfirm": "બદલી નાખો",
+    "moveTitle": "તેમની શાખા બદલવી?",
+    "moveBody": "{{name}} {{currentBranch}} સંભાળે છે. તેમને {{branch}} મોકલવાથી {{currentBranch}} માં કોઈ કેશિયર રહેશે નહીં.",
+    "conflictsTitle": "તમારો નિર્ણય જોઈએ",
+    "conflictsBody": "આ ત્યારે બન્યા હતા જ્યારે એક શાખા પર એક કેશિયરનો નિયમ નહોતો. તમારા માટે કંઈ બદલાયું નથી — નક્કી કરો કે કઈ શાખા કોની પાસે રહે.",
+    "conflictSharedBranch": "{{branch}} પર {{count}} કેશિયર છે: {{names}}",
+    "conflictNoBranch": "{{name}} પાસે કોઈ શાખા નથી",
+    "conflictTooManyBranches": "{{name}} પાસે {{count}} શાખાઓ છે"
   },
   "inviteMember": {
     "title": "સભ્યને આમંત્રિત કરો",
@@ -764,7 +788,14 @@
     "branchSection": "તેઓ કઈ શાખાઓની ઍક્સેસ કરી શકે છે?",
     "noBranches": "પહેલા શાખા ઉમેરો.",
     "submit": "આમંત્રણ મોકલો",
-    "submitting": "આમંત્રિત કરી રહ્યાં છીએ..."
+    "submitting": "આમંત્રિત કરી રહ્યાં છીએ...",
+    "cashierBranchHint": "એક કેશિયર બરાબર એક જ શાખામાં કામ કરે છે. તે જ શાખા પસંદ કરો જે તેઓ સંભાળશે.",
+    "branchHeldBy": "આ શાખાના કેશિયર {{name}} છે",
+    "branchFree": "હજુ કોઈ કેશિયર નથી",
+    "swapTitle": "તે શાખા પર પહેલેથી એક કેશિયર છે",
+    "swapBody": "{{branch}} ના કેશિયર {{cashier}} છે. આમને બોલાવવાથી શાખા તેમની પાસેથી લઈ લેવાશે અને તેમની પાસે કોઈ શાખા રહેશે નહીં.",
+    "swapConfirm": "બોલાવો અને શાખા બદલો",
+    "branchTheirs": "તેમની શાખા"
   },
   "month": {
     "1": "જાન્યુઆરી",
@@ -1137,5 +1168,53 @@
     "printableHint": "કુલ અને રેકોર્ડ, PDF તરીકે શેર કરી શકાય.",
     "worthChecking": "પહેલાં તપાસી લો",
     "overlapExpenseMatchesSupplyOrder": "{{date}} એ \"{{category}}\" હેઠળના {{amount}} એ જ રકમના સપ્લાય ઓર્ડર #{{orderNumber}} સાથે મેળ ખાય છે. જો એ જ ચુકવણી હોય, તો તે બે વાર ગણાઈ છે."
+  },
+  "permissions": {
+    "denied": "ફક્ત {{roles}} જ {{action}} શકે છે.",
+    "deniedNobody": "આ વ્યવસાયમાં કોઈ પણ {{action}} શકતું નથી.",
+    "roleJoin": ", ",
+    "askSomeone": "તેમાંથી કોઈને આ કરવા કહો, અથવા તમારી ભૂમિકા બદલાવો.",
+    "actions": {
+      "businessCreate": "બીજો વ્યવસાય શરૂ કરી",
+      "branchCreate": "શાખા ઉમેરી",
+      "branchUpdate": "શાખાની સેટિંગ બદલી",
+      "branchAllAccess": "દરેક શાખામાં કામ કરી",
+      "teamView": "ટીમમાં કોણ છે તે જોઈ",
+      "teamInvite": "કોઈને ટીમમાં બોલાવી",
+      "teamRevoke": "કોઈની પહોંચ દૂર કરી",
+      "teamManageBranchAccess": "કોઈની શાખાઓ બદલી",
+      "staffCreate": "કર્મચારી ઉમેરી",
+      "staffUpdate": "કર્મચારીનો રેકોર્ડ બદલી",
+      "staffViewOthers": "સાથીનો રેકોર્ડ ખોલી",
+      "staffViewAllBranches": "દરેક શાખાના કર્મચારી જોઈ",
+      "staffSetPay": "કોઈનો પગાર નક્કી કરી",
+      "attendanceMarkOthers": "બીજા કોઈની હાજરી નોંધી",
+      "attendanceViewRoster": "કોઈ દિવસની શાખાની હાજરી જોઈ",
+      "attendancePunchAnywhere": "શાખાની બહારથી હાજરી નોંધી",
+      "payrollView": "બીજાની પગાર સ્લિપ જોઈ",
+      "payrollRun": "પગાર તૈયાર કરી અને આખરી કરી",
+      "workCalendarManage": "સાપ્તાહિક રજા અને રજાઓની યાદી બદલી",
+      "dataSourceManage": "ડેટા સ્રોત જોડી અને વેચાણ ફાઇલ ચઢાવી",
+      "productView": "ઉત્પાદન સૂચિ જોઈ",
+      "productManage": "ઉત્પાદન ઉમેરી, બદલી અને તેના ભાવ નક્કી કરી",
+      "counterOrderCreate": "કાઉન્ટર ઓર્ડર ખોલી અને ટોકન આપી",
+      "counterOrderEdit": "ઓર્ડર થઈ ગયા પછી તેને બદલી",
+      "counterOrderVoid": "ઓર્ડર રદ કરી",
+      "counterOrderCloseDay": "શાખાનો દિવસ બંધ કરી",
+      "supplyItemView": "કાચા માલની સૂચિ જોઈ",
+      "supplyItemManage": "કાચો માલ ઉમેરી, તેના ભાવ નક્કી કરી અને દૂર કરી",
+      "supplyOrderView": "માલના ઓર્ડર જોઈ",
+      "supplyOrderCreate": "ગોદામથી કાચો માલ મંગાવી",
+      "supplyOrderFulfil": "માલનો ઓર્ડર સ્વીકારી, પેક કરી અને મોકલી",
+      "supplyOrderDeliver": "ઓર્ડર લઈ જઈ અને પહોંચ્યો એમ નોંધી",
+      "supplyOrderDelay": "ઓર્ડર પર વિલંબ નોંધી",
+      "expenseView": "શાખાનો ખર્ચ જોઈ",
+      "expenseLog": "શાખાનો ખર્ચ નોંધી",
+      "expenseViewAllBranches": "દરેક શાખાનો ખર્ચ જોઈ",
+      "analyticsViewBranch": "શાખાના પોતાના આંકડા જોઈ",
+      "analyticsViewBusiness": "દરેક શાખાની મહિના-દર-મહિના તુલના જોઈ",
+      "exportDayEnd": "એક દિવસની નોંધો નિકાસ કરી",
+      "exportMonthEnd": "એક મહિનાની નોંધો નિકાસ કરી"
+    }
   }
 }

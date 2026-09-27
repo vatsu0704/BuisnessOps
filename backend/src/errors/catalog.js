@@ -34,11 +34,23 @@ const API_MESSAGES = {
   // --- Tenancy and permissions --------------------------------------------
   TENANT_BUSINESS_ID_REQUIRED: 'businessId is required in the route',
   TENANT_ACCESS_DENIED: 'You do not have access to this business',
-  PERMISSION_DENIED: 'Insufficient permissions',
-  BRANCH_ACCESS_DENIED: 'You do not have access to this branch',
-  BRANCH_ACCESS_DENIED_DESTINATION: 'You do not have access to the destination branch',
-  STAFF_ACCESS_DENIED: 'You do not have access to this staff member',
-  SALARY_SLIP_ACCESS_DENIED: 'You do not have access to this salary slip',
+  // Requirement 19: a refusal says what the RULE is, not that a rule exists.
+  //
+  // These five all used to assert the existence of a boundary and nothing else,
+  // which tells the reader nothing they can act on. The English here is the
+  // fallback — curl, the logs, and an app too old to know the code — so it says
+  // as much as a sentence with no parameters can. The app says more: for
+  // PERMISSION_DENIED it renders the refused capability and the roles that hold
+  // it, both derived from the matrix it already mirrors, so the sentence names
+  // the actual rule and whom to ask. The `capability` param is what makes that
+  // possible and is why it rides along on every refusal from requirePermission.
+  PERMISSION_DENIED: 'This is not something your role can do',
+  BRANCH_ACCESS_DENIED: 'You can only work in the branches you have been assigned to',
+  BRANCH_ACCESS_DENIED_DESTINATION:
+    'You can only move someone to a branch you have been assigned to',
+  STAFF_ACCESS_DENIED:
+    'You can only open the records of employees at your own branches',
+  SALARY_SLIP_ACCESS_DENIED: 'You can only open your own payslips',
   // Renamed from PAY_{SET,CHANGE}_REQUIRES_OWNER_ADMIN: a cashier sets their
   // own branch's salaries now, so naming two roles in the code was a statement
   // that had stopped being true.
@@ -116,6 +128,15 @@ const API_MESSAGES = {
   MEMBERSHIP_SELF_REVOKE: 'You cannot revoke your own access',
   MEMBERSHIP_OWNER_REVOKE_REQUIRES_OWNER: 'Only an owner can revoke another owner',
   MEMBERSHIP_BRANCH_ACCESS_NOT_FOUND: 'This member does not have access to that branch',
+  // Requirement 18 — one cashier per branch, one branch per cashier. Both are
+  // 409: nothing is malformed and nobody is unauthorised, the world is simply in
+  // a state that conflicts with the request, and the same request sent again
+  // with `confirm: true` succeeds. The blocker travels as a param so the app can
+  // name them in the confirmation — the admin's next move depends on knowing who.
+  BRANCH_ALREADY_HAS_CASHIER:
+    'A branch can only have one cashier, and {{cashier}} is the cashier for {{branch}}. Confirm to move the branch to this cashier instead',
+  CASHIER_ALREADY_HAS_BRANCH:
+    'A cashier can only have one branch, and this one has {{currentBranch}}. Confirm to move them to {{branch}}',
   INVITE_BRANCHES_NOT_IN_BUSINESS: 'One or more branchIds do not belong to this business',
   INVITE_NOT_FOUND: 'Invite not found in this business',
   INVITE_ALREADY_ACCEPTED: 'This invite was already accepted — revoke the membership instead',
@@ -210,6 +231,8 @@ const FIELD_MESSAGES = {
   DATETIME_IN_PAST: '{{field}} cannot be in the past',
   DELAY_MINUTES_RANGE: 'delayMinutes must be a whole number of minutes between 1 and {{max}}',
   FIELD_MAX_LENGTH: '{{field}} must be {{max}} characters or fewer',
+  // Requirement 18, caught before an invite is created rather than at the write.
+  CASHIER_NEEDS_ONE_BRANCH: 'a cashier works at exactly one branch, so choose one',
 
   // Per-row diagnostics from a CSV/Excel upload. `column` is the literal
   // header in the uploaded file, so it stays untranslated in every language —

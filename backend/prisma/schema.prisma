@@ -306,9 +306,23 @@ model Membership {
   @@map("memberships")
 }
 
-// Explicit branch scoping for MANAGER/STAFF roles. OWNER/ADMIN roles ignore
-// this table and have implicit all-branch access within their business
-// (enforced in the tenant-resolution middleware, not here).
+// Explicit branch scoping. A role holding `branch:allAccess` — OWNER, ADMIN,
+// MANAGER, WAREHOUSE, DELIVERY_AGENT — ignores this table and reaches every
+// branch in its business implicitly (enforced in the tenant-resolution
+// middleware, not here). What is left is STAFF and CASHIER.
+//
+// Requirement 18 constrains the CASHIER case to 1:1 — one cashier per branch,
+// one branch per cashier — and that rule CANNOT be a database constraint, which
+// is worth knowing before looking for one. The condition is "at most one row per
+// branch whose membership's ROLE is CASHIER", and the role lives on `memberships`;
+// a Postgres unique index cannot reach across the join. It is enforced instead in
+// services/cashierAssignment.service.js, under a `SELECT … FOR UPDATE` on the
+// branch and the membership, which is what makes the check-then-write atomic.
+//
+// Rows deliberately SURVIVE a membership being revoked, so re-inviting someone
+// restores the scope they had. The 1:1 rule therefore counts only rows whose
+// membership is ACTIVE — otherwise a revoked cashier would keep a branch occupied
+// forever.
 model BranchAccess {
   id           String     @id @default(uuid())
   membershipId String

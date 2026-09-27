@@ -10,7 +10,9 @@ businesses), and Attendance, Payroll & Salary Slips. Every message the server
 sends is translated too, which Flow 18 checks. Reports is now the real branch ×
 month grid with net profit (Flow 17r), and compares every business one account
 holds (Flow 17s); the day and the month export to a spreadsheet and a printable
-summary (Flow 17t). The AI "ask a
+summary (Flow 17t). A branch has one cashier and a cashier has one branch, swapped
+with a confirmation that names who is displaced, and every refusal now says what the
+rule is rather than that a rule exists (Flow 17u). The AI "ask a
 question" bar is gone from Home entirely (requirement 7), hidden behind a flag
 until Phase 2's query engine exists. Alerts (Phase 5) has no tab at all; the Staff tab took its
 slot.
@@ -1528,8 +1530,119 @@ and 17n (an expense) if you have not.
 
 ---
 
+## Flow 17u — One cashier per branch, and refusals that explain themselves
+
+Requirements 18 and 19. **You need three branches and two spare email addresses**
+for this one. Sign in as the owner or an admin.
+
+### Inviting a cashier
+
+1. **Team → Invite someone**, enter an address, and choose **Cashier**.
+   - ✅ **Expected:** the branch section is a **stacked list with a tick**, not a
+     row of tick-boxes, and a line above it saying a cashier works at exactly one
+     branch. Every other branch-scoped role still gets the old multi-select grid —
+     switch to **Delivery agent** and back to check.
+   - ✅ **Expected:** each branch row says who its cashier is, or "No cashier yet",
+     **before** you choose. That is the point: you should not have to pick and be
+     refused to find out.
+2. Tap a second branch.
+   - ✅ **Expected:** the first one un-ticks. One branch, always.
+3. Pick a **free** branch and send it.
+   - ✅ **Expected:** it goes through. Back on Team, that person's card shows one
+     branch as a solid pill with "One branch, and one cashier on it." under it —
+     and **no × to remove it**, because removing a cashier's only branch from here
+     would be a worse version of moving them.
+
+### The swap
+
+4. Invite a **second** cashier and pick the branch the first one now holds.
+   - ✅ **Expected:** a confirmation naming the person, not an error — "Hari is the
+     cashier for Shop A. Moving it to … leaves Hari with no branch."
+   - ✅ **Expected:** cancelling changes nothing at all. Check Team: the first
+     cashier still has the branch and the second was never created.
+5. Do it again and confirm.
+   - ✅ **Expected:** the branch moves in one step. The new cashier has it; the old
+     one's card now says **"No branch yet — give them one before they can open a
+     till."** in amber.
+   - ✅ **Expected:** the displaced person is *not* removed. Their row is not
+     struck through and they can still sign in — they just reach nothing.
+
+### Moving somebody
+
+6. On a cashier's card, tap **Change branch**, and pick a branch **another** cashier
+   holds.
+   - ✅ **Expected:** a confirmation with **two sentences** — the one it displaces,
+     and the branch this person is leaving behind with no cashier. Confirm, and
+     check Team: exactly one cashier on each, and one branch now empty.
+7. Tap **Change branch** and pick the branch they already have.
+   - ✅ **Expected:** nothing happens and no error. Re-assigning the branch somebody
+     already holds is a no-op, not a conflict with themselves. Their own branch
+     reads **"Their branch"** rather than showing them as the blocker.
+8. Remove a cashier's branch from the server side if you want to see the empty
+   state: **Change branch** cannot produce it, which is deliberate.
+
+### A cashier with no branch
+
+9. Sign in **as the displaced cashier** from step 5.
+   - ✅ **Expected:** Home says **"You have not been given a branch"** and explains
+     that the account and role are fine but nothing is attached yet, and to ask an
+     owner or admin. It does **not** show "Add your first branch" — that card used
+     to appear here and led to a screen whose save returns 403.
+   - ✅ **Expected:** you do not also get the "Your tools are still being built"
+     notice. One notice, the one that is true.
+
+### The conflict report
+
+10. This one needs a state the app cannot create, so make it in Prisma Studio
+    (`npm run prisma:studio` in `backend/`): add a second `branch_access` row so two
+    ACTIVE cashiers hold one branch.
+    - ✅ **Expected:** Team shows an amber **"Needs a decision"** panel naming the
+      branch, the count and both people, and saying nothing has been changed for
+      you.
+    - ✅ **Expected:** it has **no fix button**. Deciding who keeps a branch is not
+      something the app can guess, so the fix is **Change branch** on the row it
+      names. Use it, and the panel disappears.
+
+### Refusals that say what the rule is (requirement 19)
+
+11. Sign in as a **staff** member and try to reach something they cannot — the
+    simplest is to let a screen make a request that is refused.
+    - ✅ **Expected:** the message names the rule and who can lift it — "Only Owner,
+      Admin, Manager or Cashier can record what a branch spent." — not "Your role
+      does not allow this."
+    - ✅ **Expected:** switch the language and the sentence is fully translated,
+      including the role names. The server sends no prose here at all: it sends the
+      capability, and the app builds the sentence from the matrix it already
+      mirrors.
+12. As a **cashier**, ask for a branch that is not yours (a deep link, or another
+    branch's id).
+    - ✅ **Expected:** "You can only work in the branches you have been assigned to.
+      Ask an admin to assign this one." — the rule and the next step, rather than
+      the bare fact that a boundary exists.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
+- **A cashier's branch can be taken away but not from the Team screen.** "Change
+  branch" moves a cashier between branches; it cannot leave them with none, because
+  the useful action from that screen is always a move. Leaving somebody branchless is
+  supported by the API (it is where a displaced cashier lands) and shows as a clear
+  notice on their Home, but reaching it deliberately means removing their membership
+  and re-inviting them.
+- **Memberships that already break the one-cashier rule are reported, not fixed.**
+  A branch with two cashiers, or a cashier with two branches, appears in Team's
+  "Needs a decision" panel and stays there until somebody moves one. That is the
+  decision: nothing but a person knows which cashier is the one still turning up.
+- **An invite can promise a branch that is gone by the time it is claimed.** If the
+  branch is taken in the interval, the person joins as a cashier with **no branch**
+  rather than the invite failing or the current holder being displaced silently. It
+  shows in the conflict panel.
+- **A refusal names roles, not people.** "Only Owner, Admin or Manager can …" says
+  which roles can lift a restriction, not which colleague to go and find — the app
+  is not going to list your admins to a staff member. R18's refusals are the
+  exception, and name the cashier being displaced, because the admin reading them can
+  already see the whole team.
 - **No overtime, leave balances or statutory deductions**: hours from
   punch-in/out are stored but do not affect pay; `LEAVE` is unpaid with no
   entitlement tracking; and deductions are one manually-entered amount — there

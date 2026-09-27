@@ -1,6 +1,6 @@
 import { apiClient } from '@/api/client';
 import type { MembershipRole } from '@/types/user';
-import type { InviteLookupResult, PendingInvite, TeamMember } from '@/types/team';
+import type { CashierConflicts, InviteLookupResult, PendingInvite, TeamMember } from '@/types/team';
 
 export async function listMemberships(businessId: string): Promise<TeamMember[]> {
   const { data } = await apiClient.get<TeamMember[]>(`/businesses/${businessId}/memberships`);
@@ -16,6 +16,12 @@ export interface InviteMemberPayload {
   email: string;
   role: MembershipRole;
   branchIds?: string[];
+  /**
+   * Requirement 18 — the admin has been shown whose branch this takes and said
+   * yes. Without it, inviting a cashier onto an occupied branch comes back 409
+   * naming the current holder, and nothing is written.
+   */
+  confirm?: boolean;
 }
 
 export interface InviteMemberResult {
@@ -54,7 +60,36 @@ export async function revokeMembership(businessId: string, membershipId: string)
   await apiClient.post(`/businesses/${businessId}/memberships/${membershipId}/revoke`);
 }
 
-/** Narrow a MANAGER/STAFF member's scope by one branch. */
+/**
+ * Widen a branch-scoped member's reach by one branch — or, for a cashier, move
+ * them to it, since a cashier holds exactly one (requirement 18).
+ *
+ * `confirm` is the swap. Without it an assignment that would put two cashiers on
+ * a branch, or two branches on a cashier, returns 409 with the blocker named in
+ * `params`, so the app can ask before anything moves.
+ */
+export async function assignBranchAccess(
+  businessId: string,
+  membershipId: string,
+  branchId: string,
+  options: { confirm?: boolean } = {}
+): Promise<void> {
+  await apiClient.post(`/businesses/${businessId}/memberships/${membershipId}/branch-access`, {
+    branchId,
+    ...(options.confirm ? { confirm: true } : {}),
+  });
+}
+
+/**
+ * Which branches have more than one cashier, and which cashiers do not have
+ * exactly one branch. Read-only: it reports, it does not fix.
+ */
+export async function listCashierConflicts(businessId: string): Promise<CashierConflicts> {
+  const { data } = await apiClient.get<CashierConflicts>(`/businesses/${businessId}/cashier-conflicts`);
+  return data;
+}
+
+/** Narrow a branch-scoped member's scope by one branch. */
 export async function removeBranchAccess(
   businessId: string,
   membershipId: string,

@@ -968,9 +968,30 @@ kind of rule a generic "insufficient permissions" cannot explain.
    than whoever opened the cart. Under R18 that fixture becomes illegal. The test stays —
    the second person becomes the **owner**, who also holds `supplyOrder:create` — and it
    is a better test for it, since owner-plus-cashier is the pairing that survives.
+   **`revoke.test.js` had the same problem from the other end**, which was not foreseen
+   here: its "narrow a two-branch member to one" case ran on a cashier, a state R18 makes
+   unreachable, so it runs on a STAFF member instead.
 9. Tests: the invariant holds under concurrent assignment; the swap moves exactly one
    branch and leaves exactly one holder; a displaced cashier is inert but intact; every
    new refusal returns its own code rather than the generic one.
+
+**Done.** See the Task 10 section of `PROJECT_FLOW.md`. Three things are worth pulling
+out because they were decided during the work rather than planned here:
+
+- **No database constraint can express R18**, so nobody should go looking for one. The
+  condition is "at most one `BranchAccess` row per branch *whose membership's role is
+  CASHIER*", and the role is on `memberships` — a unique index cannot reach across the
+  join. It is enforced under `SELECT … FOR UPDATE`, with a concurrency test.
+- **The claim-at-signup door has nobody to ask**, so it grants the membership and skips a
+  branch taken since the invite, leaving a cashier with no branch. Both alternatives are
+  worse: taking the branch is the silent rewrite R18 forbids, and refusing the signup
+  locks somebody out of their own account over an admin's scheduling problem.
+- **R19's permission half needed no new backend surface at all.** `requirePermission`
+  already sent the refused capability in `params`, and the app already mirrors the
+  matrix, so the sentence — the action, and the roles that hold it — is built on the
+  device from data it had. `lint:permissions` gained a check that every capability's
+  phrase resolves in `en.json`, because those keys are cast at runtime and `tsc` cannot
+  see them.
 
 **One design note that survives R18.** The supply cart is per *branch*, not per cashier.
 That was argued from "two people on a shift", which R18 makes rare — but it still holds,

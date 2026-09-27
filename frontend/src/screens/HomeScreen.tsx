@@ -290,6 +290,25 @@ export default function HomeScreen({ navigation }: Props) {
   // conclude the app is broken. Saying so is better than showing nothing.
   const hasOnlyUniversalSections = sections.every((section) => section.capability === null);
 
+  /**
+   * Requirements 18 and 19 — a branch-scoped member with no branch.
+   *
+   * The state R18 creates on purpose: a displaced cashier keeps their account and
+   * loses only the branch, and "until then the app tells them they have no branch
+   * rather than showing empty screens". Every section below reads branch data, so
+   * without this Home renders as a set of cards with nothing in them and the
+   * person has no way to know whether they are broken or empty.
+   *
+   * It is also a real bug fix. `stats.total === 0` used to mean "this business
+   * has no branches yet" and offered **Add your first branch** — which a cashier
+   * cannot do, and tapping it navigated to a screen whose save would 403. The two
+   * cases are told apart by `branch:create`: somebody who can add a branch is
+   * being invited to; somebody who cannot is being told to ask.
+   */
+  const reachesEveryBranch = hasCapability(membership, 'branch:allAccess');
+  const canAddBranch = hasCapability(membership, 'branch:create');
+  const hasNoBranchAssigned = !!membership && !noAccess && !reachesEveryBranch && stats.total === 0;
+
   return (
     <View style={styles.container}>
       <ScreenBackground />
@@ -351,7 +370,7 @@ export default function HomeScreen({ navigation }: Props) {
             </AnimatedEntrance>
           ) : null}
 
-          {!error && !noAccess && stats.total === 0 ? (
+          {!error && !noAccess && stats.total === 0 && canAddBranch ? (
             <AnimatedEntrance delay={step(1)} style={styles.block}>
               <InfoCard
                 testID="home-add-first-branch"
@@ -359,6 +378,17 @@ export default function HomeScreen({ navigation }: Props) {
                 title={t('home.emptyTitle')}
                 subtitle={t('home.emptySubtitle')}
                 onPress={() => rootNavigation.navigate('AddBranch')}
+              />
+            </AnimatedEntrance>
+          ) : null}
+
+          {!error && hasNoBranchAssigned && !canAddBranch ? (
+            <AnimatedEntrance delay={step(1)} style={styles.block}>
+              <PhaseNotice
+                icon="git-branch-outline"
+                badge={t('home.noBranchBadge')}
+                title={t('home.noBranchTitle')}
+                body={t('home.noBranchBody')}
               />
             </AnimatedEntrance>
           ) : null}
@@ -373,7 +403,7 @@ export default function HomeScreen({ navigation }: Props) {
             </AnimatedEntrance>
           ))}
 
-          {hasOnlyUniversalSections && !noAccess ? (
+          {hasOnlyUniversalSections && !noAccess && !hasNoBranchAssigned ? (
             <AnimatedEntrance delay={step(2)} style={styles.block}>
               <PhaseNotice
                 icon="construct-outline"

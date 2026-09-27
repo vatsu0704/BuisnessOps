@@ -103,7 +103,7 @@ One row per (user, business) — carries the role. Replaces a naive `User.busine
 | unique | (userId, businessId) | one role per person per business |
 
 ### `BranchAccess`
-Explicit branch scoping for the branch-scoped roles — `CASHIER`, `DELIVERY_AGENT` and `STAFF` — any of which can cover more than one branch.
+Explicit branch scoping for the branch-scoped roles — `CASHIER`, `DELIVERY_AGENT` and `STAFF`. The last two can cover more than one branch; `CASHIER` cannot, and that rule is not enforceable here — see below.
 
 Which roles ignore this table is **not a hardcoded list**: it is whoever holds the `branch:allAccess` capability, read by `resolveTenant` to decide the `req.branchAccess === null` sentinel. Today that is `OWNER`, `ADMIN`, `MANAGER` and `WAREHOUSE`.
 
@@ -111,6 +111,9 @@ Two things worth knowing:
 
 - **`MANAGER` left this table's audience in requirement 14.** A manager's rows still exist and can still be removed, but they no longer bound what that person reaches. The invite screen stops asking for branches for that role.
 - **`branch:allAccess` is not authority over people.** `WAREHOUSE` holds it — the order desk ships to every branch — and deliberately does not hold `staff:viewAllBranches`, so it cannot read any branch's staff records or attendance. The sentinel used to conflate the two, which was safe only while the set was {OWNER, ADMIN}.
+- **`CASHIER` is 1:1, and the rule is not in the database** (requirement 18). One cashier per branch, one branch per cashier. **Do not go looking for a constraint**: the condition is "at most one row per branch *whose membership's role is CASHIER*", and the role lives on `Membership`, so a Postgres unique index cannot reach across the join. It is enforced in `services/cashierAssignment.service.js` behind `SELECT … FOR UPDATE` on the membership and then the branch, inside the transaction that writes the row. The `@@unique([membershipId, branchId])` below is a different statement — no duplicate grants — and stays as the assertion that the allocator is correct, the same posture `Attendance.@@unique` takes.
+- **Rows survive a revoke, so the rule counts only `ACTIVE` memberships.** Keeping them is deliberate: re-inviting somebody restores the scope they had. But a revoked cashier must not keep a branch occupied forever, so `cashierHolding` filters on status — the branch is free the moment they lose access, with the row still on the table. Re-inviting a cashier drops those vestigial rows, because the branch named in the new invite is the fresh decision.
+- **`DELIVERY_AGENT` and `STAFF` are unconstrained** and can still cover several branches. R18 applies to `CASHIER` alone, named once as `SINGLE_BRANCH_ROLE` in `permissions/catalog.js` and mirrored to the app.
 
 | Column | Type | Notes |
 |---|---|---|

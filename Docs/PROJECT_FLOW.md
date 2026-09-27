@@ -9,7 +9,7 @@ The product is named **BizIQ** (Android package `com.biziq.app`), renamed from t
 **A second track is now running alongside this one.** *Branch Operations*
 (Section 13, driven by [REQUIREMENTS.md](REQUIREMENTS.md)) turns BizIQ from a
 product that analyses a business into one that runs it — counter billing,
-supply orders, expenses, net profit. Tasks 1-9 of that track have landed; Task 1
+supply orders, expenses, net profit. Tasks 1-10 of that track have landed; Task 1
 amends Phase 0 (see the note under the Phase 0 exit criterion) and Task 8
 delivers part of Phase 4.
 
@@ -354,7 +354,7 @@ got to.
 | 7 | Firebase notifications | R2, R8 | ✅ done |
 | 8 | Analytics and net profit | R13, R15 | ✅ done |
 | 9 | Day-end and month-end export | R17 | ✅ done |
-| 10 | Restrictions that explain themselves | R18, R19 | ⏳ not started |
+| 10 | Restrictions that explain themselves | R18, R19 | ✅ done |
 
 ### Task 1 — Roles and the permission matrix ✅
 
@@ -1218,3 +1218,147 @@ headers and its escaping of a branch named `<script>`, the overlap as a sentence
 there and a code in JSON, the month rolling up rather than one day of it, an invalid
 month refused, a cashier scoped to their own branch, a branch they cannot reach
 refused, and a role with no export capability refused on all three representations.
+
+### Task 10 — Restrictions that explain themselves ✅
+
+Requirements 18 and 19. Two halves of one idea: the app already hides what a role
+cannot use, and it should also **say why** when something is refused.
+
+#### R18 — one cashier per branch, one branch per cashier
+
+**The first restriction in this project that is not a capability at all.** Every
+other rule is "may this role do X?", answered from the matrix. This one is an
+invariant about who may *hold* a branch, which is exactly the kind of rule a
+generic "insufficient permissions" cannot explain — and exactly the kind a
+capability check cannot enforce.
+
+**It is a service, not a validator, and the distinction is the whole design.**
+Everything in `validations/` is a fact about the request body and can be decided
+without touching the database. This is a fact about the *world*: whether somebody
+else currently holds the branch. Two admins pressing Assign at the same moment
+both read a free branch and both write. So it lives in
+`services/cashierAssignment.service.js`, inside the transaction that makes the
+write, behind `SELECT … FOR UPDATE` on the membership and then the branch — always
+in that order, so two assignments touching the same pair cannot deadlock by taking
+the locks in opposite orders. The validator still pre-empts the half it can see (a
+cashier invited with no branch, or with two); that is a convenience, the lock is
+the guarantee. There is a test that runs two assignments concurrently and asserts
+the branch ends with exactly one cashier.
+
+**No database constraint can express it**, which is worth writing down so nobody
+goes looking for one. The condition is "at most one `BranchAccess` row per branch
+*whose membership's role is CASHIER*", and the role lives on `memberships` — a
+Postgres unique index cannot reach across a join. The `@@unique([membershipId,
+branchId])` that does exist is a different statement (no duplicate grants).
+
+**Three doors, one enforcement point.** Invite, claim-at-signup, and the
+branch-access edit all reach `business.service.js:addBranchAccess`, which now
+always runs in a transaction — given the bare Prisma singleton it opens one itself,
+given a `tx` it joins the caller's. Door two is the interesting one, because
+**nobody is present to be asked**: the branch was free when the invite was written
+and may be taken months later when its invitee signs up. Taking it from the current
+holder is the silent rewrite R18 forbids; refusing the signup would lock somebody
+out of their own account over an admin's scheduling problem. So the claim creates
+the membership, skips the branch, and the person lands as a cashier with no
+branch — a state the app names out loud.
+
+**The swap is the same request repeated**, with `confirm: true`, rather than a
+second endpoint. A confirmation that changed the URL would be a second code path
+to keep honest, and the thing being confirmed is this exact assignment. The 409
+carries the displaced cashier's **name** as a param — never baked into the
+sentence — because the admin's next action depends on knowing who. When a move both
+displaces somebody and vacates a branch, `currentBranch` rides along too and the
+app renders the second clause from its own key: one translated sentence cannot
+carry a clause that applies only sometimes.
+
+**A revoke frees the branch immediately.** `BranchAccess` rows deliberately survive
+a revoke so that re-inviting somebody restores their scope, so the rule counts only
+rows whose membership is `ACTIVE` — otherwise a revoked cashier would keep a branch
+occupied forever. Re-inviting a revoked cashier drops their vestigial rows, because
+the branch named in the new invite *is* the fresh decision, which is what the
+re-invite path's own comment already claimed.
+
+**Memberships that already break the rule are reported, never rewritten.**
+`GET …/cashier-conflicts` lists branches with more than one cashier and cashiers
+without exactly one branch, computed on demand so it is exact when read. The Team
+screen shows it as a panel that is deliberately **not actionable** — settling a
+shared branch means deciding who keeps it, and a one-tap fix would have to guess.
+
+**The one place in this codebase that acts on a role name, and it is not the
+anti-pattern it resembles.** `SINGLE_BRANCH_ROLE` lives in
+`permissions/catalog.js` beside the matrix, is mirrored into `matrix.json`, and is
+compared by `lint:permissions`. The deny-lists Task 1 removed asked "may this role
+do X?", which fails *open* for a role added later. This asks "which role is
+structurally tied to one place?" — a till belongs to a shop and a shop has one
+till — and a role added later is simply unconstrained, which is the safe default.
+
+#### R19 — every restriction says what it is
+
+**"Insufficient permissions" became a sentence, without the backend writing one.**
+`requirePermission` already put the refused capability in the error's params for the
+log; the app mirrors the capability matrix; so from that one string
+`permissions/explain.ts` builds the whole refusal — "Only Warehouse can accept,
+pack and dispatch a supply order" — with the holding roles **derived** from the
+matrix rather than written down. Move a capability between roles and every refusal
+that mentions it says the new answer.
+
+**Done in one place.** `translateApiError` special-cases `PERMISSION_DENIED`, and
+every screen already calls `extractErrorMessage`, so every refusal in the app
+explains itself — including the ones written before this task and the ones written
+after. Dozens of catch blocks were not touched.
+
+**`ACTION_KEYS` is a `Record<Capability, …>`**, so a capability added to the backend
+catalog fails `tsc` until somebody writes its phrase. Its *values* are i18n keys
+assembled at runtime and cast, which `tsc` cannot check — the same hole
+`check-error-parity.js` exists to close — so `lint:permissions` now also resolves
+every one of them against `en.json`. A capability cannot ship without being able to
+explain its own refusal.
+
+**The five refusals that only asserted a boundary exists were reworded** —
+`PERMISSION_DENIED`, `BRANCH_ACCESS_DENIED` and its destination variant,
+`STAFF_ACCESS_DENIED`, `SALARY_SLIP_ACCESS_DENIED`. "You do not have access to this
+branch" became "You can only work in the branches you have been assigned to. Ask an
+admin to assign this one." The non-permission restrictions R19 names were already
+specific: a closed day, an order too far along to cancel, an item with no price all
+state their rule.
+
+**A real bug fell out of it.** Home showed **Add your first branch** whenever the
+branch list was empty, which a cashier with no branch cannot do — tapping it opened
+a screen whose save would 403. The two cases are now told apart by `branch:create`:
+somebody who can add a branch is invited to, somebody who cannot is told to ask.
+That is also where R18's displaced cashier lands, so the notice was needed anyway.
+
+**The team moved into a store.** `TeamScreen` held members and invites in its own
+`useState`, which was right while it was the only reader. R18 gives it a second —
+the invite screen has to know which branches already have a cashier before offering
+a choice — so `teamStore` exists *before* the second private copy could, rather
+than after somebody noticed the invite screen offering a branch taken ten minutes
+ago. The branch hint degrades safely: the route is gated on `team:invite` while the
+member list needs `team:view`, and if those ever came apart the hint would just read
+"no cashier yet" while the server's 409 still names the holder.
+
+**A pre-existing conflict resolved first.** `supply-order.test.js` deliberately put
+two cashiers on one branch, to prove an order is credited to whoever placed it
+rather than whoever opened the cart. R18 makes that fixture illegal, so the second
+person is now the **owner** — who also holds `supplyOrder:create` — and it is a
+better test for it: owner-plus-cashier is the pairing that survives the rule, and it
+is the pairing the shared per-branch cart was really argued from.
+`revoke.test.js` had the same problem from the other end. Its "narrow a two-branch
+member to one" case ran on a cashier, which R18 makes an unreachable state, so it
+runs on a STAFF member — the role that is branch-scoped and unconstrained. That test
+has now changed vehicle twice for good reasons: MANAGER until requirement 14 made it
+business-wide, CASHIER until requirement 18 tied it to one branch.
+
+`backend/tests/cashier-assignment.test.js` — 20 tests: a cashier invited with no
+branch and with two, both refused before anything is created; a delivery agent
+still covering three; the occupied branch named rather than called taken; the
+confirmed swap leaving exactly one holder; the displaced cashier ACTIVE, reaching
+nothing, and still able to sign in; re-assigning their own branch a no-op rather
+than a conflict with themselves; a move refused and then made, vacating the branch
+behind it; both consequences stated when a move displaces and vacates at once; a
+non-boolean `confirm` refused rather than read as truthy; two concurrent assignments
+of one branch ending with exactly one cashier; a revoke freeing the branch with the
+row still in place; a re-invite taking the branch named now; the claim skipping a
+branch taken since the invite; the conflict report finding both shapes and changing
+nothing; and the two R19 assertions — the capability riding along on a 403, and a
+branch refusal whose sentence states the rule.

@@ -1,4 +1,5 @@
 import i18n from '@/i18n';
+import { explainPermissionDenied } from '@/permissions/explain';
 
 /**
  * Turns the API's error codes into a sentence in the reader's language.
@@ -68,6 +69,28 @@ export function translateDetail(detail: ApiErrorDetail): string | null {
  */
 export function translateApiError(body: ApiErrorBody | undefined): string | null {
   if (!body) return null;
+
+  /**
+   * Requirement 19 — a refusal says what the rule is.
+   *
+   * Every 403 from `requirePermission` arrives here carrying the capability it
+   * wanted, and this app mirrors the capability matrix, so the sentence can name
+   * the action and the roles that hold it: "Only Warehouse can accept, pack and
+   * dispatch a supply order" instead of "Your role does not allow this."
+   *
+   * Done here rather than in each screen's catch, because there are dozens of
+   * those and they all already call `extractErrorMessage`. One place, and every
+   * refusal in the app explains itself — including ones written before this and
+   * ones written after.
+   *
+   * It falls through to the plain translation when the capability is missing or
+   * unknown to this build, so an app older than the server still says something
+   * true.
+   */
+  if (body.code === 'PERMISSION_DENIED') {
+    const explained = explainPermissionDenied(body.params?.capability);
+    if (explained) return explained;
+  }
 
   if (body.code === 'VALIDATION_FAILED' && body.details?.length) {
     const lines = body.details.map(translateDetail).filter((line): line is string => !!line);

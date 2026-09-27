@@ -123,6 +123,26 @@ scoped.post('/staff', requirePermission('staff:create'), staffController.createS
 - **Never write a deny-list** (`if (role === 'STAFF') return false`). It fails
   *open* for every role added later, which is how a delivery agent would end up
   reading colleagues' HR records. Allow-lists off the matrix only.
+- **`SINGLE_BRANCH_ROLE` is the one place that acts on a role name, and it is
+  data, not a check.** Requirement 18 ties a cashier to exactly one branch, and
+  no capability can express that — it is a fact about the shape of the business
+  (a till belongs to a shop; a shop has one till), not about what a role may do.
+  So it lives in `permissions/catalog.js` beside the matrix, is mirrored into
+  `matrix.json`, and `lint:permissions` compares the two. It is not the
+  anti-pattern above: a deny-list asks "may this role do X?" and fails *open* for
+  a role added later, while this asks "which role is limited to one branch?" and a
+  role added later is simply unconstrained. If another such rule ever appears, put
+  it beside this one rather than writing `=== 'CASHIER'` at the point of use.
+- **A refusal has to say what the rule is, not that a rule exists** (requirement
+  19). `requirePermission` puts the refused capability in the error's params, and
+  the app turns that into a sentence in `permissions/explain.ts` — the action, and
+  the roles that hold it, both derived from the mirrored matrix. So the backend
+  still writes no prose, and "Insufficient permissions" reads as "Only Warehouse
+  can accept, pack and dispatch a supply order." `ACTION_KEYS` is a
+  `Record<Capability, …>`, so a new capability fails `tsc` until it has a phrase,
+  and `lint:permissions` resolves every phrase against `en.json` because those
+  keys are cast at runtime and `tsc` cannot see them. When you add a capability,
+  add its phrase in all four locales in the same change.
 - `req.branchAccess === null` means "every branch, for **data**", driven by
   `branch:allAccess`. Authority over *people* is a separate capability,
   `staff:viewAllBranches`. `WAREHOUSE` holds the first and not the second —
@@ -183,6 +203,27 @@ scoped.post('/staff', requirePermission('staff:create'), staffController.createS
   till. `SupplyOrder` records only the branch that *ordered* — there is no column
   for the warehouse that filled it, which is precisely why the transfer cannot be
   credited as warehouse revenue.
+- **One cashier per branch, one branch per cashier — and no database constraint
+  can say so.** The condition is "at most one `BranchAccess` row per branch *whose
+  membership's role is `CASHIER`*", and the role lives on `Membership`, so a unique
+  index cannot reach across the join. Don't go looking for one, and don't add a
+  check to a controller: it is enforced in `services/cashierAssignment.service.js`,
+  inside the transaction that writes the row, behind `SELECT … FOR UPDATE` on the
+  membership and then the branch — always that order, so two assignments touching
+  the same pair cannot deadlock. Three doors reach it (invite, claim-at-signup, the
+  branch-access edit) and all three go through `addBranchAccess`, which opens a
+  transaction itself when it was not given one. The validator's branch-count check
+  is a convenience that catches the common mistake early; the lock is the guarantee.
+  A `BranchAccess` row **survives a revoke** so re-inviting restores somebody's
+  scope, so the rule counts only `ACTIVE` memberships — otherwise a revoked cashier
+  would keep a branch occupied forever.
+- **The swap is the same request with `confirm: true`**, never a second endpoint.
+  Assigning an occupied branch returns a 409 naming the current holder as a
+  **param**, the app asks, and the retry is the identical call. A confirmation that
+  changed the URL would be a second code path to keep honest, and what is being
+  confirmed is this exact assignment. Memberships that already break the rule are
+  **reported and never rewritten** (`GET …/cashier-conflicts`): deciding who keeps a
+  branch needs a person, so there is deliberately no one-tap fix.
 - Adding a role means a Postgres enum change, and `ALTER TYPE … ADD VALUE`
   cannot be *used* in the transaction that added it — Prisma wraps each
   migration file in one, so data work using a new value needs its own migration
@@ -271,8 +312,12 @@ native through an Expo config plugin (see *Native Android builds*).
 
 **Shared server data lives in a store, not in each screen's `useState`.** If more
 than one component reads it, it belongs in a zustand store under `src/store/`
-(`authStore`, `branchStore`, `salesStore`), and the hook over it keeps the shape
-its call sites already use. This is not a preference — it is a bug that shipped:
+(`authStore`, `branchStore`, `salesStore`, `teamStore`), and the hook over it keeps
+the shape its call sites already use. **Move it to a store when the second reader
+appears, not after the stale copy is noticed** — `teamStore` exists because
+requirement 18 gave the member list a second reader (the invite screen needs to know
+which branches already have a cashier), and a private copy there would have offered
+branches that were taken minutes ago. This is not a preference — it is a bug that shipped:
 `useBranches` held its own `useState`, so each of its twelve callers had a
 private copy fetched once on mount, and because tab screens never unmount, Home's
 branch card kept showing a stale list until the app was killed and reopened.
@@ -388,7 +433,14 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
 - **`frontend/google-services.json` must exist before a build**, or the app has
   no Firebase config compiled into it and no push will ever arrive — the same
   build-time trap as `EXPO_PUBLIC_API_URL`, and just as silent. It is gitignored;
-  `Docs/FIREBASE_SETUP.md` is how to produce it. The backend's half,
+  `Docs/FIREBASE_SETUP.md` is how to produce it. **On EAS that gitignore is the
+  problem**: EAS Build uploads only git-tracked files, so prebuild there fails
+  outright with "google-services.json is missing". `frontend/app.config.js`
+  exists solely to take the path from a `GOOGLE_SERVICES_JSON` file-type EAS
+  environment variable when one is set, falling back to the literal path in
+  `app.json` locally — which is why `app.json` is no longer the whole config,
+  and why a config value that has to vary per build environment belongs there
+  rather than in the JSON. The backend's half,
   `backend/firebase-service-account.json`, is a **credential** — anyone holding
   it can push to every user.
 - `expo prebuild --clean` deletes machine-local files that must then be restored:

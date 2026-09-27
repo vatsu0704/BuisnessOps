@@ -1,5 +1,6 @@
 const prisma = require('../config/db');
 const expenseService = require('./expense.service');
+const cashierAssignment = require('./cashierAssignment.service');
 const { fail } = require('../errors');
 
 function createBranch(
@@ -122,10 +123,29 @@ function listMemberships(businessId) {
   });
 }
 
-// `client` defaults to the top-level prisma singleton but accepts a
-// `$transaction` callback's tx client too, so invite.service.js can grant
-// branch access atomically alongside the membership that needs it.
-async function addBranchAccess(businessId, membershipId, branchId, client = prisma) {
+/**
+ * Grant one member access to one branch.
+ *
+ * `client` defaults to the top-level prisma singleton but accepts a
+ * `$transaction` callback's tx client too, so invite.service.js can grant
+ * branch access atomically alongside the membership that needs it.
+ *
+ * It now ALWAYS runs in a transaction, because requirement 18's one-cashier-per-
+ * branch rule is a check followed by a write and the two must be atomic — see
+ * cashierAssignment.service.js. Given the bare singleton it opens one itself
+ * rather than making every call site remember to; given a tx it joins the
+ * caller's, so the invite path still grants membership and branch together or
+ * not at all.
+ *
+ * `confirm: true` is the admin having been shown who is displaced and having
+ * said yes. Without it an assignment that would break the rule is refused with a
+ * 409 naming the holder, and nothing is written.
+ */
+async function addBranchAccess(businessId, membershipId, branchId, client = prisma, { confirm = false } = {}) {
+  if (client === prisma) {
+    return prisma.$transaction((tx) => addBranchAccess(businessId, membershipId, branchId, tx, { confirm }));
+  }
+
   const membership = await client.membership.findFirst({ where: { id: membershipId, businessId } });
   if (!membership) {
     throw fail('MEMBERSHIP_NOT_FOUND', 404);
@@ -136,10 +156,27 @@ async function addBranchAccess(businessId, membershipId, branchId, client = pris
     throw fail('BRANCH_NOT_FOUND_IN_BUSINESS', 404);
   }
 
+  // Checked before the rule, so re-granting a branch somebody already holds
+  // stays the no-op it has always been rather than becoming a 409 about
+  // themselves. It also leaves a pre-existing two-branch cashier alone, which is
+  // what "reported, not silently rewritten" requires.
   const existing = await client.branchAccess.findUnique({
     where: { membershipId_branchId: { membershipId, branchId } },
   });
   if (existing) return existing;
+
+  const { release } = await cashierAssignment.planAssignment(client, {
+    businessId,
+    membership,
+    branch,
+    confirmed: confirm,
+  });
+
+  // Vacate first, then grant, inside the one transaction: at no point does the
+  // branch have two cashiers, and at no point does the moving cashier have none.
+  for (const access of release) {
+    await client.branchAccess.delete({ where: { id: access.id } });
+  }
 
   return client.branchAccess.create({ data: { membershipId, branchId } });
 }
@@ -344,6 +381,9 @@ module.exports = {
   listMemberships,
   addBranchAccess,
   removeBranchAccess,
+  // Requirement 18's audit: memberships that already break the 1:1 rule,
+  // reported for an admin to settle rather than rewritten.
+  listCashierConflicts: cashierAssignment.listCashierConflicts,
   revokeMembership,
   listTransactions,
   getSalesSummary,

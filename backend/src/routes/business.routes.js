@@ -55,6 +55,16 @@ scoped.post(
   businessController.addBranchAccess
 );
 
+// Requirement 18. Read-only: which branches have more than one cashier, and
+// which cashiers do not have exactly one branch. Memberships created before the
+// rule existed are reported here for an admin to settle rather than rewritten,
+// because nothing but a person knows which cashier is the one still turning up.
+scoped.get(
+  '/cashier-conflicts',
+  requirePermission('team:view'),
+  businessController.listCashierConflicts
+);
+
 // Taking access away. Granting it was the only direction that existed:
 // an invite could be sent but never withdrawn, and a branch grant never
 // narrowed. Revoking a membership is a POST rather than a DELETE because it

@@ -12,7 +12,7 @@ const {
   required,
 } = require('./shared');
 const { fieldError } = require('../errors');
-const { ROLES } = require('../permissions');
+const { ROLES, SINGLE_BRANCH_ROLE } = require('../permissions');
 
 // Derived from the capability matrix rather than hand-listed, so a role added
 // there is invitable on the same commit. A hand-written list is the trap that
@@ -162,10 +162,28 @@ function validateCreateMembership(body) {
   if (!body.role || !INVITABLE_ROLES.includes(body.role)) {
     errors.push(mustBeOneOf('role', INVITABLE_ROLES));
   }
-  if (body.branchIds !== undefined) {
-    if (!Array.isArray(body.branchIds) || body.branchIds.some((id) => typeof id !== 'string')) {
-      errors.push(mustBeStringArray('branchIds'));
-    }
+  const branchIdsWellFormed =
+    body.branchIds === undefined ||
+    (Array.isArray(body.branchIds) && body.branchIds.every((id) => typeof id === 'string'));
+  if (!branchIdsWellFormed) errors.push(mustBeStringArray('branchIds'));
+
+  // Requirement 18 — a cashier works at exactly one branch.
+  //
+  // The count is the half of the rule that can be decided from the request body
+  // alone, so it is caught here, before an invite exists. Whether that one
+  // branch is FREE is a fact about the world and belongs in the service, under a
+  // lock — see cashierAssignment.service.js.
+  //
+  // `SINGLE_BRANCH_ROLE` rather than the literal 'CASHIER', and rather than a
+  // capability: the constraint is not "may this role do something" — it is which
+  // role is structurally tied to one place. The matrix holds it, and
+  // `lint:permissions` compares it with the app's mirror so the invite screen's
+  // picker and this check cannot disagree.
+  if (branchIdsWellFormed && body.role === SINGLE_BRANCH_ROLE && (body.branchIds ?? []).length !== 1) {
+    errors.push(fieldError('CASHIER_NEEDS_ONE_BRANCH', 'branchIds'));
+  }
+  if (body.confirm !== undefined && typeof body.confirm !== 'boolean') {
+    errors.push(mustBeBoolean('confirm'));
   }
   return errors;
 }
@@ -173,6 +191,13 @@ function validateCreateMembership(body) {
 function validateBranchAccess(body) {
   const errors = [];
   if (!body.branchId || typeof body.branchId !== 'string') errors.push(required('branchId'));
+  // The admin has been shown who the assignment displaces and said yes.
+  // Requirement 18's swap is one request repeated, not a second endpoint: a
+  // confirmation that changed the URL would be a second code path to keep
+  // honest, and the thing being confirmed is this exact assignment.
+  if (body.confirm !== undefined && typeof body.confirm !== 'boolean') {
+    errors.push(mustBeBoolean('confirm'));
+  }
   return errors;
 }
 

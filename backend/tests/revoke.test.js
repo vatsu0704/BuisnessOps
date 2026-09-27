@@ -9,10 +9,16 @@ const password = 'TestPass123!';
 const ownerEmail = `rev-owner.${RUN_ID}@test.buisnessops.dev`;
 const adminEmail = `rev-admin.${RUN_ID}@test.buisnessops.dev`;
 const managerEmail = `rev-manager.${RUN_ID}@test.buisnessops.dev`;
-// Branch grants are exercised through a CASHIER, not the MANAGER: requirement
-// 14 made MANAGER business-wide, so narrowing a manager's BranchAccess rows no
-// longer narrows anything. CASHIER is the branch-scoped role now.
+// Branch grants are exercised through a STAFF member, and which role that is has
+// now changed twice for good reasons. It was the MANAGER until requirement 14
+// made MANAGER business-wide, at which point narrowing a manager's BranchAccess
+// rows stopped narrowing anything. It was then the CASHIER, until requirement 18
+// tied a cashier to exactly one branch — so "narrow a two-branch member to one"
+// became a state a cashier can never legally be in, and a test of it was a test
+// of something unreachable. STAFF is branch-scoped and unconstrained, which is
+// what the assertion actually needs.
 const cashierEmail = `rev-cashier.${RUN_ID}@test.buisnessops.dev`;
+const staffEmail = `rev-staff.${RUN_ID}@test.buisnessops.dev`;
 const neverSignedUpEmail = `rev-pending.${RUN_ID}@test.buisnessops.dev`;
 
 // Access could only ever be granted before this: an invite could be sent but
@@ -30,6 +36,8 @@ describe('Revoking access', () => {
   let adminMembershipId;
   let managerMembershipId;
   let cashierMembershipId;
+  let staffToken;
+  let staffMembershipId;
   let ownerMembershipId;
   const businessIdsToClean = [];
   const userIdsToClean = [];
@@ -85,6 +93,9 @@ describe('Revoking access', () => {
     const cashier = await signUpOwnBusiness(cashierEmail, 'Revoke Cashier', `Cashier Solo ${RUN_ID}`);
     cashierToken = cashier.token;
 
+    const staff = await signUpOwnBusiness(staffEmail, 'Revoke Staff', `Staff Solo ${RUN_ID}`);
+    staffToken = staff.token;
+
     await request(app)
       .post(`/api/businesses/${businessId}/memberships`)
       .set(auth(ownerToken))
@@ -96,11 +107,17 @@ describe('Revoking access', () => {
     await request(app)
       .post(`/api/businesses/${businessId}/memberships`)
       .set(auth(ownerToken))
-      .send({ email: cashierEmail, role: 'CASHIER', branchIds: [branchAId, branchBId] });
+      // Requirement 18: one branch, because a cashier may hold no more.
+      .send({ email: cashierEmail, role: 'CASHIER', branchIds: [branchAId] });
+    await request(app)
+      .post(`/api/businesses/${businessId}/memberships`)
+      .set(auth(ownerToken))
+      .send({ email: staffEmail, role: 'STAFF', branchIds: [branchAId, branchBId] });
 
     adminMembershipId = await membershipIdFor(adminEmail);
     managerMembershipId = await membershipIdFor(managerEmail);
     cashierMembershipId = await membershipIdFor(cashierEmail);
+    staffMembershipId = await membershipIdFor(staffEmail);
   });
 
   afterAll(async () => {
@@ -160,25 +177,47 @@ describe('Revoking access', () => {
     it('can be narrowed without touching the rest of the membership', async () => {
       const before = await request(app)
         .get(`/api/businesses/${businessId}/branches`)
-        .set(auth(cashierToken));
+        .set(auth(staffToken));
       expect(before.body.map((b) => b.id).sort()).toEqual([branchAId, branchBId].sort());
 
       const res = await request(app)
-        .delete(`/api/businesses/${businessId}/memberships/${cashierMembershipId}/branch-access/${branchBId}`)
+        .delete(`/api/businesses/${businessId}/memberships/${staffMembershipId}/branch-access/${branchBId}`)
         .set(auth(ownerToken));
       expect(res.statusCode).toBe(200);
 
       // Still a member of the business - they just see one branch now.
-      const after = await request(app).get(`/api/businesses/${businessId}/branches`).set(auth(cashierToken));
+      const after = await request(app).get(`/api/businesses/${businessId}/branches`).set(auth(staffToken));
       expect(after.statusCode).toBe(200);
       expect(after.body.map((b) => b.id)).toEqual([branchAId]);
     });
 
     it('404s when that member never had access to the branch', async () => {
       const res = await request(app)
-        .delete(`/api/businesses/${businessId}/memberships/${cashierMembershipId}/branch-access/${branchBId}`)
+        .delete(`/api/businesses/${businessId}/memberships/${staffMembershipId}/branch-access/${branchBId}`)
         .set(auth(ownerToken));
       expect(res.statusCode).toBe(404);
+    });
+
+    // Requirement 18 in its least glamorous form. Taking a cashier's only branch
+    // away is allowed and leaves them inert but intact — an account with no
+    // branch, which an admin can then point at another one. Refusing it would be
+    // worse: the only way to free a branch would be to remove the person.
+    it('may leave a cashier with no branch at all', async () => {
+      const res = await request(app)
+        .delete(`/api/businesses/${businessId}/memberships/${cashierMembershipId}/branch-access/${branchAId}`)
+        .set(auth(ownerToken));
+      expect(res.statusCode).toBe(200);
+
+      const after = await request(app).get(`/api/businesses/${businessId}/branches`).set(auth(cashierToken));
+      expect(after.statusCode).toBe(200);
+      expect(after.body).toEqual([]);
+
+      // Put it back, so the tests after this one see the fixture they expect.
+      const restored = await request(app)
+        .post(`/api/businesses/${businessId}/memberships/${cashierMembershipId}/branch-access`)
+        .set(auth(ownerToken))
+        .send({ branchId: branchAId });
+      expect(restored.statusCode).toBe(201);
     });
 
     // The flip side of requirement 14, asserted so it is a decision on record

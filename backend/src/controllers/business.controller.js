@@ -127,9 +127,30 @@ async function addBranchAccess(req, res, next) {
     const access = await businessService.addBranchAccess(
       req.tenant.businessId,
       req.params.membershipId,
-      req.body.branchId
+      req.body.branchId,
+      undefined,
+      // Requirement 18: the swap is this same request repeated once the admin has
+      // been told whom it displaces. `undefined` keeps the service's own default
+      // Prisma client, which is what opens the transaction the row lock needs.
+      { confirm: req.body.confirm === true }
     );
     res.status(201).json(access);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Requirement 18's audit — memberships that already break the one-cashier rule.
+ *
+ * Read under `team:view` rather than `team:manageBranchAccess`: it answers "who
+ * is where", which is the same question the Team screen it appears on already
+ * answers, and seeing a conflict is what makes someone go and fix it.
+ */
+async function listCashierConflicts(req, res, next) {
+  try {
+    const conflicts = await businessService.listCashierConflicts(req.tenant.businessId);
+    res.json(conflicts);
   } catch (err) {
     next(err);
   }
@@ -223,6 +244,7 @@ module.exports = {
   listInvites,
   revokeInvite,
   addBranchAccess,
+  listCashierConflicts,
   removeBranchAccess,
   revokeMembership,
   listTransactions,

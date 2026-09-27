@@ -21,7 +21,6 @@ const cashierEmail = `sup-cashier.${RUN_ID}@test.buisnessops.dev`;
 const otherCashierEmail = `sup-cashier2.${RUN_ID}@test.buisnessops.dev`;
 // A second cashier on the SAME branch. The cart is shared by the branch, so
 // one person building it and another sending it is a normal Tuesday.
-const mateEmail = `sup-mate.${RUN_ID}@test.buisnessops.dev`;
 const warehouseEmail = `sup-warehouse.${RUN_ID}@test.buisnessops.dev`;
 const riderEmail = `sup-rider.${RUN_ID}@test.buisnessops.dev`;
 const otherRiderEmail = `sup-rider2.${RUN_ID}@test.buisnessops.dev`;
@@ -176,12 +175,17 @@ describe('Supply orders', () => {
       [branchAId]
     ));
     ({ token: otherCashierToken } = await joinAs(otherCashierEmail, 'Other Cashier', 'CASHIER', [branchBId]));
-    ({ token: mateToken, membershipId: mateMembershipId } = await joinAs(
-      mateEmail,
-      'Shift Mate',
-      'CASHIER',
-      [branchAId]
-    ));
+    // The second person on branch A's cart used to be a second CASHIER, which
+    // requirement 18 makes illegal — one cashier per branch. The owner takes the
+    // part instead, and it is a better fixture for it: an owner holds
+    // `supplyOrder:create` and can order for any branch, so owner-plus-cashier is
+    // exactly the pairing that survives the rule and the one the shared cart was
+    // really argued from. (The design note in REQUIREMENTS.md says so: the cart
+    // is the BRANCH's, not the cashier's.)
+    mateToken = ownerToken;
+    mateMembershipId = (
+      await prisma.membership.findFirstOrThrow({ where: { businessId, role: 'OWNER' } })
+    ).id;
     ({ token: warehouseToken } = await joinAs(warehouseEmail, 'Supply Desk', 'WAREHOUSE', []));
     ({ token: riderToken, membershipId: riderMembershipId } = await joinAs(
       riderEmail,
@@ -358,6 +362,11 @@ describe('Supply orders', () => {
     // One act must not carry two names. The order header said "placed by Hari"
     // while its own history said Deep placed it, because the cart stamped
     // whoever opened it and placing preferred that stale value.
+    //
+    // The cashier opens the cart and the owner places it. The cart belongs to the
+    // BRANCH rather than to whoever started it (requirement 18's design note), so
+    // their two additions are one list — which is the only reason two people can
+    // be involved in one order at all now that a branch has a single cashier.
     it('credits whoever placed it, not whoever opened the cart', async () => {
       const cart = await cartWith(flourId, 1, branchAId, cashierToken);
       expect(cart.placedByMembership).toBeNull();

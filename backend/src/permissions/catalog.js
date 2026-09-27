@@ -221,4 +221,24 @@ const ROLE_CAPABILITIES = {
   STAFF: [],
 };
 
-module.exports = { CAPABILITIES, ROLE_CAPABILITIES };
+/**
+ * Requirement 18 — the one role that is limited to a single branch.
+ *
+ * This is NOT a capability, and it deliberately names a role, which every other
+ * authorization decision in this codebase refuses to do. The difference is what
+ * is being asked. A capability answers "may this role do X?", and asking it by
+ * name is the bug: a role added later falls through the check. This answers
+ * "which role is structurally limited to one branch?", and the answer is a fact
+ * about the shape of the business, not about permissions — a till belongs to a
+ * shop, and a shop has one till. A role added later is *not* constrained, which
+ * is the safe default and the opposite of a deny-list's failure mode.
+ *
+ * It lives here, as data, so the rule has exactly one definition: the service
+ * that enforces it, the validator that pre-empts it, and the app's branch
+ * picker all read this, and `lint:permissions` compares it with the mirror.
+ * A delivery agent covering three branches stays possible; managers and staff
+ * are unchanged.
+ */
+const SINGLE_BRANCH_ROLE = 'CASHIER';
+
+module.exports = { CAPABILITIES, ROLE_CAPABILITIES, SINGLE_BRANCH_ROLE };

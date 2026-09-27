@@ -24,11 +24,11 @@
       "USER_NOT_FOUND": "हे खाते आता अस्तित्वात नाही.",
       "TENANT_BUSINESS_ID_REQUIRED": "कोणताही व्यवसाय निवडलेला नाही.",
       "TENANT_ACCESS_DENIED": "आता या व्यवसायात तुमचा प्रवेश नाही.",
-      "PERMISSION_DENIED": "तुमची भूमिका याची परवानगी देत नाही.",
-      "BRANCH_ACCESS_DENIED": "या शाखेत तुमचा प्रवेश नाही.",
-      "BRANCH_ACCESS_DENIED_DESTINATION": "ज्या शाखेत तुम्ही हलवत आहात तिथे तुमचा प्रवेश नाही.",
-      "STAFF_ACCESS_DENIED": "या कर्मचाऱ्यावर तुमचा प्रवेश नाही.",
-      "SALARY_SLIP_ACCESS_DENIED": "या पगारपत्रकावर तुमचा प्रवेश नाही.",
+      "PERMISSION_DENIED": "हे तुमच्या भूमिकेच्या कक्षेत नाही.",
+      "BRANCH_ACCESS_DENIED": "तुम्ही फक्त तुम्हाला दिलेल्या शाखांमध्येच काम करू शकता. ही शाखा देण्यासाठी प्रशासकाला सांगा.",
+      "BRANCH_ACCESS_DENIED_DESTINATION": "तुम्ही कोणाला फक्त तुम्हाला दिलेल्या शाखेतच पाठवू शकता.",
+      "STAFF_ACCESS_DENIED": "तुम्ही फक्त तुमच्या शाखांच्या कर्मचाऱ्यांची नोंद उघडू शकता.",
+      "SALARY_SLIP_ACCESS_DENIED": "तुम्ही फक्त तुमच्याच पगार पावत्या उघडू शकता.",
       "PAY_SET_NOT_PERMITTED": "तुम्हाला पगार ठरवण्याची परवानगी नाही.",
       "PAY_CHANGE_NOT_PERMITTED": "तुम्हाला पगार बदलण्याची परवानगी नाही.",
       "MEMBERSHIP_REVOKE_OUTRANKED": "तुमच्याइतकी किंवा त्याहून अधिक पोहोच असलेल्या व्यक्तीला तुम्ही काढू शकत नाही.",
@@ -122,7 +122,9 @@
       "ANALYTICS_RANGE_REVERSED": "शेवटचा महिना पहिल्या महिन्याच्या आधीचा असू शकत नाही",
       "ANALYTICS_RANGE_TOO_LONG": "एका अहवालात एकावेळी जास्तीत जास्त {{max}} महिने येऊ शकतात",
       "EXPORT_NO_BRANCHES": "निर्यात करण्यासाठी कोणतीही शाखा नाही",
-      "EXPORT_MONTH_INVALID": "हा खरा महिना नाही"
+      "EXPORT_MONTH_INVALID": "हा खरा महिना नाही",
+      "BRANCH_ALREADY_HAS_CASHIER": "एका शाखेत फक्त एकच कॅशियर असू शकतो, आणि {{branch}} चे कॅशियर {{cashier}} आहेत.",
+      "CASHIER_ALREADY_HAS_BRANCH": "{{branch}} जोडता येत नाही — एका कॅशियरकडे एकच शाखा असते, आणि त्यांच्याकडे {{currentBranch}} आहे."
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} आवश्यक आहे",
@@ -171,7 +173,8 @@
       "CATEGORY_NOTHING_TO_UPDATE": "नाव बदला, किंवा प्रवर्ग मागे घ्या",
       "DEVICE_TOKEN_REQUIRED": "हे डिव्हाइस सूचनांसाठी नोंदवता आले नाही",
       "NOTIFICATION_ENABLED_REQUIRED": "हे सुरू करायचे की बंद ते निवडा",
-      "FIELD_MUST_BE_MONTH": "{{field}} YYYY-MM स्वरूपात महिना असावा"
+      "FIELD_MUST_BE_MONTH": "{{field}} YYYY-MM स्वरूपात महिना असावा",
+      "CASHIER_NEEDS_ONE_BRANCH": "एक कॅशियर नेमक्या एकाच शाखेत काम करतो, म्हणून एक निवडा."
     },
     "field": {
       "name": "नाव",
@@ -364,7 +367,10 @@
     "expensesTitle": "आजचे खर्च",
     "expensesSubtitle": "काय गेले, काय आले",
     "expenseGapsTitle": "विचारायच्या शाखा",
-    "expenseGapsSubtitle": "कोणी आजचा खर्च नोंदवला नाही"
+    "expenseGapsSubtitle": "कोणी आजचा खर्च नोंदवला नाही",
+    "noBranchBadge": "अजून शाखा नाही",
+    "noBranchTitle": "तुम्हाला कोणतीही शाखा दिलेली नाही",
+    "noBranchBody": "तुमचे खाते आणि भूमिका बरोबर आहेत — फक्त त्यांना कोणतीही शाखा जोडलेली नाही, म्हणून येथे दाखवण्यासारखे काही नाही. मालक किंवा प्रशासकाला एक शाखा देण्यास सांगा."
   },
   "phase": {
     "examplesLabel": "तुम्ही काय विचारू शकाल"
@@ -745,7 +751,25 @@
     "removeBranchTitle": "शाखेचा प्रवेश काढायचा?",
     "removeBranchBody": "{{name}} यांना यापुढे {{branch}} दिसणार नाही.",
     "removeBranchHint": "प्रवेश काढण्यासाठी शाखेवर टॅप करा",
-    "removeBranchAccessibility": "{{branch}} चा प्रवेश काढा"
+    "removeBranchAccessibility": "{{branch}} चा प्रवेश काढा",
+    "cashierRule": "एक शाखा, आणि त्यावर एक कॅशियर.",
+    "assignBranch": "शाखा द्या",
+    "changeBranch": "शाखा बदला",
+    "pickBranch": "कोणती शाखा?",
+    "branchHeldBy": "कॅशियर: {{name}}",
+    "branchFree": "अजून कोणी कॅशियर नाही",
+    "cashierNoBranch": "अजून शाखा नाही — गल्ला उघडण्यापूर्वी त्यांना एक शाखा द्या.",
+    "swapTitle": "शाखा बदलायची?",
+    "swapBody": "{{branch}} चे कॅशियर {{cashier}} आहेत. ती {{name}} ला दिल्यास {{cashier}} कडे कोणतीही शाखा राहणार नाही.",
+    "swapAlsoVacates": "नंतर {{currentBranch}} मध्येही कोणी कॅशियर राहणार नाही.",
+    "swapConfirm": "बदला",
+    "moveTitle": "त्यांची शाखा बदलायची?",
+    "moveBody": "{{name}} {{currentBranch}} सांभाळतात. त्यांना {{branch}} ला पाठवल्यास {{currentBranch}} मध्ये कोणी कॅशियर राहणार नाही.",
+    "conflictsTitle": "तुमचा निर्णय हवा",
+    "conflictsBody": "हे तेव्हा तयार झाले जेव्हा एका शाखेवर एक कॅशियर हा नियम नव्हता. तुमच्यासाठी काहीही बदलले नाही — ठरवा की कोणती शाखा कोणाकडे राहावी.",
+    "conflictSharedBranch": "{{branch}} वर {{count}} कॅशियर आहेत: {{names}}",
+    "conflictNoBranch": "{{name}} कडे कोणतीही शाखा नाही",
+    "conflictTooManyBranches": "{{name}} कडे {{count}} शाखा आहेत"
   },
   "inviteMember": {
     "title": "सदस्याला आमंत्रित करा",
@@ -764,7 +788,14 @@
     "branchSection": "ते कोणत्या शाखांचा प्रवेश करू शकतात?",
     "noBranches": "आधी शाखा जोडा.",
     "submit": "आमंत्रण पाठवा",
-    "submitting": "आमंत्रित करत आहे..."
+    "submitting": "आमंत्रित करत आहे...",
+    "cashierBranchHint": "एक कॅशियर नेमक्या एकाच शाखेत काम करतो. तीच शाखा निवडा जी ते सांभाळतील.",
+    "branchHeldBy": "येथील कॅशियर {{name}} आहेत",
+    "branchFree": "अजून कोणी कॅशियर नाही",
+    "swapTitle": "त्या शाखेवर आधीच एक कॅशियर आहे",
+    "swapBody": "{{branch}} चे कॅशियर {{cashier}} आहेत. यांना बोलावल्यास शाखा त्यांच्याकडून घेतली जाईल आणि त्यांच्याकडे कोणतीही शाखा राहणार नाही.",
+    "swapConfirm": "बोलावा आणि शाखा बदला",
+    "branchTheirs": "त्यांची शाखा"
   },
   "month": {
     "1": "जानेवारी",
@@ -1137,5 +1168,53 @@
     "printableHint": "एकूण आणि नोंदी, PDF म्हणून शेअर करता येईल.",
     "worthChecking": "आधी तपासा",
     "overlapExpenseMatchesSupplyOrder": "{{date}} रोजी \"{{category}}\" अंतर्गत {{amount}} त्याच रकमेच्या सप्लाय ऑर्डर #{{orderNumber}} शी जुळते. तीच रक्कम असल्यास ती दोनदा मोजली गेली आहे."
+  },
+  "permissions": {
+    "denied": "फक्त {{roles}} हेच {{action}} शकतात.",
+    "deniedNobody": "या व्यवसायात कोणीही {{action}} शकत नाही.",
+    "roleJoin": ", ",
+    "askSomeone": "त्यांपैकी कोणाला हे करायला सांगा, किंवा तुमची भूमिका बदलून घ्या.",
+    "actions": {
+      "businessCreate": "दुसरा व्यवसाय सुरू करू",
+      "branchCreate": "शाखा जोडू",
+      "branchUpdate": "शाखेची सेटिंग बदलू",
+      "branchAllAccess": "प्रत्येक शाखेत काम करू",
+      "teamView": "संघात कोण आहे ते पाहू",
+      "teamInvite": "कोणाला संघात बोलावू",
+      "teamRevoke": "कोणाचा प्रवेश काढू",
+      "teamManageBranchAccess": "कोणाच्या शाखा बदलू",
+      "staffCreate": "कर्मचारी जोडू",
+      "staffUpdate": "कर्मचाऱ्याची नोंद बदलू",
+      "staffViewOthers": "सहकाऱ्याची नोंद उघडू",
+      "staffViewAllBranches": "प्रत्येक शाखेचे कर्मचारी पाहू",
+      "staffSetPay": "कोणाचा पगार ठरवू",
+      "attendanceMarkOthers": "दुसऱ्याची हजेरी नोंदवू",
+      "attendanceViewRoster": "एका दिवसाची शाखेची हजेरी पाहू",
+      "attendancePunchAnywhere": "शाखेबाहेरून हजेरी नोंदवू",
+      "payrollView": "इतरांची पगार पावती पाहू",
+      "payrollRun": "पगार तयार करू आणि अंतिम करू",
+      "workCalendarManage": "साप्ताहिक सुट्टी आणि सुट्ट्यांची यादी बदलू",
+      "dataSourceManage": "डेटा स्रोत जोडू आणि विक्री फाइल चढवू",
+      "productView": "उत्पादन यादी पाहू",
+      "productManage": "उत्पादन जोडू, बदलू आणि त्यांचे दर ठरवू",
+      "counterOrderCreate": "काउंटर ऑर्डर उघडू आणि टोकन देऊ",
+      "counterOrderEdit": "ऑर्डर झाल्यावर तो बदलू",
+      "counterOrderVoid": "ऑर्डर रद्द करू",
+      "counterOrderCloseDay": "शाखेचा दिवस बंद करू",
+      "supplyItemView": "कच्च्या मालाची यादी पाहू",
+      "supplyItemManage": "कच्चा माल जोडू, त्याचे दर ठरवू आणि काढू",
+      "supplyOrderView": "मालाचे ऑर्डर पाहू",
+      "supplyOrderCreate": "गोदामातून कच्चा माल मागवू",
+      "supplyOrderFulfil": "मालाचा ऑर्डर स्वीकारू, पॅक करू आणि पाठवू",
+      "supplyOrderDeliver": "ऑर्डर घेऊन जाऊ आणि पोहोचला असे नोंदवू",
+      "supplyOrderDelay": "ऑर्डरवर विलंब नोंदवू",
+      "expenseView": "शाखेचा खर्च पाहू",
+      "expenseLog": "शाखेचा खर्च नोंदवू",
+      "expenseViewAllBranches": "प्रत्येक शाखेचा खर्च पाहू",
+      "analyticsViewBranch": "शाखेचे स्वतःचे आकडे पाहू",
+      "analyticsViewBusiness": "प्रत्येक शाखेची महिन्या-दरमहिना तुलना पाहू",
+      "exportDayEnd": "एका दिवसाच्या नोंदी निर्यात करू",
+      "exportMonthEnd": "एका महिन्याच्या नोंदी निर्यात करू"
+    }
   }
 }

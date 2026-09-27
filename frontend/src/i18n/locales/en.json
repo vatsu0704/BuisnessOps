@@ -24,11 +24,11 @@
       "USER_NOT_FOUND": "That account no longer exists.",
       "TENANT_BUSINESS_ID_REQUIRED": "No business selected.",
       "TENANT_ACCESS_DENIED": "You no longer have access to this business.",
-      "PERMISSION_DENIED": "Your role does not allow this.",
-      "BRANCH_ACCESS_DENIED": "You do not have access to this branch.",
-      "BRANCH_ACCESS_DENIED_DESTINATION": "You do not have access to the branch you are moving them to.",
-      "STAFF_ACCESS_DENIED": "You do not have access to this staff member.",
-      "SALARY_SLIP_ACCESS_DENIED": "You do not have access to this payslip.",
+      "PERMISSION_DENIED": "This is not something your role can do.",
+      "BRANCH_ACCESS_DENIED": "You can only work in the branches you have been assigned to. Ask an admin to assign this one.",
+      "BRANCH_ACCESS_DENIED_DESTINATION": "You can only move someone to a branch you have been assigned to.",
+      "STAFF_ACCESS_DENIED": "You can only open the records of employees at your own branches.",
+      "SALARY_SLIP_ACCESS_DENIED": "You can only open your own payslips.",
       "PAY_SET_NOT_PERMITTED": "You are not allowed to set pay.",
       "PAY_CHANGE_NOT_PERMITTED": "You are not allowed to change pay.",
       "MEMBERSHIP_REVOKE_OUTRANKED": "You cannot remove someone with equal or greater access than your own.",
@@ -122,7 +122,9 @@
       "ANALYTICS_RANGE_REVERSED": "The last month cannot come before the first",
       "ANALYTICS_RANGE_TOO_LONG": "A report can cover at most {{max}} months at a time",
       "EXPORT_NO_BRANCHES": "There is no branch to export",
-      "EXPORT_MONTH_INVALID": "That is not a real month"
+      "EXPORT_MONTH_INVALID": "That is not a real month",
+      "BRANCH_ALREADY_HAS_CASHIER": "A branch can have only one cashier, and {{cashier}} is the cashier for {{branch}}.",
+      "CASHIER_ALREADY_HAS_BRANCH": "Cannot add {{branch}} — a cashier has one branch, and this one has {{currentBranch}}."
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} is required",
@@ -171,7 +173,8 @@
       "CATEGORY_NOTHING_TO_UPDATE": "Change the name, or withdraw the category",
       "DEVICE_TOKEN_REQUIRED": "This device could not be registered for notifications",
       "NOTIFICATION_ENABLED_REQUIRED": "Choose whether to turn this on or off",
-      "FIELD_MUST_BE_MONTH": "{{field}} must be a month in YYYY-MM form"
+      "FIELD_MUST_BE_MONTH": "{{field}} must be a month in YYYY-MM form",
+      "CASHIER_NEEDS_ONE_BRANCH": "A cashier works at exactly one branch, so choose one."
     },
     "field": {
       "name": "Name",
@@ -364,7 +367,10 @@
     "expensesTitle": "Today’s expenses",
     "expensesSubtitle": "What went out, against what came in",
     "expenseGapsTitle": "Branches to chase",
-    "expenseGapsSubtitle": "Who has not logged today’s spending"
+    "expenseGapsSubtitle": "Who has not logged today’s spending",
+    "noBranchBadge": "No branch yet",
+    "noBranchTitle": "You have not been given a branch",
+    "noBranchBody": "Your account and your role are correct — there is just no branch attached to them yet, so there is nothing here to show. Ask an owner or an admin to assign you one."
   },
   "phase": {
     "examplesLabel": "What you'll be able to ask"
@@ -745,7 +751,25 @@
     "removeBranchTitle": "Remove branch access?",
     "removeBranchBody": "{{name}} will no longer see {{branch}}.",
     "removeBranchHint": "Tap a branch to remove access to it",
-    "removeBranchAccessibility": "Remove access to {{branch}}"
+    "removeBranchAccessibility": "Remove access to {{branch}}",
+    "cashierRule": "One branch, and one cashier on it.",
+    "assignBranch": "Assign a branch",
+    "changeBranch": "Change branch",
+    "pickBranch": "Which branch?",
+    "branchHeldBy": "Cashier: {{name}}",
+    "branchFree": "No cashier yet",
+    "cashierNoBranch": "No branch yet — give them one before they can open a till.",
+    "swapTitle": "Move the branch?",
+    "swapBody": "{{cashier}} is the cashier for {{branch}}. Moving it to {{name}} leaves {{cashier}} with no branch.",
+    "swapAlsoVacates": "{{currentBranch}} will then have no cashier either.",
+    "swapConfirm": "Move it",
+    "moveTitle": "Change their branch?",
+    "moveBody": "{{name}} runs {{currentBranch}}. Moving them to {{branch}} leaves {{currentBranch}} with no cashier.",
+    "conflictsTitle": "Needs a decision",
+    "conflictsBody": "These were set up before one cashier per branch became the rule. Nothing has been changed for you — decide who keeps which branch.",
+    "conflictSharedBranch": "{{branch}} has {{count}} cashiers: {{names}}",
+    "conflictNoBranch": "{{name}} has no branch",
+    "conflictTooManyBranches": "{{name}} has {{count}} branches"
   },
   "inviteMember": {
     "title": "Invite a member",
@@ -764,7 +788,14 @@
     "branchSection": "Which branches can they access?",
     "noBranches": "Add a branch first.",
     "submit": "Send invite",
-    "submitting": "Inviting..."
+    "submitting": "Inviting...",
+    "cashierBranchHint": "A cashier works at exactly one branch. Pick the one they run.",
+    "branchHeldBy": "{{name}} is the cashier here",
+    "branchFree": "No cashier yet",
+    "swapTitle": "That branch already has a cashier",
+    "swapBody": "{{cashier}} is the cashier for {{branch}}. Inviting this person takes the branch from them, and leaves them with none.",
+    "swapConfirm": "Invite and move the branch",
+    "branchTheirs": "Their branch"
   },
   "month": {
     "1": "January",
@@ -1137,5 +1168,53 @@
     "printableHint": "Totals and the records, as a PDF you can share.",
     "worthChecking": "Worth checking first",
     "overlapExpenseMatchesSupplyOrder": "{{amount}} under \"{{category}}\" on {{date}} matches supply order #{{orderNumber}} for the same amount. If it was the same payment, it is counted twice."
+  },
+  "permissions": {
+    "denied": "Only {{roles}} can {{action}}.",
+    "deniedNobody": "Nobody in this business can {{action}}.",
+    "roleJoin": ", ",
+    "askSomeone": "Ask one of them to do it, or to change your role.",
+    "actions": {
+      "businessCreate": "start another business",
+      "branchCreate": "add a branch",
+      "branchUpdate": "change a branch's settings",
+      "branchAllAccess": "work across every branch",
+      "teamView": "see who is on the team",
+      "teamInvite": "invite someone to the team",
+      "teamRevoke": "remove someone's access",
+      "teamManageBranchAccess": "change which branches someone can reach",
+      "staffCreate": "add an employee",
+      "staffUpdate": "edit an employee record",
+      "staffViewOthers": "open a colleague's record",
+      "staffViewAllBranches": "read every branch's employees",
+      "staffSetPay": "set someone's salary",
+      "attendanceMarkOthers": "mark someone else's attendance",
+      "attendanceViewRoster": "see a branch's attendance for a day",
+      "attendancePunchAnywhere": "punch in away from a branch",
+      "payrollView": "see other people's payslips",
+      "payrollRun": "generate and finalize payroll",
+      "workCalendarManage": "change the weekly off and the holiday list",
+      "dataSourceManage": "connect a data source and upload sales files",
+      "productView": "see the product catalog",
+      "productManage": "add, edit and price products",
+      "counterOrderCreate": "open a counter order and issue a token",
+      "counterOrderEdit": "change an order after it is placed",
+      "counterOrderVoid": "void an order",
+      "counterOrderCloseDay": "close a branch's day",
+      "supplyItemView": "see the raw-material catalog",
+      "supplyItemManage": "add, price and withdraw raw material",
+      "supplyOrderView": "see supply orders",
+      "supplyOrderCreate": "order raw material from the warehouse",
+      "supplyOrderFulfil": "accept, pack and dispatch a supply order",
+      "supplyOrderDeliver": "carry an order and mark it delivered",
+      "supplyOrderDelay": "post a delay against an order",
+      "expenseView": "see what a branch spent",
+      "expenseLog": "record what a branch spent",
+      "expenseViewAllBranches": "see every branch's expenses",
+      "analyticsViewBranch": "see a branch's own figures",
+      "analyticsViewBusiness": "compare every branch, month by month",
+      "exportDayEnd": "export a day's entries",
+      "exportMonthEnd": "export a month's entries"
+    }
   }
 }

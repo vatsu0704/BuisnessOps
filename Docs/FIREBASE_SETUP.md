@@ -131,6 +131,50 @@ npm run android
 
 ---
 
+## Step 5a — If you build on EAS instead of locally
+
+**EAS Build uploads only the files git tracks**, and `google-services.json` is
+not one of them. Prebuild on the builder then fails with:
+
+```
+Error: "google-services.json" is missing, make sure that the file exists.
+Remember that EAS Build only uploads the files tracked by git.
+```
+
+The file is not secret — it ships inside every APK — but it still has to reach
+the builder, and EAS does that with a **file-type environment variable**:
+
+1. On expo.dev → your project → **Environment variables** → *Create variable*.
+   Name it `GOOGLE_SERVICES_JSON`, set the type to **File**, upload
+   `frontend/google-services.json`, and tick every environment you build in
+   (production, preview, development). From the terminal instead:
+
+   ```bash
+   cd frontend
+   npx eas-cli@latest env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --environment production
+   ```
+2. Nothing else to change. `frontend/app.config.js` already prefers that
+   variable over the literal path, and each build profile in `eas.json` names
+   the environment whose variables it loads.
+
+On the builder the variable holds the **path** the file was written to, which is
+why the config reads it as a path rather than as JSON. Locally the variable is
+unset and `./google-services.json` from `app.json` is used, so nothing about
+`expo prebuild` or `./gradlew assembleRelease` changes.
+
+Two EAS credential slots look relevant here and are not:
+
+- **Google Service Account Key** (EAS Submit) uploads builds to Google Play. It
+  wants a Google Cloud service account with Play Developer API access — not
+  `google-services.json`, and not the Firebase key from step 3. Uploading the
+  wrong file fails with `"private_key": Required`.
+- **FCM V1 service account key** lets *Expo's* push service talk to FCM. BizIQ
+  never uses it: the app takes the raw device token
+  (`getDevicePushTokenAsync`) and the backend sends with `firebase-admin`,
+  so Expo is not in the delivery path.
+
+---
+
 ## Step 6 — Check it works
 
 1. Open the app and log in. Accept the notification permission prompt when it
@@ -195,7 +239,8 @@ it per manufacturer.
 
 | File | In git? | Why |
 |---|---|---|
-| `frontend/google-services.json` | **No** | Identifies your Firebase project. Not a secret in the way the service account is, but it belongs to your project rather than to the code |
+| `frontend/google-services.json` | **No** | Identifies your Firebase project. Not a secret in the way the service account is, but it belongs to your project rather than to the code. Being untracked is exactly why an EAS build needs step 5a |
+| `frontend/app.config.js` | Yes | The two-line shim that lets EAS supply the file above. No credentials in it |
 | `backend/firebase-service-account.json` | **No** | A credential. Anyone holding it can push to every user |
 | `FIREBASE_SERVICE_ACCOUNT` in `backend/.env` | **No** | `.env` has never been in git |
 | The Expo plugin entry in `app.json` | Yes | It is configuration, not credentials |

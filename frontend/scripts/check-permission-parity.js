@@ -34,7 +34,7 @@ if (!fs.existsSync(CATALOG)) {
   process.exit(1);
 }
 
-const { CAPABILITIES, ROLE_CAPABILITIES } = require(CATALOG);
+const { CAPABILITIES, ROLE_CAPABILITIES, SINGLE_BRANCH_ROLE } = require(CATALOG);
 const mirror = JSON.parse(fs.readFileSync(MIRROR, 'utf8'));
 
 const problems = [];
@@ -119,7 +119,76 @@ if (fs.existsSync(SCHEMA)) {
   }
 }
 
-// --- 5. Backend prose: see check-notification-prose.js ---------------------
+// --- 5. The single-branch role (requirement 18) ----------------------------
+// Not a capability, so sections 1-3 above cannot see it: it is the one role the
+// 1:1 branch rule constrains. Both sides read it — the backend to enforce the
+// rule, the app to make its branch picker single-select and to say which
+// branches are already taken — so a drift here means the app offers a choice
+// the server refuses, or silently stops offering one it allows.
+if (mirror.singleBranchRole !== SINGLE_BRANCH_ROLE) {
+  problems.push(
+    `singleBranchRole is "${SINGLE_BRANCH_ROLE}" in the backend catalog but ` +
+      `"${mirror.singleBranchRole ?? '(missing)'}" in the mirror`
+  );
+} else if (!ROLE_CAPABILITIES[SINGLE_BRANCH_ROLE]) {
+  problems.push(`singleBranchRole "${SINGLE_BRANCH_ROLE}" is not a role in the matrix`);
+}
+
+// --- 6. Every capability can explain its own refusal (requirement 19) ------
+// A 403 now renders as "Only Warehouse can accept, pack and dispatch a supply
+// order", built from the capability the server sent plus this app's mirror of the
+// matrix. Two things have to hold for that, and only one of them is something
+// `tsc` can see.
+//
+// ACTION_KEYS in src/permissions/explain.ts is a Record over Capability, so a
+// capability added without a phrase is a compile error. But its VALUES are i18n
+// keys assembled at runtime and cast, exactly like errors.api.<CODE> — so a typo
+// resolves to nothing and the refusal silently falls back to the server's
+// English. That is the same hole check-error-parity.js exists to close, so it is
+// closed the same way: here, against en.json.
+//
+// Scraped with a regex rather than imported, because this is a .ts module and the
+// script runs in plain node. A regex that MISSES an entry cannot hide a problem:
+// the totality check below compares what was found against the capability list.
+const EXPLAIN = path.join(__dirname, '..', 'src', 'permissions', 'explain.ts');
+const EN = path.join(__dirname, '..', 'src', 'i18n', 'locales', 'en.json');
+
+if (fs.existsSync(EXPLAIN) && fs.existsSync(EN)) {
+  const source = fs.readFileSync(EXPLAIN, 'utf8');
+  const block = source.match(/const ACTION_KEYS[^=]*=\s*\{([\s\S]*?)\n\};/);
+  if (!block) {
+    problems.push('could not find ACTION_KEYS in src/permissions/explain.ts');
+  } else {
+    const en = JSON.parse(fs.readFileSync(EN, 'utf8'));
+    const mapped = new Map();
+    for (const line of block[1].split('\n')) {
+      const entry = line.match(/^\s*'([^']+)':\s*'([^']+)',?\s*$/);
+      if (entry) mapped.set(entry[1], entry[2]);
+    }
+
+    for (const cap of backendCaps) {
+      const key = mapped.get(cap);
+      if (!key) {
+        problems.push(`capability "${cap}" has no entry in ACTION_KEYS (explain.ts)`);
+        continue;
+      }
+      // Walk the dotted path rather than assuming a depth, the way the error
+      // parity script resolves errors.api.<CODE>.
+      const text = key.split('.').reduce((node, part) => (node == null ? node : node[part]), en);
+      if (typeof text !== 'string' || !text.trim()) {
+        problems.push(`ACTION_KEYS["${cap}"] points at "${key}", which is missing from en.json`);
+      }
+    }
+
+    for (const cap of mapped.keys()) {
+      if (!backendCaps.includes(cap)) {
+        problems.push(`ACTION_KEYS has "${cap}", which is not a capability`);
+      }
+    }
+  }
+}
+
+// --- 7. Backend prose: see check-notification-prose.js ---------------------
 // This file used to carry a substring scan for `notifications/labels.js` over
 // four directories. `scripts/check-notification-prose.js` now does that job
 // properly — it walks the whole backend tree and matches an actual `require`
@@ -137,5 +206,7 @@ if (problems.length) {
 }
 
 console.log(
-  `Permission parity OK — ${backendCaps.length} capabilities across ${backendRoles.length} roles match.`
+  `Permission parity OK — ${backendCaps.length} capabilities across ${backendRoles.length} roles match, ` +
+    `${SINGLE_BRANCH_ROLE} is the single-branch role on both sides, and every ` +
+    `capability can explain its own refusal.`
 );

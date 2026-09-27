@@ -64,14 +64,14 @@ describe('CSV ingestion (Phase 1)', () => {
     expect(branch.statusCode).toBe(201);
     branchId = branch.body.id;
 
+    // The branch comes with the invite rather than as a follow-up call:
+    // requirement 18 refuses a cashier invited with no branch, because a till
+    // belongs to a shop and a cashier with none has nothing to do.
     const membership = await request(app)
       .post(`/api/businesses/${businessId}/memberships`)
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ email: cashierEmail, role: 'CASHIER' });
-    await request(app)
-      .post(`/api/businesses/${businessId}/memberships/${membership.body.id}/branch-access`)
-      .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ branchId });
+      .send({ email: cashierEmail, role: 'CASHIER', branchIds: [branchId] });
+    expect(membership.statusCode).toBe(201);
     const cashierLogin = await request(app).post('/api/auth/login').send({ email: cashierEmail, password });
     cashierToken = cashierLogin.body.token;
 

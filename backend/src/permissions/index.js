@@ -1,4 +1,4 @@
-const { CAPABILITIES, ROLE_CAPABILITIES } = require('./catalog');
+const { CAPABILITIES, ROLE_CAPABILITIES, SINGLE_BRANCH_ROLE } = require('./catalog');
 
 // Requires only ./catalog, which itself requires nothing — see the header
 // there. Keep it that way: this module is cheap to load from a script or a
@@ -71,4 +71,6 @@ module.exports = {
   capabilitiesOf,
   KNOWN_CAPABILITIES: KNOWN,
   ROLES: Object.keys(ROLE_CAPABILITIES),
+  // Re-exported so nothing outside this folder requires ./catalog directly.
+  SINGLE_BRANCH_ROLE,
 };
