@@ -119,6 +119,22 @@ function localDayRange(key, timeZone) {
   return { start, end };
 }
 
+/**
+ * The instant a wall-clock time on `key` happened at a branch in `timeZone`.
+ *
+ * A sales file says "2026-09-01 22:30" and means the shop's clock. Handing that
+ * to `new Date()` reads it in the *server's* zone instead, which is right on a
+ * laptop in India and five and a half hours out on a UTC host — far enough to
+ * move a late-evening sale onto the next day. Same two-guess correction as
+ * `localDayRange`, for the same daylight-saving reason.
+ */
+function instantOfLocalTime(key, hour, minute, second, timeZone) {
+  const [y, m, d] = String(key).split('-').map(Number);
+  const wall = Date.UTC(y, m - 1, d, hour, minute, second);
+  const firstGuess = new Date(wall - offsetMinutesAt(new Date(wall), timeZone) * 60000);
+  return new Date(wall - offsetMinutesAt(firstGuess, timeZone) * 60000);
+}
+
 /** 'YYYY-MM-DD' to the UTC-midnight Date that @db.Date columns store. */
 function dateOnly(key) {
   const [y, m, d] = String(key).split('-').map(Number);
@@ -265,6 +281,7 @@ module.exports = {
   localDayRange,
   localMonthRange,
   localTimestampKey,
+  instantOfLocalTime,
   todayKeyInZone,
   thisMonthKeyInZone,
   todayInZone,

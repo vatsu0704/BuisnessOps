@@ -736,11 +736,39 @@ table would mean teaching all five about a second kind of place first.
   "none of them".
 - When that role reaches every branch — delivery agent, warehouse desk, admin — the
   question changes from "which branch do they work at" to "where is their base", and
-  says that it only decides where attendance and payslips are filed.
-- The location is chosen automatically where there is nothing to choose: the business has
-  one location, or the person's work spans every branch and a warehouse exists. It is
-  never guessed for a branch-scoped person, because filing someone at the wrong shop
-  silently is worse than a tap.
+  says that it only decides where attendance and payslips are filed. The wording follows
+  the *work*; what is on offer follows the rule below, and the two are not the same
+  question.
+- **A base is not free-form, and the rule is read off the capability matrix.** Three
+  shapes, and which one is asked is decided by capabilities rather than by role names, so
+  a role added later lands on the right side of each line by itself:
+  - **No question** — holds `staff:viewAllBranches`, so they hold authority over people
+    at every branch: the owner, an admin, a manager. They run the business rather than a
+    place. The picker is hidden and a line names where the record will be filed instead,
+    because attendance and a payslip still have to land somewhere and hiding the choice
+    must not hide the outcome.
+  - **Warehouses only** — holds `supplyOrder:fulfil` without `staff:viewAllBranches`: the
+    warehouse desk. Accepting, packing and dispatching goods happens where the goods are.
+    Deliberately **not** `branch:allAccess`: a delivery agent reaches every branch too,
+    and holds `attendance:punchAnywhere` precisely because they have *no* fixed place of
+    work, so any branch is a legitimate payroll home for them. This is the mirror image
+    of the agent picker's `supplyOrder:deliver` **and not** `supplyOrder:fulfil`.
+  - **Every location** — everybody else, and anybody with no account at all.
+- **The warehouse rule is enforced in the service, not in the screen**, because three
+  doors reach it: add staff, edit staff, and the API. A refusal names the rule and the
+  role (`STAFF_BASE_MUST_BE_WAREHOUSE`, with `role` as a param so the device translates
+  it), in the shape R19 asks for.
+- **A business with no warehouse says so and offers to add one.** The desk has no correct
+  base until one exists, and a rule with no way out is a dead end rather than a
+  validation. This is the case that was reported: with a single shop and no warehouse,
+  the shop was silently selected for the warehouse desk.
+- The location is otherwise chosen automatically only where there is nothing to choose:
+  one option on offer, or a warehouse to default a branch-spanning person to — offered,
+  never imposed. It is never guessed for a branch-scoped person, because filing someone
+  at the wrong shop silently is worse than a tap.
+- **Why the base matters beyond payroll:** a `CASHIER` holds `staff:viewOthers` *and*
+  `staff:setPay` for their own branch, so filing the warehouse desk at a shop puts the
+  desk on that shop's roster with their salary visible to, and editable by, its cashier.
 - The job title is offered from their membership role — a delivery agent gets "Delivery
   agent" — as a suggestion that any typing replaces, and that clears if the email does.
 - A **delivery agent added this way punches in and out from anywhere**, with the

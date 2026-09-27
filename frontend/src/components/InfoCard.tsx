@@ -8,10 +8,17 @@ type Props = {
   title: string;
   subtitle: string;
   onPress?: () => void;
+  /**
+   * Set when the card opens and closes a section below it rather than going
+   * somewhere. The chevron then points down or up instead of forward, and a
+   * screen reader hears whether the section is open.
+   */
+  expanded?: boolean;
   testID?: string;
 };
 
-export default function InfoCard({ icon, title, subtitle, onPress, testID }: Props) {
+export default function InfoCard({ icon, title, subtitle, onPress, expanded, testID }: Props) {
+  const chevron = expanded === undefined ? 'chevron-forward' : expanded ? 'chevron-up' : 'chevron-down';
   const body = (
     <View style={styles.card}>
       <View style={styles.iconTile}>
@@ -21,14 +28,20 @@ export default function InfoCard({ icon, title, subtitle, onPress, testID }: Pro
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
-      {onPress ? <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} /> : null}
+      {onPress ? <Ionicons name={chevron} size={18} color={colors.textTertiary} /> : null}
     </View>
   );
 
   if (!onPress) return body;
 
   return (
-    <PressableScale testID={testID} onPress={onPress} scaleTo={0.98}>
+    <PressableScale
+      testID={testID}
+      onPress={onPress}
+      scaleTo={0.98}
+      accessibilityRole="button"
+      accessibilityState={expanded === undefined ? undefined : { expanded }}
+    >
       {body}
     </PressableScale>
   );

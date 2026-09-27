@@ -50,6 +50,24 @@ function fieldLabel(field: string | null | undefined): string {
 }
 
 /**
+ * Render the parameters a sentence interpolates.
+ *
+ * A `role` arrives as the enum name the backend holds — `WAREHOUSE` — because
+ * the backend cannot know which of the four languages to send, which is the
+ * whole reason anything that varies travels as a parameter. Dropping it into
+ * the sentence unchanged would print "WAREHOUSE works across every branch" in
+ * the middle of a Gujarati paragraph, so it is translated here, in the one
+ * place every error message already passes through.
+ *
+ * An unknown role — an app older than the server — falls back to the raw name
+ * rather than blanking out, leaving a sentence that is ugly but still true.
+ */
+function renderParams(params: Record<string, unknown> = {}): Record<string, unknown> {
+  if (typeof params.role !== 'string') return params;
+  return { ...params, role: translate(`role.${params.role}`) ?? params.role };
+}
+
+/**
  * One rejected row or field, in the reader's language. Exported because the
  * upload screen shows a list of per-row problems, which arrive as the same
  * kind of detail but are not an error response.
@@ -100,6 +118,6 @@ export function translateApiError(body: ApiErrorBody | undefined): string | null
     return null;
   }
 
-  if (body.code) return translate(`errors.api.${body.code}`, body.params ?? {});
+  if (body.code) return translate(`errors.api.${body.code}`, renderParams(body.params));
   return null;
 }

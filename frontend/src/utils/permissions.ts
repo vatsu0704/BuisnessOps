@@ -88,6 +88,15 @@ export const can = {
   setPay: (m: Membership | undefined) => hasCapability(m, 'staff:setPay'),
   manageTeam: (m: Membership | undefined) => hasCapability(m, 'team:view'),
   /**
+   * Add a location — a shop or the business's own warehouse.
+   *
+   * Used to offer the way out of a base picker with nothing correct in it: a
+   * warehouse desk cannot be filed anywhere until the business has a warehouse,
+   * and a cashier holds no `branch:create`, so they are shown the reason
+   * without a button that would meet a 403.
+   */
+  addBranches: (m: Membership | undefined) => hasCapability(m, 'branch:create'),
+  /**
    * Start another business under this account — the owner's act, not a
    * delegated one. An admin runs the business they were given; this is the one
    * entry in Settings about the account rather than about that business.

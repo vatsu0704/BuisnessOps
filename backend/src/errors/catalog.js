@@ -162,6 +162,11 @@ const API_MESSAGES = {
   // --- Staff ---------------------------------------------------------------
   STAFF_NOT_FOUND: 'Staff member not found',
   STAFF_USER_NOT_FOUND: 'No account found for this email — ask them to sign up first',
+  // Requirement 19's shape: the refusal states the rule and the role it applies
+  // to, so it can be acted on. `role` travels as a param because the sentence
+  // is assembled on the device, where the role name is already translated.
+  STAFF_BASE_MUST_BE_WAREHOUSE:
+    '{{role}} accepts, packs and dispatches goods, so they are based at a warehouse and their attendance and payslips cannot be filed at a shop',
 
   // --- Payroll -------------------------------------------------------------
   PAYSLIP_NO_BASE_SALARY: 'This staff member has no baseSalary set — cannot generate a payslip',
@@ -181,6 +186,7 @@ const API_MESSAGES = {
     'This data source has no branch assigned — set branchId when creating it before uploading',
   FILE_REQUIRED: 'file is required (multipart field name: file)',
   FILE_NO_ROWS: 'File has no data rows',
+  FILE_MISSING_COLUMNS: 'The file has no {{columns}} column — the header row must use the template’s column names',
   UPLOAD_FAILED: 'Upload failed: {{reason}}',
 
   // --- Generic -------------------------------------------------------------
@@ -239,9 +245,12 @@ const FIELD_MESSAGES = {
   // it names something the person has to go and fix in their spreadsheet.
   ROW_MISSING_COLUMN: 'Row {{row}}: missing {{column}}',
   ROW_QUANTITY_NOT_A_NUMBER: 'Row {{row}}: quantity is not a number',
+  ROW_QUANTITY_NOT_POSITIVE: 'Row {{row}}: quantity must be more than 0',
   ROW_UNIT_PRICE_NOT_A_NUMBER: 'Row {{row}}: unit_price is not a number',
+  ROW_AMOUNT_NOT_A_NUMBER: 'Row {{row}}: {{column}} is not a number',
+  ROW_AMOUNT_NEGATIVE: 'Row {{row}}: {{column}} cannot be negative',
   ROW_PAYMENT_METHOD_INVALID: 'Row {{row}}: payment_method must be one of {{options}}',
-  ROW_DATE_INVALID: 'Row {{row}}: occurred_at is not a valid date',
+  ROW_DATE_INVALID: 'Row {{row}}: occurred_at is not a date — write it like 2026-09-01 2:30 PM',
   FIELD_STRING_MAX_LENGTH: '{{field}} must be a string of {{max}} characters or fewer',
   FIELD_MUST_BE_STRING_ARRAY: '{{field}} must be an array of strings',
   FIELD_MUST_BE_ID_ARRAY: '{{field}} must be an array of ids',

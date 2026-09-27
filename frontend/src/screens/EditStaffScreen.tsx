@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { getStaffMember, setStaffActive, updateStaffMember } from '@/api/staff';
+import { listMemberships } from '@/api/team';
 import { extractErrorMessage } from '@/api/client';
+import { staffBase } from '@/permissions/staffBase';
+import type { TeamMember } from '@/types/team';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
@@ -44,7 +47,7 @@ export default function EditStaffScreen({ route, navigation }: Props) {
   const businessId = useBusinessId();
   const business = useAuthStore((s) => s.business);
   const membership = useMembership();
-  const { branches } = useBranches();
+  const { branches, warehouseBranches } = useBranches();
 
   // staff:setPay, not payroll:run — requirement 14 gives a cashier the first
   // and not the second, so gating the pay field on "can run payroll" would hide
@@ -90,9 +93,59 @@ export default function EditStaffScreen({ route, navigation }: Props) {
     void load();
   }, [load]);
 
+  /**
+   * The team, so this screen knows what the person's role implies about where
+   * they can be based — the same question AddStaffScreen asks, and it has to be
+   * asked in both places or the rule holds on the way in and not on the way
+   * back. Only fetched for someone who may read the team; for anyone else
+   * `matched` stays null and every location is offered, as before.
+   */
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  useEffect(() => {
+    if (!businessId || !can.manageTeam(membership)) return;
+    listMemberships(businessId)
+      .then(setTeam)
+      .catch(() => {});
+  }, [businessId, membership]);
+
+  const matched = useMemo(
+    () =>
+      staffMember?.userId
+        ? (team.find((m) => m.user.id === staffMember.userId && m.status === 'ACTIVE') ?? null)
+        : null,
+    [team, staffMember]
+  );
+
+  /**
+   * Which locations this person may be based at.
+   *
+   * Only the `PREMISES` rule is applied here, not the whole three-way question
+   * AddStaffScreen asks. The warehouse desk accepts, packs and dispatches goods
+   * and so is based where the goods are; the server refuses a shop anyway, and
+   * offering one would be offering a control that 400s. An owner, admin or
+   * manager keeps the full picker, because correcting a base is exactly what
+   * this screen is for — and so does a delivery agent, whose payroll home is
+   * legitimately any branch.
+   */
+  const options = useMemo(
+    () => (staffBase(matched?.role).question === 'PREMISES' ? warehouseBranches : branches),
+    [matched, branches, warehouseBranches]
+  );
+
+  /**
+   * A stored base that is no longer a valid answer is cleared rather than
+   * re-submitted, so saving an unrelated field cannot quietly carry it back.
+   * No record is in that state today; one arriving from an older app build, or
+   * from the database by hand, surfaces here as a choice to make.
+   */
+  useEffect(() => {
+    if (branchId && options.length && !options.some((b) => b.id === branchId)) setBranchId('');
+  }, [branchId, options]);
+
   const salaryParsed = parseOptionalNumber(baseSalary);
   const salaryInvalid = salaryParsed === null;
-  const canSubmit = !!businessId && !!name.trim() && !!role.trim() && !salaryInvalid && !isSaving;
+  const canSubmit =
+    !!businessId && !!name.trim() && !!role.trim() && !!branchId && !salaryInvalid && !isSaving;
 
   async function handleSave() {
     if (!businessId || !canSubmit) return;
@@ -244,19 +297,40 @@ export default function EditStaffScreen({ route, navigation }: Props) {
 
                 <AnimatedEntrance delay={step(3)} style={styles.block}>
                   <Text style={styles.sectionTitle}>{t('editStaff.branch')}</Text>
-                  <View style={styles.grid}>
-                    {branches.map((branch) => (
-                      <View key={branch.id} style={styles.gridItem}>
-                        <SegmentedOption
-                          testID={`edit-staff-branch-${branch.code}`}
-                          title={branch.name}
-                          caption={branch.code}
-                          selected={branchId === branch.id}
-                          onPress={() => setBranchId(branch.id)}
-                        />
-                      </View>
-                    ))}
-                  </View>
+                  {options.length === 0 ? (
+                    /* A warehouse desk with no warehouse to be based at. The
+                       picker has no correct answer to offer, so it says which
+                       location is missing instead of listing shops. */
+                    <Text style={styles.branchGap}>
+                      {t('addStaff.needsWarehouse', {
+                        role: t(`role.${matched?.role ?? 'STAFF'}`),
+                      })}
+                    </Text>
+                  ) : (
+                    <View style={styles.grid}>
+                      {options.map((branch) => (
+                        <View key={branch.id} style={styles.gridItem}>
+                          <SegmentedOption
+                            testID={`edit-staff-branch-${branch.code}`}
+                            title={branch.name}
+                            caption={[
+                              branch.kind === 'WAREHOUSE'
+                                ? t('addBranch.kindWarehouse')
+                                : branch.code,
+                              branch.city,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                            icon={
+                              branch.kind === 'WAREHOUSE' ? 'cube-outline' : 'storefront-outline'
+                            }
+                            selected={branchId === branch.id}
+                            onPress={() => setBranchId(branch.id)}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  )}
                 </AnimatedEntrance>
 
                 <AnimatedEntrance delay={step(4)} style={styles.block}>
@@ -347,6 +421,10 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   gridItem: { width: '48%' },
   hint: { fontSize: 12.5, color: colors.textTertiary, marginBottom: spacing.lg },
+  // The same size as `hint` but with no trailing margin and room to wrap: this
+  // one ends its section rather than introducing a field, and the sentence runs
+  // to three or four lines in Gujarati.
+  branchGap: { fontSize: 12.5, color: colors.textTertiary, lineHeight: 17 },
   fieldError: { color: colors.error, fontSize: 12, marginTop: -spacing.md, marginBottom: spacing.md },
   emptyText: { fontSize: 13.5, color: colors.textTertiary, textAlign: 'center', paddingVertical: spacing.xl },
   dangerButton: {

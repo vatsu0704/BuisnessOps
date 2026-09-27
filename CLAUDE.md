@@ -22,6 +22,7 @@ from code.
 | `Docs/database-table.md` | Data model notes |
 | `Docs/TESTING_GUIDE.md` | Click-by-click manual walkthrough of every user-facing flow that is built, in the order they have to be followed |
 | `Docs/FIREBASE_SETUP.md` | Creating the Firebase project and the two credential files push notifications need. Neither file is in git |
+| `Docs/TEST_DATA_SEED.md` | `backend/scripts/seed-test-data.sql`: seven months of test data for the owner's two businesses, landing each month on a fixed net profit, and how to re-run or remove it |
 
 A new document of this kind belongs in `Docs/` too. Only `CLAUDE.md` and
 `README.md` stay at the repository root, because Claude Code loads the rule book
@@ -544,24 +545,59 @@ React Native stay exactly where they are. That is the first thing to reach for.
 **Before overriding a transitive dependency across a major version, read the
 call site that consumes it.** This is the whole risk, and it does not show up as
 a type error or a failing test — it shows up as a broken build later, on someone
-else's machine. Two concrete refusals are on record, both found by checking:
+else's machine. Two patched majors on record changed exactly the surface their
+consumer calls, both found by checking:
 
-- **`tar` cannot go to 7.x**, which is the only patched line (`<=7.5.20` is
-  vulnerable). `@expo/cli` does `_interopRequireDefault(require('tar')).default.extract(...)`,
+- **`tar` 7** is the only patched line (`<=7.5.20` is vulnerable; 6.x never got
+  a fix). `@expo/cli` does `_interopRequireDefault(require('tar')).default.extract(...)`,
   and tar 7's CommonJS build sets `__esModule: true` with **no `default` export** —
   so `.default` is `undefined` and the call throws. On **Windows this is the
   primary path**: `extractAsync` skips the native `tar` binary when
-  `process.platform !== 'win32'` is false, so every tarball Expo extracts goes
-  through the JS module. That is 11 critical advisories that have to stay.
-- **`image-size` cannot go to 2.x**, the only patched line. `metro` does
-  `const getImageSize = require('image-size')` and calls it as a function;
-  image-size 2 removed the callable default and exports `{ imageSize }`. An
-  override here breaks Metro's asset pipeline, which means every bundle.
+  `process.platform !== 'win32'` is false, so every tarball Expo extracts — the
+  prebuild template among them — goes through the JS module. Everything else
+  `@expo/cli` passes (`cwd`, `file`, `filter`, `strip`, and `onentry`, which tar 7
+  still maps to `onReadEntry`) behaves the same.
+- **`image-size` 2** is the only patched line (`<=2.0.2`; 1.x never got a fix,
+  so `npm audit`'s "fix available via `npm audit fix`" for it is false — metro asks
+  for `^1.0.2`). `metro/src/Assets.js` does `const getImageSize = require('image-size')`
+  and calls it with a Buffer **and with a file path**; image-size 2 is not callable
+  (it exports `{ imageSize }`) and measures bytes only. A bare override breaks
+  Metro's asset pipeline, which means every bundle.
 
 Both were confirmed by installing the candidate version in a scratch directory
 and replicating the exact `require` and call, not by reading changelogs. Do that
 rather than guessing: the failure mode is a build that works for you and not for
 CI.
+
+**When the break is only in how the consumer calls it, patch the consumer.**
+Both are overridden to the patched line anyway (`tar ^7.5.22`,
+`image-size ^2.0.4`), and `frontend/patches/` holds a few-line fix to each
+consumer: `@expo/cli`'s two `_tar()` loaders take `require('tar')` as the default
+directly, and metro's `getImageSize` becomes a wrapper that reads a path into
+bytes before calling `imageSize`. `patch-package --error-on-fail` applies them on
+`postinstall`, so `npm ci` in CI and on EAS gets them too. **An override and its
+patch only work as a pair** — neither half on its own leaves a working build.
+
+- A patch is written against an exact version (`@expo+cli+0.18.31.patch`,
+  `metro+0.80.12.patch`). When an Expo patch release moves either,
+  `--error-on-fail` stops the install instead of leaving the build half-patched.
+  Regenerate the patch against the new version (edit the file in `node_modules`,
+  then `npx patch-package <name>`); don't drop the override to make the install
+  pass.
+- A patch that still applies but no longer works is what
+  `npm run lint:patched-deps` (in CI) catches. It calls the patched functions
+  themselves: `@expo/cli`'s template extractors, on a tarball with `HelloWorld`
+  paths that prebuild must rename, and metro's two measurers, checked against the
+  icon's own PNG header. Nothing else in CI reaches the tar path — only
+  `expo prebuild` does.
+- **A `file:` override cannot do this job**, and it was tried first, as a local
+  adapter package standing in for `tar`. npm 10 resolves a `file:` override's
+  path relative to **each package that depends on it**, not the project root, so
+  `file:./compat/tar` became `node_modules/@expo/cli/compat/tar`, a dangling
+  link; the `$name` reference form returns the same string and fails the same
+  way. `npm audit` then reported **0 vulnerabilities**, because the vulnerable
+  package was gone — and so was the module Expo requires. After any override
+  change, read `npm ls` for `invalid`, not just the audit count.
 
 **What an override is allowed to be:** a patch within the same major
 (`postcss`, `ajv`, `send`, `qs`), or a major bump whose consumer provably only
@@ -574,7 +610,7 @@ purpose — `@expo/plist` passes the `errorHandler` option, which 0.9 removed.
 either audit is developer tooling that never leaves this machine; `qs` parses
 request query strings on the live API. Express 4.22 asks for `~6.15.1` and every
 `6.15.x` is vulnerable, so 6.16.0 is the only fix and the override is the only
-way to get there. The 328-test suite goes through Express for every route, which
+way to get there. The 335-test suite goes through Express for every route, which
 is what makes that bump safe to make rather than safe to hope about.
 
 **`react-native: "0.74.5"` in the frontend is not a security fix.**
@@ -597,11 +633,13 @@ neither `tsc` nor the parity gates can see any of this:
   real production bundle through Metro, and is the only check that covers the
   asset pipeline, `postcss`, and anything that ships in the app. Point it at a
   temp directory so it leaves nothing in the repo.
+- `cd frontend && npm run lint:patched-deps` covers the `tar` and `image-size`
+  patches, including the prebuild path that none of the others reach.
 - `cd backend && npm test` covers `qs`, and `xlsx` through both the ingestion and
   export paths.
 
-Neither of these starts a dev server, so both are safe to run (see *Running the
-app*).
+None of these starts a dev server, so all of them are safe to run (see *Running
+the app*).
 
 **`xlsx` is installed from a URL, not from npm, and that is deliberate.**
 `backend/package.json` reads
@@ -621,8 +659,11 @@ but CI does need to reach `cdn.sheetjs.com`, which is the trade. Note 0.20's
 throws; read `XLSX.version` instead.
 
 **Re-check the whole list when the Expo SDK is upgraded.** An override that has
-become unnecessary is a version pin nobody asked for, and the two refusals above
-are exactly the things an SDK upgrade fixes properly.
+become unnecessary is a version pin nobody asked for, and the `tar` and
+`image-size` pairs above are exactly what an SDK upgrade fixes properly. Once
+`@expo/cli` and `metro` ask for those majors themselves, delete both overrides,
+both files in `patches/`, `lint:patched-deps` and its CI step — and
+`patch-package` itself, if nothing else is patched by then.
 
 ## Environment
 

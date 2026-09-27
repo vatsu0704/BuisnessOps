@@ -8,7 +8,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { ensureBranchDataSource, uploadFile, type PickedFile, type UploadResult } from '@/api/dataSource';
 import { refreshSalesSummary } from '@/store/salesStore';
-import { extractErrorMessage } from '@/api/client';
+import { extractErrorMessage, isTimeout } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import { saveSalesTemplate } from '@/utils/saveTemplate';
@@ -18,6 +18,7 @@ import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
 import SegmentedOption from '@/components/SegmentedOption';
+import TemplateGuide from '@/components/upload/TemplateGuide';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
@@ -54,6 +55,22 @@ export default function UploadScreen({ navigation }: Props) {
     result?.errorDetails?.map((detail, index) => translateDetail(detail) ?? result.errors[index]) ??
     result?.errors ??
     [];
+
+  // The untouched template: every row was a sample, so there was nothing to
+  // import. Said plainly, rather than as a "complete" with three zeros.
+  const examplesSkipped = result?.examplesSkipped ?? 0;
+  const onlyExamples = !!result && examplesSkipped > 0 && result.recordsProcessed === 0;
+  const clean = !!result && result.recordsFailed === 0 && !onlyExamples;
+
+  // Said out loud because both are otherwise invisible: samples quietly left
+  // out, and which way round 01/09/2026 was taken — a wrong guess there files
+  // a month of sales in the wrong month.
+  const resultNotes: string[] = [];
+  if (result && !onlyExamples) {
+    if (examplesSkipped > 0) resultNotes.push(t('upload.examplesSkipped', { count: examplesSkipped }));
+    if (result.dateOrder === 'DAY_FIRST') resultNotes.push(t('upload.dateOrderDayFirst'));
+    if (result.dateOrder === 'MONTH_FIRST') resultNotes.push(t('upload.dateOrderMonthFirst'));
+  }
 
   async function handleTemplate() {
     try {
@@ -93,7 +110,10 @@ export default function UploadScreen({ navigation }: Props) {
       else haptics.success();
     } catch (err) {
       haptics.error();
-      setError(extractErrorMessage(err));
+      // The server may still be writing rows when the app stops waiting, so
+      // "cannot reach the server" would send the person to retry an import
+      // that is about to finish.
+      setError(isTimeout(err) ? t('upload.timedOut') : extractErrorMessage(err));
     } finally {
       setIsUploading(false);
     }
@@ -123,6 +143,7 @@ export default function UploadScreen({ navigation }: Props) {
               subtitle={t('upload.templateSubtitle')}
               onPress={() => void handleTemplate()}
             />
+            <TemplateGuide />
           </AnimatedEntrance>
 
           {!isLoading && branches.length === 0 ? (
@@ -197,31 +218,50 @@ export default function UploadScreen({ navigation }: Props) {
                   <View style={[styles.card, styles.resultCard]}>
                     <View style={styles.resultHead}>
                       <Ionicons
-                        name={result.recordsFailed === 0 ? 'checkmark-circle' : 'warning'}
+                        name={clean ? 'checkmark-circle' : 'warning'}
                         size={20}
-                        color={result.recordsFailed === 0 ? colors.success : colors.warning}
+                        color={clean ? colors.success : colors.warning}
                       />
                       <Text style={styles.resultTitle}>
-                        {result.recordsFailed === 0 ? t('upload.doneTitle') : t('upload.partialTitle')}
+                        {onlyExamples
+                          ? t('upload.onlyExamplesTitle')
+                          : clean
+                            ? t('upload.doneTitle')
+                            : t('upload.partialTitle')}
                       </Text>
                     </View>
 
-                    <View style={styles.statRow}>
-                      <View style={styles.stat}>
-                        <Text style={styles.statValue}>{result.transactionsCreated}</Text>
-                        <Text style={styles.statLabel}>{t('upload.created')}</Text>
+                    {onlyExamples ? (
+                      <Text style={styles.resultNote}>{t('upload.onlyExamplesBody')}</Text>
+                    ) : (
+                      <View style={styles.statRow}>
+                        <View style={styles.stat}>
+                          <Text style={styles.statValue}>{result.transactionsCreated}</Text>
+                          <Text style={styles.statLabel}>{t('upload.created')}</Text>
+                        </View>
+                        <View style={styles.stat}>
+                          <Text style={styles.statValue}>{result.transactionsUpdated}</Text>
+                          <Text style={styles.statLabel}>{t('upload.updated')}</Text>
+                        </View>
+                        <View style={styles.stat}>
+                          <Text style={[styles.statValue, result.recordsFailed > 0 && styles.statValueBad]}>
+                            {result.recordsFailed}
+                          </Text>
+                          <Text style={styles.statLabel}>{t('upload.failed')}</Text>
+                        </View>
                       </View>
-                      <View style={styles.stat}>
-                        <Text style={styles.statValue}>{result.transactionsUpdated}</Text>
-                        <Text style={styles.statLabel}>{t('upload.updated')}</Text>
+                    )}
+
+                    {resultNotes.length ? (
+                      <View style={styles.resultNotes}>
+                        {resultNotes.map((note) => (
+                          <View key={note} style={styles.resultNoteRow}>
+                            <Ionicons name="information-circle-outline" size={15} color={colors.textSecondary} />
+                            <Text style={styles.resultNoteText}>{note}</Text>
+                          </View>
+                        ))}
                       </View>
-                      <View style={styles.stat}>
-                        <Text style={[styles.statValue, result.recordsFailed > 0 && styles.statValueBad]}>
-                          {result.recordsFailed}
-                        </Text>
-                        <Text style={styles.statLabel}>{t('upload.failed')}</Text>
-                      </View>
-                    </View>
+                    ) : null}
 
                     {rowErrors.length ? (
                       <View style={styles.rowErrors}>
@@ -285,7 +325,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl },
   subtitle: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.lg },
   block: { marginTop: spacing.lg },
-  templateBlock: { marginBottom: spacing.lg },
+  templateBlock: { marginBottom: spacing.lg, gap: spacing.sm },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
@@ -326,7 +366,13 @@ const styles = StyleSheet.create({
   columnsHint: { fontSize: 11.5, color: colors.textTertiary, marginTop: spacing.xs },
   resultCard: { gap: spacing.md },
   resultHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  resultTitle: { fontSize: 15.5, fontWeight: '800', color: colors.text },
+  resultTitle: { fontSize: 15.5, fontWeight: '800', color: colors.text, flex: 1 },
+  resultNote: { fontSize: 13, color: colors.textSecondary, lineHeight: 20 },
+  resultNotes: { gap: spacing.xs },
+  // Icon beside text: only the text grows, so a longer translation wraps
+  // under itself rather than pushing the icon off the line.
+  resultNoteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs + 2 },
+  resultNoteText: { flex: 1, fontSize: 12.5, color: colors.textSecondary, lineHeight: 19 },
   statRow: { flexDirection: 'row', gap: spacing.sm },
   stat: {
     flex: 1,

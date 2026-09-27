@@ -66,6 +66,12 @@ You run both servers yourself — nothing here starts them for you.
    `npm run android` open it on the device/emulator).
 5. If the database has no account you know the password for, start at Flow 1 —
    there is no demo login to use.
+6. For flows that read history — Reports (17r, 17s), the month-end export (17t),
+   payroll — load seven months of data first with
+   `backend/scripts/seed-test-data.sql`. It lands every month on a fixed net
+   profit, and gives every role orders waiting at each stage.
+   [TEST_DATA_SEED.md](TEST_DATA_SEED.md) says how to run it, what each login
+   will see, and how to remove it again.
 
 Two browser profiles are genuinely useful for this app (owner in one, a
 teammate in another) — e.g. a normal window plus an Incognito/private window,
@@ -140,26 +146,48 @@ you'll get a clean "already exists" error, not a crash.
 ## Flow 4 — Upload sales data (CSV)
 
 1. On **Home**, tap **"Bring your sales data in."**
-2. Tap **"Download template"** — a sample CSV downloads (or opens a share
-   sheet on a device). Open it to see the expected columns:
-   `occurred_at, product_name, quantity, unit_price, payment_method`
-   (optional: `transaction_external_id, sku, unit, tax_amount,
-   discount_amount`).
-3. Back on the Upload screen, tap the branch you want this data attributed to
+2. Tap **"How to fill in the template"** under the download card.
+3. ✅ **Expected:** it opens in place (the chevron flips up) and lists the five
+   required columns, then the five optional ones, each with what it means and an
+   example, then a short "Good to know" box. Column names stay in English in
+   every language — they are the headings in the file. Tap it again to close it.
+4. Tap **"Download template"** — a CSV downloads (or opens a share sheet on a
+   device). Open it: the columns are
+   `transaction_external_id, occurred_at, product_name, quantity, unit_price,
+   payment_method, tax_amount, discount_amount, sku, unit`, and every sample
+   row's bill number starts with `EXAMPLE-`.
+5. Back on the Upload screen, tap the branch you want this data attributed to
    (under "Which branch is this data for?").
-4. Tap **"Choose a CSV or Excel file"** and pick the template you just
-   downloaded (or edit it first — add a few more rows with different dates
-   and amounts to make Home's numbers more interesting).
-5. Tap **"Upload and import."**
-6. ✅ **Expected:** a result card appears showing **Created**, **Updated**,
-   and **Skipped** counts. With the unedited template you should see a clean
-   import (0 skipped). If you intentionally break a row (e.g. delete a
-   `quantity` value), that row is reported by name under "Rows that were
-   skipped" and the rest still import — the whole file never fails outright.
-7. Go back to **Home**.
-8. ✅ **Expected:** the **Sales** and **Orders** stat tiles now show real
-   numbers matching what you just uploaded (formatted like `₹1,000`, not
-   locale-aware yet — see Known Limitations).
+6. Tap **"Choose a CSV or Excel file"**, pick the template **unedited**, and
+   tap **"Upload and import."**
+7. ✅ **Expected:** **"Nothing to import yet"**, saying the file only has the
+   template's example rows. No counts, and Home's numbers do not move — the
+   samples never reach real reports.
+8. Now edit the file the way an owner would: add a few rows **below** the
+   samples with your own bill numbers (say `INV-1`, `INV-2`), dates and
+   amounts. Try the forms people actually type — `01/09/2026 8:30 PM`,
+   `₹1,200`, `upi` in lower case. Open and save it in Excel or Google Sheets
+   if you have one; its own date and price formatting is fine.
+9. Upload it again.
+10. ✅ **Expected:** a result card with **Created**, **Updated** and
+    **Skipped** counts, and below them "4 example rows were left out" plus a
+    line saying which way round a date like 01/09/2026 was read (day first,
+    for an Indian file). A deliberately broken row — a `quantity` of `0`, a
+    `tax_amount` of `abc`, a date like `31/02/2026` — is listed by its line
+    number under "Rows that were skipped", and every other row still imports.
+11. Upload the **same** file once more.
+12. ✅ **Expected:** the `INV-` rows count as **Updated**, not Created — a
+    re-upload replaces those orders rather than doubling them. (A row with no
+    bill number cannot be recognised, so it would be added again.)
+13. Go back to **Home**.
+14. ✅ **Expected:** the **Sales** and **Orders** stat tiles now show real
+    numbers matching what you uploaded (formatted like `₹1,000`, not
+    locale-aware yet — see Known Limitations). An evening sale should count on
+    the day it happened in the branch's own time zone, not the next day.
+
+**Try the file-level errors:** rename the `quantity` heading to `qty` and upload
+— one message names the missing column instead of every row failing. Headings
+typed as `Product Name` or `Unit Price` are fine: case and spaces are ignored.
 
 ---
 
@@ -1052,25 +1080,46 @@ them to punch in.
      with a sentence saying it only decides where attendance and payslips are
      filed — and the **warehouse is already selected**. A delivery agent works
      at none of the branches, so being asked to pick one was the bug.
+   - ✅ **Expected:** every branch is still **selectable**. An agent has no
+     fixed place of work, so any branch is a legitimate payroll home for them —
+     the warehouse is offered, not imposed.
 6. Do the same with the **warehouse** person's email.
-   - ✅ **Expected:** identical behaviour. Both reach every branch, and the
-     screen asks the matrix rather than naming either role.
-7. Type a **cashier's** email instead.
+   - ✅ **Expected:** **only warehouses are listed — no shops at all.** The desk
+     accepts, packs and dispatches goods, so it is based where the goods are.
+     Filing them at a shop would also put them on that shop's roster, where its
+     cashier can read and change their salary.
+   - Now try it in a business that has **no warehouse location** (Shriman
+     amrutulya, if you seeded it). ✅ **Expected:** no options and no
+     preselected shop, a line explaining that this business has no warehouse
+     yet, and an **Add a warehouse** button that opens Add branch. **Add staff**
+     stays disabled until one exists. Before this, the single shop was silently
+     selected for them.
+7. Type the email of a **manager or admin**.
+   - ✅ **Expected:** **no location picker at all** — just a line saying they
+     work across the whole business and naming where attendance and payslips
+     will be filed. They run the business rather than a place, so there is
+     nothing to choose; the line is there so the outcome is not hidden.
+8. Type a **cashier's** email instead.
    - ✅ **Expected:** it names them, and the question stays "which branch do
      they work at" with nothing preselected. A branch-scoped person is never
      guessed at: being filed at the wrong shop silently is worse than a tap.
-8. Do the same as a **cashier** rather than the owner.
+9. Do the same as a **cashier** rather than the owner.
    - ✅ **Expected:** no recognition line at all — reading the team needs a
      permission a cashier does not have — and the screen behaves as it always
      did.
-9. Save the delivery agent, then log in as them and **punch in from anywhere**.
-   - ✅ **Expected:** it works, with no geofence and the location recorded
-     (Flow 17j). Their attendance and payslip are filed against the warehouse.
-     Without the staff record made in step 5 there is no attendance at all —
-     that chain is what "so they will do punch-in punch-out" needs.
-10. As the warehouse person, punch in while at the warehouse.
+10. Open an existing **warehouse** staff member in **Staff → edit** and look at
+    the branch picker.
+    - ✅ **Expected:** only warehouses again. The rule holds on the way back
+      too, and the server refuses a shop with a message naming the rule — so
+      try it with curl if you want to see it: the app never offers the control.
+11. Save the delivery agent, then log in as them and **punch in from anywhere**.
+    - ✅ **Expected:** it works, with no geofence and the location recorded
+      (Flow 17j). Their attendance and payslip are filed against whichever base
+      you chose. Without the staff record made in step 5 there is no attendance
+      at all — that chain is what "so they will do punch-in punch-out" needs.
+12. As the warehouse person, punch in while at the warehouse.
     - ✅ **Expected:** it works, against the warehouse's own radius.
-11. Try to change the warehouse back to a branch in **Branch settings**.
+13. Try to change the warehouse back to a branch in **Branch settings**.
     - ✅ **Expected:** allowed. A location created as the wrong kind would
       otherwise be stuck as one forever.
 
@@ -1112,8 +1161,9 @@ provoke each of these and read what comes back.
 3. **Add a branch with the name left blank.**
    - ✅ **Expected:** the field error is translated, *and it names the field by
      its label* ("Name", "नाम") rather than the API's internal field name.
-4. **Upload a CSV with a bad row** (the template's own sample, with one
-   quantity emptied out — Flow 4).
+4. **Upload a CSV with a bad row** (the template with its `EXAMPLE-` prefixes
+   removed — sample rows are never imported, so they cannot fail either — and
+   one quantity emptied out; see Flow 4).
    - ✅ **Expected:** the row problems under the result are translated. The
      column name inside them (`quantity`, `occurred_at`) stays in English on
      purpose — it is the literal heading in your file, which is what you have to
@@ -1659,6 +1709,19 @@ for this one. Sign in as the owner or an admin.
   the totals and a line saying how many rows were left out; the spreadsheet always
   has every one. A forty-page PDF of counter tokens is not a summary, and silently
   truncating would make the page disagree with the file for no visible reason.
+- **A POS export's own headings are not recognised.** The upload ignores case and
+  spaces in a heading, but not a different name: a Petpooja export's `Invoice No`
+  or `Item Name` has to be renamed to `transaction_external_id` or `product_name`
+  first, and the upload names the missing column when one is. Guessing that
+  `Price` means `unit_price` rather than a line total would quietly produce wrong
+  sales, so no aliases are applied.
+- **Returns and refunds are not imported.** A `quantity` must be more than 0, so a
+  POS export's negative return lines are reported as skipped rows rather than
+  booked as sales.
+- **A file whose dates never pass the 12th is read day first.** 01/09/2026 means 1
+  September unless another date in the same file only works month first (say
+  09/13/2026). The result card says which reading was used, so a wrong guess is
+  visible — writing dates as `2026-09-01` avoids the question entirely.
 - **The export is .xlsx only, not CSV.** Every spreadsheet app opens .xlsx and it
   carries several sheets, which a single CSV cannot. If somebody needs CSV they can
   save it from Excel.

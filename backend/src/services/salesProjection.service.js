@@ -54,19 +54,20 @@ async function writeTransaction({ branchId, externalId, header, items }, client 
     created = true;
   }
 
-  for (const item of items) {
-    await client.lineItem.create({
-      data: {
-        transactionId: transaction.id,
-        productId: item.productId ?? null,
-        productNameSnapshot: item.productNameSnapshot,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        lineTotal: item.lineTotal,
-        costPriceSnapshot: item.costPriceSnapshot ?? null,
-      },
-    });
-  }
+  // One statement for the whole line set. Nothing reads the created rows back,
+  // and a month-long import writes thousands of them — one round trip each
+  // was a large part of why that took longer than the app would wait.
+  await client.lineItem.createMany({
+    data: items.map((item) => ({
+      transactionId: transaction.id,
+      productId: item.productId ?? null,
+      productNameSnapshot: item.productNameSnapshot,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      lineTotal: item.lineTotal,
+      costPriceSnapshot: item.costPriceSnapshot ?? null,
+    })),
+  });
 
   return { transaction, created };
 }

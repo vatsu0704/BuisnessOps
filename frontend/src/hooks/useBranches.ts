@@ -52,6 +52,22 @@ export function useBranches() {
    */
   const tradingBranches = useMemo(() => branches.filter((b) => b.kind === 'BRANCH'), [branches]);
 
+  /**
+   * The business's own premises.
+   *
+   * The third question a picker can ask, beside "where do goods move" and
+   * "where are people": *whose place is this?* A shop is somebody's shop, and
+   * the warehouse is the business's own. Someone who reaches every branch's
+   * data but holds authority over nobody's people — the warehouse desk, a
+   * delivery agent — is based here and nowhere else, which is what
+   * `staffBaseQuestion` in permissions/staffBase.ts asks the matrix.
+   *
+   * Empty is a real answer and means the business has not set its premises up
+   * yet. A picker reading this has to say so rather than falling back to a
+   * shop, because filing the desk at a shop puts them on that shop's roster.
+   */
+  const warehouseBranches = useMemo(() => branches.filter((b) => b.kind === 'WAREHOUSE'), [branches]);
+
   const stats = useMemo(
     () => ({
       // Every location, which is what "is this business set up yet?" means.
@@ -65,5 +81,5 @@ export function useBranches() {
     [branches, tradingBranches]
   );
 
-  return { branches, tradingBranches, isLoading, error, refresh, stats };
+  return { branches, tradingBranches, warehouseBranches, isLoading, error, refresh, stats };
 }

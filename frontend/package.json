@@ -16,7 +16,9 @@
     "prestart": "node scripts/adb-reverse.js",
     "preandroid": "node scripts/adb-reverse.js",
     "lint:backend-i18n": "node scripts/check-backend-i18n-parity.js",
-    "lint:notification-prose": "node scripts/check-notification-prose.js"
+    "lint:notification-prose": "node scripts/check-notification-prose.js",
+    "lint:patched-deps": "node scripts/check-patched-deps.js",
+    "postinstall": "patch-package --error-on-fail"
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",
@@ -57,6 +59,7 @@
     "@babel/core": "^7.25.2",
     "@types/react": "~18.2.79",
     "babel-plugin-module-resolver": "^5.0.3",
+    "patch-package": "^8.0.1",
     "typescript": "~5.3.3"
   },
   "private": true,
@@ -67,7 +70,10 @@
     "has become unnecessary is a version pin nobody asked for.",
     "react-native is NOT a security fix - it removes a bogus second copy of React",
     "Native that npm installs to satisfy @react-native/virtualized-lists' 'peer",
-    "react-native: *'."
+    "react-native: *'.",
+    "tar and image-size are the two whose only patched line changed the interface",
+    "its consumer calls, so each needs a matching patch in patches/, applied by",
+    "patch-package on postinstall. Neither override works without its patch."
   ],
   "overrides": {
     "react-native": "0.74.5",
@@ -75,8 +81,10 @@
     "ajv": "^8.18.0",
     "decode-uri-component": "^0.5.0",
     "fast-xml-parser": "^5.11.1",
+    "image-size": "^2.0.4",
     "postcss": "^8.5.28",
     "send": "^0.19.2",
+    "tar": "^7.5.22",
     "uuid": "^11.1.1",
     "@react-native/virtualized-lists": {
       "react-native": "0.74.5"

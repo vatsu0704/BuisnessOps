@@ -10,7 +10,7 @@ import { listMemberships } from '@/api/team';
 import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
-import { roleHas } from '@/permissions';
+import { staffBase } from '@/permissions/staffBase';
 import type { TeamMember } from '@/types/team';
 import { isValidEmail, parseOptionalNumber } from '@/utils/validation';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
@@ -31,8 +31,11 @@ export default function AddStaffScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const businessId = useBusinessId();
   const membership = useMembership();
-  const { branches } = useBranches();
+  const { branches, warehouseBranches } = useBranches();
   const canSetPay = can.setPay(membership);
+  // Offering the way out of an empty picker, but only to someone who may take
+  // it: a cashier holds no `branch:create` and would meet a 403.
+  const canAddBranch = can.addBranches(membership);
 
   const [branchId, setBranchId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -76,32 +79,61 @@ export default function AddStaffScreen({ navigation }: Props) {
     return team.find((m) => m.user.email.toLowerCase() === needle && m.status === 'ACTIVE') ?? null;
   }, [team, emailTrimmed]);
 
-  // Whose work is not tied to one location: a delivery agent, the warehouse
-  // desk, an admin. Asked of the capability matrix, never of a role name — so
-  // a role added later that reaches every branch lands here by itself.
-  const matchedReachesEveryBranch = !!matched && roleHas(matched.role, 'branch:allAccess');
+  /**
+   * Which of the three base questions this person gets — asked of the
+   * capability matrix, never of a role name. See permissions/staffBase.ts.
+   *
+   * Somebody with no account here is asked the ordinary question, and so is
+   * anybody a cashier adds: a cashier cannot read the team, so `matched` stays
+   * null for them and this screen behaves exactly as it did.
+   */
+  const { question: baseQuestion, spansEveryBranch } = staffBase(matched?.role);
 
   /**
-   * Choose the location when there is nothing to choose.
+   * The locations this person may actually be based at.
    *
-   * Two unambiguous cases, and no others — guessing for a branch-scoped person
-   * would file someone at the wrong shop silently, which is worse than a tap:
-   *
-   *  1. The business has one location. There is no decision to make.
-   *  2. The email belongs to somebody whose work spans every branch, and a
-   *     warehouse exists. A delivery agent is at no branch in particular and
-   *     the warehouse desk is at all of them; the business's own premises is
-   *     the base either of them would name, and it is usually the only
-   *     location that is not somebody else's shop.
-   *
-   * It never overwrites a choice already made by hand.
+   *  - `PREMISES` — the warehouses and nothing else. **Empty is the honest
+   *    answer** when the business has none: a warehouse desk without a
+   *    warehouse is a gap in the setup, and offering a shop instead would put
+   *    the desk on that shop's roster with their pay in its cashier's hands.
+   *  - `NONE` — not asked at all. The business's own premises if it has one,
+   *    otherwise its oldest location, which is where the admin of a single-shop
+   *    business genuinely works. A list of one, so the effect below needs no
+   *    special case for it.
+   *  - `ANY` — every location, exactly as before.
    */
-  const warehouse = useMemo(() => branches.find((b) => b.kind === 'WAREHOUSE') ?? null, [branches]);
+  const options = useMemo(() => {
+    if (baseQuestion === 'PREMISES') return warehouseBranches;
+    if (baseQuestion === 'ANY') return branches;
+    const implied = warehouseBranches[0] ?? branches[0];
+    return implied ? [implied] : [];
+  }, [baseQuestion, branches, warehouseBranches]);
+
+  /**
+   * Keep the choice inside what is on offer, and start it somewhere sensible.
+   *
+   * Typing an email can change the question underneath a choice already made —
+   * a shop is not an answer to where the warehouse desk is based — so a
+   * selection that is no longer offered is dropped rather than quietly
+   * submitted. After that: one option left is not a decision and is taken, and
+   * a delivery agent is *offered* their depot without being held to it, because
+   * it is the base they would usually name and any branch is legitimately
+   * theirs. Anything else is the owner's to choose and is never guessed at.
+   *
+   * The second rule used to read `branches.length === 1`, taken as an
+   * unambiguous case. For someone whose work spans every branch it is the
+   * *most* ambiguous one — the single branch is a shop they do not belong to —
+   * and it was being selected silently, which is what this screen was reported
+   * for.
+   */
   useEffect(() => {
-    if (branchId) return;
-    if (matchedReachesEveryBranch && warehouse) setBranchId(warehouse.id);
-    else if (branches.length === 1) setBranchId(branches[0].id);
-  }, [branchId, branches, matchedReachesEveryBranch, warehouse]);
+    if (branchId) {
+      if (!options.some((b) => b.id === branchId)) setBranchId(null);
+      return;
+    }
+    if (options.length === 1) setBranchId(options[0].id);
+    else if (spansEveryBranch && warehouseBranches.length === 1) setBranchId(warehouseBranches[0].id);
+  }, [branchId, options, spansEveryBranch, warehouseBranches]);
 
   /**
    * Offer their membership role as the job title.
@@ -237,40 +269,87 @@ export default function AddStaffScreen({ navigation }: Props) {
               </View>
             </AnimatedEntrance>
 
-            {/* --- Where they are based ----------------------------------- */}
+            {/* --- Where they are based -----------------------------------
+                Three shapes, chosen by capability in `staffBase`. The heading
+                follows the *work* rather than the shape: "which branch do they
+                work at?" is the wrong question for anyone whose work covers all
+                of them, including a delivery agent, who is nonetheless still
+                free to be based at any one of them. --- */}
             <AnimatedEntrance delay={step(2)} style={styles.block}>
               <View style={styles.card}>
                 <Text style={styles.sectionTitle}>
-                  {matchedReachesEveryBranch
+                  {spansEveryBranch
                     ? t('addStaff.branchHomeSection')
                     : t('addStaff.branchSection')}
                 </Text>
-                {/* A delivery agent works at none of these and a warehouse desk
-                    ships to all of them — but attendance and payslips are filed
-                    against a location, so they still have a base. Saying so is
-                    what stops this reading as "which shop do they belong to". */}
-                {matchedReachesEveryBranch ? (
-                  <Text style={styles.sectionHint}>{t('addStaff.branchHomeHint')}</Text>
-                ) : null}
-                <View style={styles.grid}>
-                  {branches.map((b) => (
-                    <View key={b.id} style={styles.gridItem}>
-                      <SegmentedOption
-                        testID={`add-staff-branch-${b.code}`}
-                        title={b.name}
-                        caption={[
-                          b.kind === 'WAREHOUSE' ? t('addBranch.kindWarehouse') : b.code,
-                          b.city,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                        icon={b.kind === 'WAREHOUSE' ? 'cube-outline' : 'storefront-outline'}
-                        selected={branchId === b.id}
-                        onPress={() => setBranchId(b.id)}
-                      />
+
+                {branches.length === 0 ? (
+                  <SetupNote
+                    icon="storefront-outline"
+                    text={t('addStaff.needsBranch')}
+                    actionLabel={canAddBranch ? t('addStaff.addBranch') : null}
+                    onAction={() => navigation.navigate('AddBranch')}
+                  />
+                ) : baseQuestion === 'NONE' ? (
+                  /* Not a question: someone holding authority over people at
+                     every branch is based at none of them in particular. The
+                     line still says where the record will be filed, so hiding
+                     the choice never hides the outcome — attendance and a
+                     payslip have to land somewhere, and the owner should not
+                     have to open the record later to find out where. */
+                  <Text
+                    testID="add-staff-branch-implied"
+                    style={[styles.sectionHint, styles.sectionHintOnly]}
+                  >
+                    {t('addStaff.branchImplied', {
+                      role: t(`role.${matched?.role ?? 'STAFF'}`),
+                      branch: options[0]?.name ?? '',
+                    })}
+                  </Text>
+                ) : baseQuestion === 'PREMISES' && options.length === 0 ? (
+                  /* The warehouse desk, at a business with no warehouse. There
+                     is no correct answer to offer, so the screen names what is
+                     missing and offers to add it — a rule with no way out is a
+                     dead end rather than a validation. */
+                  <SetupNote
+                    icon="cube-outline"
+                    text={t('addStaff.needsWarehouse', {
+                      role: t(`role.${matched?.role ?? 'STAFF'}`),
+                    })}
+                    actionLabel={canAddBranch ? t('addStaff.addWarehouse') : null}
+                    onAction={() => navigation.navigate('AddBranch')}
+                  />
+                ) : (
+                  <>
+                    {/* A delivery agent works at none of these and a warehouse
+                        desk ships to all of them — but attendance and payslips
+                        are filed against a location, so they still have a base.
+                        Saying so is what stops this reading as "which shop do
+                        they belong to". */}
+                    {spansEveryBranch ? (
+                      <Text style={styles.sectionHint}>{t('addStaff.branchHomeHint')}</Text>
+                    ) : null}
+                    <View style={styles.grid}>
+                      {options.map((b) => (
+                        <View key={b.id} style={styles.gridItem}>
+                          <SegmentedOption
+                            testID={`add-staff-branch-${b.code}`}
+                            title={b.name}
+                            caption={[
+                              b.kind === 'WAREHOUSE' ? t('addBranch.kindWarehouse') : b.code,
+                              b.city,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                            icon={b.kind === 'WAREHOUSE' ? 'cube-outline' : 'storefront-outline'}
+                            selected={branchId === b.id}
+                            onPress={() => setBranchId(b.id)}
+                          />
+                        </View>
+                      ))}
                     </View>
-                  ))}
-                </View>
+                  </>
+                )}
               </View>
             </AnimatedEntrance>
 
@@ -312,6 +391,43 @@ export default function AddStaffScreen({ navigation }: Props) {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+    </View>
+  );
+}
+
+/**
+ * What the base card says when it has nothing correct to offer.
+ *
+ * Stacked, never a row of sentence-beside-button: every Indic translation of
+ * both runs longer than the English, and a row would squeeze the sentence first
+ * in exactly the languages that need the most room. The sentence wraps to
+ * whatever width it needs and the action sits under it, sized by its own
+ * content — which is why the pill carries its own horizontal padding rather
+ * than borrowing width from a parent that happens to stretch it.
+ */
+function SetupNote({
+  icon,
+  text,
+  actionLabel,
+  onAction,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  text: string;
+  actionLabel: string | null;
+  onAction: () => void;
+}) {
+  return (
+    <View style={styles.setupNote}>
+      <View style={styles.setupRow}>
+        <Ionicons name={icon} size={18} color={colors.textTertiary} />
+        <Text style={styles.setupText}>{text}</Text>
+      </View>
+      {actionLabel ? (
+        <PressableScale testID="add-staff-setup-action" style={styles.setupAction} onPress={onAction}>
+          <Ionicons name="add" size={16} color={colors.primaryDark} />
+          <Text style={styles.setupActionText}>{actionLabel}</Text>
+        </PressableScale>
+      ) : null}
     </View>
   );
 }
@@ -364,6 +480,10 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginBottom: spacing.md,
   },
+  // The hint's bottom margin exists to separate it from the picker underneath.
+  // When it IS the whole card — the case with nothing to pick — that margin is
+  // dead space against the card's own padding, and the card reads bottom-heavy.
+  sectionHintOnly: { marginBottom: 0 },
   matchCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -379,6 +499,31 @@ const styles = StyleSheet.create({
   matchText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.primaryDark, lineHeight: 18 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   gridItem: { width: '48%' },
+  setupNote: {
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  // `flex-start` so the icon stays beside the first line of a sentence that
+  // wraps to three, rather than floating against its middle.
+  setupRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  // Takes the leftover width, so the sentence wraps inside the note instead of
+  // pushing past its edge.
+  setupText: { flex: 1, fontSize: 13, color: colors.textSecondary, lineHeight: 19 },
+  setupAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryLight,
+  },
+  setupActionText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
   submitWrap: { marginTop: spacing.lg },
   errorBanner: {
     flexDirection: 'row',

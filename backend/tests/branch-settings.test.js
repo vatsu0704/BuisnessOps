@@ -254,4 +254,99 @@ describe('Branch settings', () => {
       expect(res.statusCode).toBe(400);
     });
   });
+
+  /**
+   * Where the warehouse desk's employee record lives.
+   *
+   * `StaffMember.branchId` scopes nothing, but it is not free-form: it is the
+   * branch payroll takes its calendar and geofence from, and the one
+   * `listStaffMembers` uses to decide who a branch-scoped caller may read. A
+   * CASHIER holds `staff:viewOthers` and `staff:setPay` for their own branch,
+   * so a desk filed at a shop lands on that shop's roster with their salary in
+   * its cashier's hands.
+   */
+  describe('the warehouse desk is based at a warehouse', () => {
+    let deskWarehouseId;
+    const deskEmail = `bset-desk.${RUN_ID}@test.buisnessops.dev`;
+    const riderEmail = `bset-rider.${RUN_ID}@test.buisnessops.dev`;
+
+    beforeAll(async () => {
+      const warehouse = await request(app)
+        .post(`/api/businesses/${businessId}/branches`)
+        .set(auth(ownerToken))
+        .send({ name: 'Desk Warehouse', code: `DWH${RUN_ID}`, kind: 'WAREHOUSE', timezone: 'Asia/Kolkata' });
+      deskWarehouseId = warehouse.body.id;
+
+      for (const [email, role] of [
+        [deskEmail, 'WAREHOUSE'],
+        [riderEmail, 'DELIVERY_AGENT'],
+      ]) {
+        await signUp(email, `${role} Solo ${RUN_ID}`);
+        await request(app)
+          .post(`/api/businesses/${businessId}/memberships`)
+          .set(auth(ownerToken))
+          .send({ email, role });
+      }
+    });
+
+    it('refuses to file the desk at a shop, naming the rule and the role', async () => {
+      const res = await request(app)
+        .post(`/api/businesses/${businessId}/staff`)
+        .set(auth(ownerToken))
+        .send({ branchId, email: deskEmail, name: 'Desk Person', role: 'Warehouse' });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.code).toBe('STAFF_BASE_MUST_BE_WAREHOUSE');
+      // Requirement 19's shape: the role travels as a param so the device can
+      // render it in the reader's language rather than the server guessing.
+      expect(res.body.params.role).toBe('WAREHOUSE');
+    });
+
+    it('accepts the warehouse, and refuses a later move to a shop', async () => {
+      const created = await request(app)
+        .post(`/api/businesses/${businessId}/staff`)
+        .set(auth(ownerToken))
+        .send({ branchId: deskWarehouseId, email: deskEmail, name: 'Desk Person', role: 'Warehouse' });
+      expect(created.statusCode).toBe(201);
+
+      // The edit screen reaches the same rule. Enforcing only on creation would
+      // leave one door open and the other shut.
+      const moved = await request(app)
+        .patch(`/api/businesses/${businessId}/staff/${created.body.id}`)
+        .set(auth(ownerToken))
+        .send({ branchId });
+      expect(moved.statusCode).toBe(400);
+      expect(moved.body.code).toBe('STAFF_BASE_MUST_BE_WAREHOUSE');
+
+      // Editing anything else still works — the rule guards the pairing, not
+      // the record.
+      const renamed = await request(app)
+        .patch(`/api/businesses/${businessId}/staff/${created.body.id}`)
+        .set(auth(ownerToken))
+        .send({ name: 'Desk Person II' });
+      expect(renamed.statusCode).toBe(200);
+    });
+
+    it('leaves a delivery agent free to be based at a shop', async () => {
+      // Deliberately NOT the same rule. An agent holds branch:allAccess and
+      // attendance:punchAnywhere because they have no fixed place of work, so a
+      // branch is a legitimate payroll home — which is why the test is
+      // supplyOrder:fulfil and not "reaches every branch".
+      const res = await request(app)
+        .post(`/api/businesses/${businessId}/staff`)
+        .set(auth(ownerToken))
+        .send({ branchId, email: riderEmail, name: 'Rider Person', role: 'Delivery' });
+      expect(res.statusCode).toBe(201);
+    });
+
+    it('leaves somebody with no account of their own alone', async () => {
+      // Most staff never hold a membership, so there is no role to read a rule
+      // off and every location stays available to them.
+      const res = await request(app)
+        .post(`/api/businesses/${businessId}/staff`)
+        .set(auth(ownerToken))
+        .send({ branchId, name: 'Kitchen Helper', role: 'Helper' });
+      expect(res.statusCode).toBe(201);
+    });
+  });
 });

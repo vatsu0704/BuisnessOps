@@ -49,6 +49,13 @@ export function isTransportFailure(err: unknown): boolean {
   return axios.isAxiosError(err) && !err.response;
 }
 
+// The one transport failure that says nothing about the server being down: the
+// request reached it and the app stopped waiting. For long work such as an
+// import, that is worth its own message — the work may still be finishing.
+export function isTimeout(err: unknown): boolean {
+  return axios.isAxiosError(err) && (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT');
+}
+
 // Called by authStore on bootstrap/login/signup/logout so every request
 // after that carries (or stops carrying) the bearer token — screens never
 // touch headers directly.

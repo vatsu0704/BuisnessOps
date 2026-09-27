@@ -1,6 +1,7 @@
 const prisma = require('../config/db');
 const { fail } = require('../errors');
 const { parseFileToRows, ingestRows } = require('./ingestion.service');
+const { safeZone } = require('../utils/datetime');
 
 function createDataSource(businessId, { branchId, provider, displayName, syncFrequency }) {
   return prisma.dataSourceConnection.create({
@@ -41,6 +42,16 @@ async function uploadFile(businessId, dataSourceConnectionId, file) {
     throw fail('DATA_SOURCE_NO_BRANCH', 400);
   }
 
+  const branch = await prisma.branch.findUnique({
+    where: { id: dataSource.branchId },
+    select: { kind: true, timezone: true, currency: true },
+  });
+  // A warehouse has no till, so it has no sales to import. The app only offers
+  // trading branches; this is the server refusing the same thing.
+  if (branch.kind === 'WAREHOUSE') {
+    throw fail('BRANCH_IS_WAREHOUSE', 400);
+  }
+
   const syncRun = await prisma.syncRun.create({
     data: { dataSourceConnectionId, status: 'RUNNING', sourceFileName: file.originalname },
   });
@@ -56,7 +67,11 @@ async function uploadFile(businessId, dataSourceConnectionId, file) {
     const result = await ingestRows(rows, {
       businessId,
       branchId: dataSource.branchId,
-      currency: business.defaultCurrency,
+      // The same choice the counter makes, so a branch's sales are in one
+      // currency whichever way they arrived.
+      currency: branch.currency || business.defaultCurrency,
+      // A time in the file is the shop's clock, not the server's.
+      timeZone: safeZone(branch.timezone, business.timezone),
       dataSourceConnectionId,
     });
 
