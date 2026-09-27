@@ -488,6 +488,104 @@ and hand the body to one of the two helpers that exist for this:
 Both split on `Platform.OS === 'web'`, where the useful action is a print dialog
 or an anchor download rather than a share sheet.
 
+## Dependency overrides
+
+Both `package.json` files carry an `overrides` block, and every entry is a
+security patch forced above what some dependency's own range allows. A `//overrides`
+note in each file points here.
+
+**`npm audit`'s `fix available via npm audit fix --force` is almost always wrong
+for this project, and following it would destroy the app.** npm only ever
+proposes bumping the *direct* dependency, so a vulnerability three levels down
+inside `@expo/cli` is reported as "will install expo@57, which is a breaking
+change" — six SDK majors, a different React Native, a different new-architecture
+default, and every native module re-pinned. The vulnerable package is nearly
+always a **build-time tool** that an override can patch on its own while Expo and
+React Native stay exactly where they are. That is the first thing to reach for.
+
+**Before overriding a transitive dependency across a major version, read the
+call site that consumes it.** This is the whole risk, and it does not show up as
+a type error or a failing test — it shows up as a broken build later, on someone
+else's machine. Two concrete refusals are on record, both found by checking:
+
+- **`tar` cannot go to 7.x**, which is the only patched line (`<=7.5.20` is
+  vulnerable). `@expo/cli` does `_interopRequireDefault(require('tar')).default.extract(...)`,
+  and tar 7's CommonJS build sets `__esModule: true` with **no `default` export** —
+  so `.default` is `undefined` and the call throws. On **Windows this is the
+  primary path**: `extractAsync` skips the native `tar` binary when
+  `process.platform !== 'win32'` is false, so every tarball Expo extracts goes
+  through the JS module. That is 11 critical advisories that have to stay.
+- **`image-size` cannot go to 2.x**, the only patched line. `metro` does
+  `const getImageSize = require('image-size')` and calls it as a function;
+  image-size 2 removed the callable default and exports `{ imageSize }`. An
+  override here breaks Metro's asset pipeline, which means every bundle.
+
+Both were confirmed by installing the candidate version in a scratch directory
+and replicating the exact `require` and call, not by reading changelogs. Do that
+rather than guessing: the failure mode is a build that works for you and not for
+CI.
+
+**What an override is allowed to be:** a patch within the same major
+(`postcss`, `ajv`, `send`, `qs`), or a major bump whose consumer provably only
+uses the surface that survived (`uuid` 8→11 is fine because `@expo/bunyan`,
+`xcode` and `gaxios` all call the named `v1`/`v4` exports, which uuid 11 still
+ships for CommonJS). `@xmldom/xmldom` stops at **0.8.15** rather than 0.9.x on
+purpose — `@expo/plist` passes the `errorHandler` option, which 0.9 removed.
+
+**`qs` is the one that is actually attacker-reachable.** Everything else in
+either audit is developer tooling that never leaves this machine; `qs` parses
+request query strings on the live API. Express 4.22 asks for `~6.15.1` and every
+`6.15.x` is vulnerable, so 6.16.0 is the only fix and the override is the only
+way to get there. The 328-test suite goes through Express for every route, which
+is what makes that bump safe to make rather than safe to hope about.
+
+**`react-native: "0.74.5"` in the frontend is not a security fix.**
+`@react-native/virtualized-lists` declares `peer react-native: "*"`, and npm
+satisfied it by installing a **second, complete React Native** — 0.86.3, 49MB,
+nested at `node_modules/react-native/node_modules/react-native` — instead of
+deduping to the 0.74.5 the app is built against. It dragged in 127 packages and
+several advisories of its own. The override pins it out, but note that **`npm
+install` alone will not remove it**: npm honours an existing lockfile entry over
+an override, so the stale entries under that path have to be deleted from
+`package-lock.json` first. If `npm ls react-native` ever prints
+`invalid: react-native@0.86.3` again, that is what happened.
+
+**After changing either `overrides` block, prove the toolchain still works** —
+neither `tsc` nor the parity gates can see any of this:
+
+- `cd frontend && npx expo config --type public` exercises the config plugins,
+  which is where `@xmldom/xmldom` and `@expo/plist` live.
+- `cd frontend && npx expo export --platform android --output-dir <tmp>` builds a
+  real production bundle through Metro, and is the only check that covers the
+  asset pipeline, `postcss`, and anything that ships in the app. Point it at a
+  temp directory so it leaves nothing in the repo.
+- `cd backend && npm test` covers `qs`, and `xlsx` through both the ingestion and
+  export paths.
+
+Neither of these starts a dev server, so both are safe to run (see *Running the
+app*).
+
+**`xlsx` is installed from a URL, not from npm, and that is deliberate.**
+`backend/package.json` reads
+`"xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"`. SheetJS
+**withdrew the package from the npm registry**, so the `xlsx` name there is frozen
+at 0.18.5 with a prototype-pollution and a ReDoS advisory against it and npm
+reports "No fix available" — there is no fixed version on the registry to point
+at. The vendor's own CDN is the upstream remedy. This one had to be fixed rather
+than documented, because unlike everything else in either audit it is **reachable
+from a request**: `ingestion.service.js` calls `XLSX.read` on an uploaded
+spreadsheet. The API surface this project uses is six calls (`read`, `write`,
+`utils.book_new` / `aoa_to_sheet` / `book_append_sheet` / `sheet_to_json`) and all
+six are unchanged in 0.20.x. `package-lock.json` records the URL **with a sha512
+integrity hash**, so `npm ci` verifies it exactly as it would a registry tarball —
+but CI does need to reach `cdn.sheetjs.com`, which is the trade. Note 0.20's
+`exports` map does not expose `./package.json`, so `require('xlsx/package.json')`
+throws; read `XLSX.version` instead.
+
+**Re-check the whole list when the Expo SDK is upgraded.** An override that has
+become unnecessary is a version pin nobody asked for, and the two refusals above
+are exactly the things an SDK upgrade fixes properly.
+
 ## Environment
 
 `frontend/.env` sets `EXPO_PUBLIC_API_URL`. A physical device needs one of two

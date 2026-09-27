@@ -59,5 +59,27 @@
     "babel-plugin-module-resolver": "^5.0.3",
     "typescript": "~5.3.3"
   },
-  "private": true
+  "private": true,
+  "//overrides": [
+    "Pinned transitive versions, all of them security patches. See the",
+    "'Dependency overrides' section of CLAUDE.md for why each one is here and why",
+    "it is safe. Re-check this list when the Expo SDK is upgraded: an override that",
+    "has become unnecessary is a version pin nobody asked for.",
+    "react-native is NOT a security fix - it removes a bogus second copy of React",
+    "Native that npm installs to satisfy @react-native/virtualized-lists' 'peer",
+    "react-native: *'."
+  ],
+  "overrides": {
+    "react-native": "0.74.5",
+    "@xmldom/xmldom": "^0.8.15",
+    "ajv": "^8.18.0",
+    "decode-uri-component": "^0.5.0",
+    "fast-xml-parser": "^5.11.1",
+    "postcss": "^8.5.28",
+    "send": "^0.19.2",
+    "uuid": "^11.1.1",
+    "@react-native/virtualized-lists": {
+      "react-native": "0.74.5"
+    }
+  }
 }

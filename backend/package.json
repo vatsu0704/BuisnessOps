@@ -29,12 +29,24 @@
     "morgan": "^1.10.0",
     "multer": "^2.4.0",
     "pdfmake": "^0.3.11",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "jest": "^29.7.0",
     "nodemon": "^3.1.4",
     "prisma": "^5.20.0",
     "supertest": "^7.0.0"
+  },
+  "//overrides": [
+    "Security patches pinned above what a dependency's own range allows. See the",
+    "'Dependency overrides' section of CLAUDE.md.",
+    "qs: express 4.22 asks for ~6.15.1 and every 6.15.x is vulnerable, so the only",
+    "fix is 6.16. This one is attacker-reachable - it parses request query strings.",
+    "uuid: an optional transitive dep of gaxios (Firebase), which calls the named v4",
+    "export that uuid 11 still provides."
+  ],
+  "overrides": {
+    "qs": "^6.16.0",
+    "uuid": "^11.1.1"
   }
 }
