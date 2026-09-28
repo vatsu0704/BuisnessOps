@@ -200,27 +200,64 @@ async function getOrder(businessId, supplyOrderId, client = prisma) {
 async function getOrCreateCart(businessId, branchId) {
   const branch = await branchOf(businessId, branchId);
 
-  const existing = await prisma.supplyOrder.findFirst({
+  // Fast path: the cart almost always exists already, and reading it needs no
+  // lock. Only the miss below has to be serialised.
+  const open = await prisma.supplyOrder.findFirst({
     where: { businessId, branchId, status: 'DRAFT' },
     include: ORDER_INCLUDE,
   });
-  if (existing) return existing;
+  if (open) return open;
 
-  const business = await prisma.business.findUnique({ where: { id: businessId } });
-  return prisma.supplyOrder.create({
-    data: {
-      businessId,
-      branchId,
-      status: 'DRAFT',
-      totalAmount: new Prisma.Decimal(0),
-      currency: branch.currency || business.defaultCurrency,
-      // No `placedByMembershipId`. A draft has not been placed by anyone, and
-      // because the cart is shared by the branch, whoever opens it is often not
-      // whoever sends it. Stamping the opener here made the order claim it was
-      // "placed by Hari" while its own history said Deep placed it — one act,
-      // two names. The column means what it says: it is filled in at PLACED.
-    },
-    include: ORDER_INCLUDE,
+  /**
+   * Creating one is check-then-write, and the cart is shared by the BRANCH —
+   * so two people being in it at once is the normal case, not the exotic one.
+   * Unserialised, a cashier and the owner opening Supply in the same moment
+   * each found no cart and each made one; from then on they were adding items
+   * to different carts, and `findFirst` handed back whichever Postgres felt
+   * like. One of the two orders simply went missing. A single person
+   * double-tapping, or the screen's focus-refetch firing twice, did it too.
+   *
+   * The lock is on the BRANCH row, which is what "one cart per branch" is a
+   * fact about, and it is taken the same way `cashierAssignment.service.js`
+   * takes its locks — that service's note applies here in full: the lock is the
+   * guarantee, not the check. A unique index would have been the other way, but
+   * the condition is "at most one row per branch *whose status is DRAFT*", and
+   * Prisma cannot express a partial unique index in schema.prisma; adding one
+   * by hand would leave permanent drift against that file.
+   *
+   * Everything inside the transaction is keyed on one branch and takes its
+   * locks in one order, so two carts for different branches never wait on each
+   * other and two for the same branch cannot deadlock.
+   */
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM branches WHERE id = ${branchId} FOR UPDATE`;
+
+    // Re-read under the lock. The other request may have committed its cart in
+    // the moment between the fast path above and this line, and that cart is
+    // now the branch's one cart.
+    const existing = await tx.supplyOrder.findFirst({
+      where: { businessId, branchId, status: 'DRAFT' },
+      include: ORDER_INCLUDE,
+    });
+    if (existing) return existing;
+
+    const business = await tx.business.findUnique({ where: { id: businessId } });
+    return tx.supplyOrder.create({
+      data: {
+        businessId,
+        branchId,
+        status: 'DRAFT',
+        totalAmount: new Prisma.Decimal(0),
+        currency: branch.currency || business.defaultCurrency,
+        // No `placedByMembershipId`. A draft has not been placed by anyone, and
+        // because the cart is shared by the branch, whoever opens it is often
+        // not whoever sends it. Stamping the opener here made the order claim
+        // it was "placed by Hari" while its own history said Deep placed it —
+        // one act, two names. The column means what it says: it is filled in
+        // at PLACED.
+      },
+      include: ORDER_INCLUDE,
+    });
   });
 }
 
@@ -833,17 +870,68 @@ function branchFilter(scope) {
 }
 
 /** A branch's own orders, cart included — requirement 11's tracking view. */
+/**
+ * How many orders any one of these lists will return.
+ *
+ * Every one of them used to be unbounded. A supply order is never deleted, so
+ * "the desk's queue" and "a branch's orders" both meant *every order ever
+ * placed* — each with its items and its whole event timeline attached — fetched
+ * again on every screen focus. That is fine in the first month and gets slower
+ * every week after it, which is the kind of decay nobody reports as a bug
+ * because no single day is noticeably worse than the one before.
+ *
+ * 200 matches the ceiling `listTransactions` already uses. A busy branch places
+ * a handful of orders a day, so this is months of history and well past what
+ * anybody scrolls; the statuses that represent live work are a few dozen rows
+ * at most and are never truncated in practice.
+ *
+ * Proper pagination is the real answer and is deliberately not attempted here —
+ * it changes the response shape, and every one of these is consumed by a screen
+ * expecting a plain array.
+ */
+const MAX_ORDERS = 200;
+
+/**
+ * Keep the NEWEST rows, then hand them back in the order the caller asked for.
+ *
+ * The desk reads its queue oldest-first, which is right for work in progress
+ * and exactly wrong to truncate: `take` with an ascending sort keeps the oldest
+ * 200 orders in the business and hides everything recent — the screen would
+ * have frozen on ancient history. So the *query* always sorts newest-first and
+ * the ascending case is reversed afterwards.
+ *
+ * Below the cap this returns precisely what it returned before, in the same
+ * order. Above it, the rows that fall off are the oldest, which is the only
+ * defensible end to lose.
+ */
+function newestFirst(orderBy) {
+  return orderBy.map((clause) => {
+    const [field] = Object.keys(clause);
+    return { [field]: 'desc' };
+  });
+}
+
+async function takeNewest(where, orderBy, { ascending }) {
+  const rows = await prisma.supplyOrder.findMany({
+    where,
+    include: ORDER_INCLUDE,
+    orderBy: ascending ? newestFirst(orderBy) : orderBy,
+    take: MAX_ORDERS,
+  });
+  return ascending ? rows.reverse() : rows;
+}
+
 async function listBranchOrders(businessId, scope, { branchId, status } = {}) {
-  return prisma.supplyOrder.findMany({
-    where: {
+  return takeNewest(
+    {
       businessId,
       ...branchFilter(scope),
       ...(branchId ? { branchId } : {}),
       ...(status ? { status } : {}),
     },
-    include: ORDER_INCLUDE,
-    orderBy: [{ placedAt: 'desc' }, { createdAt: 'desc' }],
-  });
+    [{ placedAt: 'desc' }, { createdAt: 'desc' }],
+    { ascending: false }
+  );
 }
 
 /**
@@ -855,16 +943,18 @@ async function listBranchOrders(businessId, scope, { branchId, status } = {}) {
  * rows are not real work is how a queue stops being trusted.
  */
 async function listDeskOrders(businessId, scope, { status, branchId } = {}) {
-  return prisma.supplyOrder.findMany({
-    where: {
+  return takeNewest(
+    {
       businessId,
       ...branchFilter(scope),
       ...(branchId ? { branchId } : {}),
       ...(status ? { status } : { status: { not: 'DRAFT' } }),
     },
-    include: ORDER_INCLUDE,
-    orderBy: [{ placedAt: 'asc' }],
-  });
+    [{ placedAt: 'asc' }],
+    // Oldest-first is the queue order the desk works in, and is exactly the
+    // case that must not be truncated from the front. See `takeNewest`.
+    { ascending: true }
+  );
 }
 
 /**
@@ -876,8 +966,8 @@ async function listDeskOrders(businessId, scope, { status, branchId } = {}) {
  */
 async function listDeliveryOrders(businessId, scope, { includeDelivered = false } = {}) {
   const live = includeDelivered ? ['DISPATCHED', 'DELIVERED'] : ['DISPATCHED'];
-  return prisma.supplyOrder.findMany({
-    where: {
+  return takeNewest(
+    {
       businessId,
       status: { in: live },
       OR: [
@@ -885,9 +975,11 @@ async function listDeliveryOrders(businessId, scope, { includeDelivered = false 
         { deliveryAgentMembershipId: null, ...branchFilter(scope) },
       ],
     },
-    include: ORDER_INCLUDE,
-    orderBy: [{ dispatchedAt: 'asc' }],
-  });
+    [{ dispatchedAt: 'asc' }],
+    // What is still on the road is a short list; `includeDelivered` is what
+    // turns this into an ever-growing one, and it is the same truncation.
+    { ascending: true }
+  );
 }
 
 module.exports = {

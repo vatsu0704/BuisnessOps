@@ -122,13 +122,17 @@ export default function EditStaffScreen({ route, navigation }: Props) {
    * Only the `PREMISES` rule is applied here, not the whole three-way question
    * AddStaffScreen asks. The warehouse desk accepts, packs and dispatches goods
    * and so is based where the goods are; the server refuses a shop anyway, and
-   * offering one would be offering a control that 400s. An owner, admin or
-   * manager keeps the full picker, because correcting a base is exactly what
-   * this screen is for — and so does a delivery agent, whose payroll home is
-   * legitimately any branch.
+   * offering one would be offering a control that 400s.
+   *
+   * Everyone else keeps the full picker, including the roles whose base the add
+   * screen does not ask about. The two screens differ on purpose: onboarding
+   * should not put a question in front of someone when there is no meaningful
+   * answer, while this screen exists precisely to change what was set — so
+   * moving an admin's or an agent's base has to be possible somewhere, and this
+   * is that somewhere.
    */
   const options = useMemo(
-    () => (staffBase(matched?.role).question === 'PREMISES' ? warehouseBranches : branches),
+    () => (staffBase(matched?.role) === 'PREMISES' ? warehouseBranches : branches),
     [matched, branches, warehouseBranches]
   );
 

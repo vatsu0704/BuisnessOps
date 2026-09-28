@@ -26,6 +26,12 @@ You run both servers yourself — nothing here starts them for you.
 1. **Backend**: `cd backend`, then `npm run dev`. Confirm it printed
    `Server running on port 4000`.
 
+   If it prints **"Refusing to start"** instead and exits, read the bullet it
+   gives you: `DATABASE_URL` or `JWT_SECRET` is missing from `backend/.env`.
+   That check is deliberate — the server used to start without a `JWT_SECRET`
+   and only fail at the first sign-in, as a 500 that read like a broken
+   database. `.env.example` shows how to generate a secret.
+
    The automated suite (`npm test`) runs against a **separate** database and
    cannot touch the one you click through here. Once after cloning, and again
    whenever a new migration lands, run `npm run test:setup` to create and
@@ -116,6 +122,38 @@ appears under Confirm Password.
 3. ✅ **Expected:** you're back at the **Login** screen.
 4. Enter the same email/password, tap **"Sign in to BizIQ."**
 5. ✅ **Expected:** back on **Home**, same business, same data.
+6. Now get the password **wrong** three or four times on purpose.
+   - ✅ **Expected:** "Invalid email or password" each time, and nothing else
+     changes — you stay on the Login screen and are not signed out of anything.
+     After ten wrong attempts in fifteen minutes you get "Too many attempts.
+     Please wait a few minutes and try again" instead, in your own language.
+     A correct sign-in does not count towards that total.
+
+---
+
+## Flow 2a — A session that ends while you are using the app
+
+A token lasts seven days, and tab screens never unmount — so a session dying
+underneath somebody is a certainty, not an edge case. It used to leave every
+screen showing "Invalid or expired token" with no way back except finding
+Settings and logging out by hand.
+
+You need a second device or browser profile signed in as the owner for step 2.
+
+1. Sign in as a **cashier** and leave them on the **Counter** tab.
+2. As the **owner**, revoke that cashier's membership (Flow 16) — or, to test
+   the account switch instead, set their `User.status` to `DISABLED` in Prisma
+   Studio.
+3. On the cashier's device, pull to refresh, or move to another tab.
+   - ✅ **Expected:** the app returns to the **Login** screen by itself.
+   - ✅ **Expected:** their stored session is gone — force-quit and reopen, and
+     it still shows Login rather than restoring.
+4. If you disabled the account, try signing in again as them.
+   - ✅ **Expected:** "This account has been disabled. Ask the business owner to
+     restore it." — not "invalid password", which would send them hunting for a
+     typo that is not there.
+5. Set the status back to `ACTIVE` and sign in.
+   - ✅ **Expected:** straight back in, everything as it was.
 
 ---
 
@@ -1076,13 +1114,11 @@ them to punch in.
    - ✅ **Expected:** a line appears saying they are already on the team as
      Delivery agent, and the **job title fills in as "Delivery agent"**. Type
      over it and your text wins; clear the email and the suggestion goes.
-   - ✅ **Expected:** the location question becomes **"Where is their base?"**
-     with a sentence saying it only decides where attendance and payslips are
-     filed — and the **warehouse is already selected**. A delivery agent works
+   - ✅ **Expected:** **no location picker at all** — the heading becomes
+     **"Where is their base?"** and under it one line saying they work across the
+     whole business and naming where attendance and payslips will be filed (your
+     warehouse, or the oldest location if there is none). A delivery agent works
      at none of the branches, so being asked to pick one was the bug.
-   - ✅ **Expected:** every branch is still **selectable**. An agent has no
-     fixed place of work, so any branch is a legitimate payroll home for them —
-     the warehouse is offered, not imposed.
 6. Do the same with the **warehouse** person's email.
    - ✅ **Expected:** **only warehouses are listed — no shops at all.** The desk
      accepts, packs and dispatches goods, so it is based where the goods are.
@@ -1095,9 +1131,8 @@ them to punch in.
      stays disabled until one exists. Before this, the single shop was silently
      selected for them.
 7. Type the email of a **manager or admin**.
-   - ✅ **Expected:** **no location picker at all** — just a line saying they
-     work across the whole business and naming where attendance and payslips
-     will be filed. They run the business rather than a place, so there is
+   - ✅ **Expected:** the same hidden picker and the same line as the delivery
+     agent in step 5. They run the business rather than a place, so there is
      nothing to choose; the line is there so the outcome is not hidden.
 8. Type a **cashier's** email instead.
    - ✅ **Expected:** it names them, and the question stays "which branch do
@@ -1112,6 +1147,10 @@ them to punch in.
     - ✅ **Expected:** only warehouses again. The rule holds on the way back
       too, and the server refuses a shop with a message naming the rule — so
       try it with curl if you want to see it: the app never offers the control.
+    - Now edit the **delivery agent** or the **admin**. ✅ **Expected:** the full
+      picker, unlike Add staff. The two screens differ on purpose: onboarding
+      should not ask a question with no meaningful answer, while editing is
+      where a base that needs moving gets moved.
 11. Save the delivery agent, then log in as them and **punch in from anywhere**.
     - ✅ **Expected:** it works, with no geofence and the location recorded
       (Flow 17j). Their attendance and payslip are filed against whichever base
@@ -1673,6 +1712,26 @@ for this one. Sign in as the owner or an admin.
 ---
 
 ## Known limitations (not bugs — don't file these)
+
+- **No password reset and no way to change a password.** Signup, sign-in and
+  sign-out are the whole of account management; somebody who forgets their
+  password has to be given a new one in the database by hand. Email addresses
+  are not verified either. This is the largest remaining gap before a real
+  launch.
+- **Signing in is rate-limited to 10 failed attempts per 15 minutes, and signing
+  up to 5 attempts**, both per IP address. A whole shop shares one connection,
+  so several people fumbling passwords together can meet it — the wait clears
+  it, and a successful sign-in does not count against the limit. Nothing else in
+  the API is limited.
+- **A disabled account is turned away immediately, everywhere.** Setting
+  `User.status = 'DISABLED'` takes effect on the next request rather than when
+  their token expires, and the message says the account was disabled rather than
+  that the password was wrong. There is no screen for this yet: it is a database
+  change.
+- **Supply-order lists return the 200 most recent matching orders.** That is
+  months of history for a normal branch; older orders are still in the database
+  and still counted in Reports, but the Supply and Warehouse screens stop
+  scrolling there. Proper pagination is the follow-up.
 
 - **A cashier's branch can be taken away but not from the Team screen.** "Change
   branch" moves a cashier between branches; it cannot leave them with none, because

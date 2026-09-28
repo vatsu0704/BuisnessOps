@@ -104,6 +104,16 @@ async function login({ email, password }) {
     throw fail('AUTH_CREDENTIALS_INVALID', 401);
   }
 
+  // Deliberately AFTER the password check, not before it. Checked first, this
+  // would answer "does an account exist for this address?" to anybody who
+  // asked — the exact thing the shared `AUTH_CREDENTIALS_INVALID` above exists
+  // to avoid. Someone who has already proved they know the password learns
+  // nothing new by being told why they are being turned away, and being told
+  // is the difference between calling the owner and retyping the password.
+  if (user.status === 'DISABLED') {
+    throw fail('AUTH_ACCOUNT_DISABLED', 403);
+  }
+
   const token = signToken({ sub: user.id });
   return { token, user: sanitizeUser(user), business: await primaryBusiness(user) };
 }

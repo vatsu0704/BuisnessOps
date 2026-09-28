@@ -126,7 +126,9 @@
       "EXPORT_MONTH_INVALID": "That is not a real month",
       "BRANCH_ALREADY_HAS_CASHIER": "A branch can have only one cashier, and {{cashier}} is the cashier for {{branch}}.",
       "CASHIER_ALREADY_HAS_BRANCH": "Cannot add {{branch}} — a cashier has one branch, and this one has {{currentBranch}}.",
-      "STAFF_BASE_MUST_BE_WAREHOUSE": "{{role}} accepts, packs and dispatches goods, so they are based at your warehouse — their attendance and payslips cannot be filed at a shop."
+      "STAFF_BASE_MUST_BE_WAREHOUSE": "{{role}} accepts, packs and dispatches goods, so they are based at your warehouse — their attendance and payslips cannot be filed at a shop.",
+      "AUTH_ACCOUNT_DISABLED": "This account has been disabled. Ask the business owner to restore it.",
+      "TOO_MANY_REQUESTS": "Too many attempts. Please wait a few minutes and try again."
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} is required",

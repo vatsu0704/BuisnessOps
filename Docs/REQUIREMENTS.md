@@ -742,18 +742,21 @@ table would mean teaching all five about a second kind of place first.
 - **A base is not free-form, and the rule is read off the capability matrix.** Three
   shapes, and which one is asked is decided by capabilities rather than by role names, so
   a role added later lands on the right side of each line by itself:
-  - **No question** — holds `staff:viewAllBranches`, so they hold authority over people
-    at every branch: the owner, an admin, a manager. They run the business rather than a
-    place. The picker is hidden and a line names where the record will be filed instead,
-    because attendance and a payslip still have to land somewhere and hiding the choice
-    must not hide the outcome.
+  - **Every location** — does **not** hold `branch:allAccess`, so their work happens at
+    one place and the screen asks which: a cashier, a cook, a helper, and anybody with no
+    account at all. Nothing is preselected.
   - **Warehouses only** — holds `supplyOrder:fulfil` without `staff:viewAllBranches`: the
-    warehouse desk. Accepting, packing and dispatching goods happens where the goods are.
-    Deliberately **not** `branch:allAccess`: a delivery agent reaches every branch too,
-    and holds `attendance:punchAnywhere` precisely because they have *no* fixed place of
-    work, so any branch is a legitimate payroll home for them. This is the mirror image
-    of the agent picker's `supplyOrder:deliver` **and not** `supplyOrder:fulfil`.
-  - **Every location** — everybody else, and anybody with no account at all.
+    warehouse desk. Accepting, packing and dispatching goods happens where the goods are,
+    and `staff:viewAllBranches` — authority over people, which the desk deliberately
+    lacks — is what keeps the owner, an admin and a manager out of this case. The mirror
+    image of the agent picker's `supplyOrder:deliver` **and not** `supplyOrder:fulfil`.
+  - **No question** — every other role whose work spans the business: the owner, an
+    admin, a manager, a delivery agent. Asking them "which branch?" invites the reading
+    that they belong to it, which is the defect this exists to fix. The picker is hidden
+    and a line names where the record will be filed instead, because attendance and a
+    payslip still have to land somewhere and hiding the choice must not hide the outcome.
+    The base defaults to the business's own premises — the depot an agent sets out from,
+    the office an admin works out of — or its oldest location when there is no warehouse.
 - **The warehouse rule is enforced in the service, not in the screen**, because three
   doors reach it: add staff, edit staff, and the API. A refusal names the rule and the
   role (`STAFF_BASE_MUST_BE_WAREHOUSE`, with `role` as a param so the device translates
@@ -762,18 +765,22 @@ table would mean teaching all five about a second kind of place first.
   base until one exists, and a rule with no way out is a dead end rather than a
   validation. This is the case that was reported: with a single shop and no warehouse,
   the shop was silently selected for the warehouse desk.
-- The location is otherwise chosen automatically only where there is nothing to choose:
-  one option on offer, or a warehouse to default a branch-spanning person to — offered,
-  never imposed. It is never guessed for a branch-scoped person, because filing someone
-  at the wrong shop silently is worse than a tap.
+- The location is otherwise chosen automatically only where there is genuinely nothing to
+  choose: one option left on offer. It is never guessed for a branch-scoped person,
+  because filing someone at the wrong shop silently is worse than a tap.
+- **The edit screen keeps the full picker** for every case but the warehouse desk. The
+  two screens differ on purpose: onboarding should not put a question in front of someone
+  when there is no meaningful answer, while editing exists precisely to change what was
+  set — so moving an admin's or an agent's base has to be possible somewhere.
 - **Why the base matters beyond payroll:** a `CASHIER` holds `staff:viewOthers` *and*
   `staff:setPay` for their own branch, so filing the warehouse desk at a shop puts the
   desk on that shop's roster with their salary visible to, and editable by, its cashier.
 - The job title is offered from their membership role — a delivery agent gets "Delivery
   agent" — as a suggestion that any typing replaces, and that clears if the email does.
 - A **delivery agent added this way punches in and out from anywhere**, with the
-  coordinates recorded (R20), and their attendance and payslip are filed against their
-  base. That is the whole point of the chain: no staff record means no attendance at all.
+  coordinates recorded (R20), and their attendance and payslip are filed against the base
+  the screen chose for them — they are never asked for one, because they work at none of
+  the branches. That is the whole point of the chain: no staff record means no attendance at all.
 
 ---
 

@@ -30,6 +30,14 @@ const API_MESSAGES = {
   AUTH_BUSINESS_DETAILS_REQUIRED:
     'businessName, industry, country, defaultCurrency and timezone are required to create a new business',
   USER_NOT_FOUND: 'User not found',
+  // The account exists and the password was right — it has been switched off.
+  // Signing in again is exactly what will not help, so the message has to say
+  // so rather than reading like an expired session.
+  AUTH_ACCOUNT_DISABLED: 'This account has been disabled — ask the business owner to restore it',
+  // Rate limiting (middleware/rateLimit.js). Rendered from here like every
+  // other failure, so a 429 arrives translated rather than as express-rate-limit's
+  // own untranslatable English.
+  TOO_MANY_REQUESTS: 'Too many attempts. Wait a few minutes and try again',
 
   // --- Tenancy and permissions --------------------------------------------
   TENANT_BUSINESS_ID_REQUIRED: 'businessId is required in the route',

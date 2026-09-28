@@ -16,9 +16,32 @@ const analyticsRoutes = require('./analytics.routes');
 const exportRoutes = require('./export.routes');
 const inviteRoutes = require('./invite.routes');
 
+const prisma = require('../config/db');
+
 const router = express.Router();
 
-router.get('/health', (req, res) => res.json({ status: 'ok' }));
+/**
+ * Is this instance actually able to serve?
+ *
+ * It used to answer `{ status: 'ok' }` unconditionally, which made it a test of
+ * whether Node was running and nothing more. Every route below it needs
+ * Postgres, so an instance that cannot reach the database is not healthy — and
+ * a host driving restarts off this endpoint would have kept a broken instance
+ * in rotation indefinitely, reporting itself fine the whole time.
+ *
+ * `SELECT 1` rather than a real query: it proves a connection can be taken from
+ * the pool and a round trip completed, without the check itself becoming load.
+ * 503 rather than 500, because "not ready yet, come back" is what a load
+ * balancer is asking about.
+ */
+router.get('/health', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return res.json({ status: 'ok', database: 'ok' });
+  } catch (err) {
+    return res.status(503).json({ status: 'degraded', database: 'unreachable' });
+  }
+});
 router.use('/auth', authRoutes);
 router.use('/businesses', businessRoutes);
 router.use('/businesses', dataSourceRoutes);

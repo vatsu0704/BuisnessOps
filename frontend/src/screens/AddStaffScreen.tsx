@@ -87,7 +87,7 @@ export default function AddStaffScreen({ navigation }: Props) {
    * anybody a cashier adds: a cashier cannot read the team, so `matched` stays
    * null for them and this screen behaves exactly as it did.
    */
-  const { question: baseQuestion, spansEveryBranch } = staffBase(matched?.role);
+  const baseQuestion = staffBase(matched?.role);
 
   /**
    * The locations this person may actually be based at.
@@ -96,10 +96,11 @@ export default function AddStaffScreen({ navigation }: Props) {
    *    answer** when the business has none: a warehouse desk without a
    *    warehouse is a gap in the setup, and offering a shop instead would put
    *    the desk on that shop's roster with their pay in its cashier's hands.
-   *  - `NONE` — not asked at all. The business's own premises if it has one,
-   *    otherwise its oldest location, which is where the admin of a single-shop
-   *    business genuinely works. A list of one, so the effect below needs no
-   *    special case for it.
+   *  - `NONE` — not asked at all. The business's own premises if it has one —
+   *    the depot a delivery agent sets out from, and the office an admin works
+   *    out of — otherwise its oldest location, which is where the admin of a
+   *    single-shop business genuinely works. A list of one, so the effect below
+   *    needs no special case for it.
    *  - `ANY` — every location, exactly as before.
    */
   const options = useMemo(() => {
@@ -110,21 +111,20 @@ export default function AddStaffScreen({ navigation }: Props) {
   }, [baseQuestion, branches, warehouseBranches]);
 
   /**
-   * Keep the choice inside what is on offer, and start it somewhere sensible.
+   * Keep the choice inside what is on offer, and take it when there is only one.
    *
    * Typing an email can change the question underneath a choice already made —
    * a shop is not an answer to where the warehouse desk is based — so a
    * selection that is no longer offered is dropped rather than quietly
-   * submitted. After that: one option left is not a decision and is taken, and
-   * a delivery agent is *offered* their depot without being held to it, because
-   * it is the base they would usually name and any branch is legitimately
-   * theirs. Anything else is the owner's to choose and is never guessed at.
+   * submitted. One option left is not a decision and is taken; anything more is
+   * the owner's to make and is never guessed at.
    *
-   * The second rule used to read `branches.length === 1`, taken as an
+   * That second rule used to read `branches.length === 1`, taken as an
    * unambiguous case. For someone whose work spans every branch it is the
    * *most* ambiguous one — the single branch is a shop they do not belong to —
    * and it was being selected silently, which is what this screen was reported
-   * for.
+   * for. It is now unambiguous by construction: `options` has already been
+   * narrowed to the locations that are actually possible for this person.
    */
   useEffect(() => {
     if (branchId) {
@@ -132,8 +132,7 @@ export default function AddStaffScreen({ navigation }: Props) {
       return;
     }
     if (options.length === 1) setBranchId(options[0].id);
-    else if (spansEveryBranch && warehouseBranches.length === 1) setBranchId(warehouseBranches[0].id);
-  }, [branchId, options, spansEveryBranch, warehouseBranches]);
+  }, [branchId, options]);
 
   /**
    * Offer their membership role as the job title.
@@ -270,17 +269,14 @@ export default function AddStaffScreen({ navigation }: Props) {
             </AnimatedEntrance>
 
             {/* --- Where they are based -----------------------------------
-                Three shapes, chosen by capability in `staffBase`. The heading
-                follows the *work* rather than the shape: "which branch do they
-                work at?" is the wrong question for anyone whose work covers all
-                of them, including a delivery agent, who is nonetheless still
-                free to be based at any one of them. --- */}
+                Three shapes, chosen by capability in `staffBase`. "Which branch
+                do they work at?" is asked only of someone who works at one. --- */}
             <AnimatedEntrance delay={step(2)} style={styles.block}>
               <View style={styles.card}>
                 <Text style={styles.sectionTitle}>
-                  {spansEveryBranch
-                    ? t('addStaff.branchHomeSection')
-                    : t('addStaff.branchSection')}
+                  {baseQuestion === 'ANY'
+                    ? t('addStaff.branchSection')
+                    : t('addStaff.branchHomeSection')}
                 </Text>
 
                 {branches.length === 0 ? (
@@ -321,12 +317,11 @@ export default function AddStaffScreen({ navigation }: Props) {
                   />
                 ) : (
                   <>
-                    {/* A delivery agent works at none of these and a warehouse
-                        desk ships to all of them — but attendance and payslips
-                        are filed against a location, so they still have a base.
-                        Saying so is what stops this reading as "which shop do
-                        they belong to". */}
-                    {spansEveryBranch ? (
+                    {/* The warehouse desk ships to every branch — but attendance
+                        and payslips are filed against a location, so it still
+                        has a base. Saying so is what stops the warehouse list
+                        reading as "which shop do they belong to". */}
+                    {baseQuestion === 'PREMISES' ? (
                       <Text style={styles.sectionHint}>{t('addStaff.branchHomeHint')}</Text>
                     ) : null}
                     <View style={styles.grid}>

@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import * as secureStorage from '@/utils/secureStorage';
-import { setAuthToken, extractErrorMessage, warmUpServer, isTransportFailure } from '@/api/client';
+import {
+  setAuthToken,
+  extractErrorMessage,
+  warmUpServer,
+  isTransportFailure,
+  setSessionEndedHandler,
+} from '@/api/client';
 import { signup as signupRequest, login as loginRequest, fetchSession } from '@/api/auth';
 import type { SignupPayload, LoginPayload } from '@/api/auth';
 import { getBusiness, createBusiness as createBusinessRequest } from '@/api/business';
@@ -257,3 +263,26 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   clearError: () => set({ error: null }),
 }));
+
+/**
+ * End the session when the API says it is over.
+ *
+ * `apiClient` decides *whether* a failure means that — see `SESSION_ENDED_CODES`
+ * there — and this decides what to do about it. Registered once, here, because
+ * the store is imported by the app's root before any request is made.
+ *
+ * It reuses `logout` rather than clearing the state itself, so a session that
+ * ends on its own leaves exactly what a deliberate sign-out leaves: no token on
+ * the device, no stale branch, sales or notification cache, and this handset
+ * unsubscribed from pushes for an account it can no longer act as. The
+ * navigator renders the sign-in screen off `token` being null, so nothing else
+ * has to know this happened.
+ *
+ * Guarded on there being a session to end, because several screens can be
+ * mid-request when the first 401 lands and each of them would otherwise run the
+ * whole teardown again.
+ */
+setSessionEndedHandler(() => {
+  if (!useAuthStore.getState().token) return;
+  void useAuthStore.getState().logout();
+});

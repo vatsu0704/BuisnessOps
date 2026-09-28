@@ -99,6 +99,30 @@ Every table holding business data carries a `businessId`. Resolve the tenant
 from the authenticated session, never from client-supplied input, so cross-tenant
 access is impossible by construction rather than by convention.
 
+**Two things are checked on every request, and both have to be**: `requireAuth`
+reads `User.status` and refuses a `DISABLED` account, and `resolveTenant` reads
+the membership and refuses one that is not `ACTIVE`. Neither can be moved to
+login instead — a token lasts seven days and carries nothing but `sub`, so
+somebody disabled on Monday would still be working on Sunday. The cost is one
+primary-key lookup per request, and it is worth it; `User.status` sat in the
+schema enforced *nowhere* for several phases, which meant disabling an account
+did nothing whatsoever.
+
+**A list that can only grow needs a ceiling.** `MAX_ORDERS` in
+`supplyOrder.service.js` and the `limit` on `listTransactions` are the pattern:
+supply orders and transactions are never deleted, so "the desk's queue" quietly
+meant *every order ever placed*, each with its items and its whole event
+timeline, refetched on every screen focus. Where the screen reads oldest-first,
+take the newest N and reverse — truncating an ascending sort keeps the oldest
+rows and hides everything recent, which is the opposite of what anyone wants.
+
+**Rate limiting stops at the auth routes** (`middleware/rateLimit.js`), and
+widening it needs care rather than enthusiasm: every screen refetches on focus
+and a whole branch shares one shop's IP, so a limit that is wrong locks a shop
+out of its own till mid-service. `app.set('trust proxy', 1)` is what makes the
+limiter count clients rather than the host's proxy — without it everyone shares
+one bucket, and with `true` a client can spoof `X-Forwarded-For` and pick its own.
+
 ## Roles and permissions
 
 There are seven roles — `OWNER`, `ADMIN`, `MANAGER`, `STAFF`, `WAREHOUSE`,
@@ -666,6 +690,22 @@ both files in `patches/`, `lint:patched-deps` and its CI step — and
 `patch-package` itself, if nothing else is patched by then.
 
 ## Environment
+
+**`backend/src/config/env.js` runs before the server listens and refuses to
+start on a bad one.** `DATABASE_URL` and `JWT_SECRET` must exist everywhere; in
+**production only**, `JWT_SECRET` must also not be a known placeholder and must
+be at least 32 characters. The strength rules stop at production on purpose —
+CI signs with `ci-test-secret` and every checkout's `.env.test` has its own short
+value, and a guard that broke both on the day it landed is one that gets deleted
+rather than satisfied. A token is valid for seven days and carries nothing but
+`sub`, so a leaked or guessable secret is a way to *be* any user in any business;
+rotating it signs everyone out, which is the intended cure.
+
+`CORS_ORIGINS` is a comma-separated allow-list. **Unset means any origin**, which
+is what `npm run web` needs and what this has always done — the native app sends
+no `Origin` header and is not subject to CORS at all, so tightening it by default
+would break the browser preview and protect nobody. Set it in production if the
+web build is served.
 
 `frontend/.env` sets `EXPO_PUBLIC_API_URL`. A physical device needs one of two
 setups, and `localhost` on its own means the phone itself:
