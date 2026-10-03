@@ -2,6 +2,7 @@ const request = require('supertest');
 const app = require('../src/app');
 const prisma = require('../src/config/db');
 const { problemsWith, MIN_SECRET_LENGTH } = require('../src/config/env');
+const { SAFE_REQUEST_ID } = require('../src/middleware/requestLog');
 const supplyOrderService = require('../src/services/supplyOrder.service');
 
 jest.setTimeout(30000);
@@ -261,6 +262,64 @@ describe('Hardening', () => {
         supplyOrderService.getOrCreateCart(businessId, other),
       ]);
       expect(a.id).not.toBe(b.id);
+    });
+  });
+
+  /**
+   * Every response carries an id, and the same id is on the access-log line
+   * and on any 500 logged behind it. Without one, "it failed around four
+   * o'clock" cannot be turned into a particular request.
+   */
+  describe('every response can be traced back to a log line', () => {
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+    it('puts an id on a successful response', async () => {
+      const res = await request(app).get('/api/auth/me').set(auth(ownerToken));
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['x-request-id']).toMatch(UUID);
+    });
+
+    it('puts one on the failures too, which are the ones anybody reports', async () => {
+      const missing = await request(app).get('/api/nope');
+      expect(missing.statusCode).toBe(404);
+      expect(missing.headers['x-request-id']).toMatch(UUID);
+
+      const unauthorised = await request(app).get('/api/auth/me');
+      expect(unauthorised.statusCode).toBe(401);
+      expect(unauthorised.headers['x-request-id']).toMatch(UUID);
+    });
+
+    it('reuses an id the caller supplied, so a trace started upstream carries through', async () => {
+      const res = await request(app)
+        .get('/api/health')
+        .set('X-Request-Id', 'trace-abc_123.4');
+      expect(res.headers['x-request-id']).toBe('trace-abc_123.4');
+    });
+
+    /**
+     * The reason the header is pattern-checked rather than trusted. This value
+     * is written verbatim into every log line for the request, so a newline in
+     * it would let a caller forge entries in a log somebody later reads as
+     * evidence of what happened.
+     */
+    it('replaces an id that could forge a log line rather than echoing it', async () => {
+      for (const hostile of ['a'.repeat(65), 'id with spaces', '{"level":"info"}']) {
+        const res = await request(app).get('/api/health').set('X-Request-Id', hostile);
+        expect(res.headers['x-request-id']).not.toBe(hostile);
+        expect(res.headers['x-request-id']).toMatch(UUID);
+      }
+    });
+
+    /**
+     * The newline case is asserted against the pattern rather than over HTTP,
+     * because Node's own client refuses to *send* a header containing one.
+     * That is a second line of defence, not this one: a raw socket, or a proxy
+     * that rewrites headers, is not bound by it.
+     */
+    it('rejects a newline in the pattern itself, not merely in Node\'s client', () => {
+      expect(SAFE_REQUEST_ID.test('abc\ndef')).toBe(false);
+      expect(SAFE_REQUEST_ID.test('abc\r\ndef')).toBe(false);
+      expect(SAFE_REQUEST_ID.test('trace-abc_123.4')).toBe(true);
     });
   });
 

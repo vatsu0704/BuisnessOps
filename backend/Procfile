@@ -1,0 +1,12 @@
+# For a host with a release phase (Heroku, Railway, Render and the rest).
+#
+# Migrations belong here rather than in `web`: the release phase runs exactly
+# once per deploy, before any new instance starts taking traffic, so two
+# instances coming up together cannot both try to migrate and a failed
+# migration stops the deploy instead of producing a half-migrated database
+# serving requests.
+#
+# The Docker image does it the other way (`npm run start:prod`), because a
+# plain container runtime has no release phase to put it in.
+release: npm run migrate:deploy
+web: npm start

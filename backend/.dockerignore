@@ -1,0 +1,21 @@
+# Rebuilt inside the image for the target platform. Copying a Windows or macOS
+# node_modules in would ship the wrong Prisma query engine binary.
+node_modules
+npm-debug.log*
+
+# Secrets. `.env` holds JWT_SECRET and the database password, and
+# firebase-service-account.json is a credential that can push to every user —
+# both are injected by the host at run time and must never be baked into a
+# layer, where they survive in the image's history whatever a later step does.
+.env
+.env.*
+firebase-service-account.json
+google-services.json
+
+# Not part of serving.
+tests
+coverage
+scripts/seed-test-data.sql
+.git
+.github
+*.md

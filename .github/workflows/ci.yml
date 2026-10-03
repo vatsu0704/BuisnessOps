@@ -85,9 +85,12 @@ jobs:
       - name: Check patched build dependencies
         run: npm run lint:patched-deps
 
-      # No test runner is set up on the frontend yet (package.json's "test"
-      # script references jest, which isn't installed) — type-checking is
-      # the one real, currently-passing check available.
+      # No test runner is set up on the frontend yet, and package.json no
+      # longer carries a "test" script pretending otherwise — it pointed at a
+      # jest that was never installed, so `npm test` crashed rather than
+      # reporting zero tests, and anybody adding a CI step for it would have
+      # believed the frontend was covered. Type-checking plus the parity gates
+      # below are the real checks there are.
       - name: Type-check
         run: npm run lint
 

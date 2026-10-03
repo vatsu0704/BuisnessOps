@@ -1370,3 +1370,95 @@ row still in place; a re-invite taking the branch named now; the claim skipping 
 branch taken since the invite; the conflict report finding both shapes and changing
 nothing; and the two R19 assertions — the capability riding along on a 403, and a
 branch refusal whose sentence states the rule.
+
+---
+
+## 14. Deployment readiness (2026-10-02)
+
+A production-readiness pass over what was already built, rather than a feature.
+It followed a health review whose verdict was that the code was sound and the
+*deployment* did not exist: every automated gate passed, and there was no way
+to run the thing anywhere.
+
+**Three gaps closed, one left open deliberately.**
+
+### The API can be deployed
+
+`backend/Dockerfile`, `backend/.dockerignore` and `backend/Procfile`, plus two
+scripts — `migrate:deploy` and `start:prod`. Before this, `npm start` was bare
+`node src/server.js`: a first deploy would have come up against a database with
+none of the fifteen migrations applied, and nothing would have said so until the
+first query failed.
+
+Migrations have two shapes on purpose. A host with a release phase runs
+`migrate:deploy` there, once per deploy, before any instance takes traffic —
+that is what `Procfile` describes and it is the one to prefer. A plain container
+runtime has nowhere to put that, so the image's `CMD` migrates and then serves.
+
+One non-obvious consequence: **the Prisma CLI moved from `devDependencies` to
+`dependencies`.** A container that applies its own migrations needs
+`prisma migrate deploy` to survive `npm ci --omit=dev`, and the alternatives
+were shipping jest and nodemon to production or fetching the CLI over the
+network at every container start. The backend's production dependency tree is
+still **0 vulnerabilities** after the move.
+
+### Logs a person can use during an incident
+
+`config/logger.js` and `middleware/requestLog.js`, no new dependency.
+
+`morgan('dev')` was the whole of the logging. It is the right format for a
+terminal somebody is watching and close to useless afterwards: ANSI-coloured,
+no timestamp, no request id, no account, and stored by every log collector as
+unparsed text. Under `NODE_ENV=production` the API now emits one JSON object
+per line, and errors go to stderr.
+
+**The request id is the part that matters.** Every response carries
+`X-Request-Id`, every access line carries the same id, and an unhandled 500 is
+logged as `unhandled_error` with that id and the stack. A report of "it broke
+around four" is now one grep instead of a guess about which of the day's
+requests it was.
+
+An id supplied by a proxy or the app is reused, so a trace started upstream
+carries through — but it is pattern-checked first and replaced if it is not
+plainly an id. That is not fussiness: the value is written verbatim into every
+log line for the request, so a newline in it would let a caller forge entries
+in a record somebody later reads as evidence. Node's own HTTP client refuses to
+send such a header, which is a second line of defence and not this one — a raw
+socket is not bound by it, which is why the test asserts against the pattern
+directly rather than only over HTTP.
+
+Logging is silent under `NODE_ENV=test`, for the reason `errorHandler` already
+was: several hundred request lines bury the one assertion that failed.
+
+### A dead test script removed
+
+`frontend/package.json` carried `"test": "jest"` with no jest installed, so
+`npm test` crashed rather than reporting zero tests — and anybody adding a CI
+step for it would have believed the frontend was covered. CI never ran it and
+its comment said why; the script is gone and the comment now says the script is
+gone too. The frontend still has no test runner. Type-checking and the six
+parity gates remain the real checks.
+
+### Left open
+
+**Password reset, password change and email verification are still unbuilt**,
+and that is a decision rather than an oversight: it needs an email channel, and
+Firebase push cannot reach somebody who cannot sign in. It remains the largest
+gap before a launch to anyone outside a known pilot group, and it is the first
+item in `Docs/DEPLOYMENT.md`'s "Before you call it live".
+
+Also unbuilt and listed there: error tracking, database backups, rate limiting
+beyond the auth routes, and proper pagination for the supply lists.
+
+### Verification
+
+`backend/tests/hardening.test.js` grew five tests, to 19: an id on a success,
+an id on a 404 and on a 401 — the responses anybody actually reports — an
+upstream id carried through, three hostile ids replaced rather than echoed, and
+the newline case against the pattern itself.
+
+Full suite **20 files, 358 tests**. The production log path was exercised
+directly against the app with `NODE_ENV=production` to confirm the access line
+parses as JSON and carries the id, since nothing in CI runs with that value.
+The image itself has **not** been built — Docker is not installed on the
+development machine — so the Dockerfile is reviewed, not proven.

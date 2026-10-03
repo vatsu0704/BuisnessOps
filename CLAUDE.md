@@ -22,6 +22,7 @@ from code.
 | `Docs/database-table.md` | Data model notes |
 | `Docs/TESTING_GUIDE.md` | Click-by-click manual walkthrough of every user-facing flow that is built, in the order they have to be followed |
 | `Docs/FIREBASE_SETUP.md` | Creating the Firebase project and the two credential files push notifications need. Neither file is in git |
+| `Docs/DEPLOYMENT.md` | Running `backend/` somewhere other than a laptop: the production environment, the two shapes migrations can take, the image, health and the JSON logs — and what is still unbuilt before it can be called live |
 | `Docs/TEST_DATA_SEED.md` | `backend/scripts/seed-test-data.sql`: seven months of test data for the owner's two businesses, landing each month on a fixed net profit, and how to re-run or remove it |
 
 A new document of this kind belongs in `Docs/` too. Only `CLAUDE.md` and
@@ -70,6 +71,8 @@ Backend (from `backend/`, serves on port 4000):
 | `npm test` | Jest test suite |
 | `npm run prisma:migrate` | Create/apply a dev migration |
 | `npm run prisma:studio` | Browse the database |
+| `npm run migrate:deploy` | Apply committed migrations — the **production** one. Never generates or resets |
+| `npm run start:prod` | `migrate:deploy` then serve. The container's `CMD`; see *Deploying* |
 
 Frontend (from `frontend/`):
 
@@ -707,6 +710,24 @@ no `Origin` header and is not subject to CORS at all, so tightening it by defaul
 would break the browser preview and protect nobody. Set it in production if the
 web build is served.
 
+**`NODE_ENV=production` is not decoration — it switches behaviour.** It is what
+turns on the strict secret rules above and what turns the access log from
+`morgan('dev')` into one JSON object per line. A deployment that forgets it
+starts with weak-secret checking disabled and emits ANSI-coloured text that no
+log collector can parse. The Docker image sets it; a host that runs `npm start`
+directly has to.
+
+**Every response carries `X-Request-Id`, and every log line carries the same
+id** (`middleware/requestLog.js`, `config/logger.js`). An unhandled 500 is
+logged as `unhandled_error` with that id and the stack, so "it broke around
+four" becomes one grep rather than a guess — the access line and the error line
+join up. An id supplied by a proxy or the app is reused so an upstream trace
+carries through, but it is pattern-checked first and replaced if it is not
+plainly an id: the value is written verbatim into the log, so a newline in it
+would forge entries in a record somebody later reads as evidence. Logging is
+**silent under `NODE_ENV=test`** for the reason `errorHandler` already was —
+several hundred request lines bury the one assertion that failed.
+
 `frontend/.env` sets `EXPO_PUBLIC_API_URL`. A physical device needs one of two
 setups, and `localhost` on its own means the phone itself:
 
@@ -744,3 +765,34 @@ indistinguishable from a working one, and only a release APK pointed at the
 hosted API exposed it — as "cannot reach the BizIQ server at
 http://localhost:4000/api" on a server that was up. No cast is needed anyway,
 since `@types/node` types `process.env` as a string dictionary.
+
+## Deploying
+
+`Docs/DEPLOYMENT.md` is the procedure. Four things about it are invariants
+rather than steps, and each one breaks quietly:
+
+- **`prisma` is a regular dependency, not a dev one**, and moving it back
+  breaks the image rather than the tests. The container applies its own
+  migrations (`npm run start:prod`), so `prisma migrate deploy` has to survive
+  `npm ci --omit=dev`. There is a `//prisma-is-a-dependency` note beside it in
+  `backend/package.json`.
+- **`migrate deploy` in production, never `migrate dev`.** The development
+  command can generate a migration from a drifted schema and will offer to
+  reset. `npm run migrate:deploy` exists so the production path cannot reach it
+  by accident. On a host with a release phase, run it *there* — `Procfile`
+  does — so a failed migration stops the deploy instead of leaving a
+  half-migrated database serving requests, and two instances starting together
+  cannot both try.
+- **`.dockerignore` is a security file, not a size optimisation.** `.env` holds
+  `JWT_SECRET` and the database password, and `firebase-service-account.json`
+  can push to every user. A secret copied into a layer stays in the image's
+  history whatever a later step deletes it with.
+- **`npm ci` needs `cdn.sheetjs.com` as well as the registry**, because `xlsx`
+  is installed from the vendor's CDN (see *Dependency overrides*). A build
+  network that allow-lists the registry alone fails at install, which looks
+  nothing like its cause.
+
+**The frontend is not deployed, it is built** — and `EXPO_PUBLIC_API_URL` is
+inlined at build time, so a release APK calls whatever was in `frontend/.env`
+when the bundle was made. There is no run-time configuration to correct it
+afterwards.

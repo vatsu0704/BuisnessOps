@@ -1,10 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const morgan = require('morgan');
 
 const routes = require('./routes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
+const { requestId, accessLog } = require('./middleware/requestLog');
 
 const app = express();
 
@@ -19,6 +19,11 @@ const app = express();
  * limiter decorative.
  */
 app.set('trust proxy', 1);
+
+// First, so that everything below — a CORS rejection, a rate-limit refusal, a
+// 500 from the far end of a controller — can be reported against the same id,
+// and so the caller gets it back on every response including the failures.
+app.use(requestId);
 
 app.use(helmet());
 
@@ -43,7 +48,7 @@ const allowedOrigins = (process.env.CORS_ORIGINS || '')
 app.use(cors(allowedOrigins.length > 0 ? { origin: allowedOrigins } : {}));
 
 app.use(express.json());
-app.use(morgan('dev'));
+app.use(accessLog);
 
 app.use('/api', routes);
 

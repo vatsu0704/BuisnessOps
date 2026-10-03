@@ -1,4 +1,5 @@
 const { ApiError, renderMessage } = require('../errors');
+const logger = require('../config/logger');
 
 // Every error response carries the same three things: a stable `code` the
 // client can translate and branch on, the English rendering as `message` (the
@@ -49,7 +50,16 @@ function errorHandler(err, req, res, next) {
   // Unplanned. The message can carry stack paths and query internals, so it
   // goes to the server log rather than to the client — but it must go
   // somewhere, or a 500 becomes five words with nothing behind them.
-  if (process.env.NODE_ENV !== 'test') console.error('[api] unhandled error:', err);
+  //
+  // `req.id` is the half that was missing: the client is handed the same id in
+  // `X-Request-Id`, so "it broke, here is the id" leads straight to this line
+  // and to the access-log line beside it, rather than to a guess about which
+  // of the day's requests it was.
+  logger.error(
+    'unhandled_error',
+    { id: req.id, method: req.method, url: req.originalUrl, user: req.userId },
+    err
+  );
   return send(res, 500, 'INTERNAL_ERROR');
 }
 
