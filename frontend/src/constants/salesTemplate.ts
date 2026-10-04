@@ -19,7 +19,7 @@
  * backend/tests/ingestion.test.js imports this exact text, so a template that
  * the importer would reject fails the backend suite rather than a shop owner.
  */
-export const SALES_TEMPLATE_FILENAME = 'biziq-sales-template.csv';
+export const SALES_TEMPLATE_FILENAME = 'hisabkitab-sales-template.csv';
 
 export const SALES_TEMPLATE_CSV = `transaction_external_id,occurred_at,product_name,quantity,unit_price,payment_method,tax_amount,discount_amount,sku,unit
 EXAMPLE-1001,2026-09-01 9:15 AM,Masala Chai,2,30,CASH,3,0,CHAI-01,cup

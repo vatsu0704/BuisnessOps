@@ -19,6 +19,8 @@ import { useNotificationStore } from '@/store/notificationStore';
 import { currentPushToken, unregisterFromPush } from '@/utils/push';
 import { useSalesStore } from '@/store/salesStore';
 
+// Both keys keep the product's old name on purpose: renaming a stored key signs
+// every user out. A machine reads them; no person ever does.
 const TOKEN_KEY = 'biziq_token';
 // Which business the switcher last settled on, remembered per device so the
 // app reopens where it was left rather than on whichever membership the API

@@ -27,11 +27,12 @@ import PhaseNotice from '@/components/PhaseNotice';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
 import TodayPunchCard from '@/components/TodayPunchCard';
+import Wordmark from '@/components/Wordmark';
 import ExpenseGapsCard from '@/components/expense/ExpenseGapsCard';
 import BranchCatalogSection from '@/components/home/BranchCatalogSection';
 import BranchesSection from '@/components/home/BranchesSection';
 import SalesTilesSection from '@/components/home/SalesTilesSection';
-import { colors, radius, shadow, spacing } from '@/theme';
+import { colors, gradient, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 
 type Props = BottomTabScreenProps<AppTabParamList, 'Home'>;
@@ -314,25 +315,23 @@ export default function HomeScreen({ navigation }: Props) {
       <ScreenBackground />
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <View style={styles.topBar}>
-          <BrandMark size={34} />
-          <Text style={styles.wordmark}>BizIQ</Text>
-          <View style={styles.topBarSpacer} />
-          <LanguageToggle />
-          <View style={styles.branchChip}>
-            <Ionicons name="git-branch-outline" size={13} color={colors.primary} />
-            <Text style={styles.branchChipText}>{t('home.branchCount', { count: stats.total })}</Text>
+          {/* The brand takes whatever the controls leave, so on a narrow phone
+              the name stacks onto two lines instead of pushing them off screen. */}
+          <View style={styles.brand}>
+            <BrandMark width={36} delay={step(0)} />
+            <AnimatedEntrance delay={step(2)} distance={0} scaleFrom={0.92} style={styles.brandName}>
+              <Wordmark size={17} />
+            </AnimatedEntrance>
           </View>
-          <NotificationBell />
-          <PressableScale testID="home-open-settings" onPress={() => navigation.navigate('Settings')}>
-            <LinearGradient
-              colors={[colors.primary, colors.primaryDark]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.avatar}
-            >
-              <Text style={styles.avatarText}>{initials(user?.name, user?.email)}</Text>
-            </LinearGradient>
-          </PressableScale>
+          <AnimatedEntrance delay={step(3)} distance={0} scaleFrom={0.92} style={styles.actions}>
+            <LanguageToggle />
+            <NotificationBell />
+            <PressableScale testID="home-open-settings" onPress={() => navigation.navigate('Settings')}>
+              <LinearGradient colors={gradient.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatar}>
+                <Text style={styles.avatarText}>{initials(user?.name, user?.email)}</Text>
+              </LinearGradient>
+            </PressableScale>
+          </AnimatedEntrance>
         </View>
 
         <ScrollView
@@ -352,7 +351,15 @@ export default function HomeScreen({ navigation }: Props) {
         >
           <AnimatedEntrance delay={step(0)} style={styles.greetingBlock}>
             <Text style={styles.greeting}>{t('home.greeting', { name: firstName })}</Text>
-            {business ? <Text style={styles.business}>{business.name}</Text> : null}
+            {/* The branch count sits with the business it counts. It used to be in
+                the top bar, which cannot also hold the name on a 360dp phone. */}
+            <View style={styles.businessRow}>
+              {business ? <Text style={styles.business}>{business.name}</Text> : null}
+              <View style={styles.branchChip}>
+                <Ionicons name="git-branch-outline" size={13} color={colors.primary} />
+                <Text style={styles.branchChipText}>{t('home.branchCount', { count: stats.total })}</Text>
+              </View>
+            </View>
           </AnimatedEntrance>
 
           {noAccess ? (
@@ -462,8 +469,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
   },
-  wordmark: { fontSize: 17, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
-  topBarSpacer: { flex: 1 },
+  brand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  brandName: { flexShrink: 1 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   branchChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -480,7 +488,14 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl },
   greetingBlock: { marginBottom: spacing.xs },
   greeting: { fontSize: 24, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
-  business: { fontSize: 14, color: colors.textSecondary, marginTop: 2 },
+  businessRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  business: { flexShrink: 1, fontSize: 14, color: colors.textSecondary },
   block: { marginTop: spacing.lg },
   errorBanner: {
     flexDirection: 'row',

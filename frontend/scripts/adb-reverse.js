@@ -10,7 +10,7 @@
  *
  * - **4000, the API.** Expo knows nothing about it and never forwards it, so
  *   after a replug, an adb restart, or simply starting Metro fresh, the app
- *   loads perfectly and every request fails with "Cannot reach the BizIQ
+ *   loads perfectly and every request fails with "Cannot reach the HisabKitab
  *   server". That is what this script originally existed for.
  * - **8081, Metro.** Expo *does* forward this — but only for the device it
  *   launched the app on. A second device that merely has the APK installed and
@@ -64,7 +64,7 @@ try {
 } catch (err) {
   console.warn(
     `adb-reverse: could not forward (${err.message.trim().split('\n')[0]}).\n` +
-      `  If the app reports "Cannot reach the BizIQ server":\n` +
+      `  If the app reports "Cannot reach the HisabKitab server":\n` +
       `    adb -s <device> reverse tcp:${API_PORT} tcp:${API_PORT}\n` +
       `  If it cannot load the JS bundle at all:\n` +
       `    adb -s <device> reverse tcp:${METRO_PORT} tcp:${METRO_PORT}`

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "BizIQ",
+    "name": "HisabKitab",
     "slug": "biziq",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +9,11 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4F46E5"
+      "backgroundColor": "#FFFFFF"
+    },
+    "androidStatusBar": {
+      "barStyle": "dark-content",
+      "backgroundColor": "#FFFFFF"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -25,7 +29,7 @@
       "package": "com.biziq.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#4F46E5"
+        "backgroundColor": "#FFFFFF"
       },
       "googleServicesFile": "./google-services.json",
       "permissions": [
@@ -42,7 +46,8 @@
       [
         "expo-notifications",
         {
-          "color": "#4F46E5"
+          "icon": "./assets/notification-icon.png",
+          "color": "#4539E3"
         }
       ],
       [
@@ -56,7 +61,7 @@
       [
         "./plugins/withAndroid12SplashScreen",
         {
-          "backgroundColor": "#4F46E5"
+          "backgroundColor": "#FFFFFF"
         }
       ],
       "./plugins/withReleaseSigning",
@@ -65,7 +70,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "BizIQ uses your location to confirm you're punching in or out from the branch."
+          "locationWhenInUsePermission": "HisabKitab uses your location to confirm you're punching in or out from the branch."
         }
       ]
     ],

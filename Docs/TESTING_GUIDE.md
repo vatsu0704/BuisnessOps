@@ -1,4 +1,4 @@
-# Manual Testing Guide — BizIQ
+# Manual Testing Guide — HisabKitab
 
 Click-by-click walkthroughs for every user-facing flow currently built. Follow
 them in order the first time — several later flows (Team, Staff & Payroll)
@@ -41,13 +41,13 @@ You run both servers yourself — nothing here starts them for you.
    through in a browser) or `npm run android` if you want to test on a
    device/emulator.
 3. **On a physical phone**, the app has to be able to reach the API — this is
-   the usual cause of a login that fails with "cannot reach the BizIQ server".
+   the usual cause of a login that fails with "cannot reach the HisabKitab server".
    Pick whichever matches how the phone is connected, and make sure
    `frontend/.env`'s `EXPO_PUBLIC_API_URL` agrees:
    - **USB cable** (works even on mobile data, and needs no firewall rule):
      set the URL to `http://localhost:4000/api`. `npm start` and
      `npm run android` set the forward up for you. If the app loads fine but
-     every request fails with "Cannot reach the BizIQ server", the forward was
+     every request fails with "Cannot reach the HisabKitab server", the forward was
      lost — replugging the device or restarting adb drops it, and Expo only
      restores its own Metro forward, not this one. Fix it with
      **`npm run adb:reverse`** (no restart needed; it is an OS-level port
@@ -85,9 +85,52 @@ or two different browsers. Flows 7 and 8 call this out explicitly.
 
 ---
 
+## Flow 0 — Launch: the name, the icon and the splash
+
+The product is **HisabKitab**. Its launcher label, icon and system splash are
+compiled into the APK, so **a build from before the rename still shows "BizIQ"
+and the old indigo icon** — rebuild first (`npx expo prebuild -p android`, then
+`npm run android`). The web build has no launcher; steps 3–5 apply to it too.
+
+1. Find the app on the phone's home screen or in the app drawer.
+   - ✅ **Expected:** it is labelled **HisabKitab**, and its icon is the HK mark —
+     two dark stems crossed by a blue ribbon, with a blue arm — on white.
+2. Force-stop it (App info → **Force stop**), then open it.
+   - ✅ **Expected:** the system's own splash is white with the mark in the
+     middle — never black, never the old indigo, never the whole launcher tile
+     cropped into a circle. The clock and battery in the status bar are dark, so
+     they stay readable on the white.
+3. Watch the app's own splash take over.
+   - ✅ **Expected, in this order:** the left stem, then the right stem, rise into
+     place; the blue ribbon sweeps across them from left to right; the arm of the
+     K flicks out; then the whole logo lifts a little as **HisabKitab** — "Hisab"
+     in black, "Kitab" in blue — and the tagline **"Your Business. All in One."**
+     fade in beneath it. After about two seconds it fades into the first screen.
+   - Change the language (step 4) and relaunch: the tagline follows it (Gujarati:
+     *તમારો વ્યવસાય. બધું એક જ જગ્યાએ.*). The name does not — a brand name is the
+     same in every language.
+   - With **Remove animations** on (Settings → Accessibility), the logo and the
+     name appear whole instead of drawing themselves in.
+4. On **Login**:
+   - ✅ **Expected:** the header shows the mark and **HisabKitab** in the same two
+     colours, with the language chip at the right. The heading reads **"Welcome
+     to HisabKitab"** with the name in blue. Tap the language chip: in Hindi it
+     reads *"HisabKitab में आपका स्वागत है"* — the name first, as Gujarati and
+     Marathi also put it. The button reads **"Sign in to HisabKitab"**.
+   - On a phone 360dp wide or narrower, the Gujarati and Marathi button label
+     wraps onto two lines. That is the label fitting, not overflowing.
+5. Tap **"New to HisabKitab?"** to open sign-up.
+   - ✅ **Expected:** the same mark and name in the header, beside a back arrow.
+     On a 320dp-wide phone the name stacks — "Hisab" above "Kitab" — rather than
+     being cut off or pushing the language chip off screen.
+
+Home's top bar is checked in Flow 1, once there is an account to reach it with.
+
+---
+
 ## Flow 1 — Register as a business owner
 
-1. On the **Login** screen, tap **"New to BizIQ? → Register your business and
+1. On the **Login** screen, tap **"New to HisabKitab? → Register your business and
    connect your first branch."**
 2. Fill in:
    - Full name — anything, e.g. `Priya Mehta`
@@ -106,6 +149,12 @@ or two different browsers. Flows 7 and 8 call this out explicitly.
    Sales / Orders / Branches (all zero — nothing uploaded yet), then **Your
    branches**, then **Open the counter**. The numbers lead because they are
    what Home is read for; everything below them is somewhere to go.
+   - ✅ **Expected, in the top bar:** the HK mark draws itself in, then
+     **HisabKitab** and, after it, the language chip, the bell and your avatar
+     settle into place one after another. The branch count (**0 branches** here)
+     sits beside your business name under the greeting, not in the top bar. On a
+     320dp-wide phone the name in the top bar stacks onto two lines and every
+     control stays on screen; from 360dp it is one line, in all four languages.
 
 **Try the validation, too:** type a malformed email (e.g. `not-an-email`) —
 a red "Enter a valid email address" message appears under the field and the
@@ -120,7 +169,7 @@ appears under Confirm Password.
    open **Settings**.
 2. Scroll down, tap **"Log out."**
 3. ✅ **Expected:** you're back at the **Login** screen.
-4. Enter the same email/password, tap **"Sign in to BizIQ."**
+4. Enter the same email/password, tap **"Sign in to HisabKitab."**
 5. ✅ **Expected:** back on **Home**, same business, same data.
 6. Now get the password **wrong** three or four times on purpose.
    - ✅ **Expected:** "Invalid email or password" each time, and nothing else
@@ -168,8 +217,8 @@ You need a second device or browser profile signed in as the owner for step 2.
    - Currency / Timezone — prefilled from your business
 3. Tap **"Create branch."**
 4. ✅ **Expected:** you're back on Home, the branch now appears under "Your
-   branches," and the Branches stat tile went up by one — **without** closing
-   and reopening the app. Every screen reads one shared branch list, so it
+   branches," and the Branches stat tile and the count beside your business name
+   both went up by one — **without** closing and reopening the app. Every screen reads one shared branch list, so it
    should also be in the branch pickers on Products, Counter and Supply
    straight away, and in the Settings branch count.
 5. Repeat once or twice more with different codes — several of the later
@@ -602,7 +651,7 @@ MANAGER or WAREHOUSE, because those two reach every branch.
 Everything up to here only ever *granted* access. This is the other direction.
 Do it as the OWNER, from **Settings → Team & permissions**.
 
-1. Invite an email that has no BizIQ account (as in Flow 7), then, on the
+1. Invite an email that has no HisabKitab account (as in Flow 7), then, on the
    pending card, tap **Withdraw invite** and confirm.
    - ✅ **Expected:** the card disappears from the list.
 2. Now sign up with that same email, supplying business details.
@@ -1347,7 +1396,7 @@ them and the centre lists them. That is a supported mode, not a broken one, so
 run this flow either way.
 
 1. As any role, look at **Home**'s top bar.
-   - ✅ **Expected:** a bell between the language chip and the branch count. No
+   - ✅ **Expected:** a bell between the language chip and your avatar. No
      badge yet.
 2. As the **owner**, mark a staff member **absent** — one whose staff record
    carries the email of a real app account (Flow 13).
@@ -1355,7 +1404,9 @@ run this flow either way.
    - ✅ **Expected:** the bell shows a red **1**. Open it: *"You were marked
      absent for 20 Sep at Andheri West."*
    - ✅ **Expected with Firebase set up:** it also arrived as a notification on
-     the phone, in the language **that phone's app** is set to.
+     the phone, in the language **that phone's app** is set to, with the HK mark
+     as its small icon in the status bar (a white silhouette — Android draws a
+     notification icon in one colour) rather than a plain square.
 4. Mark somebody who has a staff record but **no app account**.
    - ✅ **Expected:** marking succeeds exactly as before. Nobody is notified and
      nothing fails — requirement 2 says this in as many words.
@@ -1808,7 +1859,7 @@ for this one. Sign in as the owner or an admin.
   Without it the rows are still written and the in-app centre still lists them —
   that is a supported mode, and the whole test suite runs in it — but nothing
   reaches a lock screen.
-- **iOS gets no pushes.** BizIQ ships as an Android development build; iOS needs
+- **iOS gets no pushes.** HisabKitab ships as an Android development build; iOS needs
   its own Firebase app registration, a `GoogleService-Info.plist` and an APNs
   key before any of this reaches an iPhone.
 - **A notification is never re-sent.** If the push fails, the row stays and the
@@ -1859,4 +1910,4 @@ for this one. Sign in as the owner or an admin.
 - **Some text from the server stays English by design**: CSV column names
   inside upload row errors (they are the literal headings in your file), the
   payslip document's own labels, and the occasional message that comes from a
-  third-party library rather than from BizIQ.
+  third-party library rather than from HisabKitab.

@@ -4,7 +4,7 @@
 
 ## What this project is
 
-**BizIQ** is a multi-tenant AI business intelligence platform for restaurant,
+**HisabKitab** is a multi-tenant AI business intelligence platform for restaurant,
 retail and franchise owners. The core loop: an owner asks a question in plain
 language ("What were October sales versus last year?") and receives an answer
 computed from their own sales data, with the underlying numbers traceable.
@@ -46,10 +46,45 @@ Update them in the same change as the code, not as a follow-up.
 
 ### Naming
 
-The product is **BizIQ**; the Android package is `com.biziq.app`. It was renamed
-from an earlier name, "BuisnessOps". That old name deliberately survives where
-changing it would be disruptive — the repository folder, the Postgres database
-name `buisnessops`, and git history. Those are not typos to fix.
+The product is **HisabKitab** — one word, capital H and K. It has been renamed
+twice, "BuisnessOps" then "BizIQ" then HisabKitab (2026-10-04), so the rule is
+about where a name may live, not just what it is:
+
+- **What a person reads changes; what a machine keys on stays.** These keep an
+  old name on purpose and are not typos to fix:
+  - the Android package and iOS bundle id `com.biziq.app` — Firebase's
+    `google-services.json` is registered against it, and a new id installs as
+    a second app beside the old one and orphans every push token. A one-way door
+    once published; ask first.
+  - the EAS `slug` `biziq` — EAS checks it against `extra.eas.projectId` and
+    refuses to build when they disagree.
+  - the SecureStore keys `biziq_token`, `biziq_business_id`, `biziq_language`
+    — renaming them signs every user out and forgets their language.
+  - the npm package `biziq-frontend`, the `BIZIQ_API_PORT` variable, and the
+    `// BizIQ:` comments inside `frontend/patches/` (editing a patch file is not
+    worth the risk to a comment).
+  - the repository folder, the Postgres database `buisnessops`, the hosted
+    `buisnessops.onrender.com`, and git history, from the first rename.
+- **In the app the name has one source: `APP_NAME` in
+  `frontend/src/constants/brand.ts`**, kept as its two words (`APP_NAME_PARTS`).
+  `Wordmark` renders it the way the logo sets it — "Hisab" in ink, "Kitab" in the
+  brand blue — and translations write `{{appName}}`, which i18next fills from
+  `interpolation.defaultVariables`, so no caller passes it and no locale file
+  spells it. A brand name reads the same in every language, so it is not a
+  translation key; never type it into a component or a locale file.
+  `lint:errors` knows the app supplies `{{appName}}`, as it knows about `{{field}}`.
+- **A header too narrow for the name stacks it, never cuts it.** `Wordmark`'s two
+  words are separate `Text` nodes in a wrapping row, so on a 320dp phone Home and
+  the sign-up header show "Hisab" over "Kitab" — a stacked lockup — rather than
+  clipping, shrinking or breaking mid-word. The parent only has to let it shrink.
+- **Two places cannot import it** and repeat the name: `app.json`'s `name` (the
+  launcher label) and its iOS location-permission sentence. Both are compiled
+  in, so they change only after `npx expo prebuild -p android` and a rebuild — an
+  APK from before then still shows the old name and icon.
+- **Where a sentence puts the name matters.** The Login heading is one string
+  with the name tagged inside it (`<brand>{{appName}}</brand>`, rendered with
+  `Trans`), not a prefix plus the name, because Hindi, Gujarati and Marathi put
+  the name first.
 
 ## Layout
 
@@ -373,11 +408,18 @@ branch card kept showing a stale list until the app was killed and reopened.
 - Haptics go through `src/utils/haptics.ts`, which no-ops on web — call that
   wrapper rather than `expo-haptics` directly.
 - Shared UI lives in `src/components` (`FormInput`, `PrimaryButton`,
-  `PressableScale`, `BrandMark`, `AnimatedSplash`, `ScreenBackground`). Reuse these
-  before writing a new variant.
-- Brand artwork in `frontend/assets/` is generated from vector geometry rather
-  than hand-drawn. `BrandMark.tsx` deliberately mirrors the icon's proportions —
-  change both together or the in-app logo and the launcher icon will drift apart.
+  `PressableScale`, `BrandMark`, `Wordmark`, `AnimatedSplash`, `ScreenBackground`).
+  Reuse these before writing a new variant. The brand fill for buttons, hero cards
+  and avatars is `gradient.brand` in the theme, not a pair of hex codes.
+- **The mark is drawn once, in `src/constants/brandMark.json`** — traced from the
+  supplied logo and fitted to Béziers, with each part's box and paints.
+  `BrandMark.tsx` renders it in the app, and `scripts/generate-brand-assets.js`
+  renders every PNG in `frontend/assets/` from it (launcher icon, adaptive icon,
+  splash, favicon, notification icon), so the in-app logo and the launcher icon
+  cannot drift apart. Change the JSON, re-run the script (its header says how to
+  get its renderer, which is deliberately not a dependency), then rebuild. Its
+  `blue` is also `colors.primary`, and the backend's printed documents repeat it
+  as `BRAND` in `documents/layout.js`.
 
 ## Translations
 
@@ -388,6 +430,8 @@ user-facing string** — render it with `t('section.key')` from
 - Strings live in `src/i18n/locales/{en,hi,gu,mr}.json`. `en.json` is the source of
   truth: `src/i18n/i18next.d.ts` types `t()` against it, so a key missing from
   `en.json` is a compile error rather than text that renders as the raw key.
+- **The product's name is written `{{appName}}`**, never spelled out in a
+  string — see *Naming*.
 - Adding a language means adding a JSON file and one row in `LANGUAGES`
   (`src/i18n/index.ts`). Nothing else in the app changes.
 - Language resolution order: an explicit choice stored on the device, then the
@@ -497,7 +541,12 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
   in the frontend source finds nothing, because it is not there.
 - On Android 12+ the OS draws its own splash before app code runs. It needs
   `windowSplashScreenBackground`, which Expo SDK 51 does not emit — the config
-  plugin above supplies it. Without it the launch starts on a black screen.
+  plugin above supplies it, together with `windowSplashScreenAnimatedIcon` set to
+  the adaptive icon's foreground (the bare mark). Without the first the launch
+  starts on a black screen; without the second it shows the whole launcher icon.
+  Both splashes and `AnimatedSplash` are the same white (`#FFFFFF`, repeated in
+  `app.json` because JSON cannot import it), and `androidStatusBar` asks for dark
+  status-bar icons so the clock does not vanish into it before JS starts.
 - **The debug APK is built for one CPU architecture, and that is deliberate.**
   React Native's default packages all four, which on this project meant **127MB of
   native libraries in a 147MB APK** — `arm64-v8a` 38.8MB, `x86` 34.4MB, `x86_64`
@@ -762,7 +811,7 @@ both compile and type-check cleanly, then yield `undefined` at runtime and fall
 back silently. The cast form sat in `api/client.ts` for months undetected,
 because its fallback *was* the dev URL: over `adb reverse` a broken inline is
 indistinguishable from a working one, and only a release APK pointed at the
-hosted API exposed it — as "cannot reach the BizIQ server at
+hosted API exposed it — as "cannot reach the HisabKitab server at
 http://localhost:4000/api" on a server that was up. No cast is needed anyway,
 since `@types/node` types `process.env` as a string dictionary.
 

@@ -1,4 +1,4 @@
-# Deploying the BizIQ API
+# Deploying the HisabKitab API
 
 Everything needed to run `backend/` somewhere other than a laptop, and the
 handful of things that will go wrong quietly if they are skipped.

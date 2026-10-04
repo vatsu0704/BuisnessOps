@@ -1,7 +1,11 @@
+import brandMark from '@/constants/brandMark.json';
+
 export const colors = {
-  primary: '#4F46E5',
-  primaryDark: '#4338CA',
-  primaryLight: '#EEF2FF',
+  // The logo's blue (constants/brandMark.json), so every button, chip and link
+  // matches the mark beside it. The two shades below share its hue.
+  primary: brandMark.blue,
+  primaryDark: '#3A2FC4',
+  primaryLight: '#EEEDFD',
   background: '#FAFAFB',
   surface: '#FFFFFF',
   border: '#E4E4E7',
@@ -13,6 +17,14 @@ export const colors = {
   success: '#16A34A',
   warning: '#D97706',
   white: '#FFFFFF',
+};
+
+/**
+ * The brand fill for buttons, hero cards and avatars: the ribbon's lighter blue
+ * easing into primaryDark. White text keeps AA contrast across the whole of it.
+ */
+export const gradient = {
+  brand: ['#5B4FF0', colors.primaryDark] as const,
 };
 
 export const spacing = {

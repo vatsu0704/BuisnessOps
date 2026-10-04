@@ -59,9 +59,12 @@ for (const [section, codes] of [
     if (!translation) continue;
 
     const available = placeholders(template);
-    // The client supplies the field label itself, from errors.field.*, so
-    // {{field}} is always available to a validation message.
-    if (section === 'validation') available.add('field');
+    // The client supplies these itself, so a message may use them although the
+    // server never sends them: {{field}} is the field label, from errors.field.*,
+    // for a validation message; {{appName}} is the product's name, which i18next
+    // fills into every string (interpolation.defaultVariables in i18n/index.ts).
+    const supplied = section === 'validation' ? ['field', 'appName'] : ['appName'];
+    for (const key of supplied) available.add(key);
     const used = placeholders(translation);
 
     // A placeholder nothing supplies renders as literal {{braces}} on screen.
@@ -74,7 +77,7 @@ for (const [section, codes] of [
     // sentence names a URL path or a database column, and the person reading
     // the app is better off without it. Reported, never failed.
     for (const key of available) {
-      if (!used.has(key) && key !== 'field') omitted.push(`errors.${section}.${code} omits {{${key}}}`);
+      if (!used.has(key) && !supplied.includes(key)) omitted.push(`errors.${section}.${code} omits {{${key}}}`);
     }
   }
 }

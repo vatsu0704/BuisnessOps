@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -76,8 +76,10 @@ export default function LoginScreen({ navigation }: Props) {
 
             <AnimatedEntrance delay={step(1)} style={styles.intro}>
               <Pill label={t('login.pill')} icon="trending-up" />
+              {/* One sentence with the name tagged inside it, not a prefix plus the
+                  name: Hindi, Gujarati and Marathi put the name first. */}
               <Text style={styles.heading}>
-                {t('login.headingPrefix')} <Text style={styles.headingBrand}>BizIQ</Text>
+                <Trans i18nKey="login.heading" components={{ brand: <Text style={styles.headingBrand} /> }} />
               </Text>
               <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
             </AnimatedEntrance>

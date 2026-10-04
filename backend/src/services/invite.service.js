@@ -39,7 +39,7 @@ async function assertCashierBranchesFree(businessId, role, branchIds, confirmed)
 }
 
 // The single "add someone to my team" entry point (business.controller.js's
-// createMembership route handler). Whether the target already has a BizIQ
+// createMembership route handler). Whether the target already has a HisabKitab
 // account decides what actually happens:
 //  - account exists: join them immediately (ACTIVE Membership + BranchAccess).
 //  - no account yet: store a PENDING Invite; auth.service.js's signup claims

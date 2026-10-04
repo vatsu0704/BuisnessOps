@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
+import { APP_NAME } from '@/constants/brand';
 import type { Locale } from '@/types/user';
 import { getItem, setItem } from '@/utils/secureStorage';
 import en from './locales/en.json';
@@ -8,6 +9,8 @@ import gu from './locales/gu.json';
 import hi from './locales/hi.json';
 import mr from './locales/mr.json';
 
+// Keeps the product's old name on purpose: renaming a stored key forgets every
+// user's language choice. A machine reads it; no person ever does.
 const LANGUAGE_KEY = 'biziq_language';
 
 // Adding a language means adding a JSON file and one row here — no code changes
@@ -50,7 +53,9 @@ void i18n.use(initReactI18next).init({
   // React Native has no dependable Intl.PluralRules, so keep i18next's v3 plural
   // handling (`key` / `key_plural`) rather than the v4 format that requires it.
   compatibilityJSON: 'v3',
-  interpolation: { escapeValue: false },
+  // {{appName}} is filled here for every string, so no caller passes the name
+  // and no locale file spells it — see constants/brand.ts.
+  interpolation: { escapeValue: false, defaultVariables: { appName: APP_NAME } },
   returnNull: false,
 });
 

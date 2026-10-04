@@ -1,7 +1,7 @@
 {
   "name": "buisnessops-backend",
   "version": "1.0.0",
-  "description": "Node.js + Express + PostgreSQL (Prisma) API for BuisnessOps",
+  "description": "Node.js + Express + PostgreSQL (Prisma) API for HisabKitab",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {

@@ -1,13 +1,13 @@
-# Project Flow — BizIQ
+# Project Flow — HisabKitab
 
 This document translates the product requirements (PRD) into a buildable engineering sequence for this repo: **React Native/Expo (TypeScript) frontend + Node.js/Express backend + PostgreSQL via Prisma**. It exists so that at any point in the build, anyone can answer "what phase are we in, what does it depend on, and how do we know it's done."
 
-The product is named **BizIQ** (Android package `com.biziq.app`), renamed from the earlier "BuisnessOps". The old name deliberately survives where changing it would be disruptive — the repository folder and the Postgres database name `buisnessops` — and those are not typos to fix.
+The product is named **HisabKitab** (2026-10-04), renamed from "BizIQ", which had itself replaced "BuisnessOps". Old names deliberately survive where a machine keys on them — the Android package `com.biziq.app`, the EAS slug, the stored keys on every device, the repository folder and the Postgres database name `buisnessops` — and those are not typos to fix; `CLAUDE.md`'s *Naming* section has the full list.
 
 **Where the repo actually is:** Phases 0 and 1 (CSV path) are done. The app ships as an Expo **development build** rather than Expo Go, with its own icon, animated splash and a four-tab shell (Home, Staff, Reports, Settings). Phase 3's UI i18n is done ahead of order; the rest of Phase 3 and all of Phase 2 are not started. An **Attendance & Salary Slip module** was also added outside the phase sequence, on request — backend and frontend both done (see 4a below).
 
 **A second track is now running alongside this one.** *Branch Operations*
-(Section 13, driven by [REQUIREMENTS.md](REQUIREMENTS.md)) turns BizIQ from a
+(Section 13, driven by [REQUIREMENTS.md](REQUIREMENTS.md)) turns HisabKitab from a
 product that analyses a business into one that runs it — counter billing,
 supply orders, expenses, net profit. Tasks 1-10 of that track have landed; Task 1
 amends Phase 0 (see the note under the Phase 0 exit criterion) and Task 8
@@ -96,7 +96,7 @@ Phases 0–4 are the MVP (PRD Phase 1). Phase 5 is PRD Phase 2. Phase 6 is PRD P
 
 Not part of the original PRD phase sequence — added on request, from a separate reference requirements doc. **Backend and frontend both done.**
 
-Rebuilt in a second pass (2026-09-20) after a Saral HRM quote (₹46,020/yr for 50 employees) and an eSSL biometric-device quote (₹80,500) raised the question of whether BizIQ should do this job itself. That pass fixed three defects that made the first version unfit for a real business, and moved the feature out of Settings into the places it is actually used.
+Rebuilt in a second pass (2026-09-20) after a Saral HRM quote (₹46,020/yr for 50 employees) and an eSSL biometric-device quote (₹80,500) raised the question of whether HisabKitab should do this job itself. That pass fixed three defects that made the first version unfit for a real business, and moved the feature out of Settings into the places it is actually used.
 
 **The three defects the second pass fixed:**
 
@@ -290,11 +290,11 @@ Runs partly in parallel with Phases 4–6, but nothing ships to real businesses 
 
 ## 11. Immediate Next Steps (from current repo state)
 
-Done and verified: Phases 0 and 1's CSV path (schema, migrations, tests, CI, Postman collection); the BizIQ brand (icon, adaptive icon, animated splash); a designed and animated Login/Signup/Home; a four-tab app shell; Phase 3's UI i18n in four languages; the Attendance & Salary Slip module (4a); and Home's stat tiles now reading real sales figures instead of just counting branches.
+Done and verified: Phases 0 and 1's CSV path (schema, migrations, tests, CI, Postman collection); the HisabKitab brand (one traced drawing of the mark rendered into the icon, adaptive icon, splash and notification icon, and an animated splash that draws it in); a designed and animated Login/Signup/Home; a four-tab app shell; Phase 3's UI i18n in four languages; the Attendance & Salary Slip module (4a); and Home's stat tiles now reading real sales figures instead of just counting branches.
 
 An onboarding path now exists end to end: register → add a branch → upload sales data → invite the team. Branch creation, CSV/Excel upload, and team invites are all reachable from Home/Settings as modal screens, so nothing requires Postman to use.
 
-**Team & permissions**, reachable from Settings (OWNER/ADMIN only): `GET /memberships` lists the business's team with each person's role and granted branches. The invite screen (`POST /memberships`) now handles both cases in one call — if the email already has a BizIQ account, they join immediately; if not, it creates a `PENDING Invite` (own model, not a `Membership` — see `database-table.md`) that's claimed automatically the moment that email signs up, via a public `GET /invites/lookup` the signup screen checks as you type. An invited signup joins the inviting business with the role/branches already chosen instead of creating a new business of their own, which is also what fixes the multi-membership bug below for this path. For MANAGER/STAFF invites, the screen requires picking at least one branch before it lets you submit, granted immediately (existing account) or stored on the invite (pending, granted at claim time).
+**Team & permissions**, reachable from Settings (OWNER/ADMIN only): `GET /memberships` lists the business's team with each person's role and granted branches. The invite screen (`POST /memberships`) now handles both cases in one call — if the email already has a HisabKitab account, they join immediately; if not, it creates a `PENDING Invite` (own model, not a `Membership` — see `database-table.md`) that's claimed automatically the moment that email signs up, via a public `GET /invites/lookup` the signup screen checks as you type. An invited signup joins the inviting business with the role/branches already chosen instead of creating a new business of their own, which is also what fixes the multi-membership bug below for this path. For MANAGER/STAFF invites, the screen requires picking at least one branch before it lets you submit, granted immediately (existing account) or stored on the invite (pending, granted at claim time).
 
 **Access control now goes both ways.** Granting was the only direction that existed: an invite could be sent but never withdrawn, and a branch grant never narrowed.
 
@@ -341,7 +341,7 @@ What's actually next:
 ## 13. Branch Operations (a separate track, started 2026-09-23)
 
 A second track, running alongside the phase sequence above rather than inside
-it. Where Phases 0–7 make BizIQ *analyse* a business, this track makes it *run*
+it. Where Phases 0–7 make HisabKitab *analyse* a business, this track makes it *run*
 one: counter billing with tokens, branch-to-warehouse supply orders with
 payment and dispatch, branch expense logging, and net profit per branch per
 month across several businesses in one account.

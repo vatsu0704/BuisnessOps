@@ -16,7 +16,7 @@ import NotificationSettings from '@/components/NotificationSettings';
 import NoBusinessAccessNotice from '@/components/NoBusinessAccessNotice';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
-import { colors, radius, shadow, spacing, typography } from '@/theme';
+import { colors, gradient, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { useMembership } from '@/hooks/useBusinessId';
 import { can, hasNoActiveBusiness, switchableMemberships } from '@/utils/permissions';
@@ -73,7 +73,7 @@ export default function SettingsScreen() {
             <View style={styles.profileCard}>
               <View style={styles.avatar}>
                 <LinearGradient
-                  colors={['#6366F1', '#4338CA']}
+                  colors={gradient.brand}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={[StyleSheet.absoluteFill, styles.avatarGradient]}

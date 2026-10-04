@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, shadow, spacing } from '@/theme';
+import { colors, gradient, radius, shadow, spacing } from '@/theme';
 
 type Props = {
   eyebrow: string;
@@ -13,12 +13,7 @@ type Props = {
 export default function HeroCard({ eyebrow, title, subtitle, icon }: Props) {
   return (
     <View style={styles.wrap}>
-      <LinearGradient
-        colors={['#6366F1', '#4338CA']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+      <LinearGradient colors={gradient.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       {icon ? (
         <View style={styles.iconWrap}>
           <Ionicons name={icon} size={64} color={colors.white} />

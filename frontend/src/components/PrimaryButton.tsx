@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, gradient, radius, spacing, typography } from '@/theme';
 import { spring } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
 
@@ -51,7 +51,7 @@ export default function PrimaryButton({ title, loading, disabled, icon, style, o
         {...rest}
       >
         <LinearGradient
-          colors={isDisabled ? ['#C7C7CC', '#AEAEB2'] : ['#6366F1', '#4338CA']}
+          colors={isDisabled ? ['#C7C7CC', '#AEAEB2'] : gradient.brand}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.gradient}

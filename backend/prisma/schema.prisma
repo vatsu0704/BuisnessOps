@@ -132,7 +132,7 @@ enum InviteStatus {
   REVOKED
 }
 
-// A pending invite for an email with no BizIQ account yet. Deliberately not
+// A pending invite for an email with no HisabKitab account yet. Deliberately not
 // a Membership row: Membership.userId is required (a membership is always
 // for a real person), so "invited, but not a person here yet" needs its own
 // model. Signup checks for a match on the submitted email and, if found,

@@ -249,7 +249,7 @@ describe('CSV ingestion (Phase 1)', () => {
       );
       const template = /SALES_TEMPLATE_CSV = `([^`]*)`/.exec(source)[1];
 
-      const untouched = await upload(template, 'biziq-sales-template.csv');
+      const untouched = await upload(template, 'hisabkitab-sales-template.csv');
       expect(untouched.statusCode).toBe(201);
       expect(untouched.body.recordsFailed).toBe(0);
       expect(untouched.body.examplesSkipped).toBeGreaterThan(0);

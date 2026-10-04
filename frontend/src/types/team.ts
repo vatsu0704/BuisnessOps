@@ -13,7 +13,7 @@ export interface TeamMember {
   branchAccess: TeamBranchAccess[];
 }
 
-/** Someone invited who has no BizIQ account yet — see invite.service.js. */
+/** Someone invited who has no HisabKitab account yet — see invite.service.js. */
 export interface PendingInvite {
   id: string;
   email: string;

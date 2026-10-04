@@ -4,6 +4,7 @@ import * as Device from 'expo-device';
 import { registerDeviceToken, unregisterDeviceToken } from '@/api/notifications';
 import { codeToLocale } from '@/i18n';
 import type { LanguageCode } from '@/i18n';
+import { colors } from '@/theme';
 
 /**
  * Registering this device for push — requirements 2 and 8.
@@ -56,7 +57,7 @@ export async function ensureAndroidChannel(): Promise<void> {
     // open the app anyway.
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: '#4F46E5',
+    lightColor: colors.primary,
     sound: 'default',
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
   });

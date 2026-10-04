@@ -22,7 +22,8 @@ const { html, raw, render } = require('./escape');
  *  - `font-variant-numeric: tabular-nums` on money so columns line up.
  */
 
-const BRAND = '#4F46E5';
+// The logo's blue — the app's colors.primary (frontend/src/constants/brandMark.json).
+const BRAND = '#4539E3';
 const INK = '#18181B';
 const MUTED = '#71717A';
 const LINE = '#E4E4E7';

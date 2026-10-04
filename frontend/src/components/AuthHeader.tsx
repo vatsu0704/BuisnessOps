@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import BrandMark from '@/components/BrandMark';
 import LanguageToggle from '@/components/LanguageToggle';
 import PressableScale from '@/components/PressableScale';
+import Wordmark from '@/components/Wordmark';
 import { colors, radius, spacing } from '@/theme';
 
 type Props = {
@@ -18,12 +19,13 @@ export default function AuthHeader({ onBack, caption }: Props) {
           <Ionicons name="arrow-back" size={20} color={colors.text} />
         </PressableScale>
       ) : null}
-      <BrandMark size={40} />
-      <View>
-        <Text style={styles.wordmark}>BizIQ</Text>
+      <BrandMark width={40} />
+      {/* Takes whatever the row has left, so on a narrow phone the name stacks
+          and the caption wraps instead of pushing the language toggle off screen. */}
+      <View style={styles.name}>
+        <Wordmark size={20} />
         {caption ? <Text style={styles.caption}>{caption}</Text> : null}
       </View>
-      <View style={styles.spacer} />
       <LanguageToggle />
     </View>
   );
@@ -31,7 +33,7 @@ export default function AuthHeader({ onBack, caption }: Props) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  spacer: { flex: 1 },
+  name: { flex: 1 },
   backButton: {
     width: 38,
     height: 38,
@@ -42,6 +44,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  wordmark: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
   caption: { fontSize: 12, color: colors.primary, fontWeight: '600', marginTop: -1 },
 });

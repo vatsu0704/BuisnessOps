@@ -1,4 +1,4 @@
-# Firebase setup — push notifications for BizIQ
+# Firebase setup — push notifications for HisabKitab
 
 Everything the app needs from Firebase, in the order it has to be done. Nothing
 in the codebase works until steps 1–5 are finished, because two files that are
@@ -7,10 +7,10 @@ in the codebase works until steps 1–5 are finished, because two files that are
 You need about fifteen minutes and a Google account. It is free — Firebase Cloud
 Messaging has no paid tier for what this uses.
 
-## What BizIQ actually uses Firebase for
+## What HisabKitab actually uses Firebase for
 
 **Cloud Messaging (FCM), and nothing else.** No Firebase Auth, no Firestore, no
-Analytics, no Crashlytics. BizIQ has its own accounts, its own Postgres and its
+Analytics, no Crashlytics. HisabKitab has its own accounts, its own Postgres and its
 own API; Firebase is only the pipe that wakes a phone up.
 
 That matters when you are clicking through the console: ignore every product it
@@ -22,9 +22,15 @@ offers you. If a step below does not mention it, skip it.
 
 1. Go to <https://console.firebase.google.com/> and sign in.
 2. **Create a project**.
-3. Name it `BizIQ`. The console will suggest a project ID like `biziq-4f2c1` —
-   that is fine, it only has to be globally unique.
-4. **Google Analytics: turn it off.** It asks on the second screen. BizIQ does
+3. Name it `HisabKitab`. The console will suggest a project ID like
+   `hisabkitab-4f2c1` — that is fine, it only has to be globally unique.
+
+   > The project this app already uses was created while the product was called
+   > BizIQ, so its name and ID say `biziq`. Leave it: a project's display name is
+   > cosmetic, its ID can never change, and recreating it would mean a new
+   > `google-services.json`, a new service-account key and every device
+   > re-registering. Nothing a user sees comes from either.
+4. **Google Analytics: turn it off.** It asks on the second screen. HisabKitab does
    not use it, and leaving it on adds a consent surface and a second config file
    for no benefit.
 5. **Create project**, then **Continue** when it finishes.
@@ -41,10 +47,11 @@ This is the step that produces `google-services.json`.
    ```
 
    **This must match character for character.** It is `expo.android.package` in
-   `frontend/app.json`. A mismatch is the single most common cause of "the token
+   `frontend/app.json`, and it keeps the product's old name on purpose — see
+   *Naming* in `CLAUDE.md`. A mismatch is the single most common cause of "the token
    registers but no notification ever arrives", and it fails silently — FCM
    accepts the token and drops every message sent to it.
-3. **App nickname** — anything, e.g. `BizIQ Android`.
+3. **App nickname** — anything, e.g. `HisabKitab Android`.
 4. **Debug signing certificate SHA-1** — **leave it blank.** It is only needed
    for Google Sign-In and Dynamic Links, neither of which this app uses.
 5. **Register app**.
@@ -62,7 +69,7 @@ This is the step that produces `google-services.json`.
    console"). The Expo plugin does all of that wiring; you do not add the Gradle
    lines the console shows you.
 
-> **iOS:** not set up, and not needed yet — BizIQ currently ships as an Android
+> **iOS:** not set up, and not needed yet — HisabKitab currently ships as an Android
 > development build. When iOS happens it needs its own app registration, a
 > `GoogleService-Info.plist`, and an APNs key uploaded to Firebase.
 
@@ -83,7 +90,7 @@ credentials for that.
 5. **This file is a credential. Treat it like a password.** It is already in
    `.gitignore` — do not commit it, do not paste it into a chat or an issue, and
    do not put it in the frontend. Anyone holding it can send notifications to
-   every BizIQ user.
+   every HisabKitab user.
 
    If it ever leaks, come back to this tab, delete the key, and generate a new
    one. That revokes the old one immediately.
@@ -168,7 +175,7 @@ Two EAS credential slots look relevant here and are not:
   wants a Google Cloud service account with Play Developer API access — not
   `google-services.json`, and not the Firebase key from step 3. Uploading the
   wrong file fails with `"private_key": Required`.
-- **FCM V1 service account key** lets *Expo's* push service talk to FCM. BizIQ
+- **FCM V1 service account key** lets *Expo's* push service talk to FCM. HisabKitab
   never uses it: the app takes the raw device token
   (`getDevicePushTokenAsync`) and the backend sends with `firebase-admin`,
   so Expo is not in the delivery path.
@@ -205,7 +212,7 @@ Two EAS credential slots look relevant here and are not:
 Notification permission was denied. Android only asks once — after that, the
 prompt never reappears and the app cannot re-trigger it. Fix it in the OS:
 long-press the app icon → **App info** → **Notifications** → turn them on. Then
-reopen BizIQ, which re-registers on every launch.
+reopen HisabKitab, which re-registers on every launch.
 
 **Permission granted, but nothing ever arrives.**
 In order of likelihood:
@@ -224,13 +231,13 @@ Services** cannot receive FCM at all — there is nothing to deliver the message
 Use an image whose name says "Google Play", or a real phone.
 
 **Notifications arrive but are silent.** Android 13+ gives each app's channels
-their own settings. BizIQ creates one channel, "Updates", the first time the app
+their own settings. HisabKitab creates one channel, "Updates", the first time the app
 runs. Check **App info → Notifications → Updates**.
 
 **They stop arriving after a few days on a Xiaomi/Oppo/Vivo/OnePlus phone.**
 These vendors kill background apps aggressively. In **App info → Battery**,
 choose **Unrestricted** / **No restrictions**. This is a known Android
-fragmentation problem, not a BizIQ bug — <https://dontkillmyapp.com> documents
+fragmentation problem, not a HisabKitab bug — <https://dontkillmyapp.com> documents
 it per manufacturer.
 
 ---

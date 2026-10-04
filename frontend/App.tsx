@@ -49,7 +49,8 @@ export default function App() {
         }}
       >
         <RootNavigator />
-        <StatusBar style={splashDone ? 'auto' : 'light'} />
+        {/* the splash is white, so its status bar needs dark icons too */}
+        <StatusBar style={splashDone ? 'auto' : 'dark'} />
       </NavigationContainer>
       {splashDone ? null : <AnimatedSplash ready={!isBootstrapping} onFinish={() => setSplashDone(true)} />}
     </SafeAreaProvider>

@@ -1,6 +1,6 @@
 # Requirements — Branch Operations
 
-This document captures the requirements for turning BizIQ from a reporting product
+This document captures the requirements for turning HisabKitab from a reporting product
 into an operations product, and breaks them into the tasks that build them. It is the
 source of truth for *what* is being built and *why*; [PROJECT_FLOW.md](PROJECT_FLOW.md)
 tracks *where each task has got to*, and [database-table.md](database-table.md) holds
@@ -22,11 +22,11 @@ same thing in the original list and in this document.
 
 ## 1. What changes about the product
 
-BizIQ today **analyses** a business. Sales arrive as a CSV export from a POS, and the
+HisabKitab today **analyses** a business. Sales arrive as a CSV export from a POS, and the
 app reports on them. Attendance and payroll were added later. Nothing in the app
 creates a business transaction.
 
-These requirements make BizIQ **run** the business:
+These requirements make HisabKitab **run** the business:
 
 - A branch takes counter orders and issues tokens, and the day's sales are a
   by-product of that rather than a file someone uploads later.

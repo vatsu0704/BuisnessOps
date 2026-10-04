@@ -8,7 +8,7 @@ import { translateApiError, type ApiErrorBody } from '@/api/errorMessages';
 // cleanly but leaves a runtime lookup that is `undefined` in a release bundle. That
 // hid here for a long time, because the fallback below is also the dev URL: over
 // `adb reverse` a broken inline is indistinguishable from a working one, and only a
-// release APK built against the hosted API showed it, as "cannot reach the BizIQ
+// release APK built against the hosted API showed it, as "cannot reach the HisabKitab
 // server at http://localhost:4000/api". No cast is needed to type it — @types/node
 // declares process.env as a string dictionary.
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000/api';

@@ -1,6 +1,5 @@
 {
   "common": {
-    "brand": "BizIQ",
     "active": "active",
     "more": "+{{count}} more",
     "loading": "Loading…",
@@ -11,7 +10,7 @@
     "all": "All"
   },
   "errors": {
-    "unreachable": "Cannot reach the BizIQ server at {{url}}. Check that the device is on the same network as the server and that the server is running.",
+    "unreachable": "Cannot reach the {{appName}} server at {{url}}. Check that the device is on the same network as the server and that the server is running.",
     "unexpected": "Something went wrong. Please try again.",
     "sharingUnavailable": "Sharing is not available on this device.",
     "printUnavailable": "Could not open the print view. Check that pop-ups and printing are allowed.",
@@ -69,7 +68,7 @@
       "ATTENDANCE_BEFORE_HIRED": "You cannot mark attendance before this person joined.",
       "ROSTER_FUTURE_DATE": "You cannot open a roster for a day that has not happened yet.",
       "STAFF_NOT_FOUND": "Staff member not found.",
-      "STAFF_USER_NOT_FOUND": "No BizIQ account uses this email. Ask them to sign up first.",
+      "STAFF_USER_NOT_FOUND": "No {{appName}} account uses this email. Ask them to sign up first.",
       "PAYSLIP_NO_BASE_SALARY": "Set a monthly salary for this person before generating a payslip.",
       "PAYSLIP_FUTURE_MONTH": "You cannot generate a payslip for a month that has not happened yet.",
       "PAYSLIP_FINALIZED": "This payslip is finalized and cannot be generated again.",
@@ -247,11 +246,11 @@
     "deliveries": "Deliveries"
   },
   "splash": {
-    "tagline": "Ask your business anything"
+    "tagline": "Your Business. All in One."
   },
   "login": {
     "pill": "Merchant & manager portal",
-    "headingPrefix": "Welcome to",
+    "heading": "Welcome to <brand>{{appName}}</brand>",
     "subtitle": "Ask about sales, stock and branch performance in plain language — and get answers you can trace back to your own data.",
     "heroEyebrow": "Built for multi-branch",
     "heroTitle": "One question, every branch",
@@ -261,9 +260,9 @@
     "emailPlaceholder": "you@business.com",
     "password": "Password",
     "passwordPlaceholder": "Enter your password",
-    "submit": "Sign in to BizIQ",
+    "submit": "Sign in to {{appName}}",
     "submitting": "Signing in...",
-    "registerTitle": "New to BizIQ?",
+    "registerTitle": "New to {{appName}}?",
     "registerSubtitle": "Register your business and connect your first branch.",
     "footer": "Multi-branch retail & F&B · Owner, manager and staff roles"
   },
@@ -297,7 +296,7 @@
     "submitting": "Creating account...",
     "dataTitle": "Bring your sales data in",
     "dataSubtitle": "Upload sales history from CSV or Excel once your account is set up.",
-    "haveAccount": "Already have a BizIQ account?",
+    "haveAccount": "Already have a {{appName}} account?",
     "logIn": "Log in"
   },
   "industry": {
@@ -824,7 +823,7 @@
   },
   "inviteMember": {
     "title": "Invite a member",
-    "subtitle": "If they already have a BizIQ account they'll be added right away. If not, they'll join automatically the moment they sign up with this email.",
+    "subtitle": "If they already have a {{appName}} account they'll be added right away. If not, they'll join automatically the moment they sign up with this email.",
     "email": "Email",
     "emailPlaceholder": "them@example.com",
     "emailHint": "works even before they've signed up",
@@ -1021,7 +1020,7 @@
     "save": "Save",
     "saving": "Saving...",
     "locating": "Finding your location…",
-    "locationUnavailable": "Could not get your location. Check that location is on and that BizIQ is allowed to use it.",
+    "locationUnavailable": "Could not get your location. Check that location is on and that {{appName}} is allowed to use it.",
     "radiusNeedsLocation": "Set the branch location first — a radius needs a point to measure from.",
     "geofenceOff": "Geofencing is off. Staff can punch in from anywhere.",
     "notFound": "That branch no longer exists.",
@@ -1194,7 +1193,7 @@
     "preferencesHint": "Turn off what you do not need. These apply to every business you belong to.",
     "deviceOn": "This device will receive notifications",
     "deviceOff": "This device will not receive notifications",
-    "deviceOffHint": "Turn notifications on for BizIQ in your phone settings, then reopen the app.",
+    "deviceOffHint": "Turn notifications on for {{appName}} in your phone settings, then reopen the app.",
     "categoryAttendance": "Attendance",
     "categoryAttendanceHint": "When someone marks your day. Always on — being told you were marked absent is the point.",
     "categoryOrders": "Order updates",

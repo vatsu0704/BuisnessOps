@@ -1,12 +1,16 @@
-# BizIQ
+# HisabKitab
+
+*Your Business. All in One.*
 
 Multi-tenant AI business intelligence for restaurant, retail and franchise
 owners. Full-stack app: React Native (Expo, TypeScript) frontend +
 Node.js/Express backend + PostgreSQL (Prisma ORM).
 
-> The repository folder and the Postgres database are still named
-> `BuisnessOps`, from before the product was renamed to BizIQ. That is
-> deliberate, not a typo.
+> The product was called BuisnessOps, then BizIQ. Names that machines key on
+> keep the old ones on purpose — the repository folder and the Postgres database
+> (`BuisnessOps`), and the Android package `com.biziq.app`, which Firebase and
+> every installed copy are bound to. That is deliberate, not a typo; CLAUDE.md's
+> *Naming* section has the full list.
 
 ## Documentation
 
