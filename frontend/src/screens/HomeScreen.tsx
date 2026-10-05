@@ -14,6 +14,8 @@ import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import { useSalesSummary } from '@/hooks/useSalesSummary';
 import { useMembership } from '@/hooks/useBusinessId';
+import { useSupplyPayments } from '@/hooks/useSupplyPayments';
+import { formatAmount } from '@/utils/format';
 import { hasCapability, hasNoActiveBusiness } from '@/utils/permissions';
 import type { Capability } from '@/permissions';
 import { AI_CHAT_ENABLED } from '@/config/features';
@@ -93,6 +95,19 @@ const SECTIONS: {
   // branch's own expense card follows it.
   { key: 'expenseGaps', capability: 'expense:viewAllBranches', Component: ExpenseGapsSection },
   { key: 'expenses', capability: 'expense:log', Component: ExpensesSection },
+  // Requirement 27 — what accounts has to pay for. The accountant also has a
+  // Payments tab; for the owner, who holds the same capability, this is the
+  // way in, and for both it says the figure without opening the screen.
+  { key: 'payments', capability: 'supplyPayment:settle', Component: PaymentsSection },
+  // Requirement 26 — payments sent to the warehouse that nobody has confirmed.
+  // The desk's card; anyone who also pays (accounts, the owner) already has
+  // both lists behind the card above, and two cards to one screen is one too many.
+  {
+    key: 'paymentsToConfirm',
+    capability: 'supplyPayment:verify',
+    hideWhen: { holds: 'supplyPayment:settle' },
+    Component: PaymentsToConfirmSection,
+  },
   // Requirement 4 — the catalog every branch sells from.
   { key: 'catalog', capability: 'product:view', Component: BranchCatalogSection },
   // Requirement 3. The warehouse desk has this as a tab; an admin reaches it
@@ -213,6 +228,61 @@ function DeliveriesSection() {
       title={t('home.deliveriesTitle')}
       subtitle={t('home.deliveriesSubtitle')}
       onPress={() => navigation.navigate('SupplyDeliveries')}
+    />
+  );
+}
+
+function PaymentsSection() {
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const { ready, readyTotal, onTheWay, refresh } = useSupplyPayments();
+  // Home is a tab and never unmounts, so the figure is refreshed on every visit
+  // rather than only the first.
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh])
+  );
+  return (
+    <InfoCard
+      testID="home-open-payments"
+      icon="card-outline"
+      title={t('home.paymentsTitle')}
+      subtitle={
+        ready.length > 0
+          ? t('home.paymentsReady', {
+              amount: formatAmount(readyTotal, ready[0].currency),
+              count: ready.length,
+            })
+          : onTheWay.length > 0
+            ? t('home.paymentsOnTheWay', { count: onTheWay.length })
+            : t('home.paymentsNone')
+      }
+      onPress={() => navigation.navigate('SupplyPayments')}
+    />
+  );
+}
+
+function PaymentsToConfirmSection() {
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const { toConfirm, refresh } = useSupplyPayments();
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh])
+  );
+  return (
+    <InfoCard
+      testID="home-open-payments-to-confirm"
+      icon="shield-checkmark-outline"
+      title={t('home.paymentsToConfirmTitle')}
+      subtitle={
+        toConfirm.length > 0
+          ? t('home.paymentsToConfirmCount', { count: toConfirm.length })
+          : t('home.paymentsToConfirmNone')
+      }
+      onPress={() => navigation.navigate('SupplyPayments')}
     />
   );
 }

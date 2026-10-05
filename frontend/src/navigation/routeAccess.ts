@@ -47,6 +47,13 @@ export const ROUTE_CAPABILITY: Partial<Record<keyof AppStackParamList, Capabilit
   SupplyItemForm: 'supplyItem:manage',
   SupplyDesk: 'supplyOrder:fulfil',
   SupplyDeliveries: 'supplyOrder:deliver',
+  // The Payments screen has two lists. Opening it needs the one the desk holds
+  // too — confirming payments — and the list accounts PAYS from is gated inside
+  // it on `supplyPayment:settle`, which only accounts and the owner hold.
+  SupplyPayments: 'supplyPayment:verify',
+  PaymentAccounts: 'paymentAccount:manage',
+  Vendors: 'supplyItem:manage',
+  VendorForm: 'supplyItem:manage',
   // Reading a branch's spending and recording it are separate capabilities, so
   // the back-office desk opens this screen and is offered no way to log.
   Expenses: 'expense:view',

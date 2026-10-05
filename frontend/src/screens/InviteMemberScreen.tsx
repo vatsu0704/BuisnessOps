@@ -78,7 +78,7 @@ function asBranchConflict(err: unknown): { branch: string; cashier: string } | n
   return { branch: params.branch, cashier: params.cashier };
 }
 
-// Six roles is past the point where a name alone identifies one at a glance,
+// Seven roles is past the point where a name alone identifies one at a glance,
 // so each gets a glyph.
 //
 // A Record over InvitableRole rather than a partial map, deliberately: adding a
@@ -91,6 +91,8 @@ const ROLE_ICONS: Record<InvitableRole, keyof typeof Ionicons.glyphMap> = {
   WAREHOUSE: 'cube-outline',
   CASHIER: 'receipt-outline',
   DELIVERY_AGENT: 'bicycle-outline',
+  // The same glyph as the Payments tab the role lands on: paying is the job.
+  ACCOUNTANT: 'card-outline',
   STAFF: 'person-outline',
 };
 

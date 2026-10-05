@@ -211,13 +211,18 @@ You need a second device or browser profile signed in as the owner for step 2.
 1. On **Home**, tap the **"No branches yet"** card (or, if you already have
    one, tap **"+ Add branch"** in the "Your branches" card).
 2. Fill in:
+   - **What is this place?** — leave it on *Branch*
+   - **Who pays for raw material?** — choose **FM — franchise** for now. Nothing is
+     chosen for you, and the button stays disabled until one is: it decides whether
+     this branch's cashier ever pays for an order (Flow 17x and Flow 17y are the two
+     answers).
    - Branch name — e.g. `Andheri West`
    - Branch code — e.g. `MUM-01` (this must be unique within your business)
    - City / Region — optional
    - Currency / Timezone — prefilled from your business
 3. Tap **"Create branch."**
 4. ✅ **Expected:** you're back on Home, the branch now appears under "Your
-   branches," and the Branches stat tile and the count beside your business name
+   branches" — its line says **FM — franchise** beside the code — and the Branches stat tile and the count beside your business name
    both went up by one — **without** closing and reopening the app. Every screen reads one shared branch list, so it
    should also be in the branch pickers on Products, Counter and Supply
    straight away, and in the Settings branch count.
@@ -941,20 +946,24 @@ Flow 17f done first.
      ordered in twenties.
 5. Press **−** on Milk until it reaches zero.
    - ✅ **Expected:** the line comes off entirely.
-6. Choose **Cash on delivery** and press **Place order**.
+6. Choose **Pay on delivery** and press **Place order**.
    - ✅ **Expected:** it becomes an order with a number, and the screen moves to
-     its detail. Payment reads "Cash on delivery" — nothing is outstanding, that
+     its detail. Payment reads "Pay on delivery" — nothing is outstanding, that
      is simply how it will be paid.
 7. Go back to Supply and add something again.
    - ✅ **Expected:** a **fresh** cart. The old one is an order now.
-8. Start another order, choose **Paid online**, and try to place it with the
-   reference box empty.
-   - ✅ **Expected:** refused. A reference the warehouse can check against its own
-     records is the whole content of "paid online" in a system that deliberately
-     never takes the money.
-9. Type a reference and place it.
-   - ✅ **Expected:** payment shows **Paid** — claimed, not settled. The warehouse
-     confirms it in Flow 17h.
+8. Start another order and look at **How are you paying?**
+   - ✅ **Expected:** if the warehouse's UPI ID has not been set up yet (Flow 17v),
+     there is no choice — the card says the order will be paid on delivery, and
+     why. A "Pay now" that did nothing when tapped would be worse than saying so.
+9. With the UPI ID set up, choose **Pay now**.
+   - ✅ **Expected:** a QR appears with the order's exact amount, and **Place order**
+     stays disabled. Scan it with another phone, or press **Pay with UPI app** to
+     pay from this one — the amount is already filled in. Nothing asks for a
+     reference.
+10. Press **Payment done**, then **Place order**.
+    - ✅ **Expected:** payment shows **Payment sent** — sent, not yet confirmed. The
+      warehouse confirms it in Flow 17h.
 
 ---
 
@@ -970,12 +979,13 @@ branches first (Flow 17g, once as each branch's cashier).
      is already on the phone about.
    - ✅ **Expected:** no carts. A branch still adding things is not an order, and a
      queue where some rows are not real work stops being trusted.
-2. Open the online-paid order and press **Found it** under the payment.
-   - ✅ **Expected:** payment becomes **Verified**, and the history records who
-     checked it.
-3. Open the COD order and try the same.
-   - ✅ **Expected:** refused — there is nothing to check yet. Cash on delivery is
-     paid on delivery.
+2. Open the order paid before ordering and press **Received** under the payment.
+   - ✅ **Expected:** payment becomes **Paid**, and the history records who
+     confirmed it. (**Not received** asks first, then sends it back to the branch to
+     pay again.)
+3. Open the pay-on-delivery order.
+   - ✅ **Expected:** no **Received** to press — there is nothing to confirm yet. It
+     is paid when it arrives.
 4. Press **Accept** and choose **+60 min**.
    - ✅ **Expected:** accepted, and an expected time appears.
 5. Press **Mark packed**, then **Dispatch**.
@@ -1019,17 +1029,18 @@ Requirements 9, 11 and 12.
 4. Press **Report a delay**, choose *Traffic*, submit.
    - ✅ **Expected:** it lands on the same history as the warehouse's delay.
      Requirement 9 has two ends and both write to one stream.
-5. Press **Mark delivered** on a **cash on delivery** order.
-   - ✅ **Expected:** it asks first — *"Have you taken ₹… from the … cashier?"* —
-     naming the amount and the branch. The goods arriving is not evidence the
-     money did, and only you at the counter know.
+5. Press **Mark delivered** on a **pay on delivery** order.
+   - ✅ **Expected:** it asks first — *"Take ₹… from the … cashier — in cash, or by
+     them scanning your QR"* — naming the amount and the branch. The goods arriving
+     is not evidence the money did, and only you at the counter know.
 6. Press **Not yet**.
    - ✅ **Expected:** nothing happens. The order stays dispatched and unpaid,
      which is where it actually is and where somebody can still chase it.
-7. Press **Mark delivered** again and answer **Yes, I have the money**.
-   - ✅ **Expected:** delivered, payment becomes **Paid**, and the history gains
-     its own line — *Cash taken on delivery* — saying who took it.
-8. Do the same on an **online** order.
+7. Press **Mark delivered** again and answer **Cash taken**.
+   - ✅ **Expected:** delivered, payment becomes **Payment sent** — the cash is with
+     you, not yet with the warehouse — and the history gains its own line, *Cash
+     taken on delivery*, saying who took it. Paying by the agent's QR is Flow 17x.
+8. Do the same on an order paid before ordering.
    - ✅ **Expected:** no question, because nothing is outstanding. Its payment
      state is left exactly as the warehouse left it: delivering something is not
      evidence that its payment cleared.
@@ -1762,6 +1773,165 @@ for this one. Sign in as the owner or an admin.
 
 ---
 
+## Flow 17v — Payment QR codes: where branches' money goes
+
+Requirement 26. Every payment QR in the app is made from a UPI ID set here, with the
+order's exact amount in it — there is no image to upload. Do this as the **owner**
+first; Flow 17z repeats it as the accountant.
+
+1. **Settings → Payment QR codes.**
+   - ✅ **Expected:** a short explanation, a **Warehouse** section and a **Vendors**
+     section.
+2. Under **Warehouse**, type something that is not a UPI ID — `hello`.
+   - ✅ **Expected:** "That is not a UPI ID" under the field, and **Save** stays
+     disabled.
+3. Type a real one — the UPI ID printed under any UPI QR, e.g. `yourname@okaxis` —
+   and a name such as `HisabKitab Warehouse`. Press **Save**.
+   - ✅ **Expected:** **Saved**, a test QR appears, and a line says who last
+     changed it and when.
+4. Scan the test QR with your own UPI app — **do not pay**.
+   - ✅ **Expected:** it opens on the name you typed with **no amount filled in**,
+     so nothing can be paid by accident. This is how you check the ID is right.
+5. Log in as the **warehouse desk** and look for the same screen.
+   - ✅ **Expected:** not in Settings at all. Whoever ships the goods must not also
+     be able to change where the money for them goes.
+
+---
+
+## Flow 17w — Vendors, and who supplies what
+
+Requirement 25. A vendor delivers straight to a branch — water, ice, milk — and does
+not use the app. As the **warehouse desk**:
+
+1. **Supply** (the catalog) → **Vendors** → **Add vendor**. Name `Shree Water`,
+   WhatsApp number `98765 43210`. Save.
+   - ✅ **Expected:** it is listed with a **QR not set** badge — the desk adds
+     vendors but cannot say where they are paid.
+2. Add a second vendor called `shree water`.
+   - ✅ **Expected:** refused — it is the same supplier written differently.
+3. In the catalog, **Add an item**: `Water can`, unit `can`, price `30`, and under
+   **Supplied by** choose **Shree Water**.
+   - ✅ **Expected:** the catalog now has headings — **From the warehouse** and
+     **From Shree Water** — with the water can under the second. A business with no
+     vendor items never sees these headings.
+4. As the **owner**, **Settings → Payment QR codes → Vendors → Shree Water**, set a
+   UPI ID.
+   - ✅ **Expected:** the badge becomes **QR set**, here and on the desk's Vendors list.
+5. As the desk, open Shree Water and **Stop using this vendor**.
+   - ✅ **Expected:** it asks first. Afterwards the water can cannot be ordered, and
+     the vendor is dimmed. **Use this vendor again** brings it back without asking.
+
+---
+
+## Flow 17x — A franchise (FM) branch pays for itself
+
+Requirements 24–26. Use a branch created as **FM — franchise** (Flow 3), its cashier,
+and the delivery agent. Flows 17v and 17w first.
+
+1. As the cashier, add **Flour** and a **Water can** and open the cart.
+   - ✅ **Expected:** two groups — **From the warehouse** and **From Shree Water**,
+     each with a subtotal — and a line under the total: *This becomes 2 orders, one
+     for each supplier.*
+2. Choose **Pay now**.
+   - ✅ **Expected:** **two** QR cards, one per supplier, each for exactly its own
+     subtotal, and **Place order** disabled until both say **Marked as paid**.
+     *Not yet* takes a tick back.
+3. Press **Payment done** on both, then **Place order**.
+   - ✅ **Expected:** you land on Supply orders with two new orders. The warehouse
+     one reads **Payment sent** — the warehouse still has to confirm it — and the
+     water one reads **Paid** at once, because a vendor cannot confirm anything.
+4. As the **warehouse desk**, open **Desk**.
+   - ✅ **Expected:** the flour order is there; the water order is **not** — a
+     franchise branch orders from its vendor itself.
+5. As the cashier, open the water order and press **Send on WhatsApp**.
+   - ✅ **Expected:** WhatsApp opens on Shree Water's number with the order written
+     out — branch, address, lines, total — in the app's language.
+6. Place another warehouse-only order with **Pay on delivery**, and have the desk
+   accept, pack and dispatch it. As the **agent**, press **Mark delivered**, then
+   **Show the QR**.
+   - ✅ **Expected:** the warehouse's QR, for the order's amount, on the agent's
+     phone. The cashier scans it with theirs and pays; the agent presses **They have
+     paid — mark delivered**. Payment reads **Payment sent**, and the history says
+     *Paid by UPI on delivery*.
+7. As the desk, open that order and press **Not received**.
+   - ✅ **Expected:** it asks first. Afterwards the cashier's order shows **Pay ₹…**
+     at the bottom; paying from there makes it **Payment sent** again. There is no
+     cash option there — the warehouse's cash goes through the agent.
+8. Place a water-only order with **Pay on delivery**. As the cashier, press
+   **Received**.
+   - ✅ **Expected:** *Have you paid Shree Water the ₹…?* with **Paid in cash**,
+     **Pay by UPI now** and **Received — I will pay later**.
+9. Choose **Received — I will pay later**.
+   - ✅ **Expected:** the order reads **Received**, payment **To pay**, and a **Pay
+     ₹…** button stays on it until somebody does.
+
+---
+
+## Flow 17y — A company-operated (FOCO) branch pays for nothing
+
+Requirement 24. Add a branch as **FOCO — company operated**, invite a cashier to it.
+
+1. As that cashier, cart **Flour** and a **Water can** and open the cart.
+   - ✅ **Expected:** no payment question at all — a card says *Accounts pays for this
+     order … once it arrives*.
+2. Place it.
+   - ✅ **Expected:** two orders, both reading **Accounts pays**.
+3. As the **desk**, open **Desk**.
+   - ✅ **Expected:** **both** orders are there — for a company branch the desk is who
+     sends the water order on. Open the water order: the main button is **Mark as sent
+     to the vendor**, and **Send on WhatsApp** is beside it.
+4. Press **Mark as sent to the vendor**.
+   - ✅ **Expected:** it reads **Sent to the vendor**, and the cashier is told so —
+     not that the warehouse "accepted" it.
+5. Accept, pack and dispatch the flour. As the **agent**, press **Mark delivered**.
+   - ✅ **Expected:** **no question** — nothing is owed at the counter. Delivered.
+6. As the cashier, open the water order and press **Received**.
+   - ✅ **Expected:** received straight away, with no question about paying anyone.
+7. As the owner, open **Branch settings** for this branch and change it to **FM**.
+   - ✅ **Expected:** the two orders above still read **Accounts pays** — an order is
+     paid the way it was placed. Change it back to FOCO for Flow 17z.
+
+---
+
+## Flow 17z — The Accountant
+
+Requirement 27. Invite someone as **Accountant** (Flow 6).
+
+1. On the invite screen, choose **Accountant**.
+   - ✅ **Expected:** no branch picker — the role reaches every branch — and a line
+     saying what they can and cannot see.
+2. Log in as them.
+   - ✅ **Expected:** tabs **Home · Payments · Staff · Reports · Settings**. Home shows
+     the business's sales, the expense chase list, and **Payments to make**.
+3. Open **Payments**, **To pay**.
+   - ✅ **Expected:** the FOCO orders from Flow 17y, grouped by **who is paid** — From
+     the warehouse, and Shree Water — each heading with *₹… ready · N orders*. An
+     order not yet delivered is dimmed, says *On its way — pay once it arrives*, and
+     cannot be ticked.
+4. Tick the delivered flour order, then tick the water order.
+   - ✅ **Expected:** ticking the water order **clears** the flour one. One payment pays
+     one UPI ID.
+5. Press **Select all that arrived** under the warehouse heading, then **Pay these**.
+   - ✅ **Expected:** one QR for the whole total, the order numbers in its note, and a
+     list of what it covers. Press **Pay with UPI app** to pay from this phone.
+6. Press **Payment done**.
+   - ✅ **Expected:** it asks first — *Only once the UPI payment has gone through …* —
+     then *Paid ₹… for N orders*, the orders leave the list, and as the FOCO cashier
+     they read **Paid by accounts**.
+7. **To confirm.**
+   - ✅ **Expected:** the FM payments still waiting from Flow 17x. **Received** asks
+     first, then takes one off the list.
+8. **Notifications** (with a phone signed in as the accountant).
+   - ✅ **Expected:** when the agent delivers a FOCO order — *Order #… from … has
+     arrived — ₹… to pay*; when an FM branch pays the warehouse — *… has paid ₹… for
+     order #…*. The owner gets neither.
+9. Try what they should not reach.
+   - ✅ **Expected:** **Reports** opens. Team, the counter, the cart, the desk and
+     adding a vendor are nowhere in their app — and the API refuses each of them
+     if asked directly.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
 - **No password reset and no way to change a password.** Signup, sign-in and
@@ -1779,6 +1949,23 @@ for this one. Sign in as the owner or an admin.
   their token expires, and the message says the account was disabled rather than
   that the password was wrong. There is no screen for this yet: it is a database
   change.
+- **No payment is detected automatically.** A UPI QR is paid in the payer's own UPI
+  app and the payer taps *Payment done*; the warehouse's desk or the accountant then
+  taps *Received*. Nothing in the app sees the money arrive — that would need a payment
+  gateway, and no gateway could see a vendor's own account anyway.
+- **"Pay with UPI app" can be refused for a personal UPI ID.** Some UPI apps will not
+  open a payment link to an individual's ID. A business UPI ID avoids it, and scanning
+  the QR from another phone always works.
+- **One payment choice per franchise cart.** Pay now or on delivery applies to every
+  supplier in the cart; to pay the warehouse now and a vendor on delivery, place them
+  as two carts.
+- **A paid order that is then cancelled is not refunded through the app.** A branch can
+  still cancel an order while it is only placed, even after paying for it — the refund
+  is arranged outside the app.
+- **One UPI ID for the warehouse per business.** A business with two warehouses has
+  both paid into the same account.
+- **A vendor does not use the app.** "Sent to the vendor" is the sender's own tap after
+  WhatsApp, and "Received" is the branch's — neither is the vendor saying so.
 - **Supply-order lists return the 200 most recent matching orders.** That is
   months of history for a normal branch; older orders are still in the database
   and still counted in Reports, but the Supply and Warehouse screens stop

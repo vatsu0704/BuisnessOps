@@ -106,7 +106,12 @@ function supplySection(rows, currency, labels, timeZone) {
       cells: [
         order.orderNumber === null ? '' : `#${order.orderNumber}`,
         timeOf(order.placedAt, timeZone),
-        itemSummary(order.items ?? []),
+        // The supplier rides in front of the items rather than in a column of
+        // its own: the printed table is already as wide as an A4 page allows,
+        // and only a vendor order needs saying — the warehouse is the default.
+        order.vendor?.name
+          ? `${order.vendor.name} — ${itemSummary(order.items ?? [])}`
+          : itemSummary(order.items ?? []),
         statusLabel(SUPPLY_STATUS, order.status, labels),
         statusLabel(PAYMENT_MODE, order.paymentMode, labels),
         statusLabel(PAYMENT_STATUS, order.paymentStatus, labels),

@@ -314,6 +314,56 @@ describe('Branch analytics and net profit', () => {
     });
   });
 
+  // Requirement 25. Raw material from a third-party vendor is still the branch's
+  // cost, but unlike the warehouse's it really did leave the business — so it is
+  // subtracted at both levels and is not part of the internal transfer. A month
+  // of its own, so none of the figures above move.
+  describe('vendor spend', () => {
+    const VENDOR_MONTH = monthKeyMinus(thisMonthKeyInZone(ZONE), 7);
+
+    beforeAll(async () => {
+      const vendor = await prisma.vendor.create({ data: { businessId, name: `Analytics Water ${RUN_ID}` } });
+      const at = midMonth(VENDOR_MONTH);
+      await sale(shopBId, 50000, at);
+      await supplyOrder(shopBId, 20000, at);
+      orderNumber += 1;
+      await prisma.supplyOrder.create({
+        data: {
+          businessId,
+          branchId: shopBId,
+          vendorId: vendor.id,
+          orderNumber,
+          status: 'DELIVERED',
+          totalAmount: 5000,
+          currency: 'INR',
+          paymentMode: 'ACCOUNTS',
+          placedAt: at,
+        },
+      });
+    });
+
+    it('is the branch’s cost, and leaves the business', async () => {
+      const res = await grid(ownerToken, `?from=${VENDOR_MONTH}&to=${VENDOR_MONTH}`);
+      expect(res.statusCode).toBe(200);
+
+      // The branch pays for both, whoever supplied them: 50,000 − 25,000.
+      const cell = cellIn(res.body, shopBId, VENDOR_MONTH);
+      expect(Number(cell.materialSpend)).toBe(25000);
+      expect(Number(cell.vendorSpend)).toBe(5000);
+      expect(Number(cell.netProfit)).toBe(25000);
+
+      // Only the warehouse's 20,000 stayed inside the business.
+      const { total, reconciliation } = res.body.business;
+      expect(Number(total.internalTransfer)).toBe(20000);
+      expect(Number(total.vendorSpend)).toBe(5000);
+      expect(Number(total.netProfit)).toBe(45000);
+      expect(reconciliation.balances).toBe(true);
+      expect(Number(reconciliation.branchNetProfitSum) + Number(reconciliation.internalTransfer)).toBe(
+        Number(total.netProfit)
+      );
+    });
+  });
+
   describe('money that was never spent', () => {
     // Each of these is a row that exists and must not be counted. A DRAFT cart
     // nobody placed, an order that was cancelled, a sale that was voided or

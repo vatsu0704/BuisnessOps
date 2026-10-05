@@ -113,6 +113,18 @@ export default function CrossBusinessSection({
                   tone: 'cost',
                   caption: business.total.payrollProvisional ? t('reports.provisional') : undefined,
                 },
+                // Requirement 25: money that left the business for a vendor.
+                // Only when there was some, so a business without vendors
+                // reads exactly as it did.
+                ...(Number(business.total.vendorSpend) !== 0
+                  ? [
+                      {
+                        label: t('reports.vendorSpend'),
+                        value: formatAmount(Number(business.total.vendorSpend), business.currency),
+                        tone: 'cost' as const,
+                      },
+                    ]
+                  : []),
                 {
                   label: t('reports.internalTransfer'),
                   value: formatAmount(Number(business.total.internalTransfer), business.currency),

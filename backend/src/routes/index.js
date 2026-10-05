@@ -10,6 +10,7 @@ const workCalendarRoutes = require('./workCalendar.routes');
 const productRoutes = require('./product.routes');
 const counterOrderRoutes = require('./counterOrder.routes');
 const supplyRoutes = require('./supply.routes');
+const vendorRoutes = require('./vendor.routes');
 const expenseRoutes = require('./expense.routes');
 const notificationRoutes = require('./notification.routes');
 const analyticsRoutes = require('./analytics.routes');
@@ -52,6 +53,8 @@ router.use('/businesses', workCalendarRoutes);
 router.use('/businesses', productRoutes);
 router.use('/businesses', counterOrderRoutes);
 router.use('/businesses', supplyRoutes);
+// Requirements 25 and 26: third-party vendors and where payments go.
+router.use('/businesses', vendorRoutes);
 router.use('/businesses', expenseRoutes);
 // Requirements 13 and 15. Two mounts for the same reason notifications has
 // two: the branch grid belongs to one business, the cross-business roll-up

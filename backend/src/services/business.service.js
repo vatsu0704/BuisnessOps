@@ -9,6 +9,7 @@ function createBranch(
     name,
     code,
     kind,
+    operatingModel,
     city,
     region,
     country,
@@ -29,6 +30,10 @@ function createBranch(
       // Undefined falls through to the column default, BRANCH. A WAREHOUSE is
       // a place the business staffs but does not sell from — see BranchKind.
       kind,
+      // Undefined falls through to FM, the flow every branch had before
+      // requirement 24. A change later affects orders placed from then on —
+      // each order snapshots the model it was placed under.
+      operatingModel,
       city,
       region,
       country,
@@ -65,6 +70,7 @@ async function updateBranch(businessId, branchId, patch) {
   const fields = [
     'name',
     'kind',
+    'operatingModel',
     'city',
     'region',
     'country',

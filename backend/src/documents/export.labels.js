@@ -81,6 +81,8 @@ const LABELS = {
     colPlacedAt: 'Placed',
     colPlacedBy: 'Placed by',
     colPaymentMode: 'Pay mode',
+    colSupplier: 'Supplier',
+    supplierWarehouse: 'Warehouse',
     colPaymentStatus: 'Pay status',
     colAgent: 'Agent',
     colCategory: 'Category',
@@ -114,12 +116,13 @@ const LABELS = {
     statusDraft: 'Draft',
     statusFinal: 'Final',
     statusPending: 'Pending',
-    statusPaid: 'Paid',
-    statusVerified: 'Verified',
-    statusFailed: 'Failed',
+    statusPaid: 'Payment sent',
+    statusVerified: 'Paid',
+    statusFailed: 'Not received',
 
-    modeOnline: 'Online',
-    modeCod: 'Cash on delivery',
+    modeOnline: 'Paid before ordering',
+    modeCod: 'Pay on delivery',
+    modeAccounts: 'Paid by accounts',
 
     payCash: 'Cash',
     payCard: 'Card',
@@ -190,6 +193,8 @@ const LABELS = {
     colPlacedAt: 'दिया',
     colPlacedBy: 'देने वाला',
     colPaymentMode: 'भुगतान तरीक़ा',
+    colSupplier: 'आपूर्तिकर्ता',
+    supplierWarehouse: 'गोदाम',
     colPaymentStatus: 'भुगतान स्थिति',
     colAgent: 'एजेंट',
     colCategory: 'श्रेणी',
@@ -223,12 +228,13 @@ const LABELS = {
     statusDraft: 'ड्राफ़्ट',
     statusFinal: 'अंतिम',
     statusPending: 'बाक़ी',
-    statusPaid: 'चुकाया',
-    statusVerified: 'पुष्ट',
-    statusFailed: 'विफल',
+    statusPaid: 'भुगतान भेजा',
+    statusVerified: 'चुकाया',
+    statusFailed: 'नहीं मिला',
 
-    modeOnline: 'ऑनलाइन',
-    modeCod: 'डिलीवरी पर नक़द',
+    modeOnline: 'ऑर्डर से पहले भुगतान',
+    modeCod: 'डिलीवरी पर भुगतान',
+    modeAccounts: 'अकाउंट्स द्वारा भुगतान',
 
     payCash: 'नक़द',
     payCard: 'कार्ड',
@@ -299,6 +305,8 @@ const LABELS = {
     colPlacedAt: 'આપ્યો',
     colPlacedBy: 'આપનાર',
     colPaymentMode: 'ચુકવણી રીત',
+    colSupplier: 'સપ્લાયર',
+    supplierWarehouse: 'વેરહાઉસ',
     colPaymentStatus: 'ચુકવણી સ્થિતિ',
     colAgent: 'એજન્ટ',
     colCategory: 'શ્રેણી',
@@ -332,12 +340,13 @@ const LABELS = {
     statusDraft: 'ડ્રાફ્ટ',
     statusFinal: 'આખરી',
     statusPending: 'બાકી',
-    statusPaid: 'ચૂકવ્યું',
-    statusVerified: 'ખાતરી',
-    statusFailed: 'નિષ્ફળ',
+    statusPaid: 'ચુકવણી મોકલી',
+    statusVerified: 'ચૂકવ્યું',
+    statusFailed: 'મળ્યું નથી',
 
-    modeOnline: 'ઓનલાઇન',
-    modeCod: 'ડિલિવરી પર રોકડ',
+    modeOnline: 'ઓર્ડર પહેલાં ચુકવણી',
+    modeCod: 'ડિલિવરી પર ચુકવણી',
+    modeAccounts: 'એકાઉન્ટ્સ દ્વારા ચુકવણી',
 
     payCash: 'રોકડ',
     payCard: 'કાર્ડ',
@@ -408,6 +417,8 @@ const LABELS = {
     colPlacedAt: 'दिला',
     colPlacedBy: 'देणारा',
     colPaymentMode: 'पेमेंट प्रकार',
+    colSupplier: 'पुरवठादार',
+    supplierWarehouse: 'गोदाम',
     colPaymentStatus: 'पेमेंट स्थिती',
     colAgent: 'एजंट',
     colCategory: 'प्रवर्ग',
@@ -441,12 +452,13 @@ const LABELS = {
     statusDraft: 'मसुदा',
     statusFinal: 'अंतिम',
     statusPending: 'बाकी',
-    statusPaid: 'भरले',
-    statusVerified: 'पडताळले',
-    statusFailed: 'अयशस्वी',
+    statusPaid: 'पैसे पाठवले',
+    statusVerified: 'भरले',
+    statusFailed: 'मिळाले नाहीत',
 
-    modeOnline: 'ऑनलाइन',
-    modeCod: 'डिलिव्हरीवर रोख',
+    modeOnline: 'ऑर्डरपूर्वी पेमेंट',
+    modeCod: 'डिलिव्हरीवर पेमेंट',
+    modeAccounts: 'अकाउंट्सकडून पेमेंट',
 
     payCash: 'रोख',
     payCard: 'कार्ड',
@@ -497,7 +509,8 @@ const PAYMENT_STATUS = {
   FAILED: 'statusFailed',
 };
 
-const PAYMENT_MODE = { ONLINE: 'modeOnline', COD: 'modeCod' };
+// ACCOUNTS is a company-operated branch's order, paid by accounts (requirement 24).
+const PAYMENT_MODE = { ONLINE: 'modeOnline', COD: 'modeCod', ACCOUNTS: 'modeAccounts' };
 
 const ATTENDANCE_STATUS = {
   PRESENT: 'statusPresent',

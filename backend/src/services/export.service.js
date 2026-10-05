@@ -101,6 +101,8 @@ const COUNTER_INCLUDE = {
 
 const SUPPLY_INCLUDE = {
   items: true,
+  // Who supplied it (requirement 25): the warehouse when this is null.
+  vendor: { select: { name: true } },
   placedByMembership: { include: { user: { select: { name: true } } } },
   deliveryAgentMembership: { include: { user: { select: { name: true } } } },
 };

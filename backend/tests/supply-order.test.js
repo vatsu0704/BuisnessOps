@@ -334,14 +334,17 @@ describe('Supply orders', () => {
       expect(res.body.code).toBe('SUPPLY_ORDER_EMPTY');
     });
 
-    it('refuses ONLINE without a reference the warehouse could check', async () => {
+    // Requirement 26 replaced the typed reference with the payer saying they
+    // have paid the QR. Paying now without saying so is still refused — an order
+    // that claims money was sent when nobody said it was is the thing to avoid.
+    it('refuses ONLINE when the payer has not confirmed paying', async () => {
       const cart = await cartWith(flourId, 1);
       const res = await request(app)
         .post(url(`/supply-orders/${cart.id}/place`))
         .set(auth(cashierToken))
         .send({ paymentMode: 'ONLINE' });
       expect(res.statusCode).toBe(400);
-      expect(res.body.details.some((d) => d.field === 'paymentReference')).toBe(true);
+      expect(res.body.details.some((d) => d.field === 'paymentConfirmed')).toBe(true);
     });
 
     it('records an ONLINE payment as claimed, not as settled', async () => {

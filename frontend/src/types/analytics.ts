@@ -19,9 +19,14 @@ export type BranchMonthCell = {
   saleCount: number;
   expenses: string;
   expenseCount: number;
-  /** What this branch paid its own warehouse for raw material. */
+  /** What this branch paid for raw material — to its own warehouse and to vendors. */
   materialSpend: string;
   materialOrderCount: number;
+  /**
+   * The part of `materialSpend` that went to a third-party vendor (requirement
+   * 25). Already inside `materialSpend` — reported, never subtracted twice.
+   */
+  vendorSpend: string;
   payroll: string;
   payrollSlipCount: number;
   /**
@@ -41,6 +46,7 @@ export type BranchMonthTotals = {
   expenseCount: number;
   materialSpend: string;
   materialOrderCount: number;
+  vendorSpend: string;
   payroll: string;
   netProfit: string;
 };
@@ -76,7 +82,12 @@ export type BusinessMonthCell = {
   customerSales: string;
   expenses: string;
   payroll: string;
-  /** Money that moved between this business's own locations. */
+  /**
+   * Raw material bought from third-party vendors — money that left the
+   * business, so subtracted here, unlike the internal transfer below.
+   */
+  vendorSpend: string;
+  /** Money that moved between this business's own locations — its warehouse. */
   internalTransfer: string;
   netProfit: string;
   payrollProvisional: boolean;

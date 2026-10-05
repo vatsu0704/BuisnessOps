@@ -51,6 +51,11 @@ const CATEGORIES = {
   SUPPLY_ORDER_ASSIGNED: 'deliveries',
   SUPPLY_ORDER_DELAYED: 'delays',
   SUPPLY_PAYMENT_VERIFIED: 'payments',
+  // Task 12. Sending an order on to a vendor is a step in the order's journey;
+  // the other two are about money, and sit with the payment it already had.
+  SUPPLY_ORDER_SENT_TO_VENDOR: 'orders',
+  SUPPLY_ORDER_READY_TO_PAY: 'payments',
+  SUPPLY_PAYMENT_SENT: 'payments',
 };
 
 /** Categories that cannot be switched off, and why, in one place. */
@@ -165,7 +170,7 @@ async function setPreference(userId, category, enabled) {
  * so a role added later that fulfils orders is notified without anybody
  * remembering to come back here.
  */
-async function membersWith(businessId, capability, { branchId } = {}) {
+async function membersWith(businessId, capability, { branchId, unless } = {}) {
   const memberships = await prisma.membership.findMany({
     where: { businessId, status: 'ACTIVE' },
     include: { branchAccess: true },
@@ -173,6 +178,12 @@ async function membersWith(businessId, capability, { branchId } = {}) {
 
   return memberships.filter((membership) => {
     if (!roleHas(membership.role, capability)) return false;
+    // "Who is ABLE to do X" is not "whose JOB is X" (CLAUDE.md). An owner holds
+    // every capability, so "tell whoever pays for orders" would wake the owner
+    // for every delivery too. The narrowing is a second capability off the
+    // matrix — the `{ holds, unless }` shape Home and the tab bar use — never a
+    // role name, so a role added later lands on the right side by itself.
+    if (unless && roleHas(membership.role, unless)) return false;
     // A branch-scoped member is only told about their own branches. A member
     // with `branch:allAccess` has no BranchAccess rows and hears about all.
     if (!branchId) return true;
@@ -211,9 +222,12 @@ async function notifyUser({ businessId, userId, branchId = null, code, params = 
   return notification;
 }
 
-/** Notify every member of a business holding `capability`. */
-async function notifyCapability(businessId, capability, payload, { branchId, exceptUserId } = {}) {
-  const members = await membersWith(businessId, capability, { branchId });
+/**
+ * Notify every member of a business holding `capability` — and not `unless`,
+ * when that is given. See `membersWith`.
+ */
+async function notifyCapability(businessId, capability, payload, { branchId, exceptUserId, unless } = {}) {
+  const members = await membersWith(businessId, capability, { branchId, unless });
   const seen = new Set();
 
   const created = [];

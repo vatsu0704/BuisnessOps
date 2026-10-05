@@ -342,8 +342,8 @@ What's actually next:
 
 A second track, running alongside the phase sequence above rather than inside
 it. Where Phases 0–7 make HisabKitab *analyse* a business, this track makes it *run*
-one: counter billing with tokens, branch-to-warehouse supply orders with
-payment and dispatch, branch expense logging, and net profit per branch per
+one: counter billing with tokens, branch-to-warehouse and vendor supply orders
+paid by UPI QR — by the branch, or by accounts for company-operated branches — branch expense logging, and net profit per branch per
 month across several businesses in one account.
 
 The requirements and the full task breakdown are in
@@ -363,6 +363,7 @@ got to.
 | 8 | Analytics and net profit | R13, R15 | ✅ done |
 | 9 | Day-end and month-end export | R17 | ✅ done |
 | 10 | Restrictions that explain themselves | R18, R19 | ✅ done |
+| 12 | FOCO and FM branches, vendors, UPI payments, the Accountant | R24, R25, R26, R27 | ✅ done |
 
 ### Task 1 — Roles and the permission matrix ✅
 
@@ -1370,6 +1371,77 @@ row still in place; a re-invite taking the branch named now; the claim skipping 
 branch taken since the invite; the conflict report finding both shapes and changing
 nothing; and the two R19 assertions — the capability riding along on a 403, and a
 branch refusal whose sentence states the rule.
+
+### Task 12 — FOCO and FM branches, vendors, UPI payments and the Accountant ✅
+
+Requirements 24–27, from a hand-drawn flow of two branches: B1 company-operated, B2 a
+franchise, both buying chai masala from the warehouse and water from an outside vendor.
+
+**Who pays is a fact about the branch, snapshotted onto the order.**
+`Branch.operatingModel` is `FOCO` or `FM`, default FM — the flow every branch already
+had, so nothing was backfilled. It is read when an order is *placed* and copied onto it,
+so moving a branch between models decides who pays for its next order and never rewrites
+one in flight. A FOCO order is placed as `ACCOUNTS`: the cashier is asked nothing, the
+agent delivers with no cash question, and the accountant is pushed when it arrives.
+
+**A cart becomes one order per supplier.** A catalog item names its supplier — the
+warehouse's stock, or a vendor — and placing groups the lines by it. The warehouse's
+lines stay on the cart's own row, so a one-supplier cart places exactly as before; every
+vendor's lines move to a new row with its own number and a shared `placementId`. A vendor
+order runs on its own status table (`VENDOR_TRANSITIONS`), so pack, dispatch and
+agent-deliver are refused for it by the table rather than by checks scattered through the
+verbs. The branch marks it received (`supplyOrder:receive`). A FOCO branch's vendor order
+goes through the desk, which forwards it on WhatsApp and marks it sent; an FM branch's
+never reaches the desk.
+
+**Payment needs no typing.** A UPI QR is generated on the device from the payee's UPI ID
+with the exact amount and the order numbers in it, and the payer taps "Payment done". The
+warehouse's desk or the accountant then taps "Received" — or "Not received", after which
+the branch can pay again. A vendor cannot confirm anything, and accounts paying the
+business's own bill has nobody to confirm it to, so in both of those the payer's record
+is final. The agent can take a pay-on-delivery order by showing the warehouse's QR on
+their own phone. "Pay with UPI app" covers the case a QR cannot: paying from the phone the
+code is on.
+
+**Where money goes is fenced.** The warehouse's UPI ID and every vendor's are set under
+`paymentAccount:manage` — the accountant and the owner, never the desk — and every change
+stamps who and when, shown on the set-up screen. `supplyPayment:verify` was split out of
+`supplyOrder:fulfil` so the accountant could confirm payments without being handed the
+desk; the desk kept it.
+
+**The Accountant** holds every branch's figures and payments and none of its people, and
+gets a Payments tab — Home · Payments · Staff · Reports · Settings, exactly the five-tab
+budget. The owner holds the same capabilities and also `team:invite`, which is what keeps
+Payments off their tab bar and the two new pushes off their phone; both are the
+`{ holds, unless }` discriminator, never a role name.
+
+**Vendor spend left the business.** Material bought from a vendor stays in the ordering
+branch's cost and is now also subtracted from the business total, as `vendorSpend`;
+`internalTransfer` is the warehouse part only. The R13 identity is unchanged in form and
+`analytics.test.js` proves it with a vendor order in the mix.
+
+**A quieter fix on the way past.** The "order placed" push carried the payment mode as its
+raw enum, so a Gujarati lock screen read "… ₹1,240, COD." It is now translated where each
+notification is drawn — the push on the server, the list in the app — which `ACCOUNTS`
+would otherwise have made worse.
+
+#### Verification
+
+- Backend: **21 files, 387 tests** (358 before). The new `supply-payments.test.js` covers
+  the split, both models, both kinds of supplier, receive and its question, paying again
+  after "Not received", settling (undelivered refused, mixed payees refused, all or
+  nothing), who may change a UPI ID, the accountant's reach, and who is pushed.
+- The migration was generated by diffing a database with every earlier migration applied
+  against the new schema, then applied, and the diff re-run to confirm no drift.
+- Frontend: `tsc` and all five parity gates pass. `npx expo export --platform android`
+  builds a production bundle with the new dependency in it.
+- The QR encoder was checked by rendering its output to pixels and decoding it with an
+  independent reader, for an ASCII and a Gujarati payee name, and then the exact SVG path
+  the component draws was decoded the same way.
+- **The screens have not been seen on a device** — the dev servers are Vatsal's. Their
+  geometry was worked through at 320dp and 393dp against the Gujarati strings, which
+  caught and fixed a QR card 2dp wider than its panel and two rows of growing text that
+  would not have fit; see `TESTING_GUIDE.md` for the walkthrough to do on a phone.
 
 ---
 

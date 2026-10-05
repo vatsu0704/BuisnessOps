@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/client';
-import type { Branch, BranchKind } from '@/types/branch';
+import type { Branch, BranchKind, BranchOperatingModel } from '@/types/branch';
 import type { Business } from '@/types/business';
 
 /**
@@ -48,6 +48,11 @@ export interface CreateBranchPayload {
   code: string;
   /** Omitted means BRANCH, which is what a location is unless it is said otherwise. */
   kind?: BranchKind;
+  /**
+   * Who pays for its raw material (requirement 24). Optional on the wire — the
+   * server defaults to FM — but the Add branch screen always asks.
+   */
+  operatingModel?: BranchOperatingModel;
   timezone: string;
   city?: string;
   region?: string;
@@ -73,6 +78,7 @@ export interface CreateBranchPayload {
 export interface UpdateBranchPayload {
   name?: string;
   kind?: BranchKind;
+  operatingModel?: BranchOperatingModel;
   city?: string | null;
   region?: string | null;
   addressLine?: string | null;

@@ -7,16 +7,18 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { useBusinessId } from '@/hooks/useBusinessId';
+import { useVendors } from '@/hooks/useVendors';
 import { extractErrorMessage } from '@/api/client';
 import { createSupplyItem, listSupplyItems, updateSupplyItem } from '@/api/supply';
 import type { SupplyItem } from '@/types/supply';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import FormInput from '@/components/FormInput';
+import OptionRow from '@/components/OptionRow';
 import Pill from '@/components/Pill';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { confirm } from '@/utils/confirm';
 import { haptics } from '@/utils/haptics';
@@ -32,6 +34,11 @@ import { haptics } from '@/utils/haptics';
  * cannot be ordered, which is different from one that has been withdrawn. The
  * first says "we have not settled on a price"; the second says "we no longer
  * supply this". Both are real states a catalog needs.
+ *
+ * "Supplied by" is who the branch is really ordering from (requirement 25) —
+ * the warehouse's own stock, or a third-party vendor. A stacked `OptionRow`
+ * list, not chips: the number of vendors grows with the business, and a vendor
+ * name is free text of any length.
  */
 export default function SupplyItemFormScreen() {
   const { t } = useTranslation();
@@ -45,6 +52,9 @@ export default function SupplyItemFormScreen() {
   const [unit, setUnit] = useState('');
   const [category, setCategory] = useState('');
   const [price, setPrice] = useState('');
+  // null is the warehouse's own stock.
+  const [vendorId, setVendorId] = useState<string | null>(null);
+  const { activeVendors } = useVendors();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +73,7 @@ export default function SupplyItemFormScreen() {
         setUnit(found.unit);
         setCategory(found.category ?? '');
         setPrice(found.unitPrice === null ? '' : String(Number(found.unitPrice)));
+        setVendorId(found.vendorId);
       }
     } catch (err) {
       setError(extractErrorMessage(err));
@@ -93,6 +104,7 @@ export default function SupplyItemFormScreen() {
         unit: unit.trim(),
         category: category.trim() || null,
         unitPrice: parsePrice(),
+        vendorId,
       };
       if (inventoryItemId) await updateSupplyItem(businessId, inventoryItemId, payload);
       else await createSupplyItem(businessId, payload);
@@ -207,7 +219,47 @@ export default function SupplyItemFormScreen() {
               </View>
             </AnimatedEntrance>
 
-            <AnimatedEntrance delay={step(2)} style={styles.block}>
+            {/* Only asked once there is somebody other than the warehouse to
+                choose — a business with no vendors sees the form it always had.
+                An item whose vendor has since been withdrawn keeps showing them,
+                so saving does not quietly move it back to the warehouse. */}
+            {activeVendors.length > 0 || (vendorId && item?.vendor) ? (
+              <AnimatedEntrance delay={step(2)} style={styles.block}>
+                <Text style={styles.sectionTitle}>{t('supply.suppliedBy')}</Text>
+                <View style={styles.options}>
+                  <OptionRow
+                    testID="supply-item-supplier-warehouse"
+                    title={t('supply.warehouseStock')}
+                    description={t('supply.warehouseStockHint')}
+                    icon="cube-outline"
+                    selected={vendorId === null}
+                    onPress={() => setVendorId(null)}
+                  />
+                  {activeVendors.map((vendor) => (
+                    <OptionRow
+                      key={vendor.id}
+                      testID={`supply-item-supplier-${vendor.id}`}
+                      title={vendor.name}
+                      description={t('supply.vendorSuppliesHint')}
+                      icon="storefront-outline"
+                      selected={vendorId === vendor.id}
+                      onPress={() => setVendorId(vendor.id)}
+                    />
+                  ))}
+                  {vendorId && item?.vendor && !activeVendors.some((vendor) => vendor.id === vendorId) ? (
+                    <OptionRow
+                      title={item.vendor.name}
+                      description={t('supply.vendorWithdrawnHint')}
+                      icon="storefront-outline"
+                      selected
+                      onPress={() => undefined}
+                    />
+                  ) : null}
+                </View>
+              </AnimatedEntrance>
+            ) : null}
+
+            <AnimatedEntrance delay={step(3)} style={styles.block}>
               <PrimaryButton
                 testID="supply-item-save"
                 title={inventoryItemId ? t('supply.editItem') : t('supply.addItem')}
@@ -218,7 +270,7 @@ export default function SupplyItemFormScreen() {
             </AnimatedEntrance>
 
             {item ? (
-              <AnimatedEntrance delay={step(3)} style={styles.block}>
+              <AnimatedEntrance delay={step(4)} style={styles.block}>
                 <PressableScale
                   testID="supply-item-toggle-active"
                   style={styles.dangerRow}
@@ -270,6 +322,14 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl },
   block: { marginTop: spacing.lg },
   form: { gap: spacing.md },
+  sectionTitle: {
+    ...typography.label,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: spacing.sm,
+  },
+  options: { gap: spacing.xs },
   dangerRow: {
     flexDirection: 'row',
     alignItems: 'center',

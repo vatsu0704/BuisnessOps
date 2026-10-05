@@ -9,6 +9,9 @@ const {
   validateDispatch,
   validateAssign,
   validateDeliver,
+  validateReceive,
+  validateRecordPayment,
+  validateSettle,
   validateDelay,
   validateReject,
   validateCancel,
@@ -126,6 +129,7 @@ async function placeOrder(req, res, next) {
 
     const order = await supplyOrderService.placeOrder(req.tenant.businessId, req.params.supplyOrderId, {
       paymentMode: req.body.paymentMode,
+      paymentConfirmed: req.body.paymentConfirmed,
       paymentReference: req.body.paymentReference,
       membershipId: req.tenant.membershipId,
     });
@@ -328,12 +332,90 @@ async function deliverOrder(req, res, next) {
     const order = await supplyOrderService.deliverOrder(req.tenant.businessId, req.params.supplyOrderId, {
       membershipId: req.tenant.membershipId,
       scope: scopeOf(req),
-      // Whether the cash actually changed hands. Only the person at the counter
-      // knows, so it comes from them — and the service decides whether it was
-      // needed, never the caller.
-      cashCollected: req.body.cashCollected,
+      // Whether — and how — the money changed hands. Only the person at the
+      // counter knows, so it comes from them, and the service decides whether
+      // it was needed, never the caller. `cashCollected: true` is what an app
+      // build from before the agent could show a UPI QR sends, and it meant cash.
+      collectedVia: req.body.collectedVia ?? (req.body.cashCollected === true ? 'CASH' : undefined),
     });
     res.json(order);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * The branch says a vendor's goods arrived (requirement 25). The capability is
+ * `supplyOrder:receive`; reaching the order's branch is the check here.
+ */
+async function receiveOrder(req, res, next) {
+  try {
+    const errors = validateReceive(req.body);
+    if (errors.length) return res.status(400).json(validationFailure(errors));
+    await loadTouchable(req);
+
+    const order = await supplyOrderService.receiveOrder(req.tenant.businessId, req.params.supplyOrderId, {
+      membershipId: req.tenant.membershipId,
+      vendorPaid: req.body.vendorPaid,
+    });
+    res.json(order);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** A franchise branch pays for an order it has already placed (requirement 26). */
+async function recordPayment(req, res, next) {
+  try {
+    const errors = validateRecordPayment(req.body);
+    if (errors.length) return res.status(400).json(validationFailure(errors));
+    await loadTouchable(req);
+
+    const order = await supplyOrderService.recordPayment(req.tenant.businessId, req.params.supplyOrderId, {
+      method: req.body.method,
+      paymentReference: req.body.paymentReference,
+      membershipId: req.tenant.membershipId,
+    });
+    res.json(order);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// --- Accounts (requirement 27) ------------------------------------------------
+
+async function listPaymentsDue(req, res, next) {
+  try {
+    res.json(await supplyOrderService.listPaymentsDue(req.tenant.businessId, listScope(req)));
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listPaymentsToConfirm(req, res, next) {
+  try {
+    res.json(await supplyOrderService.listPaymentsToConfirm(req.tenant.businessId, listScope(req)));
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Pay for a batch of FOCO orders at once. Branch reach is enforced inside the
+ * service's query rather than order by order here — an order the caller cannot
+ * reach is simply not found, which refuses the whole batch.
+ */
+async function settlePayments(req, res, next) {
+  try {
+    const errors = validateSettle(req.body);
+    if (errors.length) return res.status(400).json(validationFailure(errors));
+
+    const result = await supplyOrderService.settlePayments(req.tenant.businessId, listScope(req), {
+      supplyOrderIds: req.body.supplyOrderIds,
+      paymentReference: req.body.paymentReference,
+      membershipId: req.tenant.membershipId,
+    });
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -377,5 +459,10 @@ module.exports = {
   rejectOrder,
   verifyPayment,
   deliverOrder,
+  receiveOrder,
+  recordPayment,
+  listPaymentsDue,
+  listPaymentsToConfirm,
+  settlePayments,
   postDelay,
 };

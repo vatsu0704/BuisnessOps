@@ -11,12 +11,23 @@ export type BranchStatus = 'ACTIVE' | 'INACTIVE' | 'CLOSED';
  */
 export type BranchKind = 'BRANCH' | 'WAREHOUSE';
 
+/**
+ * Who pays for a branch's raw material — requirement 24.
+ *
+ * FOCO (company operated): the business pays, centrally, once the goods have
+ * arrived — the cashier only orders. FM (franchise): the branch pays for itself,
+ * before ordering or on delivery. Meaningless on a warehouse, which orders
+ * nothing.
+ */
+export type BranchOperatingModel = 'FOCO' | 'FM';
+
 export interface Branch {
   id: string;
   businessId: string;
   name: string;
   code: string;
   kind: BranchKind;
+  operatingModel: BranchOperatingModel;
   city: string | null;
   region: string | null;
   country: string | null;

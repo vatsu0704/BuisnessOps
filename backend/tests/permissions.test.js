@@ -66,6 +66,42 @@ describe('the capability matrix', () => {
     expect(roleHas('DELIVERY_AGENT', 'payroll:view')).toBe(false);
   });
 
+  // Requirement 27. Every branch's money, none of its people — the same split
+  // as the desk and the agent, for an office job rather than a road one.
+  it('gives ACCOUNTANT every branch’s figures and payments, and no authority over people', () => {
+    for (const capability of [
+      'branch:allAccess',
+      'analytics:viewBusiness',
+      'expense:viewAllBranches',
+      'supplyPayment:settle',
+      'supplyPayment:verify',
+      'paymentAccount:manage',
+    ]) {
+      expect(roleHas('ACCOUNTANT', capability)).toBe(true);
+    }
+    for (const capability of [
+      'staff:viewAllBranches',
+      'staff:viewOthers',
+      'payroll:view',
+      'team:view',
+      'export:monthEnd',
+      'supplyOrder:create',
+      'supplyOrder:fulfil',
+      'counterOrder:create',
+    ]) {
+      expect(roleHas('ACCOUNTANT', capability)).toBe(false);
+    }
+  });
+
+  // Whoever can change where money goes must not also be whoever ships the
+  // goods. If the desk ever holds this, it can redirect every branch's payments.
+  it('keeps where money goes away from the warehouse desk', () => {
+    expect(roleHas('WAREHOUSE', 'paymentAccount:manage')).toBe(false);
+    // ...while the desk keeps confirming payments, which it always did.
+    expect(roleHas('WAREHOUSE', 'supplyPayment:verify')).toBe(true);
+    expect(roleHas('WAREHOUSE', 'supplyPayment:settle')).toBe(false);
+  });
+
   // An exemption, not a privilege — which is why holding everything else does
   // not confer it. See ADMIN_EXCLUDES in the catalog.
   it('gives punch-anywhere only to the role with no fixed place of work', () => {

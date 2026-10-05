@@ -59,6 +59,7 @@ Two consequences fall out of that and are worth stating up front:
 | `WAREHOUSE` | Every branch's *orders*, no branch's *people* | The central order desk (R3, R9). Sees supply orders from all branches, fulfils and dispatches them, posts delays. Deliberately cannot read HR records. |
 | `CASHIER` | Their granted branches | The branch operator (R1, R5, R10, R11, R14). Counter billing, supply orders, expenses, and their own branch's staff including pay. |
 | `DELIVERY_AGENT` | Their granted branches | Carries supply orders, marks status, posts delays with a reason, punches their own attendance (R12). |
+| `ACCOUNTANT` | Every branch's *money*, no branch's *people* | **Added by R27.** Reads every branch's figures, pays for company-operated (FOCO) branches' supply orders, confirms franchise (FM) branches' payments to the warehouse, and sets where payments go. No staff, team or payroll capability. |
 | `STAFF` | Themselves | Own attendance and own payslips. Unchanged. |
 
 ### Why the role code changes, not just the enum
@@ -223,6 +224,11 @@ and follows the cashier to another device. The raw-material catalog reuses
 - Placing requires choosing `ONLINE` or `COD`; `ONLINE` requires a reference string.
 - A placed order can no longer be edited by the cashier.
 - The warehouse sees it immediately (R3).
+
+**Superseded in part by R24–R26.** A company-operated branch chooses no payment mode at
+all (accounts pays, R24); a cart holding a vendor's items places as one order per
+supplier (R25); and paying online is now scanning a QR and saying so — the reference is
+optional (R26).
 
 ### R5.1 — Material tracking, order tracking, dispatch, payment mode
 
@@ -782,11 +788,205 @@ table would mean teaching all five about a second kind of place first.
   the screen chose for them — they are never asked for one, because they work at none of
   the branches. That is the whole point of the chain: no staff record means no attendance at all.
 
+### R24 — Two kinds of branch: FOCO and FM
+
+> There are two types of branch, the FOCO model and the FM model. FOCO: the accountant
+> will pay the raw-material amount; the cashier only orders, the delivery boy delivers
+> it, and the delivery boy marks it delivered without any restriction. FM: the current
+> flow is right — the delivery boy receives the payment from the cashier.
+
+A **FOCO** (company-operated) branch pays for nothing itself: the business pays centrally,
+through the accountant. An **FM** (franchise) branch pays for its own raw material, which
+is the flow every branch had before this — so FM is the default, and no branch that
+already existed changed.
+
+**Confirmed:**
+- **The model lives on the branch and is snapshotted onto every order when it is placed**
+  (`SupplyOrder.operatingModel`). Changing a branch from FM to FOCO decides who pays for
+  its *next* order; an order already in flight is paid the way it was agreed.
+- **A FOCO cashier is asked nothing about payment.** Any mode an older app build still
+  sends is ignored: the branch's model is the authority, not the button.
+- **A FOCO delivery has no cash question.** The agent marks it delivered and that closes
+  it. There is no separate "cashier received" step for warehouse orders.
+- **Accounts pays only after delivery,** never before — and the warehouse never waits
+  for that payment to accept or dispatch.
+- Add branch asks the question with **nothing preselected**, because it decides whether
+  a cashier is ever asked to pay and that is not something to default quietly. The API
+  still defaults to FM, so an older client can add a branch.
+
+| | |
+| --- | --- |
+| **Who** | `OWNER`/`ADMIN`/`MANAGER` set it (`branch:create`, `branch:update`) |
+| **Entities** | `Branch.operatingModel`, `BranchOperatingModel`, `SupplyOrder.operatingModel`, `SupplyPaymentMode.ACCOUNTS` |
+| **Task** | [Task 12](#task-12--foco-and-fm-branches-vendors-upi-payments-and-the-accountant) |
+
+**Acceptance criteria**
+
+- Adding a branch asks who pays for its raw material — FOCO or FM, each with a sentence —
+  and will not save until one is chosen. A warehouse is not asked.
+- Branch settings can change it, and say the change applies to orders placed from then on.
+- A FOCO branch's order is placed with no payment question and shows "Accounts pays".
+- The agent delivers a FOCO order with no cash question, and the accountant is told it
+  can now be paid for.
+- Changing a branch's model does not change the payment of any order already placed.
+
+### R25 — Third-party vendors
+
+> FOCO B1 orders chai masala and water → the warehouse → stock (chai) goes by our
+> delivery, the water comes from the third-party vendor; accounts pays the vendor.
+> FM B2 orders the water from the vendor directly and pays the vendor.
+
+Some raw material is not the warehouse's to supply: water, ice, milk come straight from
+an outside **vendor**. A vendor does not use the app.
+
+**Confirmed:**
+- **A catalog item names its supplier** — the warehouse's own stock, or one vendor.
+- **A cart can hold both, and is split when it is placed** into one order per supplier,
+  because each order has exactly one payee and a vendor's goods never pass through the
+  warehouse. The orders share a `placementId` and each gets its own number. The cart
+  screen shows the groups before anything is placed, so the result is not a surprise.
+- **A vendor order has its own, shorter status machine** — `PLACED → (ACCEPTED) →
+  DELIVERED`. Nothing is packed or dispatched; `ACCEPTED` means "sent to the vendor", and
+  `DELIVERED` is the **branch** saying the goods arrived (`supplyOrder:receive`), since
+  nobody of ours carried them.
+- **A FOCO branch's vendor order goes through the warehouse desk,** which forwards it to
+  the vendor — the sketch's "warehouse → TPV". **An FM branch's vendor order never reaches
+  the desk:** the branch orders from its vendor itself.
+- **Forwarding is WhatsApp,** with the order composed on the device in the sender's
+  language and sent to the vendor's number. "Sent" is the sender's tap.
+- **Vendors are the desk's to add and name** (`supplyItem:manage`, because they are part
+  of the catalog the desk runs) — but **not** where a payment to them goes; see R26.
+- **Money paid to a vendor left the business,** unlike money paid to the business's own
+  warehouse. It stays inside the ordering branch's `materialSpend` — it is that branch's
+  cost — and the business roll-up subtracts it as `vendorSpend`. The R13 identity still
+  holds: `Σ(branch net) + internalTransfer = business net`, where `internalTransfer` is
+  now the warehouse part only.
+
+| | |
+| --- | --- |
+| **Who** | `WAREHOUSE` manages vendors; `CASHIER` receives; the desk forwards FOCO orders |
+| **Entities** | `Vendor`, `InventoryItem.vendorId`, `SupplyOrder.vendorId`, `SupplyOrder.placementId` |
+| **Task** | [Task 12](#task-12--foco-and-fm-branches-vendors-upi-payments-and-the-accountant) |
+
+**Acceptance criteria**
+
+- The desk adds a vendor with a name and a WhatsApp number, and can withdraw and restore one.
+- A catalog item can be given to a vendor; a withdrawn vendor cannot be chosen and its
+  items cannot be ordered.
+- A cart with warehouse and vendor items places as one order per supplier.
+- A FOCO vendor order appears on the desk and can be marked sent to the vendor; an FM one
+  does not appear there.
+- The branch marks a vendor order received. An FM branch paying on delivery is asked
+  whether it paid the vendor — cash, UPI, or not yet.
+- The agent cannot be given a vendor order, and pack, dispatch and agent-deliver are
+  refused for one.
+- Reports subtract vendor spend from the business total, and the reconciliation identity
+  still balances.
+
+### R26 — Paying by UPI QR, confirmed by whoever receives it
+
+> I need to set QR codes and make payments. Typing the reference is a long process — is
+> there another solution? … If it is paid, mark the status "Paid".
+
+R5 made payment record-only: no gateway, no money through the app. That stays. What
+changes is that **nobody types anything.**
+
+**Confirmed:**
+- **A QR is generated from a UPI ID, never uploaded as an image.** It is
+  `upi://pay?pa=…&pn=…&am=<exact amount>&cu=INR&tn=<branch code + order numbers>`, so the
+  amount is pre-filled and the order number reaches the receiver's UPI app. An image
+  would need file storage the hosted server does not keep, and could not carry the amount
+  of a particular order.
+- **The payer taps "Payment done"; the receiver taps "Received".** No payment gateway
+  and no automatic detection — chosen by Vatsal over a gateway, because a gateway costs
+  KYC and a fee on every payment and cannot see a vendor's own account anyway. A typed
+  reference is optional.
+- **Who confirms follows who receives.** The warehouse uses the app, so a payment to it
+  is `PAID` ("Payment sent") until its desk or the accountant says `VERIFIED` ("Paid") or
+  `FAILED` ("Not received"), after which the branch can pay again. A vendor does not use
+  the app, and accounts paying the business's own bill has nobody to confirm it to — so
+  in both of those the payer's record is final and goes straight to `VERIFIED`.
+- **The enum names stayed; their words changed:** `PENDING` "To pay", `PAID` "Payment
+  sent", `VERIFIED` "Paid", `FAILED` "Not received".
+- **One phone cannot scan its own screen.** So every QR card also has **"Pay with UPI
+  app"**, which opens GPay or PhonePe on the same payment. The QR is for a second phone —
+  the cashier scanning the code on the delivery agent's phone.
+- **Pay on delivery is cash or the agent's QR.** The agent's Deliver panel offers *Cash
+  taken*, *Show the QR* (the warehouse's QR on the agent's own phone, for the cashier to
+  scan), or *Not yet* (R22, unchanged).
+- **Paying now** (an FM branch, before placing) shows one QR per supplier in the cart,
+  each with its own subtotal, and Place waits until each is marked done. It is not
+  offered at all while any supplier in the cart has no UPI ID.
+- **Only `paymentAccount:manage` changes where money goes** — the accountant and the
+  owner, deliberately not the warehouse desk. Whoever can change where money goes must
+  not also be whoever ships the goods. Every change records who made it and when, and the
+  set-up screen shows it.
+
+| | |
+| --- | --- |
+| **Who** | `ACCOUNTANT`/`OWNER` set UPI IDs; `CASHIER` and the agent take payments; the desk and the accountant confirm them |
+| **Entities** | `Business.supplyUpi*`, `Vendor.upi*`, `SupplyOrder.payment*` |
+| **Task** | [Task 12](#task-12--foco-and-fm-branches-vendors-upi-payments-and-the-accountant) |
+
+**Acceptance criteria**
+
+- Settings → Payment QR codes sets the warehouse's UPI ID and each vendor's, refuses
+  something that is not a UPI ID, previews a test QR with no amount, and shows who last
+  changed it and when. The desk cannot reach it, and the API refuses the desk.
+- An FM cashier paying now sees a QR per supplier with the exact amount, marks each done,
+  and places; the warehouse order reads "Payment sent", the vendor order "Paid".
+- The agent can take a pay-on-delivery order by showing the QR; it reads "Payment sent".
+- The desk or the accountant marks a payment Received or Not received; "Not received"
+  asks first, and the branch can then pay again.
+- Nothing asks for a typed reference.
+
+### R27 — The Accountant
+
+> We need to add a role of accountant, which shows the numbers of all the branches, and
+> is able to do the payments for all branches.
+
+A new role, `ACCOUNTANT`. Business-wide, like the desk and the agent, and for the same
+reason holding **none** of the `staff:*`, `team:*` or `payroll:*` capabilities: reading
+every branch's money is not reading every branch's people.
+
+**Confirmed:**
+- **Sees** every branch's sales, expenses and net profit (`analytics:viewBranch`,
+  `analytics:viewBusiness`), every branch's expenses (`expense:view`,
+  `expense:viewAllBranches`), and every supply order (`supplyOrder:view`).
+- **Pays** for FOCO branches' orders once they have arrived (`supplyPayment:settle`) —
+  one order, or a batch to one payee under one QR. One order in the batch that is not due
+  refuses the whole batch, because the QR paid the total of all of them.
+- **Confirms** FM branches' payments to the warehouse (`supplyPayment:verify`). That
+  capability was split out of `supplyOrder:fulfil` so the accountant can confirm money
+  without being handed the desk; the desk keeps it.
+- **Sets** where payments go (`paymentAccount:manage`).
+- **Not** payslips, not exports, not the counter or the cart — chosen when the role was
+  scoped. `export:*` is the line to add if month-end reconciliation needs it.
+- **Told** when a FOCO order is delivered and ready to pay, and when a branch says it has
+  paid the warehouse. Not when an order is placed — they see those in the list, and a
+  push per order would be noise.
+
+| | |
+| --- | --- |
+| **Who** | `ACCOUNTANT` |
+| **Entities** | `MembershipRole.ACCOUNTANT` |
+| **Task** | [Task 12](#task-12--foco-and-fm-branches-vendors-upi-payments-and-the-accountant) |
+
+**Acceptance criteria**
+
+- An accountant can be invited, with no branch picker — the role reaches every branch.
+- Their tabs are Home · Payments · Staff · Reports · Settings, inside the five-tab budget.
+- Payments lists FOCO orders by payee — delivered ones selectable, ones on their way
+  dimmed — and pays a selection with one QR after asking first.
+- The accountant reads Reports but is refused team, staff records, the counter, the cart,
+  the desk and adding a vendor.
+- They receive the "ready to pay" and "payment sent" pushes; the owner does not.
+
 ---
 
 ## 4. Tasks
 
-Ten tasks. **Task 1 lands first** — it is the only one that changes existing behaviour,
+Twelve tasks. **Task 1 lands first** — it is the only one that changes existing behaviour,
 and every other task assumes its roles exist.
 
 ### Task 1 — Roles and the permission matrix
@@ -1039,6 +1239,45 @@ Written **with** each task, not after: this file, `PROJECT_FLOW.md`,
 `database-table.md`, `TESTING_GUIDE.md`, and the `CLAUDE.md` additions for the push
 exception and the new lint scripts.
 
+### Task 12 — FOCO and FM branches, vendors, UPI payments and the Accountant
+*Requirements: R24, R25, R26, R27.*
+
+1. `Branch.operatingModel`, `Vendor`, `InventoryItem.vendorId`, `SupplyOrder.vendorId` /
+   `operatingModel` / `placementId`, the payee columns on `Business` and `Vendor`, and
+   the `ACCOUNTANT` role and `ACCOUNTS` mode — one migration, no backfill.
+2. Four capabilities: `supplyOrder:receive`, `supplyPayment:settle`,
+   `supplyPayment:verify` (split out of `supplyOrder:fulfil`), `paymentAccount:manage`.
+3. Vendors and payee endpoints; the catalog's "supplied by".
+4. Placing splits a cart by supplier and decides the payment from the branch's model.
+   The vendor status machine; receive; paying after placing; UPI collection at the
+   counter; Received / Not received.
+5. Accounts: the due and to-confirm lists, settling a batch, and the two pushes.
+6. Reports subtract vendor spend at the business level; the export names the supplier.
+7. Screens: Add branch and Branch settings ask the model; Payment QR codes; Vendors; the
+   cart's supplier groups and pay-now QRs; the order screen's receive, pay and collect
+   panels; Payments, as the accountant's tab and from Home. Translations ×4.
+8. Tests: the split, both models, both kinds of supplier, settling all-or-nothing, who
+   may change a UPI ID, the reconciliation identity with vendor spend, and who is pushed.
+
+**Decided while building it.**
+
+- **The QR is drawn, not a picture.** `qrcode-generator` encodes it (pure JavaScript, no
+  dependencies of its own) and `react-native-svg`, already in the app, draws it as one
+  path with every module on a whole physical pixel, so neighbouring rows leave no seam
+  for a camera to trip on. Both the encoder and the exact path the component draws were
+  decoded by an independent reader before it went in. No native module, so no rebuild.
+- **The cart lines carry their current supplier,** so the cart can group them exactly as
+  placing will split them, before anything is placed.
+- **Settling locks the batch in id order,** so two accountants paying overlapping
+  batches from two phones cannot both pay the same order, nor deadlock waiting for each
+  other.
+- **A payment mode inside a notification is translated where it is drawn** — the push on
+  the server, the list in the app. It used to reach a Gujarati lock screen as the raw
+  enum ("… ₹1,240, COD."), and `ACCOUNTS` would have done the same.
+- **Vendor references are `ON DELETE NO ACTION`, not `RESTRICT`.** Deleting a business
+  cascades to its vendors, items and orders in one statement; `NO ACTION` is checked at
+  its end, `RESTRICT` part-way through, which would depend on cascade order.
+
 ---
 
 ## 5. Open decisions
@@ -1079,6 +1318,22 @@ costs a schema change and is only unambiguous while a business has one warehouse
 remains available if a business ever runs two and wants the warehouse read as a profit
 centre.
 
+**Is money paid to a vendor an internal transfer?** (R13, R25, Task 12.) **No.** The
+warehouse is the business's own, so paying it moves money between two pockets; a vendor
+is somebody else, so paying them is money leaving. Vendor spend therefore stays in the
+ordering branch's material cost — it is still that branch's cost, whoever supplied it —
+and is subtracted from the business total as well, as `vendorSpend`. `internalTransfer`
+is the warehouse part only, and the reconciliation identity is unchanged in form. Who
+*paid* (R24) changes nothing here: a FOCO branch's order paid by accounts is that
+branch's cost exactly as if it had paid itself.
+
+**Does the app detect a payment, or does a person confirm it?** (R26, Task 12.)
+**Decided by Vatsal: a person confirms it.** Detecting a payment needs a payment
+gateway's webhook — KYC, a fee on every payment, server set-up — and would still not
+see a vendor's own account. So the payer taps "Payment done" and the receiver taps
+"Received", with the order number in the QR's note so the receiver can find it in
+their own UPI app. A gateway remains possible later, for warehouse payments only.
+
 **Do DRAFT payslips count as payroll cost?** (R13, Task 8.) **Decided in Task 8: yes,
 flagged.** Counting only FINALIZED slips would report zero wages — and therefore a wildly
 inflated profit — for any business that generates payslips and never finalises them, which
@@ -1096,7 +1351,13 @@ revisiting once a real counter is in use.
 
 Deliberate exclusions, recorded so they are not mistaken for oversights:
 
-- **Real payment collection.** Record-only by decision (R5).
+- **Real payment collection.** Record-only by decision (R5), and still record-only
+  after R26: the QR is paid in the payer's own UPI app.
+- **Detecting that a payment arrived.** The receiver confirms it (R26). A gateway could
+  automate this for the warehouse later; it can never see a vendor's own account.
+- **Vendors using the app.** An order reaches them over WhatsApp, and the branch says
+  when it arrived (R25).
+- **Refunds.** A paid order that is then cancelled is not refunded through the app.
 - **SMS, of any kind.** Firebase push instead (R2).
 - **Scheduled jobs.** Nothing in these requirements needs a clock; see R10.
 - **The AI query engine.** Hidden, not built (R7). `PROJECT_FLOW.md` Phase 2 stands.

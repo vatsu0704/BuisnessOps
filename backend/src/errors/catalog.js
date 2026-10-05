@@ -89,7 +89,6 @@ const API_MESSAGES = {
   SUPPLY_ORDER_INVALID_TRANSITION: 'An order that is {{from}} cannot become {{to}}',
   SUPPLY_ORDER_NOT_EDITABLE: 'This order is {{status}}, so its items can no longer be changed',
   SUPPLY_ORDER_EMPTY: 'Add something to the order before placing it',
-  SUPPLY_ORDER_REFERENCE_REQUIRED: 'Paying online needs the payment reference so the warehouse can check it',
   SUPPLY_ORDER_CANCEL_TOO_LATE:
     'The warehouse has already started on this order — ask them to reject it instead',
   SUPPLY_ORDER_DELAY_NOT_APPLICABLE: 'An order that is {{status}} cannot be delayed',
@@ -100,6 +99,32 @@ const API_MESSAGES = {
   SUPPLY_ORDER_AGENT_NOT_PERMITTED: 'That member cannot be given a delivery, so the order would be stuck',
   SUPPLY_ORDER_ASSIGN_NOT_APPLICABLE: 'An order that is {{status}} cannot be given to a delivery agent',
   SUPPLY_ORDER_NOT_ASSIGNED: 'This delivery is assigned to someone else',
+
+  // --- Vendors and paying for supply orders (Task 12, requirements 24–27) --
+  VENDOR_NOT_FOUND: 'That vendor is not in this business',
+  VENDOR_NAME_TAKEN: 'There is already a vendor called {{name}}',
+  SUPPLY_VENDOR_INACTIVE: '{{name}} has been withdrawn as a vendor, so nothing can be ordered from them',
+  // An FM branch has to say how it is paying; a FOCO one never does, because
+  // accounts pays for it. The rule is the branch's, so it is the service that
+  // knows which applies — the validator cannot see the branch.
+  SUPPLY_ORDER_PAYMENT_MODE_REQUIRED: 'Choose whether to pay now or on delivery',
+  SUPPLY_ORDER_PAYMENT_NOT_CONFIRMED: 'Pay first, then confirm the payment is done before placing the order',
+  SUPPLY_PAYEE_NOT_SET:
+    'There is no UPI ID set up for {{payee}} yet, so it cannot be paid now — pay on delivery, or ask accounts to set one',
+  SUPPLY_ORDER_VENDOR_ORDER:
+    'This order comes from a vendor, not the warehouse — the branch marks it received when it arrives',
+  SUPPLY_ORDER_NOT_VENDOR_ORDER:
+    'This order comes from the warehouse — the delivery agent marks it delivered',
+  SUPPLY_ORDER_VENDOR_PAYMENT_UNANSWERED: 'Say whether the vendor has been paid for this order',
+  SUPPLY_ORDER_SETTLED_BY_ACCOUNTS: 'Accounts pays for this order, so the branch does not pay or confirm it',
+  SUPPLY_ORDER_PAYMENT_NOT_OPEN:
+    'There is nothing to pay on this order now — it has been paid, or the payment is waiting to be confirmed',
+  SUPPLY_ORDER_CASH_NEEDS_AGENT:
+    'Cash for the warehouse goes to the delivery agent when the order arrives — pay by UPI here instead',
+  SUPPLY_PAYMENT_NOT_DUE: 'Order {{orderNumber}} is not one accounts has to pay',
+  SUPPLY_PAYMENT_NOT_DELIVERED: 'Order {{orderNumber}} has not been delivered yet — pay for it once it arrives',
+  SUPPLY_PAYMENT_MIXED_PAYEES:
+    'One payment can only go to one payee — choose orders from the warehouse or from one vendor',
 
   // --- Products -------------------------------------------------------------
   PRODUCT_NOT_FOUND: 'Product not found',
@@ -247,6 +272,11 @@ const FIELD_MESSAGES = {
   FIELD_MAX_LENGTH: '{{field}} must be {{max}} characters or fewer',
   // Requirement 18, caught before an invite is created rather than at the write.
   CASHIER_NEEDS_ONE_BRANCH: 'a cashier works at exactly one branch, so choose one',
+  // Requirement 26: a payment QR is generated from this, so a typo is a QR that
+  // pays nobody.
+  UPI_ID_INVALID: '{{field}} must be a UPI ID like name@bank, as printed under a UPI QR code',
+  PAYMENT_NOT_CONFIRMED: 'pay first, then confirm the payment is done',
+  ORDER_IDS_RANGE: '{{field}} must list between 1 and {{max}} different orders',
 
   // Per-row diagnostics from a CSV/Excel upload. `column` is the literal
   // header in the uploaded file, so it stays untranslated in every language —

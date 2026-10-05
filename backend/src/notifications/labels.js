@@ -100,6 +100,20 @@ const LABELS = {
       body: 'The warehouse has confirmed payment for order #{{orderNumber}}.',
     },
 
+    // --- Task 12, requirements 25–27: vendors and paying for orders --------
+    SUPPLY_ORDER_SENT_TO_VENDOR: {
+      title: 'Sent to the vendor',
+      body: 'Order #{{orderNumber}} has been sent to {{vendor}}.',
+    },
+    SUPPLY_ORDER_READY_TO_PAY: {
+      title: 'Ready to pay',
+      body: 'Order #{{orderNumber}} from {{branch}} has arrived — {{amount}} to pay.',
+    },
+    SUPPLY_PAYMENT_SENT: {
+      title: 'Payment sent',
+      body: '{{branch}} has paid {{amount}} for order #{{orderNumber}}. Check that it arrived.',
+    },
+
     // --- Requirement 21: the agent is told they have a run -----------------
     SUPPLY_ORDER_ASSIGNED: {
       title: 'A delivery for you',
@@ -158,6 +172,19 @@ const LABELS = {
     SUPPLY_PAYMENT_VERIFIED: {
       title: 'भुगतान की पुष्टि',
       body: 'गोदाम ने ऑर्डर #{{orderNumber}} का भुगतान पक्का कर दिया है।',
+    },
+
+    SUPPLY_ORDER_SENT_TO_VENDOR: {
+      title: 'विक्रेता को भेजा गया',
+      body: 'ऑर्डर #{{orderNumber}} {{vendor}} को भेज दिया गया है।',
+    },
+    SUPPLY_ORDER_READY_TO_PAY: {
+      title: 'भुगतान करना है',
+      body: '{{branch}} का ऑर्डर #{{orderNumber}} पहुँच गया है — {{amount}} का भुगतान करना है।',
+    },
+    SUPPLY_PAYMENT_SENT: {
+      title: 'भुगतान भेजा गया',
+      body: '{{branch}} ने ऑर्डर #{{orderNumber}} के लिए {{amount}} भेजे हैं। जाँचें कि पैसे आ गए।',
     },
 
     SUPPLY_ORDER_ASSIGNED: {
@@ -219,6 +246,19 @@ const LABELS = {
       body: 'વેરહાઉસે ઓર્ડર #{{orderNumber}} ની ચુકવણી પાકી કરી છે.',
     },
 
+    SUPPLY_ORDER_SENT_TO_VENDOR: {
+      title: 'વેન્ડરને મોકલાયો',
+      body: 'ઓર્ડર #{{orderNumber}} {{vendor}} ને મોકલી દેવાયો છે.',
+    },
+    SUPPLY_ORDER_READY_TO_PAY: {
+      title: 'ચુકવણી કરવાની છે',
+      body: '{{branch}} નો ઓર્ડર #{{orderNumber}} પહોંચી ગયો છે — {{amount}} ચૂકવવાના છે.',
+    },
+    SUPPLY_PAYMENT_SENT: {
+      title: 'ચુકવણી મોકલાઈ',
+      body: '{{branch}} એ ઓર્ડર #{{orderNumber}} માટે {{amount}} મોકલ્યા છે. પૈસા આવ્યા કે નહીં તે તપાસો.',
+    },
+
     SUPPLY_ORDER_ASSIGNED: {
       title: 'તમારા માટે એક ડિલિવરી',
       body: '{{branch}} નો ઓર્ડર #{{orderNumber}} તમારે પહોંચાડવાનો છે.',
@@ -278,6 +318,19 @@ const LABELS = {
       body: 'गोदामाने ऑर्डर #{{orderNumber}} चे पैसे मिळाल्याचे पक्के केले आहे.',
     },
 
+    SUPPLY_ORDER_SENT_TO_VENDOR: {
+      title: 'विक्रेत्याकडे पाठवली',
+      body: 'ऑर्डर #{{orderNumber}} {{vendor}} कडे पाठवली आहे.',
+    },
+    SUPPLY_ORDER_READY_TO_PAY: {
+      title: 'पैसे द्यायचे आहेत',
+      body: '{{branch}} ची ऑर्डर #{{orderNumber}} पोहोचली आहे — {{amount}} द्यायचे आहेत.',
+    },
+    SUPPLY_PAYMENT_SENT: {
+      title: 'पैसे पाठवले',
+      body: '{{branch}} ने ऑर्डर #{{orderNumber}} साठी {{amount}} पाठवले आहेत. पैसे आले का ते तपासा.',
+    },
+
     SUPPLY_ORDER_ASSIGNED: {
       title: 'तुमच्यासाठी एक डिलिव्हरी',
       body: '{{branch}} ची ऑर्डर #{{orderNumber}} तुम्हाला पोहोचवायची आहे.',
@@ -285,9 +338,25 @@ const LABELS = {
   },
 };
 
+/**
+ * How an order is being paid, as the word `{{payment}}` becomes inside "Order
+ * #214 from Ring Road — ₹1,240, {{payment}}."
+ *
+ * The order carries the enum (`COD`, `ONLINE`, `ACCOUNTS`), which is a code,
+ * not a word — printed as it is, a Gujarati lock screen read "… ₹1,240, COD."
+ * Lower case, because it sits mid-sentence. The app renders the same param
+ * from `supplyPaymentMode.*` in its own locale files.
+ */
+const PAYMENT_MODES = {
+  en: { ONLINE: 'paid before ordering', COD: 'pay on delivery', ACCOUNTS: 'accounts pays' },
+  hi: { ONLINE: 'ऑर्डर से पहले भुगतान', COD: 'डिलीवरी पर भुगतान', ACCOUNTS: 'अकाउंट्स भुगतान करेगा' },
+  gu: { ONLINE: 'ઓર્ડર પહેલાં ચૂકવ્યું', COD: 'ડિલિવરી પર ચુકવણી', ACCOUNTS: 'એકાઉન્ટ્સ ચૂકવશે' },
+  mr: { ONLINE: 'ऑर्डरपूर्वी दिले', COD: 'डिलिव्हरीवर पेमेंट', ACCOUNTS: 'अकाउंट्स देईल' },
+};
+
 /** Every code this dictionary can render. The parity gate reads this. */
 const NOTIFICATION_CODES = Object.keys(LABELS.en);
 
 const LOCALES = Object.keys(LABELS);
 
-module.exports = { LABELS, NOTIFICATION_CODES, LOCALES };
+module.exports = { LABELS, PAYMENT_MODES, NOTIFICATION_CODES, LOCALES };

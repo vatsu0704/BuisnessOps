@@ -67,6 +67,22 @@ const {
  * filled it, so the revenue could not be attributed to a particular warehouse
  * without a schema change. See §5 of Docs/REQUIREMENTS.md.
  *
+ * ## Vendor orders are NOT an internal transfer (requirement 25)
+ *
+ * Raw material bought from a third-party vendor goes to somebody outside the
+ * business. It is still the ordering branch's cost — so it stays inside that
+ * branch's `materialSpend` — but unlike a warehouse order it really did leave
+ * the business, so the business roll-up subtracts it too, as `vendorSpend`.
+ * `internalTransfer` is therefore the WAREHOUSE part of material spend only,
+ * and the identity above still holds term for term:
+ *
+ *     Σ(branch netProfit) = sales − expenses − payroll − (warehouse + vendor)
+ *     business netProfit = sales − expenses − payroll − vendor
+ *
+ * Who pays (requirement 24) changes nothing here. A company-operated branch's
+ * order paid by accounts is still that branch's material cost, and is counted
+ * from `placedAt` exactly like one the branch paid for itself.
+ *
  * ## Which queries this runs
  *
  * Bounded by the number of **months** asked for, never by the number of
@@ -237,6 +253,9 @@ async function instantMetricsByBranchMonth(businessId, branches, months) {
 
   const sales = new Map();
   const material = new Map();
+  // The part of `material` that went to a vendor rather than the warehouse —
+  // money that left the business. See the header.
+  const vendorMaterial = new Map();
 
   for (const [zone, zoneBranchIds] of byZone) {
     for (const month of months) {
@@ -258,7 +277,10 @@ async function instantMetricsByBranchMonth(businessId, branches, months) {
           _count: true,
         }),
         prisma.supplyOrder.groupBy({
-          by: ['branchId'],
+          // By supplier as well, so the vendor share can be told apart from the
+          // warehouse's. Still one query: a branch orders from a handful of
+          // suppliers, not from hundreds.
+          by: ['branchId', 'vendorId'],
           where: {
             businessId,
             branchId: { in: zoneBranchIds },
@@ -284,15 +306,18 @@ async function instantMetricsByBranchMonth(businessId, branches, months) {
         });
       }
       for (const row of materialRows) {
-        material.set(`${row.branchId}|${month}`, {
-          amount: toDecimal(row._sum.totalAmount),
-          count: row._count,
-        });
+        const key = `${row.branchId}|${month}`;
+        const amount = toDecimal(row._sum.totalAmount);
+        const existing = material.get(key) ?? { amount: zero(), count: 0 };
+        material.set(key, { amount: existing.amount.plus(amount), count: existing.count + row._count });
+        if (row.vendorId) {
+          vendorMaterial.set(key, (vendorMaterial.get(key) ?? zero()).plus(amount));
+        }
       }
     }
   }
 
-  return { sales, material };
+  return { sales, material, vendorMaterial };
 }
 
 // --- Trend (requirement 15) ------------------------------------------------
@@ -341,6 +366,7 @@ function emptyTotals() {
     expenseCount: 0,
     materialSpend: zero(),
     materialOrderCount: 0,
+    vendorSpend: zero(),
     payroll: zero(),
     netProfit: zero(),
   };
@@ -353,6 +379,7 @@ function addInto(totals, cell) {
   totals.expenseCount += cell.expenseCount;
   totals.materialSpend = totals.materialSpend.plus(cell.materialSpend);
   totals.materialOrderCount += cell.materialOrderCount;
+  totals.vendorSpend = totals.vendorSpend.plus(cell.vendorSpend);
   totals.payroll = totals.payroll.plus(cell.payroll);
   totals.netProfit = totals.netProfit.plus(cell.netProfit);
   return totals;
@@ -432,6 +459,9 @@ async function getBranchMonthly(
         expenseCount: expense.count,
         materialSpend: material.amount,
         materialOrderCount: material.count,
+        // Already inside `materialSpend` — reported beside it, never subtracted
+        // twice. The branch's own net profit is unaffected by who supplied it.
+        vendorSpend: instant.vendorMaterial.get(key) ?? zero(),
         payroll: pay.amount,
         payrollSlipCount: pay.slipCount,
         // Either some slip is still a draft, or the branch has staff and no
@@ -497,6 +527,7 @@ function emptyBusinessRollUp(months) {
     customerSales: zero(),
     expenses: zero(),
     payroll: zero(),
+    vendorSpend: zero(),
     internalTransfer: zero(),
     netProfit: zero(),
     payrollProvisional: false,
@@ -517,6 +548,10 @@ function emptyBusinessRollUp(months) {
  * locations. It is subtracted from the branch that paid it and from nothing at
  * the business level, which is the entire reason the two levels differ. See the
  * header.
+ *
+ * `vendorSpend` is the material that did NOT move between the business's own
+ * locations: it went to a third-party vendor, so it is subtracted at both
+ * levels and is not part of the transfer.
  */
 function businessRollUp(rows, months) {
   const cells = months.map((month, index) => {
@@ -525,6 +560,7 @@ function businessRollUp(rows, months) {
       customerSales: zero(),
       expenses: zero(),
       payroll: zero(),
+      vendorSpend: zero(),
       internalTransfer: zero(),
       netProfit: zero(),
       payrollProvisional: false,
@@ -535,11 +571,12 @@ function businessRollUp(rows, months) {
       cell.customerSales = cell.customerSales.plus(monthCell.sales);
       cell.expenses = cell.expenses.plus(monthCell.expenses);
       cell.payroll = cell.payroll.plus(monthCell.payroll);
-      cell.internalTransfer = cell.internalTransfer.plus(monthCell.materialSpend);
+      cell.vendorSpend = cell.vendorSpend.plus(monthCell.vendorSpend);
+      cell.internalTransfer = cell.internalTransfer.plus(monthCell.materialSpend.minus(monthCell.vendorSpend));
       if (monthCell.payrollProvisional) cell.payrollProvisional = true;
     }
 
-    cell.netProfit = cell.customerSales.minus(cell.expenses).minus(cell.payroll);
+    cell.netProfit = cell.customerSales.minus(cell.expenses).minus(cell.payroll).minus(cell.vendorSpend);
     return cell;
   });
 
@@ -548,6 +585,7 @@ function businessRollUp(rows, months) {
       customerSales: totals.customerSales.plus(cell.customerSales),
       expenses: totals.expenses.plus(cell.expenses),
       payroll: totals.payroll.plus(cell.payroll),
+      vendorSpend: totals.vendorSpend.plus(cell.vendorSpend),
       internalTransfer: totals.internalTransfer.plus(cell.internalTransfer),
       netProfit: totals.netProfit.plus(cell.netProfit),
       payrollProvisional: totals.payrollProvisional || cell.payrollProvisional,
@@ -556,6 +594,7 @@ function businessRollUp(rows, months) {
       customerSales: zero(),
       expenses: zero(),
       payroll: zero(),
+      vendorSpend: zero(),
       internalTransfer: zero(),
       netProfit: zero(),
       payrollProvisional: false,
@@ -692,6 +731,7 @@ async function getCrossBusiness(userId, { from, to } = {}) {
             customerSales: totals.customerSales.plus(business.total.customerSales),
             expenses: totals.expenses.plus(business.total.expenses),
             payroll: totals.payroll.plus(business.total.payroll),
+            vendorSpend: totals.vendorSpend.plus(business.total.vendorSpend),
             internalTransfer: totals.internalTransfer.plus(business.total.internalTransfer),
             netProfit: totals.netProfit.plus(business.total.netProfit),
           }),
@@ -699,6 +739,7 @@ async function getCrossBusiness(userId, { from, to } = {}) {
             customerSales: zero(),
             expenses: zero(),
             payroll: zero(),
+            vendorSpend: zero(),
             internalTransfer: zero(),
             netProfit: zero(),
           }

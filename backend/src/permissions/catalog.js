@@ -82,9 +82,19 @@ const CAPABILITIES = {
     'See supply orders. WHAT is seen depends on the role and is enforced separately: the warehouse desk sees every branch (requirement 3), a delivery agent sees the run they are carrying, a cashier sees their own branches',
   'supplyOrder:create': 'Cart raw material and place an order on the warehouse; cancel it while the warehouse has not accepted it yet',
   'supplyOrder:fulfil':
-    'Accept, pack and dispatch a supply order; hand it to a delivery agent and see who is free to take it; verify its payment; reject one the warehouse cannot fill',
-  'supplyOrder:deliver': 'Carry a supply order and mark it delivered',
+    'Accept, pack and dispatch a supply order; hand it to a delivery agent and see who is free to take it; forward a company-operated branch’s vendor order to the vendor; reject one the warehouse cannot fill',
+  'supplyOrder:deliver': 'Carry a supply order and mark it delivered, taking the cash or showing the warehouse’s UPI QR when it is paid on delivery',
   'supplyOrder:delay': 'Post a delay against an order, with a reason',
+  'supplyOrder:receive':
+    'Confirm that goods from a third-party vendor arrived at the branch. A vendor does not use the app, so the branch is the only one who can say so',
+
+  // --- Paying for supply orders (Task 12, requirements 24–27) ---
+  'supplyPayment:settle':
+    'Pay for a company-operated (FOCO) branch’s supply orders once they are delivered — one order or a whole batch to the same payee at once',
+  'supplyPayment:verify':
+    'Confirm the warehouse received a franchise branch’s payment, or say it did not. Split out of supplyOrder:fulfil so accounts can confirm money without being able to run the desk',
+  'paymentAccount:manage':
+    'Set or change the UPI IDs payments go to — the warehouse’s and every vendor’s. Deliberately NOT held by the warehouse desk: whoever can change where money goes must not also be whoever ships the goods',
 
   // --- Expenses (Task 6) ---
   'expense:view':
@@ -154,6 +164,11 @@ const ROLE_CAPABILITIES = {
     'supplyOrder:view',
     'supplyOrder:fulfil',
     'supplyOrder:delay',
+    // Confirming a branch's payment arrived used to be part of fulfil. It is
+    // its own capability now so the accountant can hold it without the desk,
+    // and the desk keeps exactly what it had. It does NOT get
+    // paymentAccount:manage — see the note on that capability.
+    'supplyPayment:verify',
     // Requirement 10: the back-office person calls the branches that have not
     // logged today's expenses, so they need to see which ones those are — and
     // `expense:view` to open one and see what it did log. They deliberately do
@@ -181,6 +196,9 @@ const ROLE_CAPABILITIES = {
     'supplyItem:view',
     'supplyOrder:view',
     'supplyOrder:create',
+    // A vendor does not use the app, so when the water arrives the branch is
+    // the only one who can say so (requirement 25).
+    'supplyOrder:receive',
     'expense:view',
     'expense:log',
     'staff:create',
@@ -213,6 +231,31 @@ const ROLE_CAPABILITIES = {
     'supplyOrder:view',
     'supplyOrder:deliver',
     'supplyOrder:delay',
+  ],
+
+  // Requirement 27: "shows the numbers of all the branches, and is able to do
+  // the payments for all branches."
+  //
+  // Business-wide DATA scope, like the warehouse desk and the delivery agent,
+  // and for the same reason deliberately none of the staff:*, team:* or
+  // payroll:* capabilities — reading every branch's money is not reading every
+  // branch's people. No export:* either, which Vatsal chose when the role was
+  // scoped; it is the line to add if month-end reconciliation needs it.
+  //
+  // What the role is FOR is the three supplyPayment/paymentAccount entries:
+  // paying for FOCO branches, confirming FM branches' payments arrived, and
+  // owning the UPI IDs that decide where any of that money goes.
+  ACCOUNTANT: [
+    'branch:allAccess',
+    'supplyItem:view',
+    'supplyOrder:view',
+    'supplyPayment:settle',
+    'supplyPayment:verify',
+    'paymentAccount:manage',
+    'expense:view',
+    'expense:viewAllBranches',
+    'analytics:viewBranch',
+    'analytics:viewBusiness',
   ],
 
   // Own attendance and own payslips only. Those are reached by self-checks

@@ -27,6 +27,9 @@ const BRANCH_STATUSES = ['ACTIVE', 'INACTIVE', 'CLOSED'];
 // A location the business sells from, or the one it ships from. See BranchKind
 // in schema.prisma for why a warehouse is a Branch at all.
 const BRANCH_KINDS = ['BRANCH', 'WAREHOUSE'];
+// Who pays for the branch's raw material — requirement 24. See
+// BranchOperatingModel in schema.prisma.
+const BRANCH_OPERATING_MODELS = ['FOCO', 'FM'];
 
 // Shared by create and update rather than copied, so the two can't drift.
 // `requireRadiusCoordinates` is false on update, where the coordinates may
@@ -88,6 +91,11 @@ function validateCreateBranch(body) {
   if (body.kind !== undefined && !BRANCH_KINDS.includes(body.kind)) {
     errors.push(mustBeOneOf('kind', BRANCH_KINDS));
   }
+  // Optional on the wire, defaulting to FM in the schema, so an app build from
+  // before requirement 24 can still add a branch. The current app always asks.
+  if (body.operatingModel !== undefined && !BRANCH_OPERATING_MODELS.includes(body.operatingModel)) {
+    errors.push(mustBeOneOf('operatingModel', BRANCH_OPERATING_MODELS));
+  }
   for (const field of BRANCH_TEXT_FIELDS) {
     if (body[field] !== undefined && body[field] !== null && typeof body[field] !== 'string') {
       errors.push(mustBeString(field));
@@ -112,6 +120,7 @@ function validateUpdateBranch(body) {
   const allowed = [
     'name',
     'kind',
+    'operatingModel',
     'city',
     'region',
     'country',
@@ -142,6 +151,9 @@ function validateUpdateBranch(body) {
   }
   if (body.kind !== undefined && !BRANCH_KINDS.includes(body.kind)) {
     errors.push(mustBeOneOf('kind', BRANCH_KINDS));
+  }
+  if (body.operatingModel !== undefined && !BRANCH_OPERATING_MODELS.includes(body.operatingModel)) {
+    errors.push(mustBeOneOf('operatingModel', BRANCH_OPERATING_MODELS));
   }
   if (body.timezone !== undefined && !isValidTimeZone(body.timezone)) {
     errors.push(fieldError('TIMEZONE_INVALID', 'timezone'));

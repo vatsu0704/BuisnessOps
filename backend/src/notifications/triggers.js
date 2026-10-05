@@ -118,6 +118,9 @@ function orderParams(order) {
   return {
     orderNumber: order.orderNumber,
     branch: order.branch?.name ?? '',
+    // A vendor's name, for the orders that come from one. Empty otherwise,
+    // which no sentence that needs it is ever sent with.
+    vendor: order.vendor?.name ?? '',
   };
 }
 
@@ -169,7 +172,10 @@ const STATUS_CODES = {
  */
 function orderStatusChanged(businessId, order, status, { actorMembershipId } = {}) {
   return safely('orderStatusChanged', async () => {
-    const code = STATUS_CODES[status];
+    // A vendor order "accepted" by the desk is one it has sent on to the vendor
+    // (requirement 25), and telling the branch "the warehouse accepted it"
+    // would describe something that did not happen.
+    const code = status === 'ACCEPTED' && order.vendorId ? 'SUPPLY_ORDER_SENT_TO_VENDOR' : STATUS_CODES[status];
     if (!code) return;
 
     const placedBy = await userIdOfMembership(order.placedByMembershipId);
@@ -253,6 +259,59 @@ function orderAssigned(businessId, order, agentMembershipId, { actorMembershipId
   });
 }
 
+/**
+ * Requirement 27 — a company-operated branch's order has arrived, so accounts
+ * can now pay for it.
+ *
+ * To whoever pays for orders (`supplyPayment:settle`) and does not run the
+ * business (`team:invite`): the accountant, not the owner, who holds every
+ * capability and would otherwise be woken for every delivery. Sent on arrival
+ * and not on placement, which is Vatsal's rule — the accountant sees an order
+ * in the list as soon as it is placed, and is only asked to act once it can be
+ * paid for.
+ */
+function orderReadyToPay(businessId, order, { actorMembershipId } = {}) {
+  return safely('orderReadyToPay', async () => {
+    const actorUserId = await userIdOfMembership(actorMembershipId);
+    await notificationService.notifyCapability(
+      businessId,
+      'supplyPayment:settle',
+      {
+        code: 'SUPPLY_ORDER_READY_TO_PAY',
+        params: { ...orderParams(order), amount: formatMoney(order.totalAmount, order.currency) },
+        deepLink: { route: 'SupplyPayments', params: {} },
+      },
+      { branchId: order.branchId, exceptUserId: actorUserId, unless: 'team:invite' }
+    );
+  });
+}
+
+/**
+ * Requirement 26 — a franchise branch says it has paid the warehouse, so
+ * somebody should look for the money and confirm it.
+ *
+ * To whoever confirms payments (`supplyPayment:verify`) and does not run the
+ * desk (`supplyOrder:fulfil`): the accountant. The desk confirms payments too,
+ * but already hears about the order itself, and the owner and admins hold the
+ * desk's capability as well — so this is the one person whose job the money
+ * is, rather than everyone who could look at it.
+ */
+function paymentSent(businessId, order, { actorMembershipId } = {}) {
+  return safely('paymentSent', async () => {
+    const actorUserId = await userIdOfMembership(actorMembershipId);
+    await notificationService.notifyCapability(
+      businessId,
+      'supplyPayment:verify',
+      {
+        code: 'SUPPLY_PAYMENT_SENT',
+        params: { ...orderParams(order), amount: formatMoney(order.totalAmount, order.currency) },
+        deepLink: orderLink(order),
+      },
+      { branchId: order.branchId, exceptUserId: actorUserId, unless: 'supplyOrder:fulfil' }
+    );
+  });
+}
+
 module.exports = {
   attendanceMarked,
   orderPlaced,
@@ -260,4 +319,6 @@ module.exports = {
   orderDelayed,
   paymentVerified,
   orderAssigned,
+  orderReadyToPay,
+  paymentSent,
 };

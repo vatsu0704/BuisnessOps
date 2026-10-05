@@ -64,6 +64,17 @@ function checkPrice(value, errors) {
   }
 }
 
+/**
+ * Who supplies the item (requirement 25). A vendor's id, or null for the
+ * warehouse's own stock — null is a real value on update, moving an item back
+ * from a vendor to the warehouse. Whether the vendor exists and is active is a
+ * fact about the database, and the service checks it.
+ */
+function checkVendor(value, errors) {
+  if (value === undefined || value === null) return;
+  if (typeof value !== 'string' || !value.trim()) errors.push(mustBeString('vendorId'));
+}
+
 function validateCreateItem(body) {
   const errors = [];
   if (!body.name || typeof body.name !== 'string' || !body.name.trim()) errors.push(required('name'));
@@ -72,6 +83,7 @@ function validateCreateItem(body) {
     errors.push(mustBeString('category'));
   }
   checkPrice(body.unitPrice, errors);
+  checkVendor(body.vendorId, errors);
   if (body.isActive !== undefined && typeof body.isActive !== 'boolean') errors.push(mustBeBoolean('isActive'));
   return errors;
 }
@@ -88,6 +100,7 @@ function validateUpdateItem(body) {
     errors.push(mustBeString('category'));
   }
   checkPrice(body.unitPrice, errors);
+  checkVendor(body.vendorId, errors);
   if (body.isActive !== undefined && typeof body.isActive !== 'boolean') errors.push(mustBeBoolean('isActive'));
   return errors;
 }
@@ -123,22 +136,44 @@ function validateUpdateOrderItem(body) {
 
 // --- The lifecycle ---------------------------------------------------------
 
+const REFERENCE_MAX = 120;
+
+/** An optional reference: shape only. Typing one stopped being required in requirement 26. */
+function checkReference(body, errors) {
+  if (body.paymentReference === undefined || body.paymentReference === null) return;
+  if (typeof body.paymentReference !== 'string') errors.push(mustBeString('paymentReference'));
+  else if (body.paymentReference.length > REFERENCE_MAX) {
+    errors.push(stringMaxLength('paymentReference', REFERENCE_MAX));
+  }
+}
+
 /**
- * ONLINE requires a reference, because a reference the warehouse can check
- * against its own records is the entire content of "paid online" in a system
- * that deliberately does not collect the money.
+ * Paying now (ONLINE) needs the payer to say they have paid — requirement 26.
+ *
+ * It used to need a typed reference, which was the whole of "paid online" when
+ * the warehouse checked references against its bank statement. Now the payer
+ * scans a QR that carries the amount and the order number, taps "Payment done",
+ * and the receiver confirms it from their own UPI app; the reference is
+ * optional. A client from before that change still sends a reference and no
+ * flag, and is taken as having confirmed.
+ *
+ * `paymentMode` itself is optional here because whether it is needed depends on
+ * the branch — a FOCO branch never chooses, accounts pays — and only the
+ * service can see the branch. `ACCOUNTS` is never accepted from a client.
  */
 function validatePlaceOrder(body) {
   const errors = [];
-  if (!body.paymentMode) errors.push(required('paymentMode'));
-  else if (!PAYMENT_MODES.includes(body.paymentMode)) errors.push(mustBeOneOf('paymentMode', PAYMENT_MODES));
+  if (body.paymentMode !== undefined && body.paymentMode !== null && !PAYMENT_MODES.includes(body.paymentMode)) {
+    errors.push(mustBeOneOf('paymentMode', PAYMENT_MODES));
+  }
+  if (body.paymentConfirmed !== undefined && typeof body.paymentConfirmed !== 'boolean') {
+    errors.push(mustBeBoolean('paymentConfirmed'));
+  }
+  checkReference(body, errors);
 
-  if (body.paymentMode === 'ONLINE') {
-    if (!body.paymentReference || typeof body.paymentReference !== 'string' || !body.paymentReference.trim()) {
-      errors.push(required('paymentReference'));
-    } else if (body.paymentReference.length > 120) {
-      errors.push(stringMaxLength('paymentReference', 120));
-    }
+  const referenced = typeof body.paymentReference === 'string' && body.paymentReference.trim().length > 0;
+  if (body.paymentMode === 'ONLINE' && body.paymentConfirmed !== true && !referenced) {
+    errors.push(fieldError('PAYMENT_NOT_CONFIRMED', 'paymentConfirmed'));
   }
   return errors;
 }
@@ -180,19 +215,62 @@ function validateAssign(body) {
   return errors;
 }
 
+/** How the agent took the money at the counter (requirements 22 and 26). */
+const COLLECTED_VIA = ['CASH', 'UPI'];
+/** What the branch says about paying a vendor's own delivery person (requirement 25). */
+const VENDOR_PAID = ['CASH', 'UPI', 'NOT_YET'];
+/** How a branch pays for an order after placing it (requirement 26). */
+const PAYMENT_METHODS = ['UPI', 'CASH'];
+/** How many orders one accounts payment may cover. A QR pays one total; a batch is a week, not a year. */
+const MAX_SETTLE_ORDERS = 100;
+
 /**
- * Cash on delivery is confirmed by the person who took it (requirement 22).
+ * Payment on delivery is confirmed by the person who took it (requirement 22).
  *
  * Optional here rather than required, because whether it is needed depends on
  * the order — an ONLINE one has nothing to confirm. The service asks that
  * question, since it is the half that can see the order; this only checks the
  * shape, so a truthy string can never stand in for "yes, I have the money".
+ *
+ * `collectedVia` is the current answer; `cashCollected: true` is the one an app
+ * build from before the agent could show a QR still sends.
  */
 function validateDeliver(body) {
   const errors = [];
   if (body.cashCollected !== undefined && typeof body.cashCollected !== 'boolean') {
     errors.push(mustBeBoolean('cashCollected'));
   }
+  if (body.collectedVia !== undefined && !COLLECTED_VIA.includes(body.collectedVia)) {
+    errors.push(mustBeOneOf('collectedVia', COLLECTED_VIA));
+  }
+  return errors;
+}
+
+/** Whether it was asked for is the service's question; this is only the shape. */
+function validateReceive(body) {
+  const errors = [];
+  if (body.vendorPaid !== undefined && !VENDOR_PAID.includes(body.vendorPaid)) {
+    errors.push(mustBeOneOf('vendorPaid', VENDOR_PAID));
+  }
+  return errors;
+}
+
+function validateRecordPayment(body) {
+  const errors = [];
+  if (!body.method) errors.push(required('method'));
+  else if (!PAYMENT_METHODS.includes(body.method)) errors.push(mustBeOneOf('method', PAYMENT_METHODS));
+  checkReference(body, errors);
+  return errors;
+}
+
+function validateSettle(body) {
+  const errors = [];
+  const ids = body.supplyOrderIds;
+  const wellFormed = Array.isArray(ids) && ids.every((id) => typeof id === 'string' && id.trim());
+  if (!wellFormed || ids.length === 0 || new Set(ids).size > MAX_SETTLE_ORDERS) {
+    errors.push(fieldError('ORDER_IDS_RANGE', 'supplyOrderIds', { max: MAX_SETTLE_ORDERS }));
+  }
+  checkReference(body, errors);
   return errors;
 }
 
@@ -255,6 +333,9 @@ module.exports = {
   validateDispatch,
   validateAssign,
   validateDeliver,
+  validateReceive,
+  validateRecordPayment,
+  validateSettle,
   validateDelay,
   validateReject,
   validateCancel,
@@ -264,4 +345,5 @@ module.exports = {
   PAYMENT_MODES,
   ORDER_STATUSES,
   MAX_DELAY_MINUTES,
+  MAX_SETTLE_ORDERS,
 };

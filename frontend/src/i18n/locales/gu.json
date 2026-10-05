@@ -99,7 +99,6 @@
       "SUPPLY_ORDER_INVALID_TRANSITION": "જે ઓર્ડર {{from}} છે તે {{to}} થઈ શકતો નથી",
       "SUPPLY_ORDER_NOT_EDITABLE": "આ ઓર્ડર {{status}} છે, હવે તેની વસ્તુઓ બદલી શકાતી નથી",
       "SUPPLY_ORDER_EMPTY": "ઓર્ડર મૂકતા પહેલાં તેમાં કંઈક ઉમેરો",
-      "SUPPLY_ORDER_REFERENCE_REQUIRED": "ઓનલાઇન ચુકવણી માટે રેફરન્સ જરૂરી છે જેથી વેરહાઉસ ચકાસી શકે",
       "SUPPLY_ORDER_CANCEL_TOO_LATE": "વેરહાઉસે આ ઓર્ડર પર કામ શરૂ કરી દીધું છે — તેમને ના પાડવા કહો",
       "SUPPLY_ORDER_DELAY_NOT_APPLICABLE": "જે ઓર્ડર {{status}} છે તેમાં વિલંબ નોંધી શકાતો નથી",
       "SUPPLY_ORDER_PAYMENT_NOT_CLAIMED": "આ ઓર્ડર પર હમણાં ચકાસવા જેવી કોઈ ચુકવણી નથી",
@@ -127,7 +126,22 @@
       "CASHIER_ALREADY_HAS_BRANCH": "{{branch}} ઉમેરી શકાતી નથી — એક કેશિયર પાસે એક જ શાખા હોય છે, અને તેમની પાસે {{currentBranch}} છે.",
       "STAFF_BASE_MUST_BE_WAREHOUSE": "{{role}} માલ સ્વીકારે છે, પૅક કરે છે અને રવાના કરે છે, તેથી તેમનું સ્થાન તમારું ગોડાઉન છે — તેમની હાજરી અને પગારપત્રક કોઈ દુકાન પર નોંધી શકાય નહીં.",
       "AUTH_ACCOUNT_DISABLED": "આ ખાતું બંધ કરી દેવાયું છે. તેને ફરી ચાલુ કરાવવા વ્યવસાયના માલિકને કહો.",
-      "TOO_MANY_REQUESTS": "ઘણી બધી વાર પ્રયાસ થયો. કૃપા કરીને થોડી મિનિટ રાહ જોઈને ફરી પ્રયાસ કરો."
+      "TOO_MANY_REQUESTS": "ઘણી બધી વાર પ્રયાસ થયો. કૃપા કરીને થોડી મિનિટ રાહ જોઈને ફરી પ્રયાસ કરો.",
+      "VENDOR_NOT_FOUND": "એ વેન્ડર આ ધંધામાં નથી",
+      "VENDOR_NAME_TAKEN": "{{name}} નામનો વેન્ડર પહેલેથી છે",
+      "SUPPLY_VENDOR_INACTIVE": "{{name}} વેન્ડર તરીકે બંધ છે, એટલે તેમની પાસેથી કંઈ ઓર્ડર થઈ શકે નહીં",
+      "SUPPLY_ORDER_PAYMENT_MODE_REQUIRED": "હમણાં ચૂકવવું કે ડિલિવરી પર તે પસંદ કરો",
+      "SUPPLY_ORDER_PAYMENT_NOT_CONFIRMED": "પહેલાં ચુકવણી કરો, પછી ઓર્ડર મૂકતા પહેલાં ચુકવણી થઈ ગઈ તેની પુષ્ટિ કરો",
+      "SUPPLY_PAYEE_NOT_SET": "{{payee}} નું UPI ID હજી સેટ નથી, એટલે હમણાં ચુકવણી થઈ શકે નહીં — ડિલિવરી પર ચૂકવો, અથવા એકાઉન્ટ્સને સેટ કરવા કહો",
+      "SUPPLY_ORDER_VENDOR_ORDER": "આ ઓર્ડર વેરહાઉસમાંથી નહીં, વેન્ડર પાસેથી આવે છે — પહોંચે ત્યારે શાખા તેને મળ્યો તરીકે નોંધે છે",
+      "SUPPLY_ORDER_NOT_VENDOR_ORDER": "આ ઓર્ડર વેરહાઉસમાંથી આવે છે — ડિલિવરી એજન્ટ તેને પહોંચાડ્યો તરીકે નોંધે છે",
+      "SUPPLY_ORDER_VENDOR_PAYMENT_UNANSWERED": "આ ઓર્ડર માટે વેન્ડરને ચુકવણી થઈ કે નહીં તે જણાવો",
+      "SUPPLY_ORDER_SETTLED_BY_ACCOUNTS": "આ ઓર્ડરની ચુકવણી એકાઉન્ટ્સ કરે છે, એટલે શાખા ચૂકવતી નથી કે પુષ્ટિ કરતી નથી",
+      "SUPPLY_ORDER_PAYMENT_NOT_OPEN": "આ ઓર્ડર પર હાલ કંઈ ચૂકવવાનું નથી — ચુકવણી થઈ ગઈ છે, અથવા પુષ્ટિની રાહ છે",
+      "SUPPLY_ORDER_CASH_NEEDS_AGENT": "વેરહાઉસના રોકડા ઓર્ડર પહોંચે ત્યારે ડિલિવરી એજન્ટને અપાય છે — અહીં UPIથી ચૂકવો",
+      "SUPPLY_PAYMENT_NOT_DUE": "ઓર્ડર {{orderNumber}} ની ચુકવણી એકાઉન્ટ્સે કરવાની નથી",
+      "SUPPLY_PAYMENT_NOT_DELIVERED": "ઓર્ડર {{orderNumber}} હજી પહોંચ્યો નથી — પહોંચે પછી ચૂકવો",
+      "SUPPLY_PAYMENT_MIXED_PAYEES": "એક ચુકવણી ફક્ત એકને જઈ શકે — વેરહાઉસના અથવા એક જ વેન્ડરના ઓર્ડર પસંદ કરો"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} જરૂરી છે",
@@ -180,7 +194,10 @@
       "DEVICE_TOKEN_REQUIRED": "આ ડિવાઇસ સૂચનાઓ માટે નોંધાઈ શક્યું નહીં",
       "NOTIFICATION_ENABLED_REQUIRED": "પસંદ કરો કે આ ચાલુ કરવું છે કે બંધ",
       "FIELD_MUST_BE_MONTH": "{{field}} YYYY-MM સ્વરૂપમાં મહિનો હોવો જોઈએ",
-      "CASHIER_NEEDS_ONE_BRANCH": "એક કેશિયર બરાબર એક જ શાખામાં કામ કરે છે, તેથી એક પસંદ કરો."
+      "CASHIER_NEEDS_ONE_BRANCH": "એક કેશિયર બરાબર એક જ શાખામાં કામ કરે છે, તેથી એક પસંદ કરો.",
+      "UPI_ID_INVALID": "{{field}} UPI ID હોવું જોઈએ, જેમ કે name@bank — જેમ UPI QR કોડ નીચે છાપેલું હોય છે",
+      "PAYMENT_NOT_CONFIRMED": "પહેલાં ચૂકવો, પછી ચુકવણી થઈ ગઈ તેની પુષ્ટિ કરો",
+      "ORDER_IDS_RANGE": "{{field}} માં 1 થી {{max}} અલગ ઓર્ડર હોવા જોઈએ"
     },
     "field": {
       "name": "નામ",
@@ -221,7 +238,17 @@
       "preferredLocale": "ભાષા",
       "addressLine": "ડિલિવરીનું સરનામું",
       "postalCode": "પિન કોડ",
-      "deliveryAgentMembershipId": "ડિલિવરી એજન્ટ"
+      "deliveryAgentMembershipId": "ડિલિવરી એજન્ટ",
+      "upiId": "UPI ID",
+      "upiName": "ચુકવણી વખતે દેખાતું નામ",
+      "paymentConfirmed": "ચુકવણીની પુષ્ટિ",
+      "paymentReference": "ચુકવણી સંદર્ભ",
+      "supplyOrderIds": "ઓર્ડર",
+      "vendorId": "વેન્ડર",
+      "vendorPaid": "વેન્ડરની ચુકવણી",
+      "collectedVia": "કેવી રીતે ચૂકવાયું",
+      "method": "ચુકવણીની રીત",
+      "operatingModel": "કાચા માલની ચુકવણી કોણ કરશે"
     },
     "downloadFailed": "એ ફાઇલ ડાઉનલોડ થઈ શકી નથી. ફરી પ્રયાસ કરો."
   },
@@ -243,7 +270,8 @@
     "counter": "કાઉન્ટર",
     "supply": "સપ્લાય",
     "desk": "ડેસ્ક",
-    "deliveries": "ડિલિવરી"
+    "deliveries": "ડિલિવરી",
+    "payments": "ચુકવણી"
   },
   "splash": {
     "tagline": "તમારો વ્યવસાય. બધું એક જ જગ્યાએ."
@@ -316,7 +344,8 @@
     "STAFF": "સ્ટાફ",
     "WAREHOUSE": "વેરહાઉસ",
     "CASHIER": "કેશિયર",
-    "DELIVERY_AGENT": "ડિલિવરી એજન્ટ"
+    "DELIVERY_AGENT": "ડિલિવરી એજન્ટ",
+    "ACCOUNTANT": "એકાઉન્ટન્ટ"
   },
   "password": {
     "level": "સુરક્ષા સ્તર",
@@ -376,7 +405,17 @@
     "expenseGapsSubtitle": "કોણે આજનો ખર્ચ નોંધ્યો નથી",
     "noBranchBadge": "હજુ કોઈ શાખા નથી",
     "noBranchTitle": "તમને કોઈ શાખા સોંપાઈ નથી",
-    "noBranchBody": "તમારું ખાતું અને ભૂમિકા સાચાં છે — ફક્ત તેમની સાથે કોઈ શાખા જોડાયેલી નથી, તેથી અહીં બતાવવા માટે કંઈ નથી. માલિક કે વ્યવસ્થાપકને એક શાખા સોંપવા કહો."
+    "noBranchBody": "તમારું ખાતું અને ભૂમિકા સાચાં છે — ફક્ત તેમની સાથે કોઈ શાખા જોડાયેલી નથી, તેથી અહીં બતાવવા માટે કંઈ નથી. માલિક કે વ્યવસ્થાપકને એક શાખા સોંપવા કહો.",
+    "paymentsTitle": "કરવાની ચુકવણી",
+    "paymentsReady": "{{count}} ઓર્ડરના {{amount}} ચૂકવવા માટે તૈયાર",
+    "paymentsReady_plural": "{{count}} ઓર્ડરના {{amount}} ચૂકવવા માટે તૈયાર",
+    "paymentsOnTheWay": "{{count}} ઓર્ડર રસ્તામાં — પહોંચે પછી ચુકવણી કરો",
+    "paymentsOnTheWay_plural": "{{count}} ઓર્ડર રસ્તામાં — પહોંચે પછી ચુકવણી કરો",
+    "paymentsNone": "હાલ કોઈ ચુકવણી બાકી નથી",
+    "paymentsToConfirmTitle": "પુષ્ટિ કરવાની ચુકવણી",
+    "paymentsToConfirmCount": "વેરહાઉસને {{count}} ચુકવણી મોકલાઈ — પહોંચી કે નહીં તપાસો",
+    "paymentsToConfirmCount_plural": "વેરહાઉસને {{count}} ચુકવણી મોકલાઈ — પહોંચી કે નહીં તપાસો",
+    "paymentsToConfirmNone": "પુષ્ટિ માટે કંઈ બાકી નથી"
   },
   "phase": {
     "examplesLabel": "તમે શું પૂછી શકશો"
@@ -426,7 +465,9 @@
     "notComparableCurrency": "તમારા વ્યવસાયોની ચલણ અલગ છે, તેથી મળીને કોઈ કુલ દેખાડી શકાય નહીં.",
     "branchBreakdown": "{{total}} માંથી {{trading}} જગ્યાએ વેચાણ થાય છે",
     "noBusinesses": "અહીં કોઈ વ્યવસાયના એવા આંકડા નથી જે તમે જોઈ શકો.",
-    "noBranches": "એક શાખા ઉમેરો અને તેના આંકડા અહીં દેખાશે."
+    "noBranches": "એક શાખા ઉમેરો અને તેના આંકડા અહીં દેખાશે.",
+    "vendorSpend": "વેન્ડરને ચુકવણી",
+    "vendorSpendCaption": "ધંધાની બહાર ગયું"
   },
   "alerts": {
     "title": "અલર્ટ",
@@ -481,7 +522,13 @@
     "kindBranch": "શાખા",
     "kindBranchHint": "વેચે અને મંગાવે છે",
     "kindWarehouse": "ગોડાઉન",
-    "kindWarehouseHint": "શાખાઓને માલ મોકલે છે"
+    "kindWarehouseHint": "શાખાઓને માલ મોકલે છે",
+    "model": "કાચા માલની ચુકવણી કોણ કરશે?",
+    "modelHint": "આનાથી નક્કી થાય છે કે ઓર્ડર કરતી વખતે કેશિયર ચુકવણી કરશે કે કંપનીના એકાઉન્ટ્સ.",
+    "modelFoco": "FOCO — કંપની સંચાલિત",
+    "modelFocoHint": "કંપની ચુકવણી કરે છે. દરેક ઓર્ડર પહોંચે પછી એકાઉન્ટ્સ ચુકવણી કરે છે; કેશિયર ફક્ત ઓર્ડર કરે છે અને ડિલિવરી એજન્ટને કોઈ પૈસા આપતું નથી.",
+    "modelFm": "FM — ફ્રેન્ચાઇઝ",
+    "modelFmHint": "શાખા પોતે ચુકવણી કરે છે — ઓર્ડર પહેલાં UPIથી, અથવા માલ આવે ત્યારે રોકડ કે UPIથી."
   },
   "addBusiness": {
     "title": "વ્યવસાય ઉમેરો",
@@ -845,7 +892,8 @@
     "swapTitle": "તે શાખા પર પહેલેથી એક કેશિયર છે",
     "swapBody": "{{branch}} ના કેશિયર {{cashier}} છે. આમને બોલાવવાથી શાખા તેમની પાસેથી લઈ લેવાશે અને તેમની પાસે કોઈ શાખા રહેશે નહીં.",
     "swapConfirm": "બોલાવો અને શાખા બદલો",
-    "branchTheirs": "તેમની શાખા"
+    "branchTheirs": "તેમની શાખા",
+    "roleHint_ACCOUNTANT": "દરેક શાખાના આંકડા જુએ છે, કંપની સંચાલિત શાખાઓના માલની ચુકવણી કરે છે અને ફ્રેન્ચાઇઝ શાખાઓએ મોકલેલી ચુકવણીની પુષ્ટિ કરે છે. સ્ટાફ રેકોર્ડ પર પહોંચ નથી."
   },
   "month": {
     "1": "જાન્યુઆરી",
@@ -1028,7 +1076,8 @@
     "addressPlaceholder": "બિલ્ડિંગ, શેરી, લેન્ડમાર્ક",
     "addressHint": "ડિલિવરી એજન્ટને આ શાખા શોધવા માટે આ જ જોઈએ.",
     "postalCode": "પિન કોડ",
-    "kindHint": "ગોડાઉનમાં પણ સ્ટાફ હોય છે અને ત્યાં જ પંચ ઇન થાય છે. ફક્ત ત્યાં કાઉન્ટર નથી અને કાચો માલ મંગાવાતો નથી."
+    "kindHint": "ગોડાઉનમાં પણ સ્ટાફ હોય છે અને ત્યાં જ પંચ ઇન થાય છે. ફક્ત ત્યાં કાઉન્ટર નથી અને કાચો માલ મંગાવાતો નથી.",
+    "modelHint": "ફેરફાર હવેથી મૂકાતા ઓર્ડર પર લાગુ થશે. પહેલેથી મૂકાયેલા ઓર્ડરની ચુકવણી પહેલાં જેવી જ રહેશે."
   },
   "businessSwitcher": {
     "title": "વ્યવસાય",
@@ -1052,12 +1101,8 @@
     "reviewCount_plural": "{{count}} વસ્તુઓ",
     "place": "ઓર્ડર મૂકો",
     "paymentMode": "ચુકવણી કેવી રીતે કરશો?",
-    "payOnline": "ઓનલાઇન ચૂકવ્યું",
-    "payOnlineHint": "રેફરન્સ આપો જેથી વેરહાઉસ ચકાસી શકે",
-    "payCod": "ડિલિવરી પર રોકડ",
-    "payCodHint": "માલ આવે ત્યારે એજન્ટને આપો",
-    "reference": "ચુકવણી રેફરન્સ",
-    "referencePlaceholder": "UPI કે બેંક રેફરન્સ",
+    "payCod": "ડિલિવરી પર ચુકવણી",
+    "payCodHint": "માલ આવે ત્યારે રોકડ કે UPI",
     "noOrders": "હજી કોઈ સપ્લાય ઓર્ડર નથી",
     "noOrdersBody": "વેરહાઉસને મૂકેલા ઓર્ડર અહીં દેખાશે.",
     "deskEmpty": "કંઈ બાકી નથી",
@@ -1085,7 +1130,6 @@
     "delayReason": "કેમ?",
     "note": "કંઈ ઉમેરવું છે",
     "noteOptional": "જરૂરી નથી",
-    "verifyPayment": "ચુકવણી ચકાસો",
     "markVerified": "મળી ગઈ",
     "markFailed": "મળી નથી",
     "assignAgent": "કોણ લઈ જશે?",
@@ -1129,13 +1173,47 @@
     "carrying": "{{count}} ડિલિવરી સાથે",
     "carrying_plural": "{{count}} ડિલિવરી સાથે",
     "free": "અત્યારે ફ્રી",
-    "cashTitle": "ડિલિવરી પર રોકડ",
-    "cashQuestion": "શું તમે {{branch}}ના કેશિયર પાસેથી {{amount}} લીધા છે?",
-    "cashHint": "હા કહેશો તો પૈસા મળ્યા તરીકે નોંધાશે. હજી મળ્યા ન હોય તો \"હજી નહીં\" પસંદ કરો.",
-    "cashYes": "હા, પૈસા મળી ગયા",
+    "cashHint": "કોઈ પણ જવાબ શાખાની ચુકવણી સોંપાઈ તરીકે નોંધે છે. કંઈ ન મળ્યું હોય તો \"હજી નહીં\" પસંદ કરો.",
+    "cashYes": "રોકડા મળી ગયા",
     "cashNo": "હજી નહીં",
     "withdrawTitle": "{{name}} આપવાનું બંધ કરવું?",
-    "withdrawBody": "તે દરેક શાખાની ઓર્ડર યાદીમાંથી નીકળી જશે. અગાઉના ઓર્ડરમાં રહેશે, અને તમે પછીથી ફરી ચાલુ કરી શકો છો."
+    "withdrawBody": "તે દરેક શાખાની ઓર્ડર યાદીમાંથી નીકળી જશે. અગાઉના ઓર્ડરમાં રહેશે, અને તમે પછીથી ફરી ચાલુ કરી શકો છો.",
+    "fromWarehouse": "વેરહાઉસમાંથી",
+    "fromVendor": "{{name}} પાસેથી",
+    "subtotal": "પેટા સરવાળો",
+    "splitNote": "આ {{count}} ઓર્ડર બનશે, દરેક સપ્લાયરનો એક.",
+    "splitNote_plural": "આ {{count}} ઓર્ડર બનશે, દરેક સપ્લાયરનો એક.",
+    "accountsPaysTitle": "આ ઓર્ડરની ચુકવણી એકાઉન્ટ્સ કરશે",
+    "accountsPaysBody": "તમારી શાખા કંપની સંચાલિત છે. અહીં કે ડિલિવરી પર કોઈ ચુકવણી નહીં — માલ પહોંચે પછી એકાઉન્ટ્સ ચુકવણી કરશે.",
+    "payNow": "હમણાં ચુકવણી",
+    "payNowHint": "ઓર્ડર પહેલાં QR સ્કેન કરો",
+    "payNowUnavailable": "હમણાં ચુકવણી માટે આ ઓર્ડરના દરેક સપ્લાયરનું UPI ID જોઈએ, અને એક હજી સેટ નથી. માલ આવે ત્યારે ચુકવણી કરો, અથવા એકાઉન્ટ્સને ઉમેરવા કહો.",
+    "payAccounts": "એકાઉન્ટ્સ ચૂકવશે",
+    "paidByAccounts": "એકાઉન્ટ્સે ચૂકવ્યું",
+    "payAmount": "{{amount}} ચૂકવો",
+    "markSentToVendor": "વેન્ડરને મોકલ્યો તરીકે નોંધો",
+    "markReceived": "માલ મળી ગયો",
+    "notReceivedTitle": "ચુકવણી મળી નથી?",
+    "notReceivedBody": "{{branch}} ને {{amount}} ફરીથી ચૂકવવા કહેવામાં આવશે.",
+    "whatsappMessage": "{{branch}} માટે ઓર્ડર #{{number}}\n{{address}}\n\n{{lines}}\n\nકુલ {{total}}",
+    "whatsappUnavailable": "WhatsApp ખૂલ્યું નહીં. વેન્ડરનો ફોન નંબર તપાસો.",
+    "sendOnWhatsApp": "WhatsApp પર મોકલો",
+    "collectTitle": "ડિલિવરી પર ચુકવણી",
+    "collectQuestion": "{{branch}} ના કેશિયર પાસેથી {{amount}} લો — રોકડા, અથવા તમારો QR સ્કેન કરાવીને.",
+    "showQr": "QR બતાવો",
+    "hideQr": "QR છુપાવો",
+    "upiTakenDeliver": "ચુકવણી થઈ ગઈ — પહોંચાડ્યું નોંધો",
+    "receiveTitle": "માલ આવી ગયો",
+    "vendorPaidQuestion": "શું તમે {{vendor}} ને {{amount}} ચૂકવી દીધા?",
+    "paidVendorCash": "રોકડા ચૂકવ્યા",
+    "payVendorUpi": "હમણાં UPIથી ચૂકવો",
+    "paidMarkReceived": "ચૂકવ્યું — મળ્યું નોંધો",
+    "receivedNotPaid": "માલ મળ્યો — ચુકવણી પછી કરીશ",
+    "suppliedBy": "સપ્લાય કરનાર",
+    "warehouseStock": "વેરહાઉસનો માલ",
+    "warehouseStockHint": "વેરહાઉસ પેક કરીને મોકલે છે",
+    "vendorSuppliesHint": "વેન્ડર સીધો શાખા સુધી પહોંચાડે છે",
+    "vendorWithdrawnHint": "હવે સપ્લાય કરતો નથી — બીજો પસંદ કરો"
   },
   "supplyStatus": {
     "DRAFT": "મૂક્યો નથી",
@@ -1144,12 +1222,14 @@
     "PACKED": "પેક",
     "DISPATCHED": "રસ્તામાં",
     "DELIVERED": "પહોંચ્યો",
-    "CANCELLED": "રદ"
+    "CANCELLED": "રદ",
+    "SENT_TO_VENDOR": "વેન્ડરને મોકલ્યો",
+    "RECEIVED": "મળી ગયો"
   },
   "supplyPayment": {
-    "PENDING": "બાકી",
-    "PAID": "ચૂકવ્યું",
-    "VERIFIED": "ચકાસ્યું",
+    "PENDING": "ચૂકવવાનું બાકી",
+    "PAID": "ચુકવણી મોકલી",
+    "VERIFIED": "ચૂકવાઈ ગયું",
     "FAILED": "મળ્યું નથી"
   },
   "supplyDelay": {
@@ -1161,11 +1241,16 @@
     "OTHER": "બીજું કંઈક"
   },
   "supplyEvent": {
-    "PAYMENT_CLAIMED": "ચુકવણીનો રેફરન્સ આપ્યો",
+    "PAYMENT_CLAIMED": "ચુકવણી મોકલી",
     "PAYMENT_ON_DELIVERY": "પહોંચે ત્યારે ચુકવણી",
-    "PAYMENT_VERIFIED": "ચુકવણી ચકાસી",
+    "PAYMENT_VERIFIED": "ચુકવણી મળી ગઈ",
     "PAYMENT_FAILED": "ચુકવણી મળી નથી",
-    "PAYMENT_COLLECTED": "ડિલિવરી પર રોકડ લીધી"
+    "PAYMENT_COLLECTED": "ડિલિવરી પર રોકડ લીધી",
+    "PAYMENT_COLLECTED_UPI": "ડિલિવરી પર UPIથી ચુકવણી",
+    "PAYMENT_BY_ACCOUNTS": "પહોંચે પછી એકાઉન્ટ્સ ચૂકવશે",
+    "PAYMENT_SETTLED": "એકાઉન્ટ્સે ચૂકવ્યું",
+    "PAYMENT_PAID_VENDOR": "વેન્ડરને UPIથી ચૂકવ્યું",
+    "PAYMENT_PAID_VENDOR_CASH": "વેન્ડરને રોકડા ચૂકવ્યા"
   },
   "notifications": {
     "ATTENDANCE_MARKED_PRESENT": "{{branch}} પર {{date}} માટે તમને હાજર નોંધવામાં આવ્યા છે.",
@@ -1180,7 +1265,10 @@
     "SUPPLY_ORDER_REJECTED": "વેરહાઉસ ઓર્ડર #{{orderNumber}} પૂરો કરી શકે તેમ નથી.",
     "SUPPLY_ORDER_DELAYED": "ઓર્ડર #{{orderNumber}} {{minutes}} મિનિટ મોડો છે.",
     "SUPPLY_PAYMENT_VERIFIED": "વેરહાઉસે ઓર્ડર #{{orderNumber}} ની ચુકવણી પાકી કરી છે.",
-    "SUPPLY_ORDER_ASSIGNED": "{{branch}} નો ઓર્ડર #{{orderNumber}} તમારે પહોંચાડવાનો છે."
+    "SUPPLY_ORDER_ASSIGNED": "{{branch}} નો ઓર્ડર #{{orderNumber}} તમારે પહોંચાડવાનો છે.",
+    "SUPPLY_ORDER_SENT_TO_VENDOR": "ઓર્ડર #{{orderNumber}} {{vendor}} ને મોકલી દેવાયો છે.",
+    "SUPPLY_ORDER_READY_TO_PAY": "{{branch}} નો ઓર્ડર #{{orderNumber}} પહોંચી ગયો છે — {{amount}} ચૂકવવાના છે.",
+    "SUPPLY_PAYMENT_SENT": "{{branch}} એ ઓર્ડર #{{orderNumber}} માટે {{amount}} મોકલ્યા છે. પૈસા આવ્યા કે નહીં તે તપાસો."
   },
   "notificationCentre": {
     "title": "સૂચનાઓ",
@@ -1264,7 +1352,112 @@
       "analyticsViewBranch": "શાખાના પોતાના આંકડા જોઈ",
       "analyticsViewBusiness": "દરેક શાખાની મહિના-દર-મહિના તુલના જોઈ",
       "exportDayEnd": "એક દિવસની નોંધો નિકાસ કરી",
-      "exportMonthEnd": "એક મહિનાની નોંધો નિકાસ કરી"
+      "exportMonthEnd": "એક મહિનાની નોંધો નિકાસ કરી",
+      "supplyOrderReceive": "વેન્ડરનો માલ મળ્યો તરીકે નોંધવું",
+      "supplyPaymentSettle": "કંપની શાખાઓના સપ્લાય ઓર્ડરની ચુકવણી કરવી",
+      "supplyPaymentVerify": "શાખાની ચુકવણી પહોંચ્યાની પુષ્ટિ કરવી",
+      "paymentAccountManage": "ચુકવણી ક્યાં જાય તે બદલવું"
     }
+  },
+  "paymentAccounts": {
+    "title": "ચુકવણી QR કોડ",
+    "subtitle": "શાખાઓની ચુકવણી ક્યાં જાય છે",
+    "settingsSubtitle": "જે UPI IDથી દરેક ચુકવણી QR બને છે",
+    "explainer": "એપનો દરેક QR અહીંના UPI IDથી બને છે, તેમાં ઓર્ડરની ચોક્કસ રકમ હોય છે — કોઈ ફોટો અપલોડ કરવાનો નથી. UPI ID દરેક UPI QR કોડની નીચે છાપેલું હોય છે.",
+    "warehouseSection": "વેરહાઉસ",
+    "warehouseHint": "ફ્રેન્ચાઇઝ શાખાઓ વેરહાઉસના માલની ચુકવણી અહીં કરે છે, અને એકાઉન્ટ્સ કંપની શાખાઓની.",
+    "vendorsSection": "વેન્ડર",
+    "vendorsHint": "દરેક વેન્ડરની ચુકવણી ક્યાં જાય છે. વેન્ડર વેરહાઉસ ડેસ્ક ઉમેરે છે; આ ફક્ત એકાઉન્ટ્સ અને માલિક નક્કી કરી શકે છે.",
+    "noVendorsBody": "વેરહાઉસ ડેસ્ક કાચા માલની યાદીમાંથી વેન્ડર ઉમેરે છે. તેઓ અહીં સેટ કરવા માટે દેખાશે.",
+    "noUpiYet": "હજી કોઈ UPI ID નથી",
+    "qrSet": "QR તૈયાર",
+    "qrNotSet": "QR બન્યો નથી",
+    "upiId": "UPI ID",
+    "upiIdInvalid": "આ UPI ID નથી. તે name@bank જેવું દેખાય છે.",
+    "upiName": "ચુકવણી વખતે દેખાતું નામ",
+    "previewLabel": "{{payee}} માટે ટેસ્ટ QR કોડ",
+    "previewHint": "UPI એપ સાચું નામ બતાવે છે કે નહીં તે તપાસવા આ સ્કેન કરો. તેમાં કોઈ રકમ નથી, એટલે કંઈ ચુકવાશે નહીં.",
+    "changedBy": "છેલ્લો ફેરફાર {{name}} એ {{date}} એ {{time}} વાગ્યે કર્યો",
+    "someone": "કોઈ",
+    "save": "સાચવો",
+    "saved": "સચવાયું",
+    "remove": "UPI ID દૂર કરો",
+    "removeTitle": "{{payee}} નું UPI ID દૂર કરીએ?",
+    "removeBody": "નવું સેટ ન થાય ત્યાં સુધી શાખાઓ તેમને QRથી ચુકવણી કરી શકશે નહીં. ડિલિવરી પર ચુકવણી ચાલુ રહેશે."
+  },
+  "payments": {
+    "title": "ચુકવણી",
+    "paySubtitle": "કંપની શાખાઓના ઓર્ડર પહોંચે પછી ચુકવણી કરો",
+    "confirmSubtitle": "શાખાઓએ વેરહાઉસને મોકલેલી ચુકવણી",
+    "tabPay": "ચૂકવવાનું",
+    "tabConfirm": "પુષ્ટિ કરવાની",
+    "readyCount": "{{count}} તૈયાર",
+    "readyCount_plural": "{{count}} તૈયાર",
+    "waitingCount": "{{count}} બાકી",
+    "waitingCount_plural": "{{count}} બાકી",
+    "readyLine": "{{amount}} તૈયાર · {{count}} ઓર્ડર",
+    "readyLine_plural": "{{amount}} તૈયાર · {{count}} ઓર્ડર",
+    "nothingReady": "હજી કંઈ પહોંચ્યું નથી",
+    "selectAllReady": "પહોંચેલા બધા પસંદ કરો",
+    "deliveredOn": "{{date}} એ પહોંચ્યો",
+    "onTheWay": "રસ્તામાં — પહોંચે પછી ચુકવણી કરો",
+    "nothingToPay": "કોઈ ચુકવણી બાકી નથી",
+    "nothingToPayBody": "કંપની શાખાઓના ઓર્ડર મૂકાતા જ અહીં દેખાય છે, અને પહોંચે પછી તેની ચુકવણી થઈ શકે છે.",
+    "nothingToConfirm": "પુષ્ટિ માટે કંઈ નથી",
+    "nothingToConfirmBody": "જ્યારે કોઈ શાખા વેરહાઉસને ચુકવણી કરે, ત્યારે તે અહીં દેખાય છે જેથી તમે પહોંચી કે નહીં તપાસી શકો.",
+    "selectedCount": "{{count}} ઓર્ડર પસંદ કર્યો",
+    "selectedCount_plural": "{{count}} ઓર્ડર પસંદ કર્યા",
+    "paySelected": "આની ચુકવણી કરો",
+    "readyTotalHint": "{{amount}} નો માલ પહોંચી ગયો છે અને ચુકવણી માટે તૈયાર છે. સાથે ચૂકવવાના ઓર્ડર પસંદ કરો.",
+    "payTitle": "ચુકવણી કરો",
+    "payCount": "{{count}} ઓર્ડર",
+    "payCount_plural": "{{count}} ઓર્ડર",
+    "covers": "આ ચુકવણી આના માટે છે",
+    "confirmPaidTitle": "આ ચુકવણી નોંધીએ?",
+    "confirmPaidBody": "UPI ચુકવણી થઈ ગયા પછી જ: {{payee}} ને {{count}} ઓર્ડર માટે {{amount}}. આ પાછું ફેરવી શકાતું નથી.",
+    "confirmPaidBody_plural": "UPI ચુકવણી થઈ ગયા પછી જ: {{payee}} ને {{count}} ઓર્ડર માટે {{amount}}. આ પાછું ફેરવી શકાતું નથી.",
+    "paidNotice": "{{count}} ઓર્ડર માટે {{amount}} ચૂકવાયા.",
+    "paidNotice_plural": "{{count}} ઓર્ડર માટે {{amount}} ચૂકવાયા.",
+    "confirmReceivedTitle": "પૈસા આવી ગયા?",
+    "confirmReceivedBody": "ખાતરી કરો કે ઓર્ડર #{{number}} માટે {{branch}} તરફથી {{amount}} ખાતામાં આવી ગયા છે.",
+    "sentBeforeOrdering": "ઓર્ડર પહેલાં ચુકવણી",
+    "sentOnDelivery": "ડિલિવરી પર ચુકવણી"
+  },
+  "supplyPaymentMode": {
+    "ONLINE": "ઓર્ડર પહેલાં ચૂકવ્યું",
+    "COD": "ડિલિવરી પર ચુકવણી",
+    "ACCOUNTS": "એકાઉન્ટ્સ ચૂકવશે"
+  },
+  "upiPay": {
+    "payTo": "{{name}} ને ચૂકવો",
+    "qrLabel": "{{name}} ને {{amount}} ચૂકવવાનો UPI QR કોડ",
+    "scanHint": "આ બીજા ફોનથી સ્કેન કરો, અથવા આ જ ફોન પર તમારી UPI એપ ખોલો.",
+    "openApp": "UPI એપથી ચૂકવો",
+    "noApp": "આ ફોન પર કોઈ UPI એપ ખૂલી નહીં. તેના બદલે બીજા ફોનથી QR સ્કેન કરો.",
+    "notSet": "{{name}} નું UPI ID હજી સેટ નથી, એટલે ચુકવણીનો કોઈ QR નથી. એકાઉન્ટ્સ તેને \"ચુકવણી QR કોડ\" માં ઉમેરી શકે છે.",
+    "notRupees": "UPI ચુકવણી ફક્ત રૂપિયામાં થાય છે.",
+    "done": "ચુકવણી થઈ ગઈ",
+    "doneMarked": "ચૂકવ્યું તરીકે નોંધ્યું",
+    "undo": "હજી નહીં"
+  },
+  "vendors": {
+    "title": "વેન્ડર",
+    "subtitle": "સપ્લાયર જે સીધો તમારી શાખાઓ સુધી માલ પહોંચાડે છે",
+    "entrySubtitle": "વેરહાઉસ સિવાય કોણ શું સપ્લાય કરે છે",
+    "add": "વેન્ડર ઉમેરો",
+    "edit": "વેન્ડર બદલો",
+    "save": "સાચવો",
+    "empty": "હજી કોઈ વેન્ડર નથી",
+    "emptyBody": "જે સપ્લાયર સીધો તમારી શાખાઓ સુધી પહોંચાડે છે તેમને ઉમેરો — પાણી, બરફ, દૂધ.",
+    "name": "વેન્ડરનું નામ",
+    "namePlaceholder": "જેમ કે શ્રી વોટર સપ્લાયર્સ",
+    "phone": "WhatsApp નંબર",
+    "phoneHint": "આ વેન્ડરના ઓર્ડર આ નંબર પર WhatsAppથી મોકલાય છે.",
+    "paysTo": "આ વેન્ડરની ચુકવણી {{upiId}} પર જાય છે. આ એકાઉન્ટ્સ સંભાળે છે.",
+    "noUpiYet": "હજી કોઈ UPI ID નથી, એટલે શાખાઓ આ વેન્ડરને QRથી ચૂકવી શકતી નથી. એકાઉન્ટ્સને \"ચુકવણી QR કોડ\" માં સેટ કરવા કહો.",
+    "withdraw": "આ વેન્ડર બંધ કરો",
+    "restore": "આ વેન્ડર ફરી શરૂ કરો",
+    "withdrawTitle": "{{name}} બંધ કરીએ?",
+    "withdrawBody": "ફરી શરૂ ન થાય ત્યાં સુધી તેમનો માલ ઓર્ડર કરી શકાશે નહીં. પહેલેથી મૂકાયેલા ઓર્ડર પર અસર નહીં થાય."
   }
 }

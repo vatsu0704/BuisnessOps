@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { LABELS } = require('./labels');
+const { LABELS, PAYMENT_MODES } = require('./labels');
 
 /**
  * Firebase Cloud Messaging, and the only file permitted to render notification
@@ -43,9 +43,12 @@ function render(code, locale, params = {}) {
   const lower = String(locale || 'en').toLowerCase();
   const entry = LABELS[lower]?.[code] ?? LABELS.en[code];
   if (!entry) return null;
+  // A payment mode arrives as its enum; the sentence wants the word for it.
+  const modes = PAYMENT_MODES[lower] ?? PAYMENT_MODES.en;
+  const shown = params.payment && modes[params.payment] ? { ...params, payment: modes[params.payment] } : params;
   return {
-    title: interpolate(entry.title, params),
-    body: interpolate(entry.body, params),
+    title: interpolate(entry.title, shown),
+    body: interpolate(entry.body, shown),
   };
 }
 

@@ -24,6 +24,10 @@ import type { BusinessMonthCell, Reconciliation } from '@/types/analytics';
  * arithmetic in full rather than gesturing at it. It only appears when there is
  * actually a transfer to explain, because a business with no warehouse has
  * nothing to reconcile and the note would be noise.
+ *
+ * Raw material bought from a VENDOR is not part of that transfer: it left the
+ * business, so it comes off this total too and has its own line (requirement
+ * 25). Shown only when there was some, for the same reason as the note.
  */
 export default function NetProfitCard({
   cell,
@@ -40,6 +44,7 @@ export default function NetProfitCard({
 
   const net = Number(cell.netProfit);
   const transfer = Number(cell.internalTransfer);
+  const vendorSpend = Number(cell.vendorSpend);
 
   return (
     <View style={styles.card}>
@@ -67,6 +72,16 @@ export default function NetProfitCard({
           { label: t('reports.customerSales'), value: formatAmount(Number(cell.customerSales), currency) },
           { label: t('reports.expenses'), value: formatAmount(Number(cell.expenses), currency), tone: 'cost' },
           { label: t('reports.payroll'), value: formatAmount(Number(cell.payroll), currency), tone: 'cost' },
+          ...(vendorSpend !== 0
+            ? [
+                {
+                  label: t('reports.vendorSpend'),
+                  value: formatAmount(vendorSpend, currency),
+                  tone: 'cost' as const,
+                  caption: t('reports.vendorSpendCaption'),
+                },
+              ]
+            : []),
           {
             label: t('reports.internalTransfer'),
             value: formatAmount(transfer, currency),

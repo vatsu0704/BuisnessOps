@@ -28,7 +28,10 @@ export type NotificationCode =
   | 'SUPPLY_ORDER_REJECTED'
   | 'SUPPLY_ORDER_DELAYED'
   | 'SUPPLY_PAYMENT_VERIFIED'
-  | 'SUPPLY_ORDER_ASSIGNED';
+  | 'SUPPLY_ORDER_ASSIGNED'
+  | 'SUPPLY_ORDER_SENT_TO_VENDOR'
+  | 'SUPPLY_ORDER_READY_TO_PAY'
+  | 'SUPPLY_PAYMENT_SENT';
 
 /** The groups a person can switch off. `attendance` deliberately cannot. */
 export type NotificationCategory = 'attendance' | 'orders' | 'delays' | 'payments' | 'deliveries';

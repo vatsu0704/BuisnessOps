@@ -17,6 +17,8 @@ import ScreenBackground from '@/components/ScreenBackground';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import type { AppNotification, NotificationCode } from '@/types/notification';
+import type { SupplyPaymentMode } from '@/types/supply';
+import type { TFunction } from 'i18next';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Notifications'>;
 
@@ -48,6 +50,9 @@ const ICONS: Record<NotificationCode, keyof typeof Ionicons.glyphMap> = {
   SUPPLY_ORDER_DELAYED: 'time',
   SUPPLY_PAYMENT_VERIFIED: 'card',
   SUPPLY_ORDER_ASSIGNED: 'navigate',
+  SUPPLY_ORDER_SENT_TO_VENDOR: 'paper-plane',
+  SUPPLY_ORDER_READY_TO_PAY: 'wallet',
+  SUPPLY_PAYMENT_SENT: 'card',
 };
 
 const TINTS: Record<NotificationCode, string> = {
@@ -64,7 +69,23 @@ const TINTS: Record<NotificationCode, string> = {
   SUPPLY_ORDER_DELAYED: colors.warning,
   SUPPLY_PAYMENT_VERIFIED: colors.success,
   SUPPLY_ORDER_ASSIGNED: colors.primary,
+  SUPPLY_ORDER_SENT_TO_VENDOR: colors.primary,
+  SUPPLY_ORDER_READY_TO_PAY: colors.warning,
+  SUPPLY_PAYMENT_SENT: colors.warning,
 };
+
+const PAYMENT_MODES: SupplyPaymentMode[] = ['ONLINE', 'COD', 'ACCOUNTS'];
+
+/**
+ * A payment mode travels as its enum — `COD`, `ACCOUNTS` — and the sentence
+ * wants the word for it, in the language the app is set to now. The push the
+ * phone showed on the lock screen did the same on the server.
+ */
+function withPaymentWord(params: AppNotification['params'], t: TFunction): AppNotification['params'] {
+  const mode = params?.payment;
+  if (typeof mode !== 'string' || !PAYMENT_MODES.includes(mode as SupplyPaymentMode)) return params;
+  return { ...params, payment: t(`supplyPaymentMode.${mode as SupplyPaymentMode}`) };
+}
 
 export default function NotificationsScreen({ navigation }: Props) {
   const { t } = useTranslation();
@@ -109,7 +130,7 @@ export default function NotificationsScreen({ navigation }: Props) {
             {/* The sentence is rebuilt from the code every time this draws, so
                 changing the app language re-renders the whole history. */}
             <Text style={[styles.message, unread && styles.messageUnread]}>
-              {t(`notifications.${item.code}` as 'notifications.SUPPLY_ORDER_PLACED', item.params)}
+              {t(`notifications.${item.code}` as 'notifications.SUPPLY_ORDER_PLACED', withPaymentWord(item.params, t))}
             </Text>
             <Text style={styles.when}>
               {formatDate(dateKeyFromApi(item.createdAt), t)} · {formatTime(item.createdAt, t)}

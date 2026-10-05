@@ -117,10 +117,13 @@ scoped.post(
   requirePermission('supplyOrder:fulfil'),
   supplyOrderController.rejectOrder
 );
-// Requirement 9's first half: the warehouse sees and settles the payment state.
+// Requirement 9's first half, and requirement 26's "Received" / "Not received":
+// the warehouse says whether a branch's payment reached it. Its own capability
+// since Task 12 rather than `supplyOrder:fulfil`, so the accountant can confirm
+// money without being handed the desk — the desk holds it too, and lost nothing.
 scoped.post(
   '/supply-orders/:supplyOrderId/verify-payment',
-  requirePermission('supplyOrder:fulfil'),
+  requirePermission('supplyPayment:verify'),
   supplyOrderController.verifyPayment
 );
 
@@ -137,6 +140,44 @@ scoped.post(
   '/supply-orders/:supplyOrderId/delays',
   requirePermission('supplyOrder:delay'),
   supplyOrderController.postDelay
+);
+
+// --- At the branch (requirements 25 and 26) ----------------------------------
+// A vendor's goods arriving. Nobody of ours carried them, so the branch is the
+// one who says so — its own capability, held by the cashier.
+scoped.post(
+  '/supply-orders/:supplyOrderId/receive',
+  requirePermission('supplyOrder:receive'),
+  supplyOrderController.receiveOrder
+);
+// A franchise branch paying for an order it already placed: pay-on-delivery
+// paid early, a payment the warehouse said never arrived paid again, or a
+// vendor paid after the goods came. Rides on `supplyOrder:create` — paying for
+// the branch's own order is part of ordering it.
+scoped.post(
+  '/supply-orders/:supplyOrderId/pay',
+  requirePermission('supplyOrder:create'),
+  supplyOrderController.recordPayment
+);
+
+// --- Accounts (requirement 27) -------------------------------------------------
+// What accounts pays for, and the payments waiting for someone to confirm they
+// arrived. Two capabilities because they are two jobs: the desk confirms
+// payments too, and pays for nothing.
+scoped.get(
+  '/supply-payments/due',
+  requirePermission('supplyPayment:settle'),
+  supplyOrderController.listPaymentsDue
+);
+scoped.post(
+  '/supply-payments/settle',
+  requirePermission('supplyPayment:settle'),
+  supplyOrderController.settlePayments
+);
+scoped.get(
+  '/supply-payments/to-confirm',
+  requirePermission('supplyPayment:verify'),
+  supplyOrderController.listPaymentsToConfirm
 );
 
 router.use('/:businessId', scoped);

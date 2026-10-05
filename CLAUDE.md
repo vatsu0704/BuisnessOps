@@ -163,9 +163,9 @@ one bucket, and with `true` a client can spoof `X-Forwarded-For` and pick its ow
 
 ## Roles and permissions
 
-There are seven roles — `OWNER`, `ADMIN`, `MANAGER`, `STAFF`, `WAREHOUSE`,
-`CASHIER`, `DELIVERY_AGENT` — but **never check a role name.** Ask for a
-capability:
+There are eight roles — `OWNER`, `ADMIN`, `MANAGER`, `STAFF`, `WAREHOUSE`,
+`CASHIER`, `DELIVERY_AGENT`, `ACCOUNTANT` — but **never check a role name.** Ask
+for a capability:
 
 ```js
 scoped.post('/staff', requirePermission('staff:create'), staffController.createStaffMember);
@@ -230,6 +230,17 @@ scoped.post('/staff', requirePermission('staff:create'), staffController.createS
   Hiding the ordering card from an admin removed the only route they had to the
   raw-material catalog — and exposed that the warehouse desk, which owns that
   catalog, had never had one at all.
+- **Where money goes is its own capability, and the desk never holds it.**
+  `paymentAccount:manage` sets the warehouse's UPI ID and every vendor's — the
+  accountant and the owner. Whoever can change where money goes must not also be
+  whoever ships the goods, so it is not folded into `supplyItem:manage` even
+  though vendors are otherwise the desk's: the vendor edit route ignores a `upiId`
+  in its body by picking fields, and a test proves the desk is refused. Every
+  change stamps who and when beside the value.
+- **Confirming money is not running the desk.** `supplyPayment:verify` was split
+  out of `supplyOrder:fulfil` so the accountant could say a payment arrived without
+  being able to accept, pack or dispatch. The desk holds both. When a role needs
+  half of what a capability grants, split the capability — do not grant it whole.
 
 ## Branches
 
@@ -266,6 +277,22 @@ scoped.post('/staff', requirePermission('staff:create'), staffController.createS
   till. `SupplyOrder` records only the branch that *ordered* — there is no column
   for the warehouse that filled it, which is precisely why the transfer cannot be
   credited as warehouse revenue.
+- **Money paid to a vendor is NOT an internal transfer.** A third-party vendor is
+  somebody else, so their orders stay in the ordering branch's `materialSpend` *and*
+  come off the business total, as `vendorSpend`; `internalTransfer` is the warehouse
+  part only. Treating vendor spend as a transfer would make every vendor purchase
+  vanish from the business's costs.
+- **Who pays is the branch's, and is snapshotted onto the order.**
+  `Branch.operatingModel` (FOCO: accounts pays; FM: the branch pays) is read when an
+  order is placed and copied to `SupplyOrder.operatingModel`. Read the order's copy,
+  never the branch's, for anything about an order already placed — a branch can
+  change model while its orders are in flight.
+- **One payee per order, so a cart is split by supplier when it is placed.** A
+  vendor order runs on `VENDOR_TRANSITIONS`, not the warehouse's table, and is
+  received by the branch (`supplyOrder:receive`) because nobody of ours carried it.
+  A payment is confirmed by whoever *receives* it when they use the app (the
+  warehouse); a vendor cannot, and accounts paying the business's own bill has
+  nobody to confirm to, so those are final at once — see `receiverConfirms`.
 - **One cashier per branch, one branch per cashier — and no database constraint
   can say so.** The condition is "at most one `BranchAccess` row per branch *whose
   membership's role is `CASHIER`*", and the role lives on `Membership`, so a unique

@@ -59,7 +59,14 @@ export default function BranchesSection() {
                 count of "branches" above will not match what is on screen. */}
             <Text style={styles.branchMeta}>
               {[
-                branch.kind === 'WAREHOUSE' ? t('addBranch.kindWarehouse') : null,
+                // A warehouse says what it is; a branch says who pays for its
+                // raw material (requirement 24), since that changes how every
+                // order from it is handled.
+                branch.kind === 'WAREHOUSE'
+                  ? t('addBranch.kindWarehouse')
+                  : branch.operatingModel === 'FOCO'
+                    ? t('addBranch.modelFoco')
+                    : t('addBranch.modelFm'),
                 branch.code,
                 branch.city,
                 branch.region,

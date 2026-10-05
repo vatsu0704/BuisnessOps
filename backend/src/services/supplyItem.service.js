@@ -1,6 +1,7 @@
 const { Prisma } = require('@prisma/client');
 const prisma = require('../config/db');
 const { fail } = require('../errors');
+const vendorService = require('./vendor.service');
 
 /**
  * The raw-material catalog — the first half of requirement 5.
@@ -44,6 +45,14 @@ async function assertNameFree(businessId, name, exceptId = null) {
   if (clash) throw fail('SUPPLY_ITEM_NAME_TAKEN', 409, { name: clash.name });
 }
 
+/**
+ * Who supplies each item travels with it, because the catalog screen groups by
+ * supplier and the cart splits by it (requirement 25). Name and active state
+ * only — where a payment to the vendor goes is the order's business, not the
+ * catalog's.
+ */
+const ITEM_INCLUDE = { vendor: { select: { id: true, name: true, isActive: true } } };
+
 async function listItems(businessId, { includeInactive = false, search } = {}) {
   return prisma.inventoryItem.findMany({
     where: {
@@ -51,18 +60,34 @@ async function listItems(businessId, { includeInactive = false, search } = {}) {
       ...(includeInactive ? {} : { isActive: true }),
       ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
     },
+    include: ITEM_INCLUDE,
     orderBy: [{ category: 'asc' }, { name: 'asc' }],
   });
 }
 
 async function getItem(businessId, inventoryItemId) {
-  const item = await prisma.inventoryItem.findFirst({ where: { id: inventoryItemId, businessId } });
+  const item = await prisma.inventoryItem.findFirst({
+    where: { id: inventoryItemId, businessId },
+    include: ITEM_INCLUDE,
+  });
   if (!item) throw fail('SUPPLY_ITEM_NOT_FOUND', 404);
   return item;
 }
 
-async function createItem(businessId, { name, unit, category, unitPrice, isActive }) {
+/**
+ * The supplier an item may be given: a vendor of this business that has not
+ * been withdrawn, or null for the warehouse. `undefined` means "not being
+ * changed" and is passed straight through.
+ */
+async function resolveSupplier(businessId, vendorId) {
+  if (vendorId === undefined || vendorId === null) return vendorId;
+  const vendor = await vendorService.resolveActiveVendor(businessId, vendorId);
+  return vendor.id;
+}
+
+async function createItem(businessId, { name, unit, category, unitPrice, vendorId, isActive }) {
   await assertNameFree(businessId, name);
+  const supplier = await resolveSupplier(businessId, vendorId);
   return prisma.inventoryItem.create({
     data: {
       businessId,
@@ -70,8 +95,10 @@ async function createItem(businessId, { name, unit, category, unitPrice, isActiv
       unit: unit.trim(),
       category: category?.trim() || null,
       unitPrice: toDecimal(unitPrice),
+      vendorId: supplier ?? null,
       isActive: isActive ?? true,
     },
+    include: ITEM_INCLUDE,
   });
 }
 
@@ -86,6 +113,10 @@ async function createItem(businessId, { name, unit, category, unitPrice, isActiv
 async function updateItem(businessId, inventoryItemId, data) {
   const item = await getItem(businessId, inventoryItemId);
   if (data.name !== undefined) await assertNameFree(businessId, data.name, item.id);
+  // Changing the supplier moves where the item is ordered FROM next time. Lines
+  // already in a cart follow it at placement, because the cart is split by each
+  // item's supplier at that moment; orders already placed are untouched.
+  const supplier = await resolveSupplier(businessId, data.vendorId);
 
   return prisma.inventoryItem.update({
     where: { id: item.id },
@@ -94,8 +125,10 @@ async function updateItem(businessId, inventoryItemId, data) {
       ...(data.unit !== undefined ? { unit: data.unit.trim() } : {}),
       ...(data.category !== undefined ? { category: data.category?.trim() || null } : {}),
       ...(data.unitPrice !== undefined ? { unitPrice: toDecimal(data.unitPrice) } : {}),
+      ...(supplier !== undefined ? { vendorId: supplier } : {}),
       ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
     },
+    include: ITEM_INCLUDE,
   });
 }
 
@@ -108,10 +141,16 @@ async function updateItem(businessId, inventoryItemId, data) {
  * ordered at zero — a free sack of flour in the figures is worse than an error.
  */
 async function resolveOrderable(businessId, inventoryItemId, client = prisma) {
-  const item = await client.inventoryItem.findFirst({ where: { id: inventoryItemId, businessId } });
+  const item = await client.inventoryItem.findFirst({
+    where: { id: inventoryItemId, businessId },
+    include: ITEM_INCLUDE,
+  });
   if (!item) throw fail('SUPPLY_ITEM_NOT_FOUND', 404);
   if (!item.isActive) throw fail('SUPPLY_ITEM_INACTIVE', 400, { name: item.name });
   if (item.unitPrice === null) throw fail('SUPPLY_ITEM_HAS_NO_PRICE', 400, { name: item.name });
+  // A third way of being unavailable: the item is fine, but whoever supplies it
+  // has been withdrawn, and an order to them would go to nobody.
+  if (item.vendor && !item.vendor.isActive) throw fail('SUPPLY_VENDOR_INACTIVE', 400, { name: item.vendor.name });
   return item;
 }
 

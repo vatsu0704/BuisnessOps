@@ -47,6 +47,9 @@ export default function SupplyOrderCard({
           </Text>
           <Text style={styles.meta}>
             {showBranch && order.branch ? `${order.branch.name} · ` : ''}
+            {/* Who it comes from, when that is not the warehouse — a cart with
+                two suppliers became two orders, and this is how they differ. */}
+            {order.vendor ? `${t('supply.fromVendor', { name: order.vendor.name })} · ` : ''}
             {t('supply.reviewCount', { count: order.items.length })}
           </Text>
         </View>
@@ -54,7 +57,7 @@ export default function SupplyOrderCard({
       </View>
 
       <View style={styles.pills}>
-        <SupplyStatusPill status={order.status} />
+        <SupplyStatusPill status={order.status} fromVendor={!!order.vendorId} />
         {order.paymentMode ? (
           <SupplyPaymentPill status={order.paymentStatus} mode={order.paymentMode} />
         ) : null}

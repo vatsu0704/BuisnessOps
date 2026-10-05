@@ -24,6 +24,21 @@ function isWeekdayList(value) {
   return new Set(value).size === value.length;
 }
 
+/**
+ * A UPI address: `handle@psp`, as printed under every UPI QR code
+ * ("ramesh.patel@okaxis", "9876543210@ybl"). Requirement 26 builds a payment QR
+ * from this text, so a typo here is a QR that pays nobody — worth refusing at
+ * the door rather than discovering at a counter.
+ *
+ * Deliberately not a list of known PSP handles: new ones appear, and a list
+ * would refuse a real address the day a bank launched one.
+ */
+const UPI_ID_RE = /^[a-zA-Z0-9._-]{2,256}@[a-zA-Z][a-zA-Z0-9]{1,63}$/;
+
+function isValidUpiId(value) {
+  return typeof value === 'string' && UPI_ID_RE.test(value.trim());
+}
+
 function isOptionalString(value, maxLength = 200) {
   if (value === undefined || value === null) return true;
   return typeof value === 'string' && value.length <= maxLength;
@@ -70,6 +85,7 @@ module.exports = {
   isIsoDate,
   isValidTimeZone,
   isWeekdayList,
+  isValidUpiId,
   isOptionalString,
   isOptionalNonNegativeNumber,
   required,

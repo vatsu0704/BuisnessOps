@@ -124,10 +124,20 @@ export const can = {
   viewSupplyOrders: (m: Membership | undefined) => hasCapability(m, 'supplyOrder:view'),
   /** Cart raw material, place the order, and withdraw it before it is accepted. */
   orderSupplies: (m: Membership | undefined) => hasCapability(m, 'supplyOrder:create'),
-  /** Accept, pack, dispatch, reject, and check the payment — the warehouse desk. */
+  /** Accept, pack, dispatch, reject, and forward a FOCO vendor order — the warehouse desk. */
   fulfilSupplyOrders: (m: Membership | undefined) => hasCapability(m, 'supplyOrder:fulfil'),
   /** Carry an order and mark it delivered (requirement 12). */
   deliverSupplyOrders: (m: Membership | undefined) => hasCapability(m, 'supplyOrder:deliver'),
   /** Post "+30 minutes, traffic". Requirement 9 has two ends and this is both. */
   postSupplyDelay: (m: Membership | undefined) => hasCapability(m, 'supplyOrder:delay'),
+
+  // --- Vendors and paying for supply orders (requirements 24–27) ---
+  /** Say a vendor's goods arrived at the branch. */
+  receiveSupplyOrders: (m: Membership | undefined) => hasCapability(m, 'supplyOrder:receive'),
+  /** Pay for company-operated branches' orders — accounts. */
+  settleSupplyPayments: (m: Membership | undefined) => hasCapability(m, 'supplyPayment:settle'),
+  /** Say whether a branch's payment reached the warehouse — the desk and accounts. */
+  verifySupplyPayments: (m: Membership | undefined) => hasCapability(m, 'supplyPayment:verify'),
+  /** Change where payments go. Accounts and the owner; deliberately not the desk. */
+  managePaymentAccounts: (m: Membership | undefined) => hasCapability(m, 'paymentAccount:manage'),
 };

@@ -54,6 +54,7 @@ export default function SettingsScreen() {
   const canManageTeam = can.manageTeam(membership);
   const canManageWorkCalendar = can.manageWorkCalendar(membership);
   const canAddBusiness = can.createBusiness(membership);
+  const canManagePaymentAccounts = can.managePaymentAccounts(membership);
   const noAccess = hasNoActiveBusiness(user);
   // Decided here rather than inside the switcher: AnimatedEntrance carries the
   // block's top margin, so a switcher that renders null would still leave a
@@ -184,6 +185,20 @@ export default function SettingsScreen() {
                 title={t('settings.team')}
                 subtitle={t('settings.teamSubtitle')}
                 onPress={() => navigation.navigate('Team')}
+              />
+            </AnimatedEntrance>
+          ) : null}
+
+          {/* Requirement 26 — where branches' payments go. Set up once, like
+              the work calendar, which is why it is here and not on Home. */}
+          {canManagePaymentAccounts ? (
+            <AnimatedEntrance delay={step(7)} style={styles.block}>
+              <InfoCard
+                testID="settings-open-payment-accounts"
+                icon="qr-code-outline"
+                title={t('paymentAccounts.title')}
+                subtitle={t('paymentAccounts.settingsSubtitle')}
+                onPress={() => navigation.navigate('PaymentAccounts')}
               />
             </AnimatedEntrance>
           ) : null}

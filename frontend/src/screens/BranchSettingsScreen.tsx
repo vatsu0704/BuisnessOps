@@ -8,12 +8,13 @@ import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { listBranches, updateBranch, type UpdateBranchPayload } from '@/api/business';
 import { refreshBranches } from '@/store/branchStore';
 import { extractErrorMessage } from '@/api/client';
-import type { Branch, BranchKind } from '@/types/branch';
+import type { Branch, BranchKind, BranchOperatingModel } from '@/types/branch';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import FormInput from '@/components/FormInput';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
+import OptionRow from '@/components/OptionRow';
 import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
@@ -43,6 +44,7 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
 
   const [branch, setBranch] = useState<Branch | null>(null);
   const [kind, setKind] = useState<BranchKind>('BRANCH');
+  const [operatingModel, setOperatingModel] = useState<BranchOperatingModel>('FM');
   const [timezone, setTimezone] = useState('');
   const [addressLine, setAddressLine] = useState('');
   const [postalCode, setPostalCode] = useState('');
@@ -67,6 +69,7 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
       setBranch(found);
       if (found) {
         setKind(found.kind);
+        setOperatingModel(found.operatingModel);
         setTimezone(found.timezone);
         setAddressLine(found.addressLine ?? '');
         setPostalCode(found.postalCode ?? '');
@@ -127,6 +130,9 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
     try {
       const payload: UpdateBranchPayload = {
         kind,
+        // Only a branch is asked, so only a branch sends it; a warehouse keeps
+        // whatever it had, which means nothing there.
+        ...(kind === 'BRANCH' ? { operatingModel } : {}),
         timezone: timezone.trim(),
         // Emptied means cleared, the same way the geofence fields below work —
         // an address someone deleted has to actually go.
@@ -210,6 +216,36 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
                     </View>
                   </View>
                 </AnimatedEntrance>
+
+                {/* Requirement 24. Changeable, and safe to change: every order
+                    keeps the model it was placed under, so this decides who
+                    pays for the NEXT one and never rewrites one in flight. */}
+                {kind === 'BRANCH' ? (
+                  <AnimatedEntrance delay={step(0)} style={styles.block}>
+                    <View style={styles.card}>
+                      <Text style={styles.sectionTitle}>{t('addBranch.model')}</Text>
+                      <Text style={styles.hint}>{t('branchSettings.modelHint')}</Text>
+                      <View style={styles.modelList}>
+                        <OptionRow
+                          testID="branch-settings-model-FOCO"
+                          title={t('addBranch.modelFoco')}
+                          description={t('addBranch.modelFocoHint')}
+                          icon="business-outline"
+                          selected={operatingModel === 'FOCO'}
+                          onPress={() => setOperatingModel('FOCO')}
+                        />
+                        <OptionRow
+                          testID="branch-settings-model-FM"
+                          title={t('addBranch.modelFm')}
+                          description={t('addBranch.modelFmHint')}
+                          icon="storefront-outline"
+                          selected={operatingModel === 'FM'}
+                          onPress={() => setOperatingModel('FM')}
+                        />
+                      </View>
+                    </View>
+                  </AnimatedEntrance>
+                ) : null}
 
                 <AnimatedEntrance delay={step(0)} style={styles.block}>
                   <View style={styles.card}>
@@ -380,6 +416,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
   kindRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  modelList: { gap: spacing.xs, marginTop: spacing.sm },
   subLabel: {
     fontSize: 12,
     fontWeight: '700',

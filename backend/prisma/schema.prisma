@@ -47,6 +47,25 @@ enum BranchKind {
   WAREHOUSE
 }
 
+// Who pays for a branch's raw material — requirement 24.
+//
+// FOCO (company operated): the business pays centrally. The cashier only
+// orders, the delivery agent hands the goods over without asking for money, and
+// the accountant settles the order once it has been delivered.
+//
+// FM (franchise): the branch pays for itself, now (UPI, before placing) or on
+// delivery (cash, or a UPI QR the agent shows). This is the flow every branch
+// had before the distinction existed, which is why it is the default and no
+// existing row needed a backfill.
+//
+// What a branch IS (BranchKind) and who pays for it are separate questions: a
+// warehouse has no till and orders nothing, so this column means nothing on a
+// WAREHOUSE row and is simply left at its default there.
+enum BranchOperatingModel {
+  FOCO
+  FM
+}
+
 enum UserStatus {
   ACTIVE
   INVITED
@@ -71,6 +90,10 @@ enum MembershipRole {
   CASHIER
   // Carries supply orders, marks them delivered, posts delays with a reason.
   DELIVERY_AGENT
+  // Reads every branch's figures, pays for FOCO branches' raw material, and
+  // confirms the payments FM branches send the warehouse. Holds no staff:*
+  // capability — see requirement 27.
+  ACCOUNTANT
 }
 
 enum MembershipStatus {
@@ -103,6 +126,23 @@ model Business {
   // punch every single day would see every salary silently zeroed.
   unmarkedWorkingDayStatus AttendanceStatus @default(PRESENT)
 
+  // Where a branch's money for WAREHOUSE stock goes (requirement 26): the UPI
+  // ID every warehouse order's QR code is generated from. A QR is built from
+  // this text on the device, with the order's exact amount in it, rather than
+  // stored as an uploaded image — an image needs file storage the hosted server
+  // does not keep, and could not carry the amount anyway.
+  //
+  // One per business. Vendors carry their own (Vendor.upiId).
+  //
+  // Who changed it, and when, is recorded beside it, because changing where
+  // money goes is the one edit in this app that can quietly redirect it. Only
+  // `paymentAccount:manage` may write these.
+  supplyUpiId                    String?
+  supplyUpiName                  String?
+  supplyUpiUpdatedAt             DateTime?
+  supplyUpiUpdatedByMembershipId String?
+  supplyUpiUpdatedByMembership   Membership? @relation("BusinessSupplyUpiUpdatedBy", fields: [supplyUpiUpdatedByMembershipId], references: [id], onDelete: SetNull)
+
   branches              Branch[]
   memberships           Membership[]
   dataSourceConnections DataSourceConnection[]
@@ -119,6 +159,7 @@ model Business {
   dayCloses             DayClose[]
   supplyOrders          SupplyOrder[]
   supplyOrderCounter    SupplyOrderCounter?
+  vendors               Vendor[]
   expenseCategories     ExpenseCategory[]
   expenses              Expense[]
   notifications         Notification[]
@@ -163,6 +204,10 @@ model Branch {
   // Defaults to BRANCH, so every location that already exists stays exactly
   // what it was and no backfill is needed.
   kind       BranchKind @default(BRANCH)
+  // Who pays for this branch's raw material. Read when an order is PLACED and
+  // snapshotted onto it (SupplyOrder.operatingModel), so changing it here
+  // affects orders placed from then on and never rewrites one already in flight.
+  operatingModel BranchOperatingModel @default(FM)
   city       String?
   region     String?
   country    String?
@@ -300,6 +345,9 @@ model Membership {
   supplyDeliveries   SupplyOrder[]      @relation("SupplyOrderDeliveryAgent")
   supplyOrderEvents  SupplyOrderEvent[] @relation("SupplyOrderEventActor")
   expensesRecorded   Expense[]          @relation("ExpenseRecordedBy")
+  // Who last changed where money goes — see Business.supplyUpiId.
+  supplyUpiUpdates   Business[]         @relation("BusinessSupplyUpiUpdatedBy")
+  vendorUpiUpdates   Vendor[]           @relation("VendorUpiUpdatedBy")
 
   @@unique([userId, businessId])
   @@index([businessId])
@@ -307,7 +355,7 @@ model Membership {
 }
 
 // Explicit branch scoping. A role holding `branch:allAccess` — OWNER, ADMIN,
-// MANAGER, WAREHOUSE, DELIVERY_AGENT — ignores this table and reaches every
+// MANAGER, WAREHOUSE, DELIVERY_AGENT, ACCOUNTANT — ignores this table and reaches every
 // branch in its business implicitly (enforced in the tenant-resolution
 // middleware, not here). What is left is STAFF and CASHIER.
 //
@@ -591,12 +639,68 @@ model InventoryItem {
   // history of every order that ever contained it.
   isActive Boolean @default(true)
 
+  // Who supplies it (requirement 25). Null is the warehouse's own stock, which
+  // is everything that existed before vendors did. Read when a cart is placed:
+  // a cart's lines are split into one order per supplier, because each order
+  // has exactly one payee.
+  vendorId String?
+  vendor   Vendor? @relation(fields: [vendorId], references: [id], onDelete: NoAction)
+
   usageRecords     InventoryUsage[]
   supplyOrderItems SupplyOrderItem[]
 
   @@index([businessId])
   @@index([businessId, isActive])
+  @@index([vendorId])
   @@map("inventory_items")
+}
+
+// A third-party vendor — requirement 25.
+//
+// Someone outside the business who supplies some raw material directly (the
+// water in the original sketch), as opposed to the warehouse, which supplies it
+// from the business's own stock. A vendor does not use the app: an order reaches
+// them over WhatsApp, and the branch says when the goods arrived.
+//
+// Withdrawn rather than deleted, like a catalog item: orders and items point at
+// it, and deleting it would rewrite who those orders were from. Those two
+// references are NoAction rather than Restrict for one reason: NO ACTION is
+// checked at the end of the statement, RESTRICT immediately. Deleting a whole
+// business cascades to its vendors, items and orders in one statement, and an
+// immediate check would depend on which of those cascades Postgres happened to
+// run first. A vendor still in use is refused either way.
+//
+// The UPI fields are where a payment to this vendor goes, and follow the same
+// rule as Business.supplyUpiId — written only under `paymentAccount:manage`,
+// with who and when recorded, because they decide whose account money lands in.
+// Name and phone are the warehouse desk's (`supplyItem:manage`); the desk
+// deliberately cannot change where the money goes.
+model Vendor {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  name  String
+  // For the "send to vendor" WhatsApp message. Free text, as typed — a vendor's
+  // number is whatever they gave, and a strict format would refuse half of them.
+  phone String?
+
+  upiId                    String?
+  upiName                  String?
+  upiUpdatedAt             DateTime?
+  upiUpdatedByMembershipId String?
+  upiUpdatedByMembership   Membership? @relation("VendorUpiUpdatedBy", fields: [upiUpdatedByMembershipId], references: [id], onDelete: SetNull)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items        InventoryItem[]
+  supplyOrders SupplyOrder[]
+
+  @@unique([businessId, name])
+  @@index([businessId, isActive])
+  @@map("vendors")
 }
 
 // Daily usage/wastage per branch per item.
@@ -928,16 +1032,33 @@ enum SupplyOrderStatus {
 // in Docs/REQUIREMENTS.md is RECORD ONLY: no gateway, no money moving through
 // this app. ONLINE means the cashier paid by some other means and typed the
 // reference; the warehouse then confirms it against their own bank record.
+//
+// Requirement 26 keeps it record-only and removes the typing: ONLINE now means
+// "paid by scanning the payee's UPI QR before placing", confirmed by the payer
+// tapping "Payment done". The reference became optional.
 enum SupplyPaymentMode {
   ONLINE
   COD
+  // A FOCO branch's order (requirement 24): the business pays centrally, after
+  // delivery, from the accountant's Payments screen. Never chosen by a client —
+  // placeOrder sets it from the branch's operating model.
+  ACCOUNTS
 }
 
+// The enum names predate requirement 26 and are kept; what they MEAN is now
+// "who has said what" about the money:
+//
+// A payment is confirmed by whoever RECEIVES it, when they use the app. The
+// warehouse does (its desk, or the accountant), so a payment to it goes PAID
+// on the payer's tap and VERIFIED on the receiver's "Received". A vendor does
+// not, and accounts paying for a FOCO branch has nobody to confirm it to — so
+// in both of those cases the payer's record is final and goes straight to
+// VERIFIED. The app labels VERIFIED "Paid" and PAID "Payment sent".
 enum SupplyPaymentStatus {
-  PENDING // nothing claimed yet — every COD order until it arrives
-  PAID // the branch says it paid, and gave a reference
-  VERIFIED // the warehouse found that reference in their own records
-  FAILED // the warehouse looked and it was not there
+  PENDING // nothing paid yet — pay on delivery, or accounts to pay after delivery
+  PAID // the payer says it is paid; waiting for the warehouse to confirm
+  VERIFIED // settled: the receiver confirmed it, or the payer's record is final
+  FAILED // the warehouse looked and it had not arrived; the branch can pay again
 }
 
 enum SupplyOrderEventType {
@@ -963,6 +1084,23 @@ model SupplyOrder {
   orderNumber Int?
 
   status SupplyOrderStatus @default(DRAFT)
+
+  // Who supplies this order (requirement 25). Null is the warehouse. Set when a
+  // cart is split at placement — a DRAFT can hold lines from several suppliers,
+  // and each supplier's lines become their own order with their own payee.
+  vendorId String?
+  vendor   Vendor? @relation(fields: [vendorId], references: [id], onDelete: NoAction)
+
+  // The branch's operating model at the moment this was PLACED (requirement 24).
+  // A snapshot, so moving a branch from FM to FOCO decides how its NEXT order is
+  // paid and leaves every order already in flight as it was agreed. Meaningless
+  // on a DRAFT, which is why the default does no harm there.
+  operatingModel BranchOperatingModel @default(FM)
+
+  // The orders one cart was split into share this, so they can be shown as the
+  // one act of ordering they were. Null on a DRAFT and on every order placed
+  // before splitting existed.
+  placementId String?
 
   // Recomputed from the items on every change, never adjusted, so it cannot
   // drift from the lines it totals.
@@ -1005,6 +1143,9 @@ model SupplyOrder {
   @@index([businessId, branchId, status])
   // The delivery agent's queue (requirement 12).
   @@index([deliveryAgentMembershipId, status])
+  // The accountant's Payments lists (requirement 27).
+  @@index([businessId, paymentMode, paymentStatus])
+  @@index([vendorId])
   @@map("supply_orders")
 }
 

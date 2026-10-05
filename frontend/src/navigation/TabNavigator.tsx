@@ -11,6 +11,7 @@ import StaffHubScreen from '@/screens/StaffHubScreen';
 import SupplyCatalogScreen from '@/screens/SupplyCatalogScreen';
 import WarehouseDeskScreen from '@/screens/WarehouseDeskScreen';
 import DeliveryQueueScreen from '@/screens/DeliveryQueueScreen';
+import SupplyPaymentsScreen from '@/screens/SupplyPaymentsScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
 import { useMembership } from '@/hooks/useBusinessId';
 import { hasCapability } from '@/utils/permissions';
@@ -23,6 +24,7 @@ export type AppTabParamList = {
   Supply: undefined;
   Desk: undefined;
   Deliveries: undefined;
+  Payments: undefined;
   Products: undefined;
   Staff: undefined;
   Reports: undefined;
@@ -57,6 +59,7 @@ const TAB_CATALOGUE: {
     | 'tabs.supply'
     | 'tabs.desk'
     | 'tabs.deliveries'
+    | 'tabs.payments'
     | 'tabs.products'
     | 'tabs.staff'
     | 'tabs.reports'
@@ -126,6 +129,20 @@ const TAB_CATALOGUE: {
     labelKey: 'tabs.deliveries',
     capability: 'supplyOrder:deliver',
     demoteWhen: { holds: 'analytics:viewBusiness' },
+  },
+  // Requirement 27: paying for the company's branches is the accountant's job,
+  // so it is their tab — Home · Payments · Staff · Reports · Settings, exactly
+  // the five-tab budget. Owner, admin and manager hold the same capability and
+  // also hold `team:invite`, which is what tells them apart: running the
+  // business is not the same job as settling its bills. They keep their five
+  // tabs and reach Payments from Home.
+  {
+    name: 'Payments',
+    component: SupplyPaymentsScreen,
+    icon: 'card-outline',
+    labelKey: 'tabs.payments',
+    capability: 'supplyPayment:settle',
+    demoteWhen: { holds: 'team:invite' },
   },
   {
     name: 'Products',

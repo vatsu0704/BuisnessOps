@@ -388,3 +388,21 @@ describe('Notifications', () => {
     });
   });
 });
+
+// The lock screen is drawn from the server's text (see labels.js), so a param
+// that is a code rather than a word has to become a word there. A payment mode
+// used to reach a Gujarati phone as "… ₹1,240, COD." — and requirement 24's
+// ACCOUNTS would have done the same.
+describe('rendering a push', () => {
+  const { render } = require('../src/notifications/push');
+
+  it('writes the payment mode as a word, in the device language', () => {
+    const params = { orderNumber: 214, branch: 'Ring Road', amount: '₹1,240' };
+    const gu = render('SUPPLY_ORDER_PLACED', 'gu', { ...params, payment: 'ACCOUNTS' });
+    expect(gu.body).not.toContain('ACCOUNTS');
+    expect(gu.body).toContain('એકાઉન્ટ્સ');
+
+    const en = render('SUPPLY_ORDER_PLACED', 'en', { ...params, payment: 'COD' });
+    expect(en.body).toContain('pay on delivery');
+  });
+});

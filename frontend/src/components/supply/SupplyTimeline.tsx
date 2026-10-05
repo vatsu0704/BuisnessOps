@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '@/theme';
 import { formatTime } from '@/utils/date';
+import { supplyStatusKey } from '@/components/supply/SupplyPills';
 import type { SupplyOrderEvent } from '@/types/supply';
 
 /**
@@ -33,7 +34,14 @@ const TINTS: Record<SupplyOrderEvent['type'], string> = {
   ASSIGNMENT: colors.primary,
 };
 
-export default function SupplyTimeline({ events }: { events: SupplyOrderEvent[] }) {
+export default function SupplyTimeline({
+  events,
+  fromVendor = false,
+}: {
+  events: SupplyOrderEvent[];
+  /** A vendor's order words two of its statuses differently — see `supplyStatusKey`. */
+  fromVendor?: boolean;
+}) {
   const { t } = useTranslation();
 
   return (
@@ -50,7 +58,7 @@ export default function SupplyTimeline({ events }: { events: SupplyOrderEvent[] 
               event.type === 'ASSIGNMENT'
               ? t('supply.assignedTo', { name: event.note ?? t('supply.assignUnnamed') })
               : event.toStatus
-                ? t(`supplyStatus.${event.toStatus}`)
+                ? t(supplyStatusKey(event.toStatus, fromVendor))
                 : event.reasonCode
                   ? t(`supplyEvent.${event.reasonCode}` as never)
                   : '';

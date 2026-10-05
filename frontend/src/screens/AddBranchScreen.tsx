@@ -11,6 +11,7 @@ import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import FormInput from '@/components/FormInput';
+import OptionRow from '@/components/OptionRow';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -19,7 +20,7 @@ import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
 import { useBusinessId } from '@/hooks/useBusinessId';
-import type { BranchKind } from '@/types/branch';
+import type { BranchKind, BranchOperatingModel } from '@/types/branch';
 import { getCurrentCoords } from '@/utils/location';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AddBranch'>;
@@ -34,6 +35,10 @@ export default function AddBranchScreen({ navigation }: Props) {
   // What this location IS. A warehouse is staffed and punched into like any
   // other location, and simply does not sell or order — see BranchKind.
   const [kind, setKind] = useState<BranchKind>('BRANCH');
+  // Who pays for its raw material (requirement 24). Nothing is preselected:
+  // it decides whether the cashier is ever asked to pay, and that is not a
+  // thing to default quietly. A warehouse orders nothing, so is not asked.
+  const [operatingModel, setOperatingModel] = useState<BranchOperatingModel | null>(null);
   const [city, setCity] = useState('');
   const [region, setRegion] = useState('');
   // Where a delivery goes, as opposed to where the branch is for reporting.
@@ -65,6 +70,7 @@ export default function AddBranchScreen({ navigation }: Props) {
 
   const canSubmit =
     !!businessId &&
+    (kind === 'WAREHOUSE' || operatingModel !== null) &&
     name.trim().length > 0 &&
     code.trim().length > 0 &&
     timezone.trim().length > 0 &&
@@ -97,6 +103,7 @@ export default function AddBranchScreen({ navigation }: Props) {
         name: name.trim(),
         code: code.trim().toUpperCase(),
         kind,
+        operatingModel: kind === 'BRANCH' && operatingModel ? operatingModel : undefined,
         timezone: timezone.trim(),
         city: city.trim() || undefined,
         region: region.trim() || undefined,
@@ -172,6 +179,35 @@ export default function AddBranchScreen({ navigation }: Props) {
                     onPress={() => setKind('WAREHOUSE')}
                   />
                 </View>
+
+                {/* The second question, once the first says it is a branch.
+                    Rows with a sentence each, not chips: the difference
+                    between the two is a sentence, and "FOCO" on its own
+                    tells a new owner nothing. */}
+                {kind === 'BRANCH' ? (
+                  <View style={styles.modelBlock}>
+                    <Text style={styles.sectionTitle}>{t('addBranch.model')}</Text>
+                    <Text style={styles.sectionHint}>{t('addBranch.modelHint')}</Text>
+                    <View style={styles.modelList}>
+                      <OptionRow
+                        testID="branch-model-FOCO"
+                        title={t('addBranch.modelFoco')}
+                        description={t('addBranch.modelFocoHint')}
+                        icon="business-outline"
+                        selected={operatingModel === 'FOCO'}
+                        onPress={() => setOperatingModel('FOCO')}
+                      />
+                      <OptionRow
+                        testID="branch-model-FM"
+                        title={t('addBranch.modelFm')}
+                        description={t('addBranch.modelFmHint')}
+                        icon="storefront-outline"
+                        selected={operatingModel === 'FM'}
+                        onPress={() => setOperatingModel('FM')}
+                      />
+                    </View>
+                  </View>
+                ) : null}
 
                 <FormInput
                   testID="branch-name"
@@ -388,6 +424,8 @@ const styles = StyleSheet.create({
   // Two chips share the width evenly, which is what SegmentedOption is built
   // for — and two is comfortably inside the three it stops working past.
   kindRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
+  modelBlock: { marginBottom: spacing.lg },
+  modelList: { gap: spacing.xs },
   rowItem: { flex: 1 },
   submitWrap: { marginTop: spacing.lg },
   errorBanner: {

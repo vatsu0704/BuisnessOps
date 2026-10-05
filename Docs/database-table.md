@@ -97,7 +97,7 @@ One row per (user, business) — carries the role. Replaces a naive `User.busine
 | id | String (uuid) | PK |
 | userId | String | FK → User |
 | businessId | String | FK → Business |
-| role | Enum: `OWNER, ADMIN, MANAGER, STAFF, WAREHOUSE, CASHIER, DELIVERY_AGENT` | The vocabulary only — **what each role may do is not in the database.** It lives in `backend/src/permissions/catalog.js`, mirrored to `frontend/src/permissions/matrix.json` and gated by `npm run lint:permissions` in CI. The last three arrived with the Branch Operations track; see section 11. |
+| role | Enum: `OWNER, ADMIN, MANAGER, STAFF, WAREHOUSE, CASHIER, DELIVERY_AGENT, ACCOUNTANT` | The vocabulary only — **what each role may do is not in the database.** It lives in `backend/src/permissions/catalog.js`, mirrored to `frontend/src/permissions/matrix.json` and gated by `npm run lint:permissions` in CI. `WAREHOUSE`, `CASHIER` and `DELIVERY_AGENT` arrived with the Branch Operations track (section 11), `ACCOUNTANT` with its Task 12 (section 21). |
 | status | Enum: `INVITED, ACTIVE, REVOKED` | `REVOKED` is what "remove this person" writes (`POST /memberships/:id/revoke`) — a soft revoke, because deleting the row would null `Attendance.markedByMembershipId` on every day they ever marked. `resolveTenant` requires `ACTIVE`, so a revoke takes effect on the person's very next request without any token invalidation. Re-inviting the same email flips the row back to `ACTIVE` with the new invite's role, which is the only way back in. `INVITED` is still set by no code path — "invited, no account yet" is modeled by `Invite` below instead, since a Membership row requires a real `userId`. Kept for a future self-serve accept/decline step on an *existing* account being invited to a *new* business, which isn't built yet either. |
 | invitedAt / joinedAt | DateTime, nullable | |
 | unique | (userId, businessId) | one role per person per business |
@@ -734,9 +734,9 @@ Name uniqueness is a **service-level** check (case-insensitive), not a unique in
 | orderNumber | Int? | Null while it is a `DRAFT` cart. Issued at `PLACED` from `SupplyOrderCounter` |
 | status | `SupplyOrderStatus` | `DRAFT | PLACED | ACCEPTED | PACKED | DISPATCHED | DELIVERED | CANCELLED` |
 | totalAmount / currency | Decimal(12,2) / String | Recomputed from the items on every change, never adjusted |
-| paymentMode | `SupplyPaymentMode?` | `ONLINE | COD`. Null on a draft; required to leave one |
+| paymentMode | `SupplyPaymentMode?` | `ONLINE | COD | ACCOUNTS`. Null on a draft. `ACCOUNTS` is a FOCO branch's order and is set by the server, never chosen — see section 21 |
 | paymentStatus | `SupplyPaymentStatus` | `PENDING | PAID | VERIFIED | FAILED` |
-| paymentReference | String? | What the warehouse checks against its own records |
+| paymentReference | String? | Optional since requirement 26: payment is a QR scan confirmed by the receiver, and a reference is only kept when somebody typed one |
 | paymentVerifiedAt | DateTime? | |
 | promisedAt | DateTime? | When it is currently expected. Each delay pushes it, when one was given |
 | placedByMembershipId | String? | FK, `SetNull`. **Null until `PLACED`**, then whoever placed it. Kept because per-cashier reporting filters on it |
@@ -1039,6 +1039,7 @@ cost of that is bounded deliberately: see the query-count note in
 | `sales` | `Transaction.totalAmount`, `status = COMPLETED` | `occurredAt` | **Yes** — it is an instant |
 | `expenses` | `Expense.amount` | `expenseDate` | No — already the branch's own day |
 | `materialSpend` | `SupplyOrder.totalAmount`, status in PLACED…DELIVERED | `placedAt` | **Yes** — it is an instant |
+| `vendorSpend` | the part of `materialSpend` whose `vendorId` is set (Task 12) | `placedAt` | **Yes** |
 | `payroll` | `SalarySlip.netPay`, DRAFT and FINALIZED | `monthYear` | No — already 'YYYY-MM' |
 
 `materialSpend` is keyed on **`placedAt`, not `deliveredAt`**. Delivery would drop
@@ -1055,11 +1056,13 @@ excluded by status rather than by date.
   business roll-up treats it as an untraced *internal transfer* and a warehouse
   reads as a cost centre. Adding `supplyingBranchId` is what would let a warehouse
   be reported as a profit centre instead; it is not needed while a business has one.
-- **There is no purchase or supplier model at all.** A warehouse buying flour from
+- **There is no purchase model for the warehouse.** A warehouse buying flour from
   the outside world has nowhere to record it except as an ordinary `Expense`
   against the warehouse branch — which is exactly why `expense.service.js`
   deliberately permits a `WAREHOUSE` where the trading services refuse one. Without
-  that, the business's largest real cost would be invisible.
+  that, the business's largest real cost would be invisible. Task 12's `Vendor` is
+  something else: a supplier delivering straight to a *branch*, whose orders are
+  supply orders and reach the reports as `vendorSpend` (section 21).
 
 ---
 
@@ -1098,3 +1101,91 @@ exactly equals a `SupplyOrder.totalAmount` on the same branch and the same day.
 That keeps it a statement about two rows rather than a guess about wording — which
 could not work across four languages. It is the last piece of §5 of
 `REQUIREMENTS.md`.
+
+---
+
+## 21. FOCO and FM branches, vendors, UPI payees and the Accountant — built (Branch Operations Task 12)
+
+Requirements 24–27. One migration, `20261005100000_branch_models_vendors_accountant`,
+and no backfill: every new column is nullable or defaults to the behaviour that existed
+before it.
+
+### New enum and enum values
+
+| Enum | Values | Notes |
+|---|---|---|
+| `BranchOperatingModel` | `FOCO`, `FM` | Who pays for a branch's raw material. FOCO — the business, through accounts. FM — the branch itself |
+| `MembershipRole` | + `ACCOUNTANT` | Every branch's money, none of its people. What it may do is in `permissions/catalog.js` |
+| `SupplyPaymentMode` | + `ACCOUNTS` | A FOCO branch's order. Set by the server from the branch, never chosen by a client |
+
+`SupplyPaymentStatus` kept its four names; what they **mean** changed (R26):
+
+| Value | Means | App label |
+|---|---|---|
+| `PENDING` | Nothing paid yet | "To pay", "Pay on delivery" or "Accounts pays" |
+| `PAID` | The payer says it is paid; the warehouse has not confirmed it | "Payment sent" |
+| `VERIFIED` | Settled — confirmed by the warehouse, or final at once because nobody could confirm it (a vendor; accounts paying) | "Paid" |
+| `FAILED` | The warehouse looked and it had not arrived; the branch can pay again | "Not received" |
+
+### `Branch` — extended
+
+| Column | Type | Notes |
+|---|---|---|
+| operatingModel | `BranchOperatingModel` | `@default(FM)` — the flow every branch already had. Meaningless on a `WAREHOUSE`, left at its default there |
+
+### `Business` — extended: the warehouse's payee
+
+| Column | Type | Notes |
+|---|---|---|
+| supplyUpiId | String? | The UPI ID every warehouse order's QR is generated from. Lower-cased. One per business |
+| supplyUpiName | String? | What the payer's UPI app shows as "paying to" |
+| supplyUpiUpdatedAt | DateTime? | When it was last changed |
+| supplyUpiUpdatedByMembershipId | String? | FK → Membership, `SetNull`. Who last changed it — shown on the set-up screen |
+
+Written only under `paymentAccount:manage`. Changing where money goes is the one edit
+that can quietly redirect it, so who did it and when sits beside the value.
+
+### `Vendor` — new
+
+A third-party supplier who delivers straight to a branch (R25) and does not use the app.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId | String | FK → Business, `Cascade` |
+| name | String | Unique per business; also checked case-insensitively in the service |
+| phone | String? | Free text, as typed. The "send to vendor" WhatsApp message goes here |
+| upiId / upiName | String? | Where a payment to them goes. Written only under `paymentAccount:manage` — the desk names vendors but cannot change this |
+| upiUpdatedAt / upiUpdatedByMembershipId | DateTime? / String? | Who last changed it, and when. FK → Membership, `SetNull` |
+| isActive | Boolean | Withdrawn rather than deleted: items and orders point at it |
+| createdAt / updatedAt | DateTime | |
+| unique | (businessId, name) | |
+| index | (businessId, isActive) | |
+
+### `InventoryItem` — extended
+
+| Column | Type | Notes |
+|---|---|---|
+| vendorId | String? | FK → Vendor, **`NoAction`**. Null is the warehouse's own stock. Read when a cart is placed: lines are grouped by it |
+
+### `SupplyOrder` — extended
+
+| Column | Type | Notes |
+|---|---|---|
+| vendorId | String? | FK → Vendor, **`NoAction`**. Null is the warehouse. Decides which status machine the order runs on and who its payee is |
+| operatingModel | `BranchOperatingModel` | The branch's model **when it was placed** — a snapshot, so changing a branch never rewrites an order in flight. Default FM, meaningless on a DRAFT |
+| placementId | String? | Shared by the orders one cart was split into. Null on a DRAFT and on every order placed before splitting existed |
+| indexes | + (businessId, paymentMode, paymentStatus), (vendorId) | the accountant's two Payments lists |
+
+**`NoAction`, not `Restrict`, on both vendor references.** Deleting a whole business
+cascades to its vendors, items and orders in one statement. `RESTRICT` is checked
+immediately, part-way through that cascade, so whether it failed would depend on which
+table Postgres happened to reach first; `NO ACTION` is checked at the end of the
+statement. A vendor still in use is refused either way.
+
+### What a vendor changes in the reports
+
+`materialSpend` still counts every supply order a branch placed — vendor or warehouse,
+it is that branch's cost. The analytics query now groups by `(branchId, vendorId)` to
+report the vendor part beside it as `vendorSpend`, which the business roll-up subtracts
+because it left the business. `internalTransfer` is `materialSpend − vendorSpend`.

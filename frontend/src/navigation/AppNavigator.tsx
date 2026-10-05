@@ -22,6 +22,10 @@ import SupplyOrdersScreen from '@/screens/SupplyOrdersScreen';
 import SupplyOrderDetailScreen from '@/screens/SupplyOrderDetailScreen';
 import SupplyItemFormScreen from '@/screens/SupplyItemFormScreen';
 import WarehouseDeskScreen from '@/screens/WarehouseDeskScreen';
+import SupplyPaymentsScreen from '@/screens/SupplyPaymentsScreen';
+import PaymentAccountsScreen from '@/screens/PaymentAccountsScreen';
+import VendorsScreen from '@/screens/VendorsScreen';
+import VendorFormScreen from '@/screens/VendorFormScreen';
 import DeliveryQueueScreen from '@/screens/DeliveryQueueScreen';
 import ExpensesScreen from '@/screens/ExpensesScreen';
 import AddExpenseScreen from '@/screens/AddExpenseScreen';
@@ -57,6 +61,11 @@ export type AppStackParamList = {
   SupplyItemForm: { inventoryItemId?: string } | undefined;
   SupplyDesk: undefined;
   SupplyDeliveries: undefined;
+  // Paying for supply orders, and where payments go (requirements 25–27).
+  SupplyPayments: undefined;
+  PaymentAccounts: undefined;
+  Vendors: undefined;
+  VendorForm: { vendorId?: string } | undefined;
   // Branch expenses (requirement 10). Both take a branch so the back office
   // can follow a branch it is chasing straight into that branch's figures.
   Expenses: { branchId?: string } | undefined;
@@ -102,6 +111,11 @@ const MODAL_SCREENS: { name: keyof AppStackParamList; component: ComponentType<a
   { name: 'SupplyItemForm', component: SupplyItemFormScreen },
   { name: 'SupplyDesk', component: WarehouseDeskScreen },
   { name: 'SupplyDeliveries', component: DeliveryQueueScreen },
+  // A tab for the accountant; pushed from Home for the desk and the owner.
+  { name: 'SupplyPayments', component: SupplyPaymentsScreen },
+  { name: 'PaymentAccounts', component: PaymentAccountsScreen },
+  { name: 'Vendors', component: VendorsScreen },
+  { name: 'VendorForm', component: VendorFormScreen },
   { name: 'Expenses', component: ExpensesScreen },
   { name: 'AddExpense', component: AddExpenseScreen },
   { name: 'Notifications', component: NotificationsScreen },

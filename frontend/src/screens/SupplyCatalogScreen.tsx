@@ -14,6 +14,7 @@ import { extractErrorMessage } from '@/api/client';
 import { addSupplyCartItem, getSupplyCart, listSupplyItems } from '@/api/supply';
 import type { SupplyItem, SupplyOrder } from '@/types/supply';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import InfoCard from '@/components/InfoCard';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
 import SegmentedOption from '@/components/SegmentedOption';
@@ -32,6 +33,11 @@ import { step } from '@/theme/motion';
  * Quantities are NOT set here. Tapping adds one, and the exact amount is typed
  * on the cart screen, where a numeric field has room to be a numeric field.
  * Getting to 20 kg by tapping a plus twenty times is not a design.
+ *
+ * Once some items come from a third-party vendor (requirement 25), the list is
+ * headed by WHO supplies each part — the warehouse, then each vendor — with the
+ * categories beneath. A business with no vendor items sees exactly the list it
+ * always had: a heading that only ever says "From the warehouse" says nothing.
  */
 export default function SupplyCatalogScreen() {
   const { t } = useTranslation();
@@ -87,15 +93,27 @@ export default function SupplyCatalogScreen() {
     return counts;
   }, [cart]);
 
+  // Supplier, then category: the warehouse first and vendors by name, the same
+  // order the cart splits an order in.
+  const hasVendorItems = useMemo(() => items.some((item) => item.vendorId !== null), [items]);
   const grouped = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    const groups = new Map<string, SupplyItem[]>();
+    const suppliers = new Map<string, { label: string | null; categories: Map<string, SupplyItem[]> }>();
     for (const item of items) {
       if (needle && !item.name.toLowerCase().includes(needle)) continue;
-      const key = item.category?.trim() || t('supply.uncategorised');
-      groups.set(key, [...(groups.get(key) ?? []), item]);
+      const supplierKey = item.vendorId ?? '';
+      const supplier = suppliers.get(supplierKey) ?? { label: item.vendor?.name ?? null, categories: new Map() };
+      const category = item.category?.trim() || t('supply.uncategorised');
+      supplier.categories.set(category, [...(supplier.categories.get(category) ?? []), item]);
+      suppliers.set(supplierKey, supplier);
     }
-    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+    return [...suppliers.entries()]
+      .sort(([a, x], [b, y]) => (a === '' ? -1 : b === '' ? 1 : (x.label ?? '').localeCompare(y.label ?? '')))
+      .map(([key, supplier]) => ({
+        key,
+        label: supplier.label,
+        categories: [...supplier.categories.entries()].sort(([a], [b]) => a.localeCompare(b)),
+      }));
   }, [items, search, t]);
 
   async function addOne(item: SupplyItem) {
@@ -147,6 +165,21 @@ export default function SupplyCatalogScreen() {
             <RefreshControl refreshing={isLoading} onRefresh={() => void load()} tintColor={colors.primary} />
           }
         >
+          {/* Where the desk manages who supplies what outside the warehouse.
+              On this screen because vendors are part of the catalog, and the
+              desk had no other way in. */}
+          {canManage ? (
+            <AnimatedEntrance delay={step(0)} style={styles.block}>
+              <InfoCard
+                testID="supply-open-vendors"
+                icon="storefront-outline"
+                title={t('vendors.title')}
+                subtitle={t('vendors.entrySubtitle')}
+                onPress={() => navigation.navigate('Vendors')}
+              />
+            </AnimatedEntrance>
+          ) : null}
+
           {canOrder && branches.length > 1 ? (
             <AnimatedEntrance delay={step(0)} style={styles.block}>
               <Text style={styles.sectionTitle}>{t('supply.branch')}</Text>
@@ -203,60 +236,78 @@ export default function SupplyCatalogScreen() {
             </AnimatedEntrance>
           ) : null}
 
-          {grouped.map(([category, group], groupIndex) => (
-            <AnimatedEntrance key={category} delay={step(Math.min(groupIndex + 2, 5))} style={styles.block}>
-              <Text style={styles.sectionTitle}>{category}</Text>
-              <View style={styles.list}>
-                {group.map((item) => {
-                  const inCart = quantityInCart.get(item.id) ?? 0;
-                  const orderable = item.isActive && item.unitPrice !== null;
-                  return (
-                    <View key={item.id} style={[styles.row, !item.isActive && styles.rowWithdrawn]}>
-                      <PressableScale
-                        testID={`supply-item-${item.id}`}
-                        scaleTo={0.99}
-                        style={styles.rowText}
-                        onPress={
-                          canManage
-                            ? () => navigation.navigate('SupplyItemForm', { inventoryItemId: item.id })
-                            : undefined
-                        }
-                      >
-                        <Text style={styles.rowName}>{item.name}</Text>
-                        <Text style={styles.rowMeta}>
-                          {item.unitPrice === null
-                            ? t('supply.noPriceYet')
-                            : t('supply.perUnit', {
-                                price: formatAmount(Number(item.unitPrice), currency),
-                                unit: item.unit,
-                              })}
-                          {!item.isActive ? ` · ${t('supply.withdrawn')}` : ''}
-                        </Text>
-                      </PressableScale>
+          {grouped.map((supplier, supplierIndex) => (
+            <View key={supplier.key || 'warehouse'}>
+              {hasVendorItems ? (
+                <AnimatedEntrance delay={step(Math.min(supplierIndex + 2, 5))} style={styles.supplierBlock}>
+                  <View style={styles.supplierHeader}>
+                    <Ionicons
+                      name={supplier.label ? 'storefront-outline' : 'cube-outline'}
+                      size={18}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.supplierTitle}>
+                      {supplier.label ? t('supply.fromVendor', { name: supplier.label }) : t('supply.fromWarehouse')}
+                    </Text>
+                  </View>
+                </AnimatedEntrance>
+              ) : null}
+              {supplier.categories.map(([category, group], groupIndex) => (
+                <AnimatedEntrance key={category} delay={step(Math.min(groupIndex + 2, 5))} style={styles.block}>
+                  <Text style={styles.sectionTitle}>{category}</Text>
+                  <View style={styles.list}>
+                    {group.map((item) => {
+                      const inCart = quantityInCart.get(item.id) ?? 0;
+                      const orderable = item.isActive && item.unitPrice !== null;
+                      return (
+                        <View key={item.id} style={[styles.row, !item.isActive && styles.rowWithdrawn]}>
+                          <PressableScale
+                            testID={`supply-item-${item.id}`}
+                            scaleTo={0.99}
+                            style={styles.rowText}
+                            onPress={
+                              canManage
+                                ? () => navigation.navigate('SupplyItemForm', { inventoryItemId: item.id })
+                                : undefined
+                            }
+                          >
+                            <Text style={styles.rowName}>{item.name}</Text>
+                            <Text style={styles.rowMeta}>
+                              {item.unitPrice === null
+                                ? t('supply.noPriceYet')
+                                : t('supply.perUnit', {
+                                    price: formatAmount(Number(item.unitPrice), currency),
+                                    unit: item.unit,
+                                  })}
+                              {!item.isActive ? ` · ${t('supply.withdrawn')}` : ''}
+                            </Text>
+                          </PressableScale>
 
-                      {canOrder && orderable ? (
-                        <PressableScale
-                          testID={`supply-add-${item.id}`}
-                          style={[styles.addChip, inCart > 0 && styles.addChipActive]}
-                          disabled={busyItemId !== null || !branchId}
-                          onPress={() => void addOne(item)}
-                        >
-                          {inCart > 0 ? (
-                            <Text style={styles.addChipCount}>{inCart}</Text>
-                          ) : (
-                            <Ionicons name="add" size={16} color={colors.primary} />
-                          )}
-                        </PressableScale>
-                      ) : null}
+                          {canOrder && orderable ? (
+                            <PressableScale
+                              testID={`supply-add-${item.id}`}
+                              style={[styles.addChip, inCart > 0 && styles.addChipActive]}
+                              disabled={busyItemId !== null || !branchId}
+                              onPress={() => void addOne(item)}
+                            >
+                              {inCart > 0 ? (
+                                <Text style={styles.addChipCount}>{inCart}</Text>
+                              ) : (
+                                <Ionicons name="add" size={16} color={colors.primary} />
+                              )}
+                            </PressableScale>
+                          ) : null}
 
-                      {canManage && !canOrder ? (
-                        <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                      ) : null}
-                    </View>
-                  );
-                })}
-              </View>
-            </AnimatedEntrance>
+                          {canManage && !canOrder ? (
+                            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                          ) : null}
+                        </View>
+                      );
+                    })}
+                  </View>
+                </AnimatedEntrance>
+              ))}
+            </View>
           ))}
         </ScrollView>
 
@@ -319,6 +370,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   branchGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  supplierBlock: { marginTop: spacing.xl },
+  // The supplier's name wraps beside its icon rather than pushing the row wider.
+  supplierHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  supplierTitle: { flexShrink: 1, fontSize: 16, fontWeight: '800', color: colors.text },
   branchItem: { flexGrow: 1, flexBasis: '46%' },
   searchBox: {
     flexDirection: 'row',

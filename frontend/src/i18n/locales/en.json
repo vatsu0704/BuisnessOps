@@ -99,7 +99,6 @@
       "SUPPLY_ORDER_INVALID_TRANSITION": "An order that is {{from}} cannot become {{to}}",
       "SUPPLY_ORDER_NOT_EDITABLE": "This order is {{status}}, so its items can no longer be changed",
       "SUPPLY_ORDER_EMPTY": "Add something to the order before placing it",
-      "SUPPLY_ORDER_REFERENCE_REQUIRED": "Paying online needs the payment reference so the warehouse can check it",
       "SUPPLY_ORDER_CANCEL_TOO_LATE": "The warehouse has already started on this order — ask them to reject it instead",
       "SUPPLY_ORDER_DELAY_NOT_APPLICABLE": "An order that is {{status}} cannot be delayed",
       "SUPPLY_ORDER_PAYMENT_NOT_CLAIMED": "There is no payment to check on this order yet",
@@ -127,7 +126,22 @@
       "CASHIER_ALREADY_HAS_BRANCH": "Cannot add {{branch}} — a cashier has one branch, and this one has {{currentBranch}}.",
       "STAFF_BASE_MUST_BE_WAREHOUSE": "{{role}} accepts, packs and dispatches goods, so they are based at your warehouse — their attendance and payslips cannot be filed at a shop.",
       "AUTH_ACCOUNT_DISABLED": "This account has been disabled. Ask the business owner to restore it.",
-      "TOO_MANY_REQUESTS": "Too many attempts. Please wait a few minutes and try again."
+      "TOO_MANY_REQUESTS": "Too many attempts. Please wait a few minutes and try again.",
+      "VENDOR_NOT_FOUND": "That vendor is not in this business",
+      "VENDOR_NAME_TAKEN": "There is already a vendor called {{name}}",
+      "SUPPLY_VENDOR_INACTIVE": "{{name}} has been withdrawn as a vendor, so nothing can be ordered from them",
+      "SUPPLY_ORDER_PAYMENT_MODE_REQUIRED": "Choose whether to pay now or on delivery",
+      "SUPPLY_ORDER_PAYMENT_NOT_CONFIRMED": "Pay first, then confirm the payment is done before placing the order",
+      "SUPPLY_PAYEE_NOT_SET": "There is no UPI ID set up for {{payee}} yet, so it cannot be paid now — pay on delivery, or ask accounts to set one",
+      "SUPPLY_ORDER_VENDOR_ORDER": "This order comes from a vendor, not the warehouse — the branch marks it received when it arrives",
+      "SUPPLY_ORDER_NOT_VENDOR_ORDER": "This order comes from the warehouse — the delivery agent marks it delivered",
+      "SUPPLY_ORDER_VENDOR_PAYMENT_UNANSWERED": "Say whether the vendor has been paid for this order",
+      "SUPPLY_ORDER_SETTLED_BY_ACCOUNTS": "Accounts pays for this order, so the branch does not pay or confirm it",
+      "SUPPLY_ORDER_PAYMENT_NOT_OPEN": "There is nothing to pay on this order now — it has been paid, or the payment is waiting to be confirmed",
+      "SUPPLY_ORDER_CASH_NEEDS_AGENT": "Cash for the warehouse goes to the delivery agent when the order arrives — pay by UPI here instead",
+      "SUPPLY_PAYMENT_NOT_DUE": "Order {{orderNumber}} is not one accounts has to pay",
+      "SUPPLY_PAYMENT_NOT_DELIVERED": "Order {{orderNumber}} has not been delivered yet — pay for it once it arrives",
+      "SUPPLY_PAYMENT_MIXED_PAYEES": "One payment can only go to one payee — choose orders from the warehouse or from one vendor"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} is required",
@@ -180,7 +194,10 @@
       "DEVICE_TOKEN_REQUIRED": "This device could not be registered for notifications",
       "NOTIFICATION_ENABLED_REQUIRED": "Choose whether to turn this on or off",
       "FIELD_MUST_BE_MONTH": "{{field}} must be a month in YYYY-MM form",
-      "CASHIER_NEEDS_ONE_BRANCH": "A cashier works at exactly one branch, so choose one."
+      "CASHIER_NEEDS_ONE_BRANCH": "A cashier works at exactly one branch, so choose one.",
+      "UPI_ID_INVALID": "{{field}} must be a UPI ID like name@bank, as printed under a UPI QR code",
+      "PAYMENT_NOT_CONFIRMED": "pay first, then confirm the payment is done",
+      "ORDER_IDS_RANGE": "{{field}} must list between 1 and {{max}} different orders"
     },
     "field": {
       "name": "Name",
@@ -221,7 +238,17 @@
       "preferredLocale": "Language",
       "addressLine": "Delivery address",
       "postalCode": "PIN code",
-      "deliveryAgentMembershipId": "Delivery agent"
+      "deliveryAgentMembershipId": "Delivery agent",
+      "upiId": "UPI ID",
+      "upiName": "name shown when paying",
+      "paymentConfirmed": "payment confirmation",
+      "paymentReference": "payment reference",
+      "supplyOrderIds": "orders",
+      "vendorId": "vendor",
+      "vendorPaid": "vendor payment",
+      "collectedVia": "how it was paid",
+      "method": "payment method",
+      "operatingModel": "who pays for raw material"
     },
     "downloadFailed": "That file could not be downloaded. Try again."
   },
@@ -243,7 +270,8 @@
     "counter": "Counter",
     "supply": "Supply",
     "desk": "Desk",
-    "deliveries": "Deliveries"
+    "deliveries": "Deliveries",
+    "payments": "Payments"
   },
   "splash": {
     "tagline": "Your Business. All in One."
@@ -316,7 +344,8 @@
     "STAFF": "Staff",
     "WAREHOUSE": "Warehouse",
     "CASHIER": "Cashier",
-    "DELIVERY_AGENT": "Delivery agent"
+    "DELIVERY_AGENT": "Delivery agent",
+    "ACCOUNTANT": "Accountant"
   },
   "password": {
     "level": "Security level",
@@ -376,7 +405,17 @@
     "expenseGapsSubtitle": "Who has not logged today’s spending",
     "noBranchBadge": "No branch yet",
     "noBranchTitle": "You have not been given a branch",
-    "noBranchBody": "Your account and your role are correct — there is just no branch attached to them yet, so there is nothing here to show. Ask an owner or an admin to assign you one."
+    "noBranchBody": "Your account and your role are correct — there is just no branch attached to them yet, so there is nothing here to show. Ask an owner or an admin to assign you one.",
+    "paymentsTitle": "Payments to make",
+    "paymentsReady": "{{amount}} ready to pay across {{count}} order",
+    "paymentsReady_plural": "{{amount}} ready to pay across {{count}} orders",
+    "paymentsOnTheWay": "{{count}} order on its way — pay once it arrives",
+    "paymentsOnTheWay_plural": "{{count}} orders on their way — pay once they arrive",
+    "paymentsNone": "Nothing to pay right now",
+    "paymentsToConfirmTitle": "Payments to confirm",
+    "paymentsToConfirmCount": "{{count}} payment sent to the warehouse — check it arrived",
+    "paymentsToConfirmCount_plural": "{{count}} payments sent to the warehouse — check they arrived",
+    "paymentsToConfirmNone": "Nothing waiting to be confirmed"
   },
   "phase": {
     "examplesLabel": "What you'll be able to ask"
@@ -426,7 +465,9 @@
     "notComparableCurrency": "Your businesses use different currencies, so there is no combined total to show.",
     "branchBreakdown": "{{trading}} of {{total}} locations trade",
     "noBusinesses": "No business here has figures you can read yet.",
-    "noBranches": "Add a branch and its figures will appear here."
+    "noBranches": "Add a branch and its figures will appear here.",
+    "vendorSpend": "Paid to vendors",
+    "vendorSpendCaption": "left the business"
   },
   "alerts": {
     "title": "Alerts",
@@ -481,7 +522,13 @@
     "kindBranch": "Branch",
     "kindBranchHint": "Sells and orders",
     "kindWarehouse": "Warehouse",
-    "kindWarehouseHint": "Supplies the branches"
+    "kindWarehouseHint": "Supplies the branches",
+    "model": "Who pays for raw material?",
+    "modelHint": "This decides whether the cashier pays when ordering, or the company’s accounts pays for it.",
+    "modelFoco": "FOCO — company operated",
+    "modelFocoHint": "The company pays. Accounts pays for each order once it arrives; the cashier only orders, and nobody pays the delivery agent.",
+    "modelFm": "FM — franchise",
+    "modelFmHint": "The branch pays for itself — by UPI before ordering, or in cash or UPI when it arrives."
   },
   "addBusiness": {
     "title": "Add a business",
@@ -845,7 +892,8 @@
     "swapTitle": "That branch already has a cashier",
     "swapBody": "{{cashier}} is the cashier for {{branch}}. Inviting this person takes the branch from them, and leaves them with none.",
     "swapConfirm": "Invite and move the branch",
-    "branchTheirs": "Their branch"
+    "branchTheirs": "Their branch",
+    "roleHint_ACCOUNTANT": "Sees every branch’s numbers, pays for company-run branches’ supplies and confirms the payments franchise branches send. No access to staff records."
   },
   "month": {
     "1": "January",
@@ -1028,7 +1076,8 @@
     "addressPlaceholder": "Building, street, landmark",
     "addressHint": "What a delivery agent needs in order to find this branch.",
     "postalCode": "PIN code",
-    "kindHint": "A warehouse is staffed and punched into like anywhere else. It simply has no counter and orders no raw material."
+    "kindHint": "A warehouse is staffed and punched into like anywhere else. It simply has no counter and orders no raw material.",
+    "modelHint": "A change applies to orders placed from now on. Orders already placed keep how they were to be paid."
   },
   "businessSwitcher": {
     "title": "Business",
@@ -1052,12 +1101,8 @@
     "reviewCount_plural": "{{count}} items",
     "place": "Place order",
     "paymentMode": "How are you paying?",
-    "payOnline": "Paid online",
-    "payOnlineHint": "Give the reference so the warehouse can check it",
-    "payCod": "Cash on delivery",
-    "payCodHint": "Pay the agent when it arrives",
-    "reference": "Payment reference",
-    "referencePlaceholder": "UPI or bank reference",
+    "payCod": "Pay on delivery",
+    "payCodHint": "Cash or UPI when it arrives",
     "noOrders": "No supply orders yet",
     "noOrdersBody": "Orders you place on the warehouse will show here.",
     "deskEmpty": "Nothing waiting",
@@ -1085,9 +1130,8 @@
     "delayReason": "Why?",
     "note": "Anything to add",
     "noteOptional": "Optional",
-    "verifyPayment": "Check the payment",
-    "markVerified": "Found it",
-    "markFailed": "Not found",
+    "markVerified": "Received",
+    "markFailed": "Not received",
     "assignAgent": "Who is taking it?",
     "assignNobody": "Nobody yet",
     "promisedAt": "Expected by {{time}}",
@@ -1129,13 +1173,47 @@
     "carrying": "carrying {{count}} run",
     "carrying_plural": "carrying {{count}} runs",
     "free": "free right now",
-    "cashTitle": "Cash on delivery",
-    "cashQuestion": "Have you taken {{amount}} from the {{branch}} cashier?",
-    "cashHint": "Saying yes records the money as collected. Say not yet if it has not been handed over.",
-    "cashYes": "Yes, I have the money",
+    "cashHint": "Either answer records the branch’s payment as handed over. Choose not yet if nothing has been.",
+    "cashYes": "Cash taken",
     "cashNo": "Not yet",
     "withdrawTitle": "Stop supplying {{name}}?",
-    "withdrawBody": "It comes off every branch’s order list. Orders already placed keep it, and you can supply it again later."
+    "withdrawBody": "It comes off every branch’s order list. Orders already placed keep it, and you can supply it again later.",
+    "fromWarehouse": "From the warehouse",
+    "fromVendor": "From {{name}}",
+    "subtotal": "Subtotal",
+    "splitNote": "This becomes {{count}} order, one for each supplier.",
+    "splitNote_plural": "This becomes {{count}} orders, one for each supplier.",
+    "accountsPaysTitle": "Accounts pays for this order",
+    "accountsPaysBody": "Your branch is company operated. Nothing is paid here or on delivery — accounts pays once it arrives.",
+    "payNow": "Pay now",
+    "payNowHint": "Scan the QR before placing",
+    "payNowUnavailable": "Paying now needs a UPI ID for every supplier in this order, and one is not set up yet. Pay when it arrives, or ask accounts to add it.",
+    "payAccounts": "Accounts pays",
+    "paidByAccounts": "Paid by accounts",
+    "payAmount": "Pay {{amount}}",
+    "markSentToVendor": "Mark as sent to the vendor",
+    "markReceived": "Received",
+    "notReceivedTitle": "Payment not received?",
+    "notReceivedBody": "{{branch}} will be asked to pay the {{amount}} again.",
+    "whatsappMessage": "Order #{{number}} for {{branch}}\n{{address}}\n\n{{lines}}\n\nTotal {{total}}",
+    "whatsappUnavailable": "WhatsApp could not be opened. Check the vendor’s phone number.",
+    "sendOnWhatsApp": "Send on WhatsApp",
+    "collectTitle": "Payment on delivery",
+    "collectQuestion": "Take {{amount}} from the {{branch}} cashier — in cash, or by them scanning your QR.",
+    "showQr": "Show the QR",
+    "hideQr": "Hide the QR",
+    "upiTakenDeliver": "They have paid — mark delivered",
+    "receiveTitle": "The goods arrived",
+    "vendorPaidQuestion": "Have you paid {{vendor}} the {{amount}}?",
+    "paidVendorCash": "Paid in cash",
+    "payVendorUpi": "Pay by UPI now",
+    "paidMarkReceived": "Paid — mark received",
+    "receivedNotPaid": "Received — I will pay later",
+    "suppliedBy": "Supplied by",
+    "warehouseStock": "Warehouse stock",
+    "warehouseStockHint": "Packed and sent by the warehouse",
+    "vendorSuppliesHint": "Delivered straight to the branch by the vendor",
+    "vendorWithdrawnHint": "No longer supplying — choose another"
   },
   "supplyStatus": {
     "DRAFT": "Not placed",
@@ -1144,13 +1222,15 @@
     "PACKED": "Packed",
     "DISPATCHED": "On the way",
     "DELIVERED": "Delivered",
-    "CANCELLED": "Cancelled"
+    "CANCELLED": "Cancelled",
+    "SENT_TO_VENDOR": "Sent to the vendor",
+    "RECEIVED": "Received"
   },
   "supplyPayment": {
-    "PENDING": "Pending",
-    "PAID": "Paid",
-    "VERIFIED": "Verified",
-    "FAILED": "Not found"
+    "PENDING": "To pay",
+    "PAID": "Payment sent",
+    "VERIFIED": "Paid",
+    "FAILED": "Not received"
   },
   "supplyDelay": {
     "TRAFFIC": "Traffic",
@@ -1161,11 +1241,16 @@
     "OTHER": "Something else"
   },
   "supplyEvent": {
-    "PAYMENT_CLAIMED": "Payment reference given",
+    "PAYMENT_CLAIMED": "Payment sent",
     "PAYMENT_ON_DELIVERY": "To be paid on delivery",
-    "PAYMENT_VERIFIED": "Payment verified",
-    "PAYMENT_FAILED": "Payment not found",
-    "PAYMENT_COLLECTED": "Cash taken on delivery"
+    "PAYMENT_VERIFIED": "Payment received",
+    "PAYMENT_FAILED": "Payment not received",
+    "PAYMENT_COLLECTED": "Cash taken on delivery",
+    "PAYMENT_COLLECTED_UPI": "Paid by UPI on delivery",
+    "PAYMENT_BY_ACCOUNTS": "Accounts pays once it arrives",
+    "PAYMENT_SETTLED": "Paid by accounts",
+    "PAYMENT_PAID_VENDOR": "Vendor paid by UPI",
+    "PAYMENT_PAID_VENDOR_CASH": "Vendor paid in cash"
   },
   "notifications": {
     "ATTENDANCE_MARKED_PRESENT": "You were marked present for {{date}} at {{branch}}.",
@@ -1180,7 +1265,10 @@
     "SUPPLY_ORDER_REJECTED": "The warehouse cannot fill order #{{orderNumber}}.",
     "SUPPLY_ORDER_DELAYED": "Order #{{orderNumber}} is {{minutes}} minutes late.",
     "SUPPLY_PAYMENT_VERIFIED": "The warehouse has confirmed payment for order #{{orderNumber}}.",
-    "SUPPLY_ORDER_ASSIGNED": "Order #{{orderNumber}} to {{branch}} is yours to carry."
+    "SUPPLY_ORDER_ASSIGNED": "Order #{{orderNumber}} to {{branch}} is yours to carry.",
+    "SUPPLY_ORDER_SENT_TO_VENDOR": "Order #{{orderNumber}} has been sent to {{vendor}}.",
+    "SUPPLY_ORDER_READY_TO_PAY": "Order #{{orderNumber}} from {{branch}} has arrived — {{amount}} to pay.",
+    "SUPPLY_PAYMENT_SENT": "{{branch}} has paid {{amount}} for order #{{orderNumber}}. Check that it arrived."
   },
   "notificationCentre": {
     "title": "Notifications",
@@ -1264,7 +1352,112 @@
       "analyticsViewBranch": "see a branch's own figures",
       "analyticsViewBusiness": "compare every branch, month by month",
       "exportDayEnd": "export a day's entries",
-      "exportMonthEnd": "export a month's entries"
+      "exportMonthEnd": "export a month's entries",
+      "supplyOrderReceive": "mark a vendor’s goods as received",
+      "supplyPaymentSettle": "pay for company branches’ supply orders",
+      "supplyPaymentVerify": "confirm a branch’s payment arrived",
+      "paymentAccountManage": "change where payments go"
     }
+  },
+  "paymentAccounts": {
+    "title": "Payment QR codes",
+    "subtitle": "Where branches’ payments go",
+    "settingsSubtitle": "The UPI IDs every payment QR is made from",
+    "explainer": "Every QR in the app is made from a UPI ID here, with the order’s exact amount in it — there is no image to upload. The UPI ID is printed under any UPI QR code.",
+    "warehouseSection": "Warehouse",
+    "warehouseHint": "What franchise branches pay for warehouse stock, and what accounts pays for company branches.",
+    "vendorsSection": "Vendors",
+    "vendorsHint": "Where a payment to each vendor goes. The warehouse desk adds vendors; only accounts and the owner can set these.",
+    "noVendorsBody": "The warehouse desk adds vendors from the raw-material catalog. They will appear here to set up.",
+    "noUpiYet": "No UPI ID yet",
+    "qrSet": "QR set",
+    "qrNotSet": "QR not set",
+    "upiId": "UPI ID",
+    "upiIdInvalid": "That is not a UPI ID. It looks like name@bank.",
+    "upiName": "Name shown when paying",
+    "previewLabel": "Test QR code for {{payee}}",
+    "previewHint": "Scan this to check your UPI app shows the right name. It has no amount, so nothing is paid.",
+    "changedBy": "Last changed by {{name}} on {{date}} at {{time}}",
+    "someone": "someone",
+    "save": "Save",
+    "saved": "Saved",
+    "remove": "Remove UPI ID",
+    "removeTitle": "Remove the UPI ID for {{payee}}?",
+    "removeBody": "Branches will not be able to pay them by QR until a new one is set. Paying on delivery still works."
+  },
+  "payments": {
+    "title": "Payments",
+    "paySubtitle": "Pay for company branches’ orders once they arrive",
+    "confirmSubtitle": "Payments branches have sent the warehouse",
+    "tabPay": "To pay",
+    "tabConfirm": "To confirm",
+    "readyCount": "{{count}} ready",
+    "readyCount_plural": "{{count}} ready",
+    "waitingCount": "{{count}} waiting",
+    "waitingCount_plural": "{{count}} waiting",
+    "readyLine": "{{amount}} ready · {{count}} order",
+    "readyLine_plural": "{{amount}} ready · {{count}} orders",
+    "nothingReady": "Nothing has arrived yet",
+    "selectAllReady": "Select all that arrived",
+    "deliveredOn": "Arrived {{date}}",
+    "onTheWay": "On its way — pay once it arrives",
+    "nothingToPay": "Nothing to pay",
+    "nothingToPayBody": "Orders from company branches appear here when they are placed, and can be paid for once they arrive.",
+    "nothingToConfirm": "Nothing to confirm",
+    "nothingToConfirmBody": "When a branch pays the warehouse, it appears here for you to check it arrived.",
+    "selectedCount": "{{count}} order selected",
+    "selectedCount_plural": "{{count}} orders selected",
+    "paySelected": "Pay these",
+    "readyTotalHint": "{{amount}} has arrived and is ready to pay. Tick the orders to pay together.",
+    "payTitle": "Pay",
+    "payCount": "{{count}} order",
+    "payCount_plural": "{{count}} orders",
+    "covers": "This payment covers",
+    "confirmPaidTitle": "Record this payment?",
+    "confirmPaidBody": "Only once the UPI payment has gone through: {{amount}} to {{payee}} for {{count}} order. This cannot be undone.",
+    "confirmPaidBody_plural": "Only once the UPI payment has gone through: {{amount}} to {{payee}} for {{count}} orders. This cannot be undone.",
+    "paidNotice": "Paid {{amount}} for {{count}} order.",
+    "paidNotice_plural": "Paid {{amount}} for {{count}} orders.",
+    "confirmReceivedTitle": "Did the money arrive?",
+    "confirmReceivedBody": "Confirm {{amount}} from {{branch}} for order #{{number}} is in the account.",
+    "sentBeforeOrdering": "Paid before ordering",
+    "sentOnDelivery": "Paid on delivery"
+  },
+  "supplyPaymentMode": {
+    "ONLINE": "paid before ordering",
+    "COD": "pay on delivery",
+    "ACCOUNTS": "accounts pays"
+  },
+  "upiPay": {
+    "payTo": "Pay {{name}}",
+    "qrLabel": "UPI QR code to pay {{amount}} to {{name}}",
+    "scanHint": "Scan this from another phone, or open your UPI app on this one.",
+    "openApp": "Pay with UPI app",
+    "noApp": "No UPI app opened on this phone. Scan the QR from another phone instead.",
+    "notSet": "No UPI ID is set up for {{name}} yet, so there is no QR to pay. Accounts can add one under Payment QR codes.",
+    "notRupees": "UPI payments are in rupees only.",
+    "done": "Payment done",
+    "doneMarked": "Marked as paid",
+    "undo": "Not yet"
+  },
+  "vendors": {
+    "title": "Vendors",
+    "subtitle": "Suppliers who deliver straight to your branches",
+    "entrySubtitle": "Who supplies what outside the warehouse",
+    "add": "Add vendor",
+    "edit": "Edit vendor",
+    "save": "Save",
+    "empty": "No vendors yet",
+    "emptyBody": "Add the suppliers who deliver straight to your branches — water, ice, milk.",
+    "name": "Vendor name",
+    "namePlaceholder": "e.g. Shree Water Suppliers",
+    "phone": "WhatsApp number",
+    "phoneHint": "Orders for this vendor are sent to this number on WhatsApp.",
+    "paysTo": "Payments to this vendor go to {{upiId}}. Accounts manages this.",
+    "noUpiYet": "No UPI ID yet, so branches cannot pay this vendor by QR. Ask accounts to set one under Payment QR codes.",
+    "withdraw": "Stop using this vendor",
+    "restore": "Use this vendor again",
+    "withdrawTitle": "Stop using {{name}}?",
+    "withdrawBody": "Their items can no longer be ordered until they are brought back. Orders already placed are not affected."
   }
 }

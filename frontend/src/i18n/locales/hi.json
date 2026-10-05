@@ -99,7 +99,6 @@
       "SUPPLY_ORDER_INVALID_TRANSITION": "जो ऑर्डर {{from}} है वह {{to}} नहीं हो सकता",
       "SUPPLY_ORDER_NOT_EDITABLE": "यह ऑर्डर {{status}} है, अब इसका सामान नहीं बदला जा सकता",
       "SUPPLY_ORDER_EMPTY": "ऑर्डर देने से पहले उसमें कुछ जोड़ें",
-      "SUPPLY_ORDER_REFERENCE_REQUIRED": "ऑनलाइन भुगतान के लिए रेफ़रन्स ज़रूरी है ताकि गोदाम जाँच सके",
       "SUPPLY_ORDER_CANCEL_TOO_LATE": "गोदाम इस ऑर्डर पर काम शुरू कर चुका है — उनसे मना करने को कहें",
       "SUPPLY_ORDER_DELAY_NOT_APPLICABLE": "जो ऑर्डर {{status}} है उसमें देरी दर्ज नहीं की जा सकती",
       "SUPPLY_ORDER_PAYMENT_NOT_CLAIMED": "इस ऑर्डर पर अभी जाँचने के लिए कोई भुगतान नहीं है",
@@ -127,7 +126,22 @@
       "CASHIER_ALREADY_HAS_BRANCH": "{{branch}} नहीं जोड़ी जा सकती — एक कैशियर के पास एक ही शाखा होती है, और इनके पास {{currentBranch}} है।",
       "STAFF_BASE_MUST_BE_WAREHOUSE": "{{role}} सामान स्वीकार करते, पैक करते और भेजते हैं, इसलिए उनका ठिकाना आपका गोदाम है — उनकी हाज़िरी और सैलरी स्लिप किसी दुकान पर दर्ज नहीं की जा सकतीं।",
       "AUTH_ACCOUNT_DISABLED": "यह खाता बंद कर दिया गया है। इसे वापस चालू करवाने के लिए व्यवसाय के मालिक से कहें।",
-      "TOO_MANY_REQUESTS": "बहुत बार कोशिश हुई। कृपया कुछ मिनट रुककर फिर कोशिश करें।"
+      "TOO_MANY_REQUESTS": "बहुत बार कोशिश हुई। कृपया कुछ मिनट रुककर फिर कोशिश करें।",
+      "VENDOR_NOT_FOUND": "वह विक्रेता इस व्यवसाय में नहीं है",
+      "VENDOR_NAME_TAKEN": "{{name}} नाम का विक्रेता पहले से है",
+      "SUPPLY_VENDOR_INACTIVE": "{{name}} विक्रेता के रूप में बंद है, इसलिए उनसे कुछ ऑर्डर नहीं किया जा सकता",
+      "SUPPLY_ORDER_PAYMENT_MODE_REQUIRED": "चुनें कि अभी भुगतान करना है या डिलीवरी पर",
+      "SUPPLY_ORDER_PAYMENT_NOT_CONFIRMED": "पहले भुगतान करें, फिर ऑर्डर देने से पहले पुष्टि करें कि भुगतान हो गया",
+      "SUPPLY_PAYEE_NOT_SET": "{{payee}} का UPI ID अभी सेट नहीं है, इसलिए अभी भुगतान नहीं हो सकता — डिलीवरी पर भुगतान करें, या अकाउंट्स से सेट करने को कहें",
+      "SUPPLY_ORDER_VENDOR_ORDER": "यह ऑर्डर गोदाम से नहीं, विक्रेता से आता है — पहुँचने पर शाखा इसे प्राप्त दर्ज करती है",
+      "SUPPLY_ORDER_NOT_VENDOR_ORDER": "यह ऑर्डर गोदाम से आता है — डिलीवरी एजेंट इसे पहुँचाया दर्ज करता है",
+      "SUPPLY_ORDER_VENDOR_PAYMENT_UNANSWERED": "बताएँ कि इस ऑर्डर के लिए विक्रेता को भुगतान हुआ या नहीं",
+      "SUPPLY_ORDER_SETTLED_BY_ACCOUNTS": "इस ऑर्डर का भुगतान अकाउंट्स करता है, इसलिए शाखा न भुगतान करती है न पुष्टि",
+      "SUPPLY_ORDER_PAYMENT_NOT_OPEN": "इस ऑर्डर पर अभी कुछ भुगतान बाक़ी नहीं — भुगतान हो चुका है, या पुष्टि का इंतज़ार है",
+      "SUPPLY_ORDER_CASH_NEEDS_AGENT": "गोदाम का नक़द ऑर्डर पहुँचने पर डिलीवरी एजेंट को दिया जाता है — यहाँ UPI से भुगतान करें",
+      "SUPPLY_PAYMENT_NOT_DUE": "ऑर्डर {{orderNumber}} का भुगतान अकाउंट्स को नहीं करना है",
+      "SUPPLY_PAYMENT_NOT_DELIVERED": "ऑर्डर {{orderNumber}} अभी पहुँचा नहीं है — पहुँचने पर भुगतान करें",
+      "SUPPLY_PAYMENT_MIXED_PAYEES": "एक भुगतान सिर्फ़ एक को जा सकता है — गोदाम के या किसी एक विक्रेता के ऑर्डर चुनें"
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} आवश्यक है",
@@ -180,7 +194,10 @@
       "DEVICE_TOKEN_REQUIRED": "यह डिवाइस सूचनाओं के लिए दर्ज नहीं हो सका",
       "NOTIFICATION_ENABLED_REQUIRED": "चुनें कि इसे चालू करना है या बंद",
       "FIELD_MUST_BE_MONTH": "{{field}} YYYY-MM रूप में एक महीना होना चाहिए",
-      "CASHIER_NEEDS_ONE_BRANCH": "एक कैशियर ठीक एक ही शाखा में काम करता है, इसलिए एक चुनें।"
+      "CASHIER_NEEDS_ONE_BRANCH": "एक कैशियर ठीक एक ही शाखा में काम करता है, इसलिए एक चुनें।",
+      "UPI_ID_INVALID": "{{field}} UPI ID होना चाहिए, जैसे name@bank — जैसा UPI QR कोड के नीचे छपा होता है",
+      "PAYMENT_NOT_CONFIRMED": "पहले भुगतान करें, फिर पुष्टि करें कि भुगतान हो गया",
+      "ORDER_IDS_RANGE": "{{field}} में 1 से {{max}} अलग-अलग ऑर्डर होने चाहिए"
     },
     "field": {
       "name": "नाम",
@@ -221,7 +238,17 @@
       "preferredLocale": "भाषा",
       "addressLine": "डिलीवरी का पता",
       "postalCode": "पिन कोड",
-      "deliveryAgentMembershipId": "डिलीवरी एजेंट"
+      "deliveryAgentMembershipId": "डिलीवरी एजेंट",
+      "upiId": "UPI ID",
+      "upiName": "भुगतान पर दिखने वाला नाम",
+      "paymentConfirmed": "भुगतान की पुष्टि",
+      "paymentReference": "भुगतान संदर्भ",
+      "supplyOrderIds": "ऑर्डर",
+      "vendorId": "विक्रेता",
+      "vendorPaid": "विक्रेता का भुगतान",
+      "collectedVia": "कैसे भुगतान हुआ",
+      "method": "भुगतान का तरीक़ा",
+      "operatingModel": "कच्चे माल का भुगतान कौन करेगा"
     },
     "downloadFailed": "वह फ़ाइल डाउनलोड नहीं हो सकी। फिर कोशिश करें।"
   },
@@ -243,7 +270,8 @@
     "counter": "काउंटर",
     "supply": "सप्लाई",
     "desk": "डेस्क",
-    "deliveries": "डिलीवरी"
+    "deliveries": "डिलीवरी",
+    "payments": "भुगतान"
   },
   "splash": {
     "tagline": "आपका व्यापार। सब कुछ एक जगह।"
@@ -316,7 +344,8 @@
     "STAFF": "स्टाफ",
     "WAREHOUSE": "गोदाम",
     "CASHIER": "कैशियर",
-    "DELIVERY_AGENT": "डिलीवरी एजेंट"
+    "DELIVERY_AGENT": "डिलीवरी एजेंट",
+    "ACCOUNTANT": "अकाउंटेंट"
   },
   "password": {
     "level": "सुरक्षा स्तर",
@@ -376,7 +405,17 @@
     "expenseGapsSubtitle": "किसने आज का खर्च दर्ज नहीं किया",
     "noBranchBadge": "अभी कोई शाखा नहीं",
     "noBranchTitle": "आपको कोई शाखा नहीं सौंपी गई है",
-    "noBranchBody": "आपका खाता और भूमिका सही हैं — बस उनसे कोई शाखा जुड़ी नहीं है, इसलिए यहाँ दिखाने के लिए कुछ नहीं है। मालिक या व्यवस्थापक से एक शाखा सौंपने के लिए कहें।"
+    "noBranchBody": "आपका खाता और भूमिका सही हैं — बस उनसे कोई शाखा जुड़ी नहीं है, इसलिए यहाँ दिखाने के लिए कुछ नहीं है। मालिक या व्यवस्थापक से एक शाखा सौंपने के लिए कहें।",
+    "paymentsTitle": "करने वाले भुगतान",
+    "paymentsReady": "{{count}} ऑर्डर का {{amount}} भुगतान के लिए तैयार",
+    "paymentsReady_plural": "{{count}} ऑर्डरों का {{amount}} भुगतान के लिए तैयार",
+    "paymentsOnTheWay": "{{count}} ऑर्डर रास्ते में — पहुँचने पर भुगतान करें",
+    "paymentsOnTheWay_plural": "{{count}} ऑर्डर रास्ते में — पहुँचने पर भुगतान करें",
+    "paymentsNone": "अभी कोई भुगतान बाक़ी नहीं",
+    "paymentsToConfirmTitle": "पुष्टि करने वाले भुगतान",
+    "paymentsToConfirmCount": "गोदाम को {{count}} भुगतान भेजा गया — जाँचें कि पहुँचा",
+    "paymentsToConfirmCount_plural": "गोदाम को {{count}} भुगतान भेजे गए — जाँचें कि पहुँचे",
+    "paymentsToConfirmNone": "पुष्टि के लिए कुछ बाक़ी नहीं"
   },
   "phase": {
     "examplesLabel": "आप क्या पूछ सकेंगे"
@@ -426,7 +465,9 @@
     "notComparableCurrency": "आपके व्यवसायों की मुद्राएँ अलग हैं, इसलिए मिलाकर कोई कुल नहीं दिखाया जा सकता।",
     "branchBreakdown": "{{total}} में से {{trading}} जगह बिक्री करती हैं",
     "noBusinesses": "यहाँ किसी व्यवसाय के ऐसे आँकड़े नहीं हैं जो आप देख सकें।",
-    "noBranches": "एक शाखा जोड़ें और उसके आँकड़े यहाँ दिखेंगे।"
+    "noBranches": "एक शाखा जोड़ें और उसके आँकड़े यहाँ दिखेंगे।",
+    "vendorSpend": "विक्रेताओं को भुगतान",
+    "vendorSpendCaption": "व्यवसाय से बाहर गया"
   },
   "alerts": {
     "title": "अलर्ट",
@@ -481,7 +522,13 @@
     "kindBranch": "शाखा",
     "kindBranchHint": "बेचती और मँगाती है",
     "kindWarehouse": "गोदाम",
-    "kindWarehouseHint": "शाखाओं को माल भेजता है"
+    "kindWarehouseHint": "शाखाओं को माल भेजता है",
+    "model": "कच्चे माल का भुगतान कौन करेगा?",
+    "modelHint": "इससे तय होता है कि ऑर्डर करते समय कैशियर भुगतान करेगा या कंपनी के अकाउंट्स।",
+    "modelFoco": "FOCO — कंपनी संचालित",
+    "modelFocoHint": "कंपनी भुगतान करती है। हर ऑर्डर पहुँचने पर अकाउंट्स भुगतान करता है; कैशियर सिर्फ़ ऑर्डर करता है और डिलीवरी एजेंट को कोई पैसे नहीं देता।",
+    "modelFm": "FM — फ्रैंचाइज़ी",
+    "modelFmHint": "शाखा खुद भुगतान करती है — ऑर्डर से पहले UPI से, या माल आने पर नक़द या UPI से।"
   },
   "addBusiness": {
     "title": "व्यवसाय जोड़ें",
@@ -845,7 +892,8 @@
     "swapTitle": "उस शाखा पर पहले से एक कैशियर है",
     "swapBody": "{{branch}} के कैशियर {{cashier}} हैं। इन्हें बुलाने पर शाखा उनसे ले ली जाएगी और उनके पास कोई शाखा नहीं रहेगी।",
     "swapConfirm": "बुलाएँ और शाखा बदलें",
-    "branchTheirs": "इनकी शाखा"
+    "branchTheirs": "इनकी शाखा",
+    "roleHint_ACCOUNTANT": "हर शाखा के आँकड़े देखते हैं, कंपनी-संचालित शाखाओं की सप्लाई का भुगतान करते हैं और फ्रैंचाइज़ी शाखाओं के भेजे भुगतान की पुष्टि करते हैं। स्टाफ रिकॉर्ड तक पहुँच नहीं।"
   },
   "month": {
     "1": "जनवरी",
@@ -1028,7 +1076,8 @@
     "addressPlaceholder": "इमारत, सड़क, लैंडमार्क",
     "addressHint": "डिलीवरी एजेंट को यह शाखा ढूँढने के लिए यही चाहिए।",
     "postalCode": "पिन कोड",
-    "kindHint": "गोदाम में भी स्टाफ़ होता है और वहीं पंच इन होता है। बस वहाँ काउंटर नहीं होता और कच्चा माल नहीं मँगाया जाता।"
+    "kindHint": "गोदाम में भी स्टाफ़ होता है और वहीं पंच इन होता है। बस वहाँ काउंटर नहीं होता और कच्चा माल नहीं मँगाया जाता।",
+    "modelHint": "बदलाव अब से दिए गए ऑर्डरों पर लागू होगा। पहले से दिए गए ऑर्डरों का भुगतान पहले जैसा ही रहेगा।"
   },
   "businessSwitcher": {
     "title": "व्यवसाय",
@@ -1052,12 +1101,8 @@
     "reviewCount_plural": "{{count}} सामान",
     "place": "ऑर्डर भेजें",
     "paymentMode": "भुगतान कैसे करेंगे?",
-    "payOnline": "ऑनलाइन भुगतान",
-    "payOnlineHint": "रेफ़रन्स दें ताकि गोदाम जाँच सके",
-    "payCod": "डिलीवरी पर नक़द",
-    "payCodHint": "सामान आने पर एजेंट को दें",
-    "reference": "भुगतान रेफ़रन्स",
-    "referencePlaceholder": "UPI या बैंक रेफ़रन्स",
+    "payCod": "डिलीवरी पर भुगतान",
+    "payCodHint": "माल आने पर नक़द या UPI",
     "noOrders": "अभी कोई सप्लाई ऑर्डर नहीं",
     "noOrdersBody": "गोदाम को भेजे ऑर्डर यहाँ दिखेंगे।",
     "deskEmpty": "कुछ बाक़ी नहीं",
@@ -1085,7 +1130,6 @@
     "delayReason": "क्यों?",
     "note": "कुछ और कहना है",
     "noteOptional": "ज़रूरी नहीं",
-    "verifyPayment": "भुगतान जाँचें",
     "markVerified": "मिल गया",
     "markFailed": "नहीं मिला",
     "assignAgent": "कौन ले जाएगा?",
@@ -1129,13 +1173,47 @@
     "carrying": "{{count}} डिलीवरी साथ में",
     "carrying_plural": "{{count}} डिलीवरी साथ में",
     "free": "अभी खाली",
-    "cashTitle": "डिलीवरी पर नक़द",
-    "cashQuestion": "क्या आपने {{branch}} के कैशियर से {{amount}} ले लिए हैं?",
-    "cashHint": "हाँ कहने पर पैसा मिला हुआ दर्ज होगा। अगर अभी नहीं मिला है तो \"अभी नहीं\" चुनें।",
-    "cashYes": "हाँ, पैसे मिल गए",
+    "cashHint": "कोई भी जवाब शाखा का भुगतान सौंपा गया दर्ज करता है। अगर कुछ नहीं मिला तो \"अभी नहीं\" चुनें।",
+    "cashYes": "नक़द मिल गए",
     "cashNo": "अभी नहीं",
     "withdrawTitle": "{{name}} देना बंद करें?",
-    "withdrawBody": "यह हर शाखा की ऑर्डर सूची से हट जाएगा। पहले दिए गए ऑर्डर वैसे ही रहेंगे, और आप इसे बाद में फिर से चालू कर सकते हैं।"
+    "withdrawBody": "यह हर शाखा की ऑर्डर सूची से हट जाएगा। पहले दिए गए ऑर्डर वैसे ही रहेंगे, और आप इसे बाद में फिर से चालू कर सकते हैं।",
+    "fromWarehouse": "गोदाम से",
+    "fromVendor": "{{name}} से",
+    "subtotal": "उप-योग",
+    "splitNote": "यह {{count}} ऑर्डर बनेगा, हर सप्लायर का एक।",
+    "splitNote_plural": "यह {{count}} ऑर्डर बनेंगे, हर सप्लायर का एक।",
+    "accountsPaysTitle": "इस ऑर्डर का भुगतान अकाउंट्स करेगा",
+    "accountsPaysBody": "आपकी शाखा कंपनी संचालित है। यहाँ या डिलीवरी पर कोई भुगतान नहीं — माल पहुँचने पर अकाउंट्स भुगतान करेगा।",
+    "payNow": "अभी भुगतान",
+    "payNowHint": "ऑर्डर से पहले QR स्कैन करें",
+    "payNowUnavailable": "अभी भुगतान के लिए इस ऑर्डर के हर सप्लायर का UPI ID चाहिए, और एक अभी सेट नहीं है। माल आने पर भुगतान करें, या अकाउंट्स से जोड़ने को कहें।",
+    "payAccounts": "अकाउंट्स भुगतान करेगा",
+    "paidByAccounts": "अकाउंट्स ने भुगतान किया",
+    "payAmount": "{{amount}} का भुगतान करें",
+    "markSentToVendor": "विक्रेता को भेजा गया दर्ज करें",
+    "markReceived": "माल मिल गया",
+    "notReceivedTitle": "भुगतान नहीं मिला?",
+    "notReceivedBody": "{{branch}} से {{amount}} दोबारा भुगतान करने को कहा जाएगा।",
+    "whatsappMessage": "{{branch}} के लिए ऑर्डर #{{number}}\n{{address}}\n\n{{lines}}\n\nकुल {{total}}",
+    "whatsappUnavailable": "WhatsApp नहीं खुला। विक्रेता का फ़ोन नंबर जाँचें।",
+    "sendOnWhatsApp": "WhatsApp पर भेजें",
+    "collectTitle": "डिलीवरी पर भुगतान",
+    "collectQuestion": "{{branch}} के कैशियर से {{amount}} लें — नक़द, या आपका QR स्कैन करवाकर।",
+    "showQr": "QR दिखाएँ",
+    "hideQr": "QR छिपाएँ",
+    "upiTakenDeliver": "भुगतान हो गया — पहुँचाया दर्ज करें",
+    "receiveTitle": "माल आ गया",
+    "vendorPaidQuestion": "क्या आपने {{vendor}} को {{amount}} दे दिए?",
+    "paidVendorCash": "नक़द दिया",
+    "payVendorUpi": "अभी UPI से भुगतान करें",
+    "paidMarkReceived": "भुगतान हुआ — मिला दर्ज करें",
+    "receivedNotPaid": "माल मिला — भुगतान बाद में करूँगा",
+    "suppliedBy": "सप्लाई करने वाला",
+    "warehouseStock": "गोदाम का माल",
+    "warehouseStockHint": "गोदाम पैक करके भेजता है",
+    "vendorSuppliesHint": "विक्रेता सीधे शाखा तक पहुँचाता है",
+    "vendorWithdrawnHint": "अब सप्लाई नहीं करता — कोई और चुनें"
   },
   "supplyStatus": {
     "DRAFT": "भेजा नहीं",
@@ -1144,12 +1222,14 @@
     "PACKED": "पैक",
     "DISPATCHED": "रास्ते में",
     "DELIVERED": "पहुँचा",
-    "CANCELLED": "रद्द"
+    "CANCELLED": "रद्द",
+    "SENT_TO_VENDOR": "विक्रेता को भेजा",
+    "RECEIVED": "मिल गया"
   },
   "supplyPayment": {
-    "PENDING": "बाक़ी",
-    "PAID": "भुगतान",
-    "VERIFIED": "जाँचा गया",
+    "PENDING": "भुगतान बाक़ी",
+    "PAID": "भुगतान भेजा",
+    "VERIFIED": "भुगतान हो गया",
     "FAILED": "नहीं मिला"
   },
   "supplyDelay": {
@@ -1161,11 +1241,16 @@
     "OTHER": "कुछ और"
   },
   "supplyEvent": {
-    "PAYMENT_CLAIMED": "भुगतान का रेफ़रन्स दिया",
+    "PAYMENT_CLAIMED": "भुगतान भेजा",
     "PAYMENT_ON_DELIVERY": "पहुँचने पर भुगतान",
-    "PAYMENT_VERIFIED": "भुगतान जाँचा गया",
+    "PAYMENT_VERIFIED": "भुगतान मिल गया",
     "PAYMENT_FAILED": "भुगतान नहीं मिला",
-    "PAYMENT_COLLECTED": "डिलीवरी पर नक़द लिया"
+    "PAYMENT_COLLECTED": "डिलीवरी पर नक़द लिया",
+    "PAYMENT_COLLECTED_UPI": "डिलीवरी पर UPI से भुगतान",
+    "PAYMENT_BY_ACCOUNTS": "पहुँचने पर अकाउंट्स भुगतान करेगा",
+    "PAYMENT_SETTLED": "अकाउंट्स ने भुगतान किया",
+    "PAYMENT_PAID_VENDOR": "विक्रेता को UPI से भुगतान",
+    "PAYMENT_PAID_VENDOR_CASH": "विक्रेता को नक़द भुगतान"
   },
   "notifications": {
     "ATTENDANCE_MARKED_PRESENT": "{{branch}} पर {{date}} के लिए आपको हाज़िर लगाया गया है।",
@@ -1180,7 +1265,10 @@
     "SUPPLY_ORDER_REJECTED": "गोदाम ऑर्डर #{{orderNumber}} पूरा नहीं कर सकता।",
     "SUPPLY_ORDER_DELAYED": "ऑर्डर #{{orderNumber}} {{minutes}} मिनट लेट है।",
     "SUPPLY_PAYMENT_VERIFIED": "गोदाम ने ऑर्डर #{{orderNumber}} का भुगतान पक्का कर दिया है।",
-    "SUPPLY_ORDER_ASSIGNED": "{{branch}} का ऑर्डर #{{orderNumber}} आपको पहुँचाना है।"
+    "SUPPLY_ORDER_ASSIGNED": "{{branch}} का ऑर्डर #{{orderNumber}} आपको पहुँचाना है।",
+    "SUPPLY_ORDER_SENT_TO_VENDOR": "ऑर्डर #{{orderNumber}} {{vendor}} को भेज दिया गया है।",
+    "SUPPLY_ORDER_READY_TO_PAY": "{{branch}} का ऑर्डर #{{orderNumber}} पहुँच गया है — {{amount}} का भुगतान करना है।",
+    "SUPPLY_PAYMENT_SENT": "{{branch}} ने ऑर्डर #{{orderNumber}} के लिए {{amount}} भेजे हैं। जाँचें कि पैसे आ गए।"
   },
   "notificationCentre": {
     "title": "सूचनाएँ",
@@ -1264,7 +1352,112 @@
       "analyticsViewBranch": "शाखा के अपने आँकड़े देख",
       "analyticsViewBusiness": "हर शाखा की महीने-दर-महीने तुलना देख",
       "exportDayEnd": "एक दिन की प्रविष्टियाँ निर्यात कर",
-      "exportMonthEnd": "एक महीने की प्रविष्टियाँ निर्यात कर"
+      "exportMonthEnd": "एक महीने की प्रविष्टियाँ निर्यात कर",
+      "supplyOrderReceive": "विक्रेता का माल प्राप्त दर्ज करना",
+      "supplyPaymentSettle": "कंपनी शाखाओं के सप्लाई ऑर्डर का भुगतान करना",
+      "supplyPaymentVerify": "शाखा का भुगतान पहुँचने की पुष्टि करना",
+      "paymentAccountManage": "भुगतान कहाँ जाता है यह बदलना"
     }
+  },
+  "paymentAccounts": {
+    "title": "भुगतान QR कोड",
+    "subtitle": "शाखाओं का भुगतान कहाँ जाता है",
+    "settingsSubtitle": "वे UPI ID जिनसे हर भुगतान QR बनता है",
+    "explainer": "ऐप का हर QR यहाँ के UPI ID से बनता है, उसमें ऑर्डर की सही रकम होती है — कोई फ़ोटो अपलोड नहीं करनी। UPI ID हर UPI QR कोड के नीचे छपा होता है।",
+    "warehouseSection": "गोदाम",
+    "warehouseHint": "फ्रैंचाइज़ी शाखाएँ गोदाम के माल का भुगतान यहीं करती हैं, और अकाउंट्स कंपनी शाखाओं का।",
+    "vendorsSection": "विक्रेता",
+    "vendorsHint": "हर विक्रेता का भुगतान कहाँ जाता है। विक्रेता गोदाम डेस्क जोड़ता है; ये सिर्फ़ अकाउंट्स और मालिक तय कर सकते हैं।",
+    "noVendorsBody": "गोदाम डेस्क कच्चे माल की सूची से विक्रेता जोड़ता है। वे यहाँ सेट करने के लिए दिखेंगे।",
+    "noUpiYet": "अभी कोई UPI ID नहीं",
+    "qrSet": "QR तैयार",
+    "qrNotSet": "QR नहीं बना",
+    "upiId": "UPI ID",
+    "upiIdInvalid": "यह UPI ID नहीं है। यह name@bank जैसा दिखता है।",
+    "upiName": "भुगतान करते समय दिखने वाला नाम",
+    "previewLabel": "{{payee}} का परीक्षण QR कोड",
+    "previewHint": "जाँचने के लिए इसे स्कैन करें कि UPI ऐप सही नाम दिखाता है। इसमें कोई रकम नहीं है, इसलिए कुछ भुगतान नहीं होगा।",
+    "changedBy": "आख़िरी बदलाव {{name}} ने {{date}} को {{time}} बजे किया",
+    "someone": "किसी",
+    "save": "सहेजें",
+    "saved": "सहेजा गया",
+    "remove": "UPI ID हटाएँ",
+    "removeTitle": "{{payee}} का UPI ID हटाएँ?",
+    "removeBody": "नया सेट होने तक शाखाएँ उन्हें QR से भुगतान नहीं कर पाएँगी। डिलीवरी पर भुगतान चलता रहेगा।"
+  },
+  "payments": {
+    "title": "भुगतान",
+    "paySubtitle": "कंपनी शाखाओं के ऑर्डर पहुँचने पर भुगतान करें",
+    "confirmSubtitle": "शाखाओं द्वारा गोदाम को भेजे गए भुगतान",
+    "tabPay": "भुगतान करना है",
+    "tabConfirm": "पुष्टि करनी है",
+    "readyCount": "{{count}} तैयार",
+    "readyCount_plural": "{{count}} तैयार",
+    "waitingCount": "{{count}} बाक़ी",
+    "waitingCount_plural": "{{count}} बाक़ी",
+    "readyLine": "{{amount}} तैयार · {{count}} ऑर्डर",
+    "readyLine_plural": "{{amount}} तैयार · {{count}} ऑर्डर",
+    "nothingReady": "अभी कुछ नहीं पहुँचा",
+    "selectAllReady": "जो पहुँचे वे सब चुनें",
+    "deliveredOn": "{{date}} को पहुँचा",
+    "onTheWay": "रास्ते में — पहुँचने पर भुगतान करें",
+    "nothingToPay": "कोई भुगतान बाक़ी नहीं",
+    "nothingToPayBody": "कंपनी शाखाओं के ऑर्डर देते ही यहाँ दिखते हैं, और पहुँचने पर उनका भुगतान किया जा सकता है।",
+    "nothingToConfirm": "पुष्टि के लिए कुछ नहीं",
+    "nothingToConfirmBody": "जब कोई शाखा गोदाम को भुगतान करती है, तो यहाँ दिखता है ताकि आप जाँच सकें कि पहुँचा।",
+    "selectedCount": "{{count}} ऑर्डर चुना",
+    "selectedCount_plural": "{{count}} ऑर्डर चुने",
+    "paySelected": "इनका भुगतान करें",
+    "readyTotalHint": "{{amount}} का माल पहुँच गया है और भुगतान के लिए तैयार है। साथ में भुगतान करने वाले ऑर्डर चुनें।",
+    "payTitle": "भुगतान करें",
+    "payCount": "{{count}} ऑर्डर",
+    "payCount_plural": "{{count}} ऑर्डर",
+    "covers": "यह भुगतान इनका है",
+    "confirmPaidTitle": "यह भुगतान दर्ज करें?",
+    "confirmPaidBody": "UPI भुगतान हो जाने के बाद ही: {{payee}} को {{count}} ऑर्डर के लिए {{amount}}। इसे बदला नहीं जा सकता।",
+    "confirmPaidBody_plural": "UPI भुगतान हो जाने के बाद ही: {{payee}} को {{count}} ऑर्डरों के लिए {{amount}}। इसे बदला नहीं जा सकता।",
+    "paidNotice": "{{count}} ऑर्डर के लिए {{amount}} का भुगतान हो गया।",
+    "paidNotice_plural": "{{count}} ऑर्डरों के लिए {{amount}} का भुगतान हो गया।",
+    "confirmReceivedTitle": "क्या पैसे आ गए?",
+    "confirmReceivedBody": "पुष्टि करें कि ऑर्डर #{{number}} के लिए {{branch}} से {{amount}} खाते में आ गए हैं।",
+    "sentBeforeOrdering": "ऑर्डर से पहले भुगतान",
+    "sentOnDelivery": "डिलीवरी पर भुगतान"
+  },
+  "supplyPaymentMode": {
+    "ONLINE": "ऑर्डर से पहले भुगतान",
+    "COD": "डिलीवरी पर भुगतान",
+    "ACCOUNTS": "अकाउंट्स भुगतान करेगा"
+  },
+  "upiPay": {
+    "payTo": "{{name}} को भुगतान करें",
+    "qrLabel": "{{name}} को {{amount}} देने का UPI QR कोड",
+    "scanHint": "इसे दूसरे फ़ोन से स्कैन करें, या इसी फ़ोन पर अपना UPI ऐप खोलें।",
+    "openApp": "UPI ऐप से भुगतान करें",
+    "noApp": "इस फ़ोन पर कोई UPI ऐप नहीं खुला। इसके बजाय दूसरे फ़ोन से QR स्कैन करें।",
+    "notSet": "{{name}} का UPI ID अभी सेट नहीं है, इसलिए भुगतान का कोई QR नहीं है। अकाउंट्स इसे \"भुगतान QR कोड\" में जोड़ सकता है।",
+    "notRupees": "UPI भुगतान सिर्फ़ रुपये में होता है।",
+    "done": "भुगतान हो गया",
+    "doneMarked": "भुगतान हुआ दर्ज",
+    "undo": "अभी नहीं"
+  },
+  "vendors": {
+    "title": "विक्रेता",
+    "subtitle": "सप्लायर जो सीधे आपकी शाखाओं तक माल पहुँचाते हैं",
+    "entrySubtitle": "गोदाम के बाहर से कौन क्या सप्लाई करता है",
+    "add": "विक्रेता जोड़ें",
+    "edit": "विक्रेता बदलें",
+    "save": "सहेजें",
+    "empty": "अभी कोई विक्रेता नहीं",
+    "emptyBody": "वे सप्लायर जोड़ें जो सीधे आपकी शाखाओं तक पहुँचाते हैं — पानी, बर्फ़, दूध।",
+    "name": "विक्रेता का नाम",
+    "namePlaceholder": "जैसे श्री वॉटर सप्लायर्स",
+    "phone": "WhatsApp नंबर",
+    "phoneHint": "इस विक्रेता के ऑर्डर इसी नंबर पर WhatsApp से भेजे जाते हैं।",
+    "paysTo": "इस विक्रेता का भुगतान {{upiId}} पर जाता है। इसे अकाउंट्स संभालता है।",
+    "noUpiYet": "अभी कोई UPI ID नहीं, इसलिए शाखाएँ इस विक्रेता को QR से भुगतान नहीं कर सकतीं। अकाउंट्स से \"भुगतान QR कोड\" में सेट करने को कहें।",
+    "withdraw": "इस विक्रेता को बंद करें",
+    "restore": "इस विक्रेता को फिर शुरू करें",
+    "withdrawTitle": "{{name}} को बंद करें?",
+    "withdrawBody": "वापस शुरू करने तक उनका माल ऑर्डर नहीं किया जा सकेगा। पहले से दिए गए ऑर्डरों पर असर नहीं पड़ेगा।"
   }
 }

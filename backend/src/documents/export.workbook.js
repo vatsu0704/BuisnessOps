@@ -189,6 +189,7 @@ function supplyRows(report, labels) {
       labels.colBranch,
       labels.colOrderNumber,
       labels.colPlacedAt,
+      labels.colSupplier,
       labels.colStatus,
       labels.colPaymentMode,
       labels.colPaymentStatus,
@@ -205,6 +206,8 @@ function supplyRows(report, labels) {
         s.branch.name,
         order.orderNumber ?? '',
         timestamp(order.placedAt, s.branch.timezone),
+        // A vendor's own name, untranslated; the warehouse is a word, and is.
+        order.vendor?.name ?? labels.supplierWarehouse,
         statusLabel(SUPPLY_STATUS, order.status, labels),
         statusLabel(PAYMENT_MODE, order.paymentMode, labels),
         statusLabel(PAYMENT_STATUS, order.paymentStatus, labels),

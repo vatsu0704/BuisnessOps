@@ -1,11 +1,18 @@
 import { apiClient } from '@/api/client';
 import type {
+  ChoosablePaymentMode,
   DeliveryAgent,
+  PaymentAccount,
+  PlacedSupplyOrder,
+  SettleResult,
+  SupplyCollectedVia,
   SupplyDelayReason,
   SupplyItem,
   SupplyOrder,
   SupplyOrderStatus,
-  SupplyPaymentMode,
+  SupplyPaymentOrder,
+  SupplyVendorPaid,
+  Vendor,
 } from '@/types/supply';
 
 const base = (businessId: string) => `/businesses/${businessId}`;
@@ -24,7 +31,14 @@ export async function listSupplyItems(
 
 export async function createSupplyItem(
   businessId: string,
-  payload: { name: string; unit: string; category?: string | null; unitPrice?: number | null }
+  payload: {
+    name: string;
+    unit: string;
+    category?: string | null;
+    unitPrice?: number | null;
+    /** Who supplies it. null or omitted is the warehouse's own stock. */
+    vendorId?: string | null;
+  }
 ): Promise<SupplyItem> {
   const { data } = await apiClient.post<SupplyItem>(`${base(businessId)}/supply-items`, payload);
   return data;
@@ -42,6 +56,8 @@ export async function updateSupplyItem(
     unit?: string;
     category?: string | null;
     unitPrice?: number | null;
+    /** null moves it back to the warehouse's own stock. */
+    vendorId?: string | null;
     isActive?: boolean;
   }
 ): Promise<SupplyItem> {
@@ -91,12 +107,20 @@ export async function updateSupplyOrderItem(
   return data;
 }
 
+/**
+ * Place the cart — which the server splits into one order per supplier.
+ *
+ * A company-operated (FOCO) branch sends no payment at all: accounts pays, and
+ * the server would ignore one anyway. A franchise branch says how it is paying,
+ * and paying now (`ONLINE`) means it already paid every payee's QR and says so
+ * with `paymentConfirmed`. No reference has to be typed (requirement 26).
+ */
 export async function placeSupplyOrder(
   businessId: string,
   supplyOrderId: string,
-  payload: { paymentMode: SupplyPaymentMode; paymentReference?: string }
-): Promise<SupplyOrder> {
-  const { data } = await apiClient.post<SupplyOrder>(
+  payload: { paymentMode?: ChoosablePaymentMode; paymentConfirmed?: boolean; paymentReference?: string }
+): Promise<PlacedSupplyOrder> {
+  const { data } = await apiClient.post<PlacedSupplyOrder>(
     `${base(businessId)}/supply-orders/${supplyOrderId}/place`,
     payload
   );
@@ -231,19 +255,53 @@ export async function assignSupplyOrder(
 /**
  * Mark it delivered.
  *
- * `cashCollected` is the agent saying the branch's cash is actually in their
- * hand (requirement 22). The server decides whether it was needed — it is the
- * half that can see the order — and refuses a cash-on-delivery order without
- * it, rather than recording money as received because the goods arrived.
+ * `collectedVia` is the agent saying how the branch's money reached them —
+ * cash in hand, or the cashier scanning the QR the agent showed (requirements
+ * 22 and 26). The server decides whether it was needed — it is the half that
+ * can see the order — and refuses a pay-on-delivery order without it, rather
+ * than recording money as received because the goods arrived.
  */
 export async function deliverSupplyOrder(
   businessId: string,
   supplyOrderId: string,
-  cashCollected?: boolean
+  collectedVia?: SupplyCollectedVia
 ): Promise<SupplyOrder> {
   const { data } = await apiClient.post<SupplyOrder>(
     `${base(businessId)}/supply-orders/${supplyOrderId}/deliver`,
-    { cashCollected }
+    { collectedVia }
+  );
+  return data;
+}
+
+/**
+ * The branch says a vendor's goods arrived (requirement 25). A franchise branch
+ * paying on delivery also says whether it paid the vendor's own delivery person.
+ */
+export async function receiveSupplyOrder(
+  businessId: string,
+  supplyOrderId: string,
+  vendorPaid?: SupplyVendorPaid
+): Promise<SupplyOrder> {
+  const { data } = await apiClient.post<SupplyOrder>(
+    `${base(businessId)}/supply-orders/${supplyOrderId}/receive`,
+    { vendorPaid }
+  );
+  return data;
+}
+
+/**
+ * A franchise branch pays for an order it already placed: early, again after
+ * the warehouse said it never arrived, or a vendor after the goods came.
+ * Cash is for a vendor only — the warehouse's cash goes through the agent.
+ */
+export async function paySupplyOrder(
+  businessId: string,
+  supplyOrderId: string,
+  payload: { method: 'UPI' | 'CASH'; paymentReference?: string }
+): Promise<SupplyOrder> {
+  const { data } = await apiClient.post<SupplyOrder>(
+    `${base(businessId)}/supply-orders/${supplyOrderId}/pay`,
+    payload
   );
   return data;
 }
@@ -283,5 +341,83 @@ export async function verifySupplyPayment(
     `${base(businessId)}/supply-orders/${supplyOrderId}/verify-payment`,
     payload
   );
+  return data;
+}
+
+// --- Accounts (requirement 27) -------------------------------------------------
+
+/** What accounts pays for: every FOCO order still unpaid, delivered or on its way. */
+export async function listPaymentsDue(businessId: string): Promise<SupplyPaymentOrder[]> {
+  const { data } = await apiClient.get<SupplyPaymentOrder[]>(`${base(businessId)}/supply-payments/due`);
+  return data;
+}
+
+/** Payments sent to the warehouse that nobody has confirmed yet. */
+export async function listPaymentsToConfirm(businessId: string): Promise<SupplyPaymentOrder[]> {
+  const { data } = await apiClient.get<SupplyPaymentOrder[]>(`${base(businessId)}/supply-payments/to-confirm`);
+  return data;
+}
+
+/**
+ * Pay for a batch of delivered FOCO orders, all to one payee, in one go. All
+ * or nothing on the server: one order that is not due refuses the batch.
+ */
+export async function settleSupplyPayments(
+  businessId: string,
+  payload: { supplyOrderIds: string[]; paymentReference?: string }
+): Promise<SettleResult> {
+  const { data } = await apiClient.post<SettleResult>(`${base(businessId)}/supply-payments/settle`, payload);
+  return data;
+}
+
+// --- Vendors and payees (requirements 25 and 26) --------------------------------
+
+export async function listVendors(
+  businessId: string,
+  options: { includeInactive?: boolean } = {}
+): Promise<Vendor[]> {
+  const { data } = await apiClient.get<Vendor[]>(`${base(businessId)}/vendors`, { params: options });
+  return data;
+}
+
+export async function createVendor(
+  businessId: string,
+  payload: { name: string; phone?: string | null }
+): Promise<Vendor> {
+  const { data } = await apiClient.post<Vendor>(`${base(businessId)}/vendors`, payload);
+  return data;
+}
+
+/** The desk's half: name, phone, withdrawn. Never where the money goes. */
+export async function updateVendor(
+  businessId: string,
+  vendorId: string,
+  payload: { name?: string; phone?: string | null; isActive?: boolean }
+): Promise<Vendor> {
+  const { data } = await apiClient.patch<Vendor>(`${base(businessId)}/vendors/${vendorId}`, payload);
+  return data;
+}
+
+/** Accounts' half: where a payment to this vendor goes. `upiId: null` clears it. */
+export async function setVendorUpi(
+  businessId: string,
+  vendorId: string,
+  payload: { upiId: string | null; upiName?: string | null }
+): Promise<Vendor> {
+  const { data } = await apiClient.patch<Vendor>(`${base(businessId)}/vendors/${vendorId}/upi`, payload);
+  return data;
+}
+
+/** Where a payment for warehouse stock goes. */
+export async function getPaymentAccount(businessId: string): Promise<PaymentAccount> {
+  const { data } = await apiClient.get<PaymentAccount>(`${base(businessId)}/payment-account`);
+  return data;
+}
+
+export async function setPaymentAccount(
+  businessId: string,
+  payload: { upiId: string | null; upiName?: string | null }
+): Promise<PaymentAccount> {
+  const { data } = await apiClient.patch<PaymentAccount>(`${base(businessId)}/payment-account`, payload);
   return data;
 }
