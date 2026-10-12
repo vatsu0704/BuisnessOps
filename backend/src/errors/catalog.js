@@ -38,6 +38,10 @@ const API_MESSAGES = {
   // other failure, so a 429 arrives translated rather than as express-rate-limit's
   // own untranslatable English.
   TOO_MANY_REQUESTS: 'Too many attempts. Wait a few minutes and try again',
+  // Deleting your own account (services/account.service.js).
+  ACCOUNT_DELETE_PASSWORD_INCORRECT: 'That password is not right, so the account was not deleted',
+  ACCOUNT_DELETE_OWNER_HAS_TEAM:
+    '{{business}} still has {{count}} other active member(s). Remove them from the team first, then delete your account',
 
   // --- Tenancy and permissions --------------------------------------------
   TENANT_BUSINESS_ID_REQUIRED: 'businessId is required in the route',

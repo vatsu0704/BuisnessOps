@@ -15,14 +15,15 @@
     "blue fills the arm (a path with no paint) and is also the app's primary colour",
     "(theme/index.ts), so the UI matches the logo. A paint names a gradient in paints.",
     "",
-    "splashShare is how much of the screen's width the mark spans on the splash: the",
-    "native one scales splash-icon.png to the screen width, and AnimatedSplash draws the",
-    "mark at the same share, so the hand-over from one to the other does not jump."
+    "splashMarkWidth is the mark's width in dp on the launch splash. The system splash",
+    "shows adaptive-icon.png (mark 500 of 1024) at app.json's imageWidth of 288dp, so",
+    "the mark is 288 * 500 / 1024 dp there, and AnimatedSplash draws it at the same",
+    "width so the hand-over does not jump. generate-brand-assets.js checks the sum."
   ],
   "width": 1000,
   "height": 657,
   "blue": "#4539E3",
-  "splashShare": 0.44,
+  "splashMarkWidth": 140.625,
   "paints": {
     "stemUpper": {
       "x1": 0,

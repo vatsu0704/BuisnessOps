@@ -56,3 +56,19 @@ export async function updatePreferredLocale(preferredLocale: Locale): Promise<Us
   const { data } = await apiClient.patch<User>('/auth/me/locale', { preferredLocale });
   return data;
 }
+
+export interface DeleteAccountResponse {
+  /** The businesses that were owned alone and went with the account. */
+  deletedBusinessIds: string[];
+}
+
+export async function deleteAccount(password: string): Promise<DeleteAccountResponse> {
+  // A business with months of records behind it takes a while to cascade, so
+  // this waits as long as the calls that may meet a cold server.
+  const { data } = await apiClient.post<DeleteAccountResponse>(
+    '/auth/me/delete',
+    { password },
+    { timeout: AUTH_TIMEOUT_MS }
+  );
+  return data;
+}

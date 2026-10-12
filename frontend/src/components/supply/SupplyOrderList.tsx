@@ -16,6 +16,7 @@ import SupplyOrderCard from '@/components/supply/SupplyOrderCard';
 import type { SupplyOrder, SupplyOrderStatus } from '@/types/supply';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
+import { useScreenEdges } from '@/hooks/useScreenEdges';
 
 /**
  * The cashier's tracking list, the warehouse desk and the delivery queue are
@@ -49,6 +50,7 @@ export default function SupplyOrderList({
   fetchOrders: (businessId: string, status?: SupplyOrderStatus) => Promise<SupplyOrder[]>;
   testIDPrefix: string;
 }) {
+  const edges = useScreenEdges();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const businessId = useBusinessId();
@@ -84,7 +86,7 @@ export default function SupplyOrderList({
   return (
     <View style={styles.container}>
       <ScreenBackground />
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={edges}>
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.title}>{title}</Text>

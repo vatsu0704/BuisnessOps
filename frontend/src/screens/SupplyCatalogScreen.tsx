@@ -21,6 +21,7 @@ import SegmentedOption from '@/components/SegmentedOption';
 import { formatAmount } from '@/utils/format';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
+import { useScreenEdges } from '@/hooks/useScreenEdges';
 
 /**
  * The raw-material catalog — requirement 5.
@@ -40,6 +41,7 @@ import { step } from '@/theme/motion';
  * always had: a heading that only ever says "From the warehouse" says nothing.
  */
 export default function SupplyCatalogScreen() {
+  const edges = useScreenEdges();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const businessId = useBusinessId();
@@ -140,7 +142,7 @@ export default function SupplyCatalogScreen() {
   return (
     <View style={styles.container}>
       <ScreenBackground />
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={edges}>
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.title}>{t('supply.catalogTitle')}</Text>

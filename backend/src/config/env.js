@@ -23,6 +23,8 @@
  * instead of satisfied. Outside production the value only has to *exist*.
  */
 
+const { missingOperatorVariables } = require('../legal/operator');
+
 /** Values that mean "nobody has set this yet", whatever the file says. */
 const PLACEHOLDER_SECRETS = new Set([
   'change-me',
@@ -70,12 +72,32 @@ function problemsWith(env) {
 }
 
 /**
+ * Things worth saying at startup that are not worth refusing to start over.
+ *
+ * The public privacy policy names the company that operates the app, from
+ * `LEGAL_NAME`, `LEGAL_ADDRESS` and `SUPPORT_EMAIL` (see legal/operator.js).
+ * The server has to run before the company is registered, so their absence is
+ * only reported — but in production, where the store listing links to that
+ * page, it is reported every time the server starts.
+ */
+function warningsFor(env) {
+  if (env.NODE_ENV !== 'production') return [];
+  const missing = missingOperatorVariables(env);
+  if (missing.length === 0) return [];
+  return [
+    `${missing.join(', ')} not set — /privacy and /delete-account say the operator's details are still being finalised.`,
+  ];
+}
+
+/**
  * Called once from `server.js`, after dotenv and before `listen`.
  *
  * Deliberately not called from `app.js`: the test suite imports the app
  * directly and must not have a `process.exit` in its import path.
  */
 function assertEnv(env = process.env) {
+  for (const warning of warningsFor(env)) console.warn(`[api] ${warning}`);
+
   const problems = problemsWith(env);
   if (problems.length === 0) return;
 
@@ -89,4 +111,4 @@ function assertEnv(env = process.env) {
   process.exit(1);
 }
 
-module.exports = { assertEnv, problemsWith, MIN_SECRET_LENGTH, PLACEHOLDER_SECRETS };
+module.exports = { assertEnv, problemsWith, warningsFor, MIN_SECRET_LENGTH, PLACEHOLDER_SECRETS };

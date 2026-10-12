@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet, Text, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
+import { StyleSheet, Text, type LayoutChangeEvent } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as SplashScreen from 'expo-splash-screen';
 import Animated, {
@@ -20,8 +20,6 @@ import { duration, spring, step } from '@/theme/motion';
 const NAME_AT = step(9);
 // Long enough for the mark to draw and the name to be read before the app takes over.
 const MIN_VISIBLE_MS = 1800;
-// On a tablet the share of the width would make a poster of it.
-const MAX_MARK_WIDTH = 220;
 // The logo's proportions, as fractions of the mark's width: the name runs about
 // 1.4× as wide as the mark ("HisabKitab" in the wordmark's weight is ~4.75em, so a
 // font size of 0.295 of it), with a gap of about 9% between them.
@@ -35,15 +33,21 @@ type Props = {
 
 /**
  * Takes over from the native splash: the same white, and the mark at the same
- * place and width (the screen-width share in constants/brandMark.json), so the
- * hand-over does not jump. The mark draws itself in at the centre, then the
- * whole lockup rises as the name and tagline appear beneath it, so it ends up
- * centred as a unit; once the app is ready it fades away over the first screen.
+ * place and width, so the hand-over does not jump.
+ *
+ * That width is fixed in dp, not a share of the screen. Since SDK 54 the only
+ * native splash is Android's own (12+), which draws its icon at a fixed size
+ * whatever the phone — `splashMarkWidth` in constants/brandMark.json says what
+ * that comes to. It used to be a share of the screen's width, because the old
+ * expo-splash-screen scaled its image to the screen and this had to follow it.
+ *
+ * The mark draws itself in at the centre, then the whole lockup rises as the
+ * name and tagline appear beneath it, so it ends up centred as a unit; once the
+ * app is ready it fades away over the first screen.
  */
 export default function AnimatedSplash({ ready, onFinish }: Props) {
   const { t } = useTranslation();
-  const { width } = useWindowDimensions();
-  const markWidth = Math.min(width * art.splashShare, MAX_MARK_WIDTH);
+  const markWidth = art.splashMarkWidth;
   const gap = Math.round(markWidth * NAME_GAP);
   const startedAt = useRef(Date.now());
   const reveal = useSharedValue(0);
@@ -96,7 +100,7 @@ export default function AnimatedSplash({ ready, onFinish }: Props) {
 }
 
 const styles = StyleSheet.create({
-  // app.json's splash and the Android 12 plugin use this same white (#FFFFFF).
+  // app.json's expo-splash-screen background is this same white (#FFFFFF).
   container: { backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
   lockup: { alignItems: 'center' },
   name: { alignItems: 'center', paddingHorizontal: spacing.xl },

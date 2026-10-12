@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -22,6 +22,7 @@ import { colors, radius, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { confirm } from '@/utils/confirm';
 import { haptics } from '@/utils/haptics';
+import { useScreenEdges } from '@/hooks/useScreenEdges';
 
 /**
  * Add or edit one thing the warehouse supplies.
@@ -41,6 +42,7 @@ import { haptics } from '@/utils/haptics';
  * name is free text of any length.
  */
 export default function SupplyItemFormScreen() {
+  const edges = useScreenEdges();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { params } = useRoute<RouteProp<AppStackParamList, 'SupplyItemForm'>>();
@@ -152,7 +154,7 @@ export default function SupplyItemFormScreen() {
   return (
     <View style={styles.container}>
       <ScreenBackground />
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={edges}>
         <View style={styles.header}>
           <Text style={styles.title}>
             {inventoryItemId ? t('supply.editItem') : t('supply.addItem')}
@@ -166,7 +168,7 @@ export default function SupplyItemFormScreen() {
           </PressableScale>
         </View>
 
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.flex} behavior="padding">
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             {error ? (
               <AnimatedEntrance key={error} delay={0} style={styles.block}>

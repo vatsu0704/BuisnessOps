@@ -38,6 +38,7 @@ import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { confirm } from '@/utils/confirm';
 import { haptics } from '@/utils/haptics';
+import { useScreenEdges } from '@/hooks/useScreenEdges';
 
 /**
  * The counter — requirement 1.
@@ -81,6 +82,7 @@ const MAX_COLUMNS = 6;
 const TRAY_MAX_HEIGHT = 196;
 
 export default function CounterScreen() {
+  const edges = useScreenEdges();
   const { t } = useTranslation();
   const navigation = useNavigation();
   /**
@@ -262,7 +264,7 @@ export default function CounterScreen() {
   return (
     <View style={styles.container}>
       <ScreenBackground />
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={edges}>
         <View style={styles.header}>
           <Text style={styles.title}>{t('counter.title')}</Text>
           <View style={styles.headerActions}>

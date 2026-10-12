@@ -127,6 +127,8 @@
       "STAFF_BASE_MUST_BE_WAREHOUSE": "{{role}} accepts, packs and dispatches goods, so they are based at your warehouse — their attendance and payslips cannot be filed at a shop.",
       "AUTH_ACCOUNT_DISABLED": "This account has been disabled. Ask the business owner to restore it.",
       "TOO_MANY_REQUESTS": "Too many attempts. Please wait a few minutes and try again.",
+      "ACCOUNT_DELETE_PASSWORD_INCORRECT": "That password is not right, so your account was not deleted.",
+      "ACCOUNT_DELETE_OWNER_HAS_TEAM": "{{business}} still has {{count}} other active member(s). Remove them from the team first, then delete your account.",
       "VENDOR_NOT_FOUND": "That vendor is not in this business",
       "VENDOR_NAME_TAKEN": "There is already a vendor called {{name}}",
       "SUPPLY_VENDOR_INACTIVE": "{{name}} has been withdrawn as a vendor, so nothing can be ordered from them",
@@ -325,7 +327,8 @@
     "dataTitle": "Bring your sales data in",
     "dataSubtitle": "Upload sales history from CSV or Excel once your account is set up.",
     "haveAccount": "Already have a {{appName}} account?",
-    "logIn": "Log in"
+    "logIn": "Log in",
+    "privacyNotice": "By creating an account you agree to the <link>Privacy policy</link>."
   },
   "industry": {
     "RETAIL": "Retail",
@@ -501,7 +504,10 @@
     "teamSubtitle": "Invite people and manage who can access what",
     "logout": "Log out",
     "noAccessTitle": "No business access",
-    "noAccessBody": "Your access to every business on this account has been removed. Ask an owner to invite you again."
+    "noAccessBody": "Your access to every business on this account has been removed. Ask an owner to invite you again.",
+    "privacyPolicy": "Privacy policy",
+    "privacyPolicySubtitle": "What {{appName}} collects, and how to have it deleted",
+    "deleteAccount": "Delete account"
   },
   "addBranch": {
     "title": "Add branch",
@@ -866,7 +872,8 @@
     "conflictsBody": "These were set up before one cashier per branch became the rule. Nothing has been changed for you — decide who keeps which branch.",
     "conflictSharedBranch": "{{branch}} has {{count}} cashiers: {{names}}",
     "conflictNoBranch": "{{name}} has no branch",
-    "conflictTooManyBranches": "{{name}} has {{count}} branches"
+    "conflictTooManyBranches": "{{name}} has {{count}} branches",
+    "deletedAccount": "Deleted account"
   },
   "inviteMember": {
     "title": "Invite a member",
@@ -1459,5 +1466,26 @@
     "restore": "Use this vendor again",
     "withdrawTitle": "Stop using {{name}}?",
     "withdrawBody": "Their items can no longer be ordered until they are brought back. Orders already placed are not affected."
+  },
+  "deleteAccount": {
+    "title": "Delete your account",
+    "subtitle": "This cannot be undone. Read what will happen before you go ahead.",
+    "goesTitle": "What will be deleted",
+    "goesAccount": "Your name, phone number, password, notifications and settings. Your email address is erased from the account.",
+    "goesBusinesses": "The businesses you own, with every branch, sale, expense, order, staff record and payslip in them:",
+    "exportFirst": "Download what you need first: Reports → Export.",
+    "teamRule": "If any of these still has other active team members, you will be asked to remove them first.",
+    "staysTitle": "What stays",
+    "losesAccess": "You will lose access to:",
+    "employerKeeps": "The attendance and payslips they keep about you stay with them, because they are their record of paying you.",
+    "passwordLabel": "Your password",
+    "passwordHint": "To confirm it is you",
+    "submit": "Delete my account",
+    "submitting": "Deleting…",
+    "confirmTitle": "Delete your account?",
+    "confirmBody": "Your account will be deleted and you will be signed out. This cannot be undone.",
+    "confirmBodyOwner": "Your account and the businesses you own will be deleted, with all their records. This cannot be undone.",
+    "confirmAction": "Delete",
+    "readMore": "Read exactly what is deleted"
   }
 }

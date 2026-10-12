@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -21,6 +21,7 @@ import { haptics } from '@/utils/haptics';
 import { isUpiCurrency, supplierPayee, upiNote } from '@/utils/upi';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
+import { useScreenEdges } from '@/hooks/useScreenEdges';
 
 /** One supplier's share of the cart — what becomes one order when it is placed. */
 type SupplierGroup = {
@@ -79,6 +80,7 @@ function groupBySupplier(items: SupplyOrderItem[]): SupplierGroup[] {
  *   app (requirement 26).
  */
 export default function SupplyCartScreen() {
+  const edges = useScreenEdges();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { params } = useRoute<RouteProp<AppStackParamList, 'SupplyCart'>>();
@@ -201,7 +203,7 @@ export default function SupplyCartScreen() {
   return (
     <View style={styles.container}>
       <ScreenBackground />
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={edges}>
         <View style={styles.header}>
           <Text style={styles.title}>{t('supply.cartTitle')}</Text>
           <PressableScale testID="supply-cart-close" style={styles.close} onPress={() => navigation.goBack()}>
@@ -211,7 +213,7 @@ export default function SupplyCartScreen() {
 
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
         >
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             {error ? (

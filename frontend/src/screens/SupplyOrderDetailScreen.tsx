@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -45,6 +45,7 @@ import { payeeOf, upiNote } from '@/utils/upi';
 import { openWhatsApp } from '@/utils/whatsapp';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
+import { useScreenEdges } from '@/hooks/useScreenEdges';
 
 /**
  * One supply order, and everything anyone may do to it.
@@ -109,6 +110,7 @@ type Panel = 'none' | 'delay' | 'reject' | 'accept' | 'dispatch' | 'assign' | 'c
 const ASSIGNABLE = ['ACCEPTED', 'PACKED', 'DISPATCHED'];
 
 export default function SupplyOrderDetailScreen() {
+  const edges = useScreenEdges();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { params } = useRoute<RouteProp<AppStackParamList, 'SupplyOrderDetail'>>();
@@ -184,7 +186,7 @@ export default function SupplyOrderDetailScreen() {
     return (
       <View style={styles.container}>
         <ScreenBackground />
-        <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <SafeAreaView style={styles.safe} edges={edges}>
           <View style={styles.header}>
             <Text style={styles.title}>{t('common.loading')}</Text>
             <PressableScale style={styles.close} onPress={() => navigation.goBack()}>
@@ -373,7 +375,7 @@ export default function SupplyOrderDetailScreen() {
   return (
     <View style={styles.container}>
       <ScreenBackground />
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={edges}>
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.title}>
@@ -392,7 +394,7 @@ export default function SupplyOrderDetailScreen() {
           </PressableScale>
         </View>
 
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.flex} behavior="padding">
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <AnimatedEntrance delay={step(0)} style={styles.block}>
               <View style={styles.pills}>

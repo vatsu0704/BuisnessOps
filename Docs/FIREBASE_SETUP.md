@@ -105,6 +105,12 @@ FIREBASE_SERVICE_ACCOUNT=./firebase-service-account.json
 
 The path is relative to `backend/`. An absolute path works too.
 
+**On a host with environment variables but no secret files** — most of them —
+paste the whole JSON file in as the value instead of a path. A value starting
+with `{` is read as the JSON itself, and the `\n`s inside its `private_key`
+survive the trip as they are. Treat that variable exactly as you would the file:
+it is the same credential.
+
 **If this variable is absent, the backend starts normally and simply does not
 send pushes.** That is deliberate: everything else — logging an expense, marking
 attendance, dispatching an order — has to keep working on a machine that has no

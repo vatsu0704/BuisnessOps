@@ -1,6 +1,7 @@
 const authService = require('../services/auth.service');
+const accountService = require('../services/account.service');
 const { fail, validationFailure } = require('../errors');
-const { validateSignup, validateLogin } = require('../validations/auth.validation');
+const { validateSignup, validateLogin, validateDeleteAccount } = require('../validations/auth.validation');
 const { validateUpdateLocale } = require('../validations/user.validation');
 
 async function signup(req, res, next) {
@@ -49,4 +50,16 @@ async function updateLocale(req, res, next) {
   }
 }
 
-module.exports = { signup, login, me, updateLocale };
+async function deleteAccount(req, res, next) {
+  try {
+    const errors = validateDeleteAccount(req.body);
+    if (errors.length) return res.status(400).json(validationFailure(errors));
+
+    const result = await accountService.deleteAccount(req.userId, req.body.password);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { signup, login, me, updateLocale, deleteAccount };

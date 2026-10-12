@@ -88,7 +88,10 @@ export function usePushRegistration() {
       // outlives the access that justified it, and dispatching into an
       // unregistered route is a silent no-op.
       const target = resolveDeepLink(membershipRef.current, link.route, link.params);
-      navigation.navigate(target.route as 'Tabs', target.params as undefined);
+      // `pop`: when that screen is already open, go back to it with the new
+      // params rather than stacking a second copy — what `navigate` did by
+      // itself before React Navigation 7.
+      navigation.navigate(target.route as 'Tabs', target.params as undefined, { pop: true });
       void refreshNotifications();
     }
 

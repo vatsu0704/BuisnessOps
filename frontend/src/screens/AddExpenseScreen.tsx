@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -161,7 +160,7 @@ export default function AddExpenseScreen({ navigation, route }: Props) {
           </PressableScale>
         </View>
 
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.flex} behavior="padding">
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             {error ? (
               <AnimatedEntrance key={error} delay={0} distance={-8} style={styles.block}>

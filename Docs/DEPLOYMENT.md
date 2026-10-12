@@ -41,7 +41,8 @@ is stricter than it is locally.
 | `NODE_ENV` | Set it to `production` | This is what switches on JSON logging and the strict secret rules. The Docker image sets it. |
 | `PORT` | Optional | Defaults to 4000. Most hosts inject their own; the code already reads it. |
 | `CORS_ORIGINS` | Only if you serve the web build | Comma-separated. **Unset means any origin** — fine for the native app, wrong for a browser. |
-| `FIREBASE_SERVICE_ACCOUNT` | Optional | Unset means the API records notifications without sending them, and starts normally. |
+| `FIREBASE_SERVICE_ACCOUNT` | Optional | A path to the credential file, or the file's JSON itself. Unset means the API records notifications without sending them, and starts normally. |
+| `LEGAL_NAME`, `LEGAL_ADDRESS`, `SUPPORT_EMAIL` | Before the store listing goes live | Who operates the app, as `/privacy` and `/delete-account` state it. Unset, those pages say the details are being finalised and a production server warns at start. See *The public pages* below. |
 
 Generate the secret — do not reuse the development one, and do not copy one
 from any checkout:
@@ -61,10 +62,18 @@ can push a notification to every user. It is gitignored, it is in
 `.dockerignore`, and it must never be baked into an image layer — a layer keeps
 it in the image's history whatever a later step deletes.
 
-Inject it the way your host handles secret files (a mounted secret, or a file
-written at boot from an environment variable), and point
-`FIREBASE_SERVICE_ACCOUNT` at wherever it lands. See `Docs/FIREBASE_SETUP.md`
-for how the file is produced.
+There are two ways to hand it over, and the API takes either:
+
+- **A secret file**, where the host has them (a mounted secret): point
+  `FIREBASE_SERVICE_ACCOUNT` at wherever it lands.
+- **The JSON itself, as the variable's value**, on a host that only has
+  environment variables — Railway, and most others. A value starting with `{` is
+  parsed directly. Mark the variable secret in the host's dashboard; it is the
+  same credential as the file.
+
+If inline JSON does not parse, the API starts without push and logs that it
+could not — without quoting the value, because the value is a private key. See
+`Docs/FIREBASE_SETUP.md` for how the file is produced.
 
 ---
 
@@ -196,24 +205,53 @@ rather than a step.
 
 ---
 
+## The public pages
+
+The same server answers two plain web pages outside `/api`, because the app
+stores require them and link to them:
+
+| Path | What it is |
+| --- | --- |
+| `/privacy` | The privacy policy — entered in the Play Console, and opened from the app's Settings and sign-up screen |
+| `/delete-account` | How to delete an account, in the app or without it — entered in the Play Console's Data safety form |
+
+They name the company that operates the app from `LEGAL_NAME`, `LEGAL_ADDRESS`
+and `SUPPORT_EMAIL`. Until all three are set they say the operator's details are
+being finalised, and a production server warns about it at every start; it does
+not refuse to start. An address can separate its lines with `\n`. Setting them
+needs a restart, not a deploy.
+
+Their paths are what matter, not their host: the app derives them from its API
+address, so when the API moves to your own domain, the pages move with it.
+
+---
+
 ## The app's half
 
-The APK is **not** configured at run time. `EXPO_PUBLIC_API_URL` is inlined by
-Expo's Babel transform at build time, so the URL that was in `frontend/.env`
-when the bundle was built is the URL the installed app will call, forever.
+The app is **not** configured at run time. `EXPO_PUBLIC_API_URL` is inlined by
+Expo's Babel transform at build time, so the URL the bundle was built with is the
+URL the installed app will call, forever. **Build against your own domain**
+(`https://api.yourdomain.in/api`), not a host's (`*.onrender.com`,
+`*.up.railway.app`), so the server can change hosts without an app update.
 
-A shareable build is the release variant:
+What Google Play takes is an Android App Bundle:
 
 ```
 cd frontend
-# .env must hold the hosted API URL before this, not localhost
-cd android && ./gradlew assembleRelease
+npm run build:play -- --api-url https://api.yourdomain.in/api
 ```
 
-It writes `android/app/build/outputs/apk/release/app-release.apk` with the
-bundle, and therefore that URL, compiled in. Without
-`frontend/keystore.properties` it is signed with the debug key — fine for
-sideloading, not acceptable for the Play Store.
+It takes the address from its argument rather than `frontend/.env`, refuses a
+non-https or local one, refuses to build without the release signing key or with
+a Firebase file for another package, and afterwards checks the bundle calls that
+address and is not signed with the debug key. It writes
+`android/app/build/outputs/bundle/release/app-release.aab`.
+`Docs/PLAY_STORE_RELEASE.md` is the rest of the route to the store.
+
+A shareable APK for sideloading is still the release variant
+(`cd android && ./gradlew assembleRelease`, with the hosted address in `.env`
+first). Without `frontend/keystore.properties` it is signed with the debug key —
+fine for sideloading, never for the Play Store.
 
 `frontend/google-services.json` must exist before any build, or the app has no
 Firebase configuration compiled into it and no push will ever arrive. On EAS

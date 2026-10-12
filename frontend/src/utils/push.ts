@@ -32,8 +32,11 @@ import { colors } from '@/theme';
  * being the only one who is not told, which is the opposite of the point.
  */
 Notifications.setNotificationHandler({
+  // `shouldShowAlert` was split in two by SDK 53: the banner over the app, and
+  // the entry left in the notification shade. Both, for the reason above.
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),

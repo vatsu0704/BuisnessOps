@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -187,7 +187,7 @@ export default function AddStaffScreen({ navigation }: Props) {
     <View style={styles.container}>
       <ScreenBackground />
       <SafeAreaView style={styles.safe}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+        <KeyboardAvoidingView behavior="padding" style={styles.flex}>
           <View style={styles.header}>
             <Text style={styles.title}>{t('addStaff.title')}</Text>
             <PressableScale testID="add-staff-close" style={styles.close} onPress={() => navigation.goBack()}>

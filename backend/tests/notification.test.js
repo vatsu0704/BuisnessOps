@@ -406,3 +406,43 @@ describe('rendering a push', () => {
     expect(en.body).toContain('pay on delivery');
   });
 });
+
+// Most hosts have environment variables and no secret files, so the credential
+// has to be accepted as the JSON itself as well as as a path to it.
+describe('reading the Firebase credential', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const { readServiceAccount } = require('../src/notifications/push');
+  const credential = {
+    type: 'service_account',
+    project_id: 'hisabkitab-test',
+    private_key: '-----BEGIN PRIVATE KEY-----\nnot-a-real-key\n-----END PRIVATE KEY-----\n',
+  };
+
+  it('takes the JSON itself, newlines in the key intact', () => {
+    const parsed = readServiceAccount(`  ${JSON.stringify(credential)}\n`);
+    expect(parsed).toEqual(credential);
+    expect(parsed.private_key).toContain('\n');
+  });
+
+  it('still takes a path to the file', () => {
+    const file = path.join(os.tmpdir(), `fsa-${Date.now()}.json`);
+    fs.writeFileSync(file, JSON.stringify(credential));
+    try {
+      expect(readServiceAccount(file)).toEqual(credential);
+    } finally {
+      fs.unlinkSync(file);
+    }
+  });
+
+  it('refuses broken inline JSON without quoting it, since it would be the key', () => {
+    const broken = '{"private_key": "SECRET-MATERIAL", oops';
+    expect(() => readServiceAccount(broken)).toThrow('does not parse');
+    try {
+      readServiceAccount(broken);
+    } catch (err) {
+      expect(err.message).not.toContain('SECRET-MATERIAL');
+    }
+  });
+});

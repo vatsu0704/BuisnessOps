@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
@@ -180,184 +180,188 @@ export default function StaffDetailScreen({ route, navigation }: Props) {
           </PressableScale>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content}>
-          {error ? (
-            <AnimatedEntrance key={error} delay={0} distance={-8}>
-              <View style={styles.errorBanner}>
-                <Ionicons name="alert-circle" size={16} color={colors.error} />
-                <Text style={styles.errorText}>{error}</Text>
+        {/* Since SDK 54 the window no longer shrinks for the keyboard (edge-to-edge),
+            so the form below has to move out of its way itself. */}
+        <KeyboardAvoidingView behavior="padding" style={styles.flex}>
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            {error ? (
+              <AnimatedEntrance key={error} delay={0} distance={-8}>
+                <View style={styles.errorBanner}>
+                  <Ionicons name="alert-circle" size={16} color={colors.error} />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              </AnimatedEntrance>
+            ) : null}
+
+            {staffMember ? (
+              <AnimatedEntrance delay={step(0)}>
+                <View style={styles.card}>
+                  <View style={styles.identityHead}>
+                    <View style={styles.identityText}>
+                      <Text style={styles.meta}>{staffMember.role}</Text>
+                      <Text style={styles.meta}>{branchName ?? staffMember.branchId}</Text>
+                    </View>
+                    {staffMember.status === 'INACTIVE' ? <Pill label={t('editStaff.inactive')} tone="muted" /> : null}
+                    <PressableScale
+                      testID="staff-detail-edit"
+                      style={styles.iconButton}
+                      onPress={() => navigation.navigate('EditStaff', { staffMemberId })}
+                    >
+                      <Ionicons name="create-outline" size={18} color={colors.primary} />
+                    </PressableScale>
+                  </View>
+                  {staffMember.baseSalary ? (
+                    <Text style={styles.meta}>
+                      {t('staffDetail.baseSalary', {
+                        amount: formatAmount(Number(staffMember.baseSalary), business?.defaultCurrency ?? 'INR'),
+                      })}
+                    </Text>
+                  ) : (
+                    <Text style={styles.metaWarn}>{t('staffDetail.noSalary')}</Text>
+                  )}
+                </View>
+              </AnimatedEntrance>
+            ) : null}
+
+            <AnimatedEntrance delay={step(1)} style={styles.block}>
+              <View style={styles.monthNav}>
+                <PressableScale testID="staff-detail-prev-month" onPress={goPrev} style={styles.monthNavButton}>
+                  <Ionicons name="chevron-back" size={18} color={colors.text} />
+                </PressableScale>
+                <Text style={styles.monthLabel}>{label}</Text>
+                <PressableScale
+                  testID="staff-detail-next-month"
+                  onPress={goNext}
+                  disabled={!canGoNext}
+                  style={[styles.monthNavButton, !canGoNext && styles.monthNavDisabled]}
+                >
+                  <Ionicons name="chevron-forward" size={18} color={canGoNext ? colors.text : colors.textTertiary} />
+                </PressableScale>
               </View>
             </AnimatedEntrance>
-          ) : null}
 
-          {staffMember ? (
-            <AnimatedEntrance delay={step(0)}>
-              <View style={styles.card}>
-                <View style={styles.identityHead}>
-                  <View style={styles.identityText}>
-                    <Text style={styles.meta}>{staffMember.role}</Text>
-                    <Text style={styles.meta}>{branchName ?? staffMember.branchId}</Text>
-                  </View>
-                  {staffMember.status === 'INACTIVE' ? <Pill label={t('editStaff.inactive')} tone="muted" /> : null}
-                  <PressableScale
-                    testID="staff-detail-edit"
-                    style={styles.iconButton}
-                    onPress={() => navigation.navigate('EditStaff', { staffMemberId })}
-                  >
-                    <Ionicons name="create-outline" size={18} color={colors.primary} />
-                  </PressableScale>
+            {summary ? (
+              <AnimatedEntrance delay={step(2)} style={styles.block}>
+                <View style={styles.card}>
+                  <Text style={styles.sectionTitle}>{t('monthSummary.title')}</Text>
+                  <MonthSummaryStrip summary={summary} />
                 </View>
-                {staffMember.baseSalary ? (
-                  <Text style={styles.meta}>
-                    {t('staffDetail.baseSalary', {
-                      amount: formatAmount(Number(staffMember.baseSalary), business?.defaultCurrency ?? 'INR'),
-                    })}
-                  </Text>
+              </AnimatedEntrance>
+            ) : null}
+
+            <AnimatedEntrance delay={step(3)} style={styles.block}>
+              <View style={styles.card}>
+                {isLoading ? (
+                  <Text style={styles.emptyText}>{t('common.loading')}</Text>
+                ) : records.length === 0 ? (
+                  <Text style={styles.emptyText}>{t('attendance.noHistory')}</Text>
                 ) : (
-                  <Text style={styles.metaWarn}>{t('staffDetail.noSalary')}</Text>
+                  records.map((record, index) => (
+                    <View key={record.id} style={[styles.dayRow, index > 0 && styles.dayRowDivided]}>
+                      <View style={styles.dayHead}>
+                        <Text style={styles.dayDate}>{formatDate(dateKeyFromApi(record.date), t)}</Text>
+                        <AttendanceStatusPill status={record.status} />
+                      </View>
+                      {/* When and where. Renders nothing for a day that was
+                          marked by hand, so those rows stay as they were. */}
+                      <PunchTrace record={record} />
+                    </View>
+                  ))
                 )}
               </View>
             </AnimatedEntrance>
-          ) : null}
 
-          <AnimatedEntrance delay={step(1)} style={styles.block}>
-            <View style={styles.monthNav}>
-              <PressableScale testID="staff-detail-prev-month" onPress={goPrev} style={styles.monthNavButton}>
-                <Ionicons name="chevron-back" size={18} color={colors.text} />
-              </PressableScale>
-              <Text style={styles.monthLabel}>{label}</Text>
-              <PressableScale
-                testID="staff-detail-next-month"
-                onPress={goNext}
-                disabled={!canGoNext}
-                style={[styles.monthNavButton, !canGoNext && styles.monthNavDisabled]}
-              >
-                <Ionicons name="chevron-forward" size={18} color={canGoNext ? colors.text : colors.textTertiary} />
-              </PressableScale>
-            </View>
-          </AnimatedEntrance>
-
-          {summary ? (
-            <AnimatedEntrance delay={step(2)} style={styles.block}>
+            <AnimatedEntrance delay={step(4)} style={styles.block}>
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>{t('monthSummary.title')}</Text>
-                <MonthSummaryStrip summary={summary} />
+                <Text style={styles.sectionTitle}>{t('staffDetail.markSection')}</Text>
+                <DateField
+                  testID="staff-detail-mark-date"
+                  label={t('staffDetail.date')}
+                  value={markDate}
+                  onChange={setMarkDate}
+                  minimumDate={fromISODate(monthStart)}
+                  maximumDate={fromISODate(markMax)}
+                />
+                <AttendanceStatusPicker
+                  testIDPrefix="staff-detail-mark"
+                  label={t('staffDetail.status')}
+                  value={markStatus}
+                  onChange={setMarkStatus}
+                  style={styles.chipRow}
+                />
+                <PrimaryButton
+                  testID="staff-detail-mark-submit"
+                  title={t('staffDetail.markSubmit')}
+                  loading={isMarking}
+                  disabled={!markStatus}
+                  onPress={handleMark}
+                  style={styles.markButton}
+                />
               </View>
             </AnimatedEntrance>
-          ) : null}
 
-          <AnimatedEntrance delay={step(3)} style={styles.block}>
-            <View style={styles.card}>
-              {isLoading ? (
-                <Text style={styles.emptyText}>{t('common.loading')}</Text>
-              ) : records.length === 0 ? (
-                <Text style={styles.emptyText}>{t('attendance.noHistory')}</Text>
-              ) : (
-                records.map((record, index) => (
-                  <View key={record.id} style={[styles.dayRow, index > 0 && styles.dayRowDivided]}>
-                    <View style={styles.dayHead}>
-                      <Text style={styles.dayDate}>{formatDate(dateKeyFromApi(record.date), t)}</Text>
-                      <AttendanceStatusPill status={record.status} />
-                    </View>
-                    {/* When and where. Renders nothing for a day that was
-                        marked by hand, so those rows stay as they were. */}
-                    <PunchTrace record={record} />
-                  </View>
-                ))
-              )}
-            </View>
-          </AnimatedEntrance>
-
-          <AnimatedEntrance delay={step(4)} style={styles.block}>
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>{t('staffDetail.markSection')}</Text>
-              <DateField
-                testID="staff-detail-mark-date"
-                label={t('staffDetail.date')}
-                value={markDate}
-                onChange={setMarkDate}
-                minimumDate={fromISODate(monthStart)}
-                maximumDate={fromISODate(markMax)}
-              />
-              <AttendanceStatusPicker
-                testIDPrefix="staff-detail-mark"
-                label={t('staffDetail.status')}
-                value={markStatus}
-                onChange={setMarkStatus}
-                style={styles.chipRow}
-              />
-              <PrimaryButton
-                testID="staff-detail-mark-submit"
-                title={t('staffDetail.markSubmit')}
-                loading={isMarking}
-                disabled={!markStatus}
-                onPress={handleMark}
-                style={styles.markButton}
-              />
-            </View>
-          </AnimatedEntrance>
-
-          {canManagePayroll ? (
-          <AnimatedEntrance delay={step(5)} style={styles.block}>
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>{t('staffDetail.payrollSection', { month: label })}</Text>
-              {!staffMember?.baseSalary ? <Text style={styles.metaWarn}>{t('staffDetail.noSalaryHint')}</Text> : null}
-              <FormInput
-                testID="staff-detail-deductions"
-                label={t('staffDetail.deductions')}
-                hint={t('addStaff.optional')}
-                icon="remove-circle-outline"
-                keyboardType="numeric"
-                value={deductions}
-                onChangeText={setDeductions}
-              />
-              {deductionsInvalid ? <Text style={styles.fieldError}>{t('staffDetail.invalidNumber')}</Text> : null}
-              <PrimaryButton
-                testID="staff-detail-generate-slip"
-                title={t('staffDetail.generateSlip')}
-                icon="document-text-outline"
-                loading={isGenerating}
-                disabled={!canGenerate}
-                onPress={handleGenerate}
-                style={styles.markButton}
-              />
-            </View>
-          </AnimatedEntrance>
-          ) : null}
-
-          {slips.length > 0 ? (
-            <AnimatedEntrance delay={step(6)} style={styles.block}>
+            {canManagePayroll ? (
+            <AnimatedEntrance delay={step(5)} style={styles.block}>
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>{t('staffDetail.pastSlips')}</Text>
-                {slips.map((slip, index) => (
-                  <View key={slip.id} style={[styles.slipRow, index > 0 && styles.dayRowDivided]}>
-                    <View style={styles.slipText}>
-                      <View style={styles.slipHead}>
-                        <Text style={styles.dayDate}>{slip.monthYear}</Text>
-                        <Pill
-                          label={slip.status === 'FINALIZED' ? t('staffDetail.finalized') : t('staffDetail.draft')}
-                          tone={slip.status === 'FINALIZED' ? 'brand' : 'muted'}
-                        />
+                <Text style={styles.sectionTitle}>{t('staffDetail.payrollSection', { month: label })}</Text>
+                {!staffMember?.baseSalary ? <Text style={styles.metaWarn}>{t('staffDetail.noSalaryHint')}</Text> : null}
+                <FormInput
+                  testID="staff-detail-deductions"
+                  label={t('staffDetail.deductions')}
+                  hint={t('addStaff.optional')}
+                  icon="remove-circle-outline"
+                  keyboardType="numeric"
+                  value={deductions}
+                  onChangeText={setDeductions}
+                />
+                {deductionsInvalid ? <Text style={styles.fieldError}>{t('staffDetail.invalidNumber')}</Text> : null}
+                <PrimaryButton
+                  testID="staff-detail-generate-slip"
+                  title={t('staffDetail.generateSlip')}
+                  icon="document-text-outline"
+                  loading={isGenerating}
+                  disabled={!canGenerate}
+                  onPress={handleGenerate}
+                  style={styles.markButton}
+                />
+              </View>
+            </AnimatedEntrance>
+            ) : null}
+
+            {slips.length > 0 ? (
+              <AnimatedEntrance delay={step(6)} style={styles.block}>
+                <View style={styles.card}>
+                  <Text style={styles.sectionTitle}>{t('staffDetail.pastSlips')}</Text>
+                  {slips.map((slip, index) => (
+                    <View key={slip.id} style={[styles.slipRow, index > 0 && styles.dayRowDivided]}>
+                      <View style={styles.slipText}>
+                        <View style={styles.slipHead}>
+                          <Text style={styles.dayDate}>{slip.monthYear}</Text>
+                          <Pill
+                            label={slip.status === 'FINALIZED' ? t('staffDetail.finalized') : t('staffDetail.draft')}
+                            tone={slip.status === 'FINALIZED' ? 'brand' : 'muted'}
+                          />
+                        </View>
+                        <Text style={styles.meta}>{formatAmountPrecise(slip.netPay, slip.currency)}</Text>
                       </View>
-                      <Text style={styles.meta}>{formatAmountPrecise(slip.netPay, slip.currency)}</Text>
+                      <PressableScale
+                        testID={`staff-detail-share-${slip.id}`}
+                        style={styles.downloadButton}
+                        onPress={() => handleShare(slip)}
+                      >
+                        {sharingSlipId === slip.id ? (
+                          <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                          <Ionicons name="share-outline" size={16} color={colors.primary} />
+                        )}
+                      </PressableScale>
                     </View>
-                    <PressableScale
-                      testID={`staff-detail-share-${slip.id}`}
-                      style={styles.downloadButton}
-                      onPress={() => handleShare(slip)}
-                    >
-                      {sharingSlipId === slip.id ? (
-                        <ActivityIndicator size="small" color={colors.primary} />
-                      ) : (
-                        <Ionicons name="share-outline" size={16} color={colors.primary} />
-                      )}
-                    </PressableScale>
-                  </View>
-                ))}
-              </View>
-            </AnimatedEntrance>
-          ) : null}
-        </ScrollView>
+                  ))}
+                </View>
+              </AnimatedEntrance>
+            ) : null}
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
@@ -379,6 +383,7 @@ const styles = StyleSheet.create({
   monthNavDisabled: { opacity: 0.4 },
   slipHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   safe: { flex: 1 },
+  flex: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

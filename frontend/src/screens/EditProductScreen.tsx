@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -186,7 +186,7 @@ export default function EditProductScreen({ navigation, route }: Props) {
     <View style={styles.container}>
       <ScreenBackground />
       <SafeAreaView style={styles.safe}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+        <KeyboardAvoidingView behavior="padding" style={styles.flex}>
           <View style={styles.header}>
             <Text style={styles.title}>{t('editProduct.title')}</Text>
             <PressableScale testID="edit-product-close" style={styles.close} onPress={() => navigation.goBack()}>

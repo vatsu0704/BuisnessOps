@@ -30,6 +30,7 @@ import DeliveryQueueScreen from '@/screens/DeliveryQueueScreen';
 import ExpensesScreen from '@/screens/ExpensesScreen';
 import AddExpenseScreen from '@/screens/AddExpenseScreen';
 import NotificationsScreen from '@/screens/NotificationsScreen';
+import DeleteAccountScreen from '@/screens/DeleteAccountScreen';
 import { useMembership } from '@/hooks/useBusinessId';
 import TabNavigator from './TabNavigator';
 import { canOpenRoute } from './routeAccess';
@@ -73,6 +74,9 @@ export type AppStackParamList = {
   // Requirement 8. Open to everyone: it lists your OWN notifications, and
   // there is nobody to withhold that from.
   Notifications: undefined;
+  // Open to everyone for the same reason: it is your own account. Both app
+  // stores require that anybody who can sign up can delete from inside the app.
+  DeleteAccount: undefined;
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -119,6 +123,7 @@ const MODAL_SCREENS: { name: keyof AppStackParamList; component: ComponentType<a
   { name: 'Expenses', component: ExpensesScreen },
   { name: 'AddExpense', component: AddExpenseScreen },
   { name: 'Notifications', component: NotificationsScreen },
+  { name: 'DeleteAccount', component: DeleteAccountScreen },
 ];
 
 /**

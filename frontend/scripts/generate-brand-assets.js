@@ -10,13 +10,22 @@
  *   adaptive-icon.png      1024², transparent foreground for Android 8+. The mark sits
  *                          inside the 66/108 safe circle that every launcher mask keeps;
  *                          the white behind it is app.json's adaptiveIcon.backgroundColor.
- *                          The Android 12+ system splash shows this same layer.
- *   splash-icon.png        1024², transparent. Expo scales it to the screen's width, and
- *                          the mark spans `splashShare` of it — the share AnimatedSplash
- *                          draws at, so the hand-over does not jump.
+ *                          It is also the launch splash's icon (app.json's
+ *                          expo-splash-screen plugin) at 288dp: Android 12+ masks that
+ *                          icon to its middle 192dp circle, and the safe circle sits
+ *                          inside it, so the whole mark shows.
  *   favicon.png            196², white, for the web build.
  *   notification-icon.png  96², white silhouette on transparent. Android draws only a
  *                          notification icon's alpha, so colour would be thrown away.
+ *
+ * And, into store-listing/ — artwork for the store pages, never bundled into the app:
+ *
+ *   play-icon-512.png      512², white, opaque. The Play Store's listing icon, composed
+ *                          like icon.png; Play rounds the corners itself.
+ *   feature-graphic.png    1024×500, white, opaque. The banner across the top of the Play
+ *                          listing: the mark and the wordmark, "Hisab" in ink and "Kitab"
+ *                          in the brand blue, as `Wordmark` sets them. The two words come
+ *                          from src/constants/brand.ts, the name's one source.
  *
  * Rendering needs @resvg/resvg-js, which is deliberately not a dependency: the app
  * never uses it, and it ships a native binary per platform that every `npm ci` would
@@ -44,7 +53,23 @@ try {
 }
 
 const ASSETS = path.join(__dirname, '..', 'assets');
+const STORE = path.join(__dirname, '..', 'store-listing');
 const WHITE = '#FFFFFF';
+// theme/index.ts's colors.text — the ink `Wordmark` sets the first word in.
+const INK = '#18181B';
+// Text needs a font, which a bare SVG renderer does not have; the system's will
+// do for a store banner. Segoe UI on Windows, Roboto on Linux, Arial elsewhere.
+const FONT_FAMILY = "'Segoe UI', Roboto, Arial, sans-serif";
+const RESVG_OPTIONS = { font: { loadSystemFonts: true, defaultFontFamily: 'Arial' } };
+
+// The name's two words, read from the app's one source of it rather than typed
+// again here. brand.ts is TypeScript, so it is matched rather than required.
+const APP_NAME_PARTS = (() => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'constants', 'brand.ts'), 'utf8');
+  const match = /APP_NAME_PARTS\s*=\s*\[\s*'([^']+)'\s*,\s*'([^']+)'\s*\]/.exec(source);
+  if (!match) throw new Error('Could not read APP_NAME_PARTS from src/constants/brand.ts');
+  return [match[1], match[2]];
+})();
 
 // Drawing order matters: the ribbon paints over the top of the right stem's lower piece.
 const PATHS = ['leftStem', 'rightStem', 'ribbon', 'arm'].flatMap((name) => art.parts[name].paths);
@@ -59,20 +84,48 @@ function gradients() {
     .join('');
 }
 
-/** A square canvas with the mark `markWidth` wide, centred. */
-function svg({ size, markWidth, background = null, silhouette = false }) {
+/**
+ * A canvas with the mark `markWidth` wide — centred, unless `markX` places it —
+ * and anything in `extra` drawn over it. `size` is shorthand for a square.
+ */
+function svg({ size, width = size, height = size, markWidth, markX, background = null, silhouette = false, extra = '' }) {
   const scale = markWidth / art.width;
-  const x = (size - markWidth) / 2;
-  const y = (size - art.height * scale) / 2;
+  const x = markX ?? (width - markWidth) / 2;
+  const y = (height - art.height * scale) / 2;
   const fill = (p) => (silhouette ? WHITE : p.paint ? `url(#${p.paint})` : art.blue);
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`,
-    background ? `<rect width="${size}" height="${size}" fill="${background}"/>` : '',
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    background ? `<rect width="${width}" height="${height}" fill="${background}"/>` : '',
     `<defs>${gradients()}</defs>`,
     `<g transform="translate(${x} ${y}) scale(${scale})">`,
     ...PATHS.map((p) => `<path d="${p.d}" fill="${fill(p)}"/>`),
-    '</g></svg>',
+    '</g>',
+    extra,
+    '</svg>',
   ].join('');
+}
+
+/** The two-colour wordmark as SVG text, its baseline at (x, y). */
+function wordmark(x, y, fontSize) {
+  const [first, second] = APP_NAME_PARTS;
+  return (
+    `<text x="${x}" y="${y}" font-family="${FONT_FAMILY}" font-weight="800" font-size="${fontSize}" ` +
+    `letter-spacing="${(-fontSize * 0.018).toFixed(2)}">` +
+    `<tspan fill="${INK}">${first}</tspan><tspan fill="${art.blue}">${second}</tspan></text>`
+  );
+}
+
+/**
+ * Where the wordmark's ink actually falls, relative to its baseline origin.
+ * A font's advance widths and its painted pixels differ, and centring a mark
+ * and a word together needs the painted ones — so it is rendered once, alone,
+ * and measured.
+ */
+function measureWordmark(fontSize) {
+  const probe = `<svg xmlns="http://www.w3.org/2000/svg" width="${fontSize * 12}" height="${fontSize * 3}">${wordmark(0, fontSize * 2, fontSize)}</svg>`;
+  const box = new Resvg(probe, RESVG_OPTIONS).getBBox();
+  if (!box) throw new Error('The wordmark rendered nothing — is a system font available?');
+  return { left: box.x, top: box.y - fontSize * 2, width: box.width, height: box.height };
 }
 
 // PNG writer for the opaque icons, which must not carry an alpha channel.
@@ -115,19 +168,64 @@ function opaquePng(width, height, rgba) {
   ]);
 }
 
-function render(file, options) {
-  const image = new Resvg(svg(options)).render();
+function render(file, options, dir = ASSETS) {
+  const image = new Resvg(svg(options), RESVG_OPTIONS).render();
   // An opaque image's pixels are the same premultiplied or not, so dropping alpha is exact.
   const png = options.background ? opaquePng(image.width, image.height, image.pixels) : image.asPng();
-  fs.writeFileSync(path.join(ASSETS, file), png);
-  console.log(`  ${file.padEnd(23)} ${options.size}×${options.size}, mark ${Math.round(options.markWidth)} wide`);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, file), png);
+  const width = options.width ?? options.size;
+  const height = options.height ?? options.size;
+  console.log(`  ${file.padEnd(23)} ${width}×${height}, mark ${Math.round(options.markWidth)} wide`);
+}
+
+// 500 wide puts the mark's corners 299px from the centre, inside the 313px safe radius.
+const ADAPTIVE_MARK_WIDTH = 500;
+
+// AnimatedSplash draws the mark at brandMark.json's splashMarkWidth so the
+// system splash hands over without a jump. That is only true while it equals
+// what the system splash actually shows: this file's adaptive mark, at the
+// imageWidth app.json gives expo-splash-screen. Changing either here or there
+// without the other is a jump nobody would notice until a launch.
+{
+  const plugins = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'app.json'), 'utf8')).expo.plugins;
+  const splash = plugins.find((p) => Array.isArray(p) && p[0] === 'expo-splash-screen');
+  const imageWidth = splash?.[1]?.imageWidth;
+  const expected = (imageWidth * ADAPTIVE_MARK_WIDTH) / 1024;
+  if (art.splashMarkWidth !== expected) {
+    throw new Error(
+      `brandMark.json splashMarkWidth is ${art.splashMarkWidth}, but the system splash shows the mark ` +
+        `${expected}dp wide (imageWidth ${imageWidth} × ${ADAPTIVE_MARK_WIDTH}/1024). Make them agree.`
+    );
+  }
 }
 
 console.log('Rendering brand assets from src/constants/brandMark.json:');
 render('icon.png', { size: 1024, markWidth: 600, background: WHITE });
-// 500 wide puts the mark's corners 299px from the centre, inside the 313px safe radius.
-render('adaptive-icon.png', { size: 1024, markWidth: 500 });
-render('splash-icon.png', { size: 1024, markWidth: 1024 * art.splashShare });
+render('adaptive-icon.png', { size: 1024, markWidth: ADAPTIVE_MARK_WIDTH });
 render('favicon.png', { size: 196, markWidth: 156, background: WHITE });
 // 80 of 96: Android's 24dp notification icon keeps its artwork inside the middle 20dp.
 render('notification-icon.png', { size: 96, markWidth: 80, silhouette: true });
+
+console.log('\nRendering store artwork into store-listing/:');
+render('play-icon-512.png', { size: 512, markWidth: 300, background: WHITE }, STORE);
+{
+  // The mark and the wordmark side by side, centred as one group, with the
+  // word's ink vertically centred on the mark. Play crops nothing from this
+  // banner, but some surfaces overlay it near the edges, so the group keeps
+  // well inside them.
+  const width = 1024;
+  const height = 500;
+  const markWidth = 230;
+  const gap = 44;
+  const fontSize = 100;
+  const word = measureWordmark(fontSize);
+  const markX = (width - (markWidth + gap + word.width)) / 2;
+  const textX = markX + markWidth + gap - word.left;
+  const baseline = height / 2 - word.top - word.height / 2;
+  render(
+    'feature-graphic.png',
+    { width, height, markWidth, markX, background: WHITE, extra: wordmark(textX, baseline, fontSize) },
+    STORE
+  );
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -147,132 +147,136 @@ export default function WorkCalendarScreen({ navigation }: Props) {
           </PressableScale>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          {error ? (
-            <AnimatedEntrance key={error} delay={0} distance={-8} style={styles.block}>
-              <View style={styles.errorBanner}>
-                <Ionicons name="alert-circle" size={16} color={colors.error} />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            </AnimatedEntrance>
-          ) : null}
-
-          {isLoading || !workWeek ? (
-            <Text style={styles.emptyText}>{t('common.loading')}</Text>
-          ) : (
-            <>
-              <AnimatedEntrance delay={step(0)}>
-                <View style={styles.card}>
-                  <Text style={styles.sectionTitle}>{t('workCalendar.weeklyOff')}</Text>
-                  <View style={styles.weekRow}>
-                    {WEEKDAYS.map((day) => {
-                      const selected = workWeek.weeklyOffDays.includes(day);
-                      return (
-                        <PressableScale
-                          key={day}
-                          testID={`work-calendar-weekday-${day}`}
-                          scaleTo={0.94}
-                          style={[styles.weekChip, selected && styles.weekChipOn]}
-                          onPress={() => toggleWeekday(day)}
-                          disabled={isSaving}
-                        >
-                          <Text style={[styles.weekChipText, selected && styles.weekChipTextOn]}>
-                            {weekdayName(day, t)}
-                          </Text>
-                        </PressableScale>
-                      );
-                    })}
-                  </View>
-                  <Text style={styles.hint}>{t('workCalendar.weeklyOffHint')}</Text>
+        {/* Since SDK 54 the window no longer shrinks for the keyboard (edge-to-edge),
+            so the form below has to move out of its way itself. */}
+        <KeyboardAvoidingView behavior="padding" style={styles.flex}>
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            {error ? (
+              <AnimatedEntrance key={error} delay={0} distance={-8} style={styles.block}>
+                <View style={styles.errorBanner}>
+                  <Ionicons name="alert-circle" size={16} color={colors.error} />
+                  <Text style={styles.errorText}>{error}</Text>
                 </View>
               </AnimatedEntrance>
+            ) : null}
 
-              <AnimatedEntrance delay={step(1)} style={styles.block}>
-                <View style={styles.card}>
-                  <Text style={styles.sectionTitle}>{t('workCalendar.unmarkedTitle')}</Text>
-                  <View style={styles.chipRow}>
-                    <View style={styles.chipItem}>
-                      <SegmentedOption
-                        testID="work-calendar-unmarked-present"
-                        title={t('workCalendar.unmarkedPresent')}
-                        selected={workWeek.unmarkedWorkingDayStatus === 'PRESENT'}
-                        onPress={() => setUnmarked('PRESENT')}
-                      />
+            {isLoading || !workWeek ? (
+              <Text style={styles.emptyText}>{t('common.loading')}</Text>
+            ) : (
+              <>
+                <AnimatedEntrance delay={step(0)}>
+                  <View style={styles.card}>
+                    <Text style={styles.sectionTitle}>{t('workCalendar.weeklyOff')}</Text>
+                    <View style={styles.weekRow}>
+                      {WEEKDAYS.map((day) => {
+                        const selected = workWeek.weeklyOffDays.includes(day);
+                        return (
+                          <PressableScale
+                            key={day}
+                            testID={`work-calendar-weekday-${day}`}
+                            scaleTo={0.94}
+                            style={[styles.weekChip, selected && styles.weekChipOn]}
+                            onPress={() => toggleWeekday(day)}
+                            disabled={isSaving}
+                          >
+                            <Text style={[styles.weekChipText, selected && styles.weekChipTextOn]}>
+                              {weekdayName(day, t)}
+                            </Text>
+                          </PressableScale>
+                        );
+                      })}
                     </View>
-                    <View style={styles.chipItem}>
-                      <SegmentedOption
-                        testID="work-calendar-unmarked-absent"
-                        title={t('workCalendar.unmarkedAbsent')}
-                        selected={workWeek.unmarkedWorkingDayStatus === 'ABSENT'}
-                        onPress={() => setUnmarked('ABSENT')}
-                      />
-                    </View>
+                    <Text style={styles.hint}>{t('workCalendar.weeklyOffHint')}</Text>
                   </View>
-                  <Text style={styles.hint}>{t('workCalendar.unmarkedHint')}</Text>
-                </View>
-              </AnimatedEntrance>
+                </AnimatedEntrance>
 
-              <AnimatedEntrance delay={step(2)} style={styles.block}>
-                <View style={styles.card}>
-                  <Text style={styles.sectionTitle}>{t('workCalendar.addHoliday')}</Text>
-                  <DateField
-                    testID="work-calendar-holiday-date"
-                    label={t('workCalendar.holidayDate')}
-                    value={holidayDate}
-                    onChange={setHolidayDate}
-                    // A holiday can legitimately be in the future, unlike an
-                    // attendance mark.
-                    maximumDate={new Date(year + 1, 11, 31)}
-                  />
-                  <FormInput
-                    testID="work-calendar-holiday-name"
-                    label={t('workCalendar.holidayName')}
-                    icon="sparkles-outline"
-                    value={holidayName}
-                    onChangeText={setHolidayName}
-                  />
-                  <PrimaryButton
-                    testID="work-calendar-add-holiday"
-                    title={t('workCalendar.addHoliday')}
-                    icon="add"
-                    loading={isAdding}
-                    disabled={!holidayName.trim()}
-                    onPress={handleAddHoliday}
-                  />
-                </View>
-              </AnimatedEntrance>
-
-              <AnimatedEntrance delay={step(3)} style={styles.block}>
-                <View style={styles.card}>
-                  <Text style={styles.sectionTitle}>{t('workCalendar.holidays')}</Text>
-                  {holidays.length === 0 ? (
-                    <Text style={styles.emptyText}>{t('workCalendar.noHolidays', { year })}</Text>
-                  ) : (
-                    holidays.map((holiday, index) => (
-                      <View key={holiday.id} style={[styles.row, index > 0 && styles.divided]}>
-                        <View style={styles.rowText}>
-                          <Text style={styles.name}>{holiday.name}</Text>
-                          <Text style={styles.meta}>{formatDateLong(dateKeyFromApi(holiday.date), t)}</Text>
-                        </View>
-                        <Pill
-                          label={holiday.branch ? holiday.branch.name : t('workCalendar.allBranches')}
-                          tone="muted"
+                <AnimatedEntrance delay={step(1)} style={styles.block}>
+                  <View style={styles.card}>
+                    <Text style={styles.sectionTitle}>{t('workCalendar.unmarkedTitle')}</Text>
+                    <View style={styles.chipRow}>
+                      <View style={styles.chipItem}>
+                        <SegmentedOption
+                          testID="work-calendar-unmarked-present"
+                          title={t('workCalendar.unmarkedPresent')}
+                          selected={workWeek.unmarkedWorkingDayStatus === 'PRESENT'}
+                          onPress={() => setUnmarked('PRESENT')}
                         />
-                        <PressableScale
-                          testID={`work-calendar-delete-${holiday.id}`}
-                          style={styles.iconButton}
-                          onPress={() => handleDeleteHoliday(holiday.id)}
-                        >
-                          <Ionicons name="trash-outline" size={15} color={colors.error} />
-                        </PressableScale>
                       </View>
-                    ))
-                  )}
-                </View>
-              </AnimatedEntrance>
-            </>
-          )}
-        </ScrollView>
+                      <View style={styles.chipItem}>
+                        <SegmentedOption
+                          testID="work-calendar-unmarked-absent"
+                          title={t('workCalendar.unmarkedAbsent')}
+                          selected={workWeek.unmarkedWorkingDayStatus === 'ABSENT'}
+                          onPress={() => setUnmarked('ABSENT')}
+                        />
+                      </View>
+                    </View>
+                    <Text style={styles.hint}>{t('workCalendar.unmarkedHint')}</Text>
+                  </View>
+                </AnimatedEntrance>
+
+                <AnimatedEntrance delay={step(2)} style={styles.block}>
+                  <View style={styles.card}>
+                    <Text style={styles.sectionTitle}>{t('workCalendar.addHoliday')}</Text>
+                    <DateField
+                      testID="work-calendar-holiday-date"
+                      label={t('workCalendar.holidayDate')}
+                      value={holidayDate}
+                      onChange={setHolidayDate}
+                      // A holiday can legitimately be in the future, unlike an
+                      // attendance mark.
+                      maximumDate={new Date(year + 1, 11, 31)}
+                    />
+                    <FormInput
+                      testID="work-calendar-holiday-name"
+                      label={t('workCalendar.holidayName')}
+                      icon="sparkles-outline"
+                      value={holidayName}
+                      onChangeText={setHolidayName}
+                    />
+                    <PrimaryButton
+                      testID="work-calendar-add-holiday"
+                      title={t('workCalendar.addHoliday')}
+                      icon="add"
+                      loading={isAdding}
+                      disabled={!holidayName.trim()}
+                      onPress={handleAddHoliday}
+                    />
+                  </View>
+                </AnimatedEntrance>
+
+                <AnimatedEntrance delay={step(3)} style={styles.block}>
+                  <View style={styles.card}>
+                    <Text style={styles.sectionTitle}>{t('workCalendar.holidays')}</Text>
+                    {holidays.length === 0 ? (
+                      <Text style={styles.emptyText}>{t('workCalendar.noHolidays', { year })}</Text>
+                    ) : (
+                      holidays.map((holiday, index) => (
+                        <View key={holiday.id} style={[styles.row, index > 0 && styles.divided]}>
+                          <View style={styles.rowText}>
+                            <Text style={styles.name}>{holiday.name}</Text>
+                            <Text style={styles.meta}>{formatDateLong(dateKeyFromApi(holiday.date), t)}</Text>
+                          </View>
+                          <Pill
+                            label={holiday.branch ? holiday.branch.name : t('workCalendar.allBranches')}
+                            tone="muted"
+                          />
+                          <PressableScale
+                            testID={`work-calendar-delete-${holiday.id}`}
+                            style={styles.iconButton}
+                            onPress={() => handleDeleteHoliday(holiday.id)}
+                          >
+                            <Ionicons name="trash-outline" size={15} color={colors.error} />
+                          </PressableScale>
+                        </View>
+                      ))
+                    )}
+                  </View>
+                </AnimatedEntrance>
+              </>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
@@ -281,6 +285,7 @@ export default function WorkCalendarScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   safe: { flex: 1 },
+  flex: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

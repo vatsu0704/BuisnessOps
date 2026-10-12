@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+// The legacy entry point is the API these helpers were written against; SDK 54
+// made the new File/Directory API the package default.
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import i18n from '@/i18n';
 import { apiClient } from '@/api/client';

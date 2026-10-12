@@ -2,7 +2,7 @@
 
 This document translates the product requirements (PRD) into a buildable engineering sequence for this repo: **React Native/Expo (TypeScript) frontend + Node.js/Express backend + PostgreSQL via Prisma**. It exists so that at any point in the build, anyone can answer "what phase are we in, what does it depend on, and how do we know it's done."
 
-The product is named **HisabKitab** (2026-10-04), renamed from "BizIQ", which had itself replaced "BuisnessOps". Old names deliberately survive where a machine keys on them — the Android package `com.biziq.app`, the EAS slug, the stored keys on every device, the repository folder and the Postgres database name `buisnessops` — and those are not typos to fix; `CLAUDE.md`'s *Naming* section has the full list.
+The product is named **HisabKitab** (2026-10-04), renamed from "BizIQ", which had itself replaced "BuisnessOps". Old names deliberately survive where a machine keys on them — the Android package `com.biziq.app` (until the Play release renames it, [PLAY_STORE_RELEASE.md](PLAY_STORE_RELEASE.md) A1), the EAS slug, the stored keys on every device, the repository folder and the Postgres database name `buisnessops` — and those are not typos to fix; `CLAUDE.md`'s *Naming* section has the full list.
 
 **Where the repo actually is:** Phases 0 and 1 (CSV path) are done. The app ships as an Expo **development build** rather than Expo Go, with its own icon, animated splash and a four-tab shell (Home, Staff, Reports, Settings). Phase 3's UI i18n is done ahead of order; the rest of Phase 3 and all of Phase 2 are not started. An **Attendance & Salary Slip module** was also added outside the phase sequence, on request — backend and frontend both done (see 4a below).
 
@@ -38,7 +38,7 @@ These decisions shape every phase and shouldn't be revisited per-feature:
 | 4 | Reporting & cross-branch comparison | FR-06, FR-07 | 🟡 branch × month net profit and cross-business comparison done (Branch Operations Task 8); benchmarking against a company average, and city/region grouping, not started |
 | 5 | Proactive intelligence: alerts, benchmarking, wastage, cash-mix, seasonal correlation | FR-08–FR-12 | ⏳ not started (tab exists, shows a planned notice) |
 | 6 | Strategic & franchise: staff analytics, royalty automation, expansion what-if, forecasting | FR-13–FR-16 | ⏳ not started |
-| 7 | Hardening: security, compliance, performance, billing | NFRs (Section 7) | ⏳ not started |
+| 7 | Hardening: security, compliance, performance, billing | NFRs (Section 7) | 🟡 store-launch code done — Expo SDK 54 (targets API 36), account deletion, privacy policy, the Play bundle build ([PLAY_STORE_RELEASE.md](PLAY_STORE_RELEASE.md)); the package rename waits on Firebase, and the security, compliance, load-test and billing work below is not started |
 
 Phase 3's UI half landed out of order, ahead of Phase 2 — that was a deliberate request, not a plan change. The phase ordering below still stands.
 
@@ -286,6 +286,24 @@ Runs partly in parallel with Phases 4–6, but nothing ships to real businesses 
 
 **Exit criteria:** cross-tenant test suite passes, load test meets targets, and a compliance sign-off exists for each market being onboarded.
 
+### 7a. Store launch readiness (Google Play)
+
+What the Play Store requires before it will take an upload, tracked step by step — code and paperwork — in [PLAY_STORE_RELEASE.md](PLAY_STORE_RELEASE.md). Status as of 2026-10-07:
+
+| Deliverable | Status |
+| --- | --- |
+| Target Android 16 (API 36): Expo SDK 51 → 54, React Native 0.81, React Navigation 7, still the old architecture | ✅ done — the app needs a fresh development build (`npm run android`) |
+| Edge-to-edge on every screen (Android 16 allows no opt-out) | 🟡 code done; the on-device design pass is outstanding |
+| Account deletion, in the app and on a public page (`POST /auth/me/delete`, Settings → Delete account, `/delete-account`) | ✅ done, with tests |
+| Privacy policy at a public URL, reachable from Settings and sign-up (`/privacy`) | ✅ done — names the operator once `LEGAL_NAME`, `LEGAL_ADDRESS`, `SUPPORT_EMAIL` are set |
+| `npm run build:play` — the signed `.aab`, with its address, key, Firebase file and CPU architectures checked | ✅ done |
+| Play listing icon and feature graphic (`frontend/store-listing/`) | ✅ done |
+| Firebase credential accepted as inline JSON, for hosts without secret files | ✅ done |
+| Package rename `com.biziq.app` → `com.hisabkitab.app` | ⏸ deferred — needs the new Android app registered in Firebase first |
+| Company registration, D-U-N-S, domain, Play Console organization account | ⏳ the owner's, in progress |
+
+Account deletion is a store requirement rather than a Branch Operations one, so it lives here and not in `REQUIREMENTS.md`. Its rules: a business owned alone goes with the account; a business that still has other active members stops the deletion until they are removed; records an employer keeps about someone (attendance, payslips) stay with the employer; the user row is anonymised rather than deleted, because other businesses' audit trails point at it (see `database-table.md`).
+
 ---
 
 ## 11. Immediate Next Steps (from current repo state)
@@ -312,6 +330,7 @@ What's actually next:
 1. **Phase 2 — Core Query Engine.** Still blocked on an LLM provider being wired in (Anthropic API key not yet provided). The Home screen already has the answer surface and the disabled ask bar waiting for it.
 2. **Locale-aware formatting** (Phase 3 leftover) — partly done: `formatAmount` now groups INR the Indian way (₹3,40,000) and month, weekday and date labels come from the translation files rather than a hardcoded English array. Still open: locale-aware number and date formatting driven by the business's region rather than the app language, and the Hermes `Intl` caveat in Section 6 still stands.
 3. **Live POS adapter** — blocked on either picking a different pull-capable vendor or a Petpooja partner conversation (see Section 12).
+4. **Google Play release** (Phase 7a) — the code is ready; what remains is the package rename once Firebase has the new app, the on-device edge-to-edge check, and the owner's paperwork and hosting. Password reset is the strongest candidate for the next feature before strangers use the app: without it a forgotten password is a dead account.
 
 *Done since this list was last written: the business switcher, revoking access (both under 4a above), backend i18n (4b) and branch settings — see below.*
 

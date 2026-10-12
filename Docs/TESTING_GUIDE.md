@@ -15,7 +15,9 @@ with a confirmation that names who is displaced, and every refusal now says what
 rule is rather than that a rule exists (Flow 17u). The AI "ask a
 question" bar is gone from Home entirely (requirement 7), hidden behind a flag
 until Phase 2's query engine exists. Alerts (Phase 5) has no tab at all; the Staff tab took its
-slot.
+slot. For the app stores, the privacy policy is reachable from Settings and sign-up
+(Flow 20) and anybody can delete their own account (Flow 21); the app runs on Expo
+SDK 54 and draws edge-to-edge on Android (Flow 0, Flow 10).
 
 ---
 
@@ -40,6 +42,13 @@ You run both servers yourself — nothing here starts them for you.
 2. **Frontend**: `cd frontend`, then `npm run web` (fastest for clicking
    through in a browser) or `npm run android` if you want to test on a
    device/emulator.
+
+   **The app is on Expo SDK 54 (React Native 0.81) since October 2026.** A
+   development build installed before that cannot run today's JavaScript — it
+   opens to a red error screen. Run `npm run android` once to build and install a
+   new one; after that, `npm start` is enough again. Node 20.19.4 or newer is
+   needed (`node -v`). The new build installs over the old one, because the
+   debug signing key did not change.
 3. **On a physical phone**, the app has to be able to reach the API — this is
    the usual cause of a login that fails with "cannot reach the HisabKitab server".
    Pick whichever matches how the phone is connected, and make sure
@@ -96,11 +105,17 @@ and the old indigo icon** — rebuild first (`npx expo prebuild -p android`, the
    - ✅ **Expected:** it is labelled **HisabKitab**, and its icon is the HK mark —
      two dark stems crossed by a blue ribbon, with a blue arm — on white.
 2. Force-stop it (App info → **Force stop**), then open it.
-   - ✅ **Expected:** the system's own splash is white with the mark in the
+   - ✅ **Expected:** the system's own splash is white with the whole mark in the
      middle — never black, never the old indigo, never the whole launcher tile
-     cropped into a circle. The clock and battery in the status bar are dark, so
-     they stay readable on the white.
+     cropped into a circle, and no corner of the mark clipped. The clock and
+     battery in the status bar are dark, so they stay readable on the white, and
+     there is no separate coloured strip behind them: since SDK 54 the app draws
+     edge-to-edge, under the status bar.
 3. Watch the app's own splash take over.
+   - ✅ **Expected:** the mark does not jump in size or position at the moment the
+     app's splash replaces the system's — both draw it about 140dp wide. A visible
+     jump means `splashMarkWidth` and app.json's splash `imageWidth` have drifted
+     apart (see CLAUDE.md, *Native Android builds*).
    - ✅ **Expected, in this order:** the left stem, then the right stem, rise into
      place; the blue ribbon sweeps across them from left to right; the arm of the
      K flicks out; then the whole logo lifts a little as **HisabKitab** — "Hisab"
@@ -301,7 +316,11 @@ typed as `Product Name` or `Unit Price` are fine: case and spaces are ignored.
    Staff & payroll used to live here too. It is now its own **Staff tab**,
    because it is used daily rather than configured once — see Flow 13.
    - A language **dropdown**, showing the language you are in
-   - **"Log out"**
+   - **"Privacy policy"** card — opens the public page in the browser (Flow 20)
+   - **"Log out"**, a red outlined button
+   - Under it, a small underlined **"Delete account"** link — quieter than Log
+     out on purpose, so a thumb reaching for one does not land on the other
+     (Flow 21)
 
    The business id used to sit at the bottom of the business card. It is gone:
    it is a UUID and there was nothing anyone could do with it.
@@ -490,6 +509,18 @@ number" message and the button should refuse to submit, not crash.
 - **Branch scoping**: if you granted a Manager/Staff account access to only
   one branch, confirm they see only that branch on Home, and can't reach
   another branch's data even by nothing more than using the app normally.
+- **Edge-to-edge** (Android, since SDK 54): the app now draws under the status
+  bar and the navigation bar, and Android 16 allows no way out of it. Switch the
+  phone between **gesture navigation** and **3-button navigation** (Settings →
+  System → Navigation mode) and, in each, check that nothing sits under the bar
+  at the bottom: the tab bar, the supply cart's total and Place-order tray, the
+  counter's running total, and every form's submit button with the keyboard both
+  open and closed. Nothing at the top should hide under the clock either.
+  Check the screens that are a **tab for one role and a modal for another** both
+  ways — the counter, the supply catalog and cart, Products, Payments: as a
+  cashier's tab, and as an owner's modal from Home. In a tab there should be no
+  extra gap above the tab bar; as a modal the last thing on screen should clear
+  the navigation bar.
 
 ---
 
@@ -1932,6 +1963,83 @@ Requirement 27. Invite someone as **Accountant** (Flow 6).
 
 ---
 
+## Flow 20 — The privacy policy
+
+Both app stores require a privacy policy that is reachable from inside the app,
+not only from the store listing. It is a public page the backend serves at
+`/privacy`, beside the API rather than under `/api`.
+
+1. **Settings → Privacy policy.**
+   - ✅ **Expected:** the phone's browser opens the API server's `/privacy` page
+     (with `.env` on `localhost` over `adb reverse`, the phone's browser reaches it
+     through the same tunnel). It shows the HisabKitab name, **Privacy policy**, a
+     *Last updated* date, and sections on what is collected, why, who sees it, how
+     long it is kept, deleting your account, and your rights.
+   - Until the company is registered it also shows a yellow box: **Operator
+     details are being finalised.** That is correct, not a missing page.
+2. Log out, open **sign-up**, and look under the **Register** button.
+   - ✅ **Expected:** *By creating an account you agree to the* **Privacy policy**,
+     with the last words underlined in blue; tapping them opens the same page.
+     Switch language: in Hindi, Gujarati and Marathi the link sits wherever that
+     language puts the policy's name in the sentence, not tacked onto the end.
+3. In `backend/.env`, set `LEGAL_NAME`, `LEGAL_ADDRESS` and `SUPPORT_EMAIL`
+   (an address can break lines with `\n`), restart the backend, and reload the page.
+   - ✅ **Expected:** the yellow box is gone, and **Contact** names the company, its
+     address on separate lines, and the email as a link. Open `/delete-account` too:
+     it now tells someone without the app to write to that address.
+
+The page is English in every language — see *Known limitations*.
+
+---
+
+## Flow 21 — Delete your account
+
+Both app stores require this too. **Use throwaway accounts** — what this deletes
+cannot be brought back. Each case starts at **Settings → Delete account**.
+
+1. **The screen, before anything happens.**
+   - ✅ **Expected:** a title, *This cannot be undone*, and a card **What will be
+     deleted**: your name, phone, password, notifications and settings. For an
+     owner, it then lists **the businesses you own** by name, with a blue tip to
+     download what you need first (**Reports → Export**) and a note that a business
+     with other active members will be refused. For anyone who works in somebody
+     else's business, a second card **What stays** names those businesses and says
+     the attendance and payslips stay with them. At the bottom: a password field, a
+     solid red **Delete my account** button (greyed out until you type), and a
+     *Read exactly what is deleted* link that opens `/delete-account`.
+2. **A wrong password.** Type anything else, press **Delete my account**, confirm.
+   - ✅ **Expected:** it asks first — *Delete your account?* — then a red banner:
+     *That password is not right, so your account was not deleted.* You are still
+     signed in, and nothing has changed.
+3. **An owner with a team.** As the owner from Flow 6, whose business still has an
+   active member, enter the right password and confirm.
+   - ✅ **Expected:** refused, naming the business: *<Business> still has 1 other
+     active member(s). Remove them from the team first, then delete your account.*
+     Still signed in; the business and its team untouched.
+4. **Somebody who works in a business.** Sign in as the Staff account from Flow 7,
+   delete it with the right password.
+   - ✅ **Expected:** signed out to the Login screen at once. Signing in with that
+     email and password now says *Invalid email or password*.
+   - As the owner: on **Team** their row reads **Deleted account**, struck through
+     as removed, with no email under it; on the **Staff** tab their staff record and
+     the days they worked are still there — the business's own record of paying
+     them.
+5. **An owner alone.** Register a new owner (Flow 1) with a fresh email, add a
+   branch, then delete the account.
+   - ✅ **Expected:** the confirmation says the account **and the businesses you
+     own** will be deleted, with all their records. After it, signed out. Signing
+     in fails. **Registering again with the same email works**, and starts a new,
+     empty business — the old one is gone with everything in it.
+6. **Signed in somewhere else at the time.** If the account in 4 or 5 was also
+   open in a second browser or phone, use anything there.
+   - ✅ **Expected:** that session ends on its next request and returns to Login —
+     a deleted account is refused everywhere at once, not when its token expires.
+7. **Without the app:** open `/delete-account` in any browser.
+   - ✅ **Expected:** the steps in the app, what is and is not deleted, and — once
+     `SUPPORT_EMAIL` is set (Flow 20, step 3) — the address to write to.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
 - **No password reset and no way to change a password.** Signup, sign-in and
@@ -1948,7 +2056,21 @@ Requirement 27. Invite someone as **Accountant** (Flow 6).
   `User.status = 'DISABLED'` takes effect on the next request rather than when
   their token expires, and the message says the account was disabled rather than
   that the password was wrong. There is no screen for this yet: it is a database
-  change.
+  change. (A deleted account is a disabled one with its details erased, which is
+  why another signed-in device ends its session the same way — Flow 21.)
+- **Deleting an account has no grace period and no undo.** It happens the moment
+  it is confirmed. And there is no way to hand a business to somebody else, so an
+  owner whose business still has a team has to remove them before leaving — the
+  business cannot outlive its owner's account.
+- **The privacy policy and the deletion page are English only**, in every app
+  language. Each is a legal statement, and nobody has reviewed a translation of
+  one. Until `LEGAL_NAME`, `LEGAL_ADDRESS` and `SUPPORT_EMAIL` are set on the
+  server they say the operator's details are being finalised — the company is
+  not registered yet.
+- **The Android package is still `com.biziq.app`.** It becomes
+  `com.hisabkitab.app` before the first Play upload, once the new app is
+  registered in Firebase — see `Docs/PLAY_STORE_RELEASE.md` (A1). Nothing a
+  person sees shows it, and renaming it later installs as a second app.
 - **No payment is detected automatically.** A UPI QR is paid in the payer's own UPI
   app and the payer taps *Payment done*; the warehouse's desk or the accountant then
   taps *Received*. Nothing in the app sees the money arrive — that would need a payment

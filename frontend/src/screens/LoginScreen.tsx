@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Trans, useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -68,7 +68,7 @@ export default function LoginScreen({ navigation }: Props) {
     <View style={styles.container}>
       <ScreenBackground />
       <SafeAreaView style={styles.safe}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+        <KeyboardAvoidingView behavior="padding" style={styles.flex}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <AnimatedEntrance delay={step(0)}>
               <AuthHeader />

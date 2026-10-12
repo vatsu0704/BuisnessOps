@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 
 const routes = require('./routes');
+const legalRoutes = require('./routes/legal.routes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { requestId, accessLog } = require('./middleware/requestLog');
 
@@ -51,6 +52,8 @@ app.use(express.json());
 app.use(accessLog);
 
 app.use('/api', routes);
+// The privacy policy and the account-deletion page (legal/pages.js).
+app.use(legalRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

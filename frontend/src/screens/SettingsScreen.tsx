@@ -3,13 +3,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import BusinessSwitcher from '@/components/BusinessSwitcher';
+import DangerButton from '@/components/DangerButton';
 import InfoCard from '@/components/InfoCard';
 import LanguageSelector from '@/components/LanguageSelector';
 import NotificationSettings from '@/components/NotificationSettings';
@@ -20,6 +20,7 @@ import { colors, gradient, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { useMembership } from '@/hooks/useBusinessId';
 import { can, hasNoActiveBusiness, switchableMemberships } from '@/utils/permissions';
+import { openLegalPage } from '@/utils/legalLinks';
 
 function initials(name?: string | null, email?: string | null): string {
   const source = name?.trim() || email || '';
@@ -214,10 +215,40 @@ export default function SettingsScreen() {
             <NotificationSettings />
           </AnimatedEntrance>
 
+          {/* Both app stores require the privacy policy to be reachable from
+              inside the app, not only from the listing. It opens the public
+              page in the browser — the same one the listing links to. */}
           <AnimatedEntrance delay={step(10)} style={styles.block}>
-            <PressableScale testID="settings-logout" style={styles.logout} onPress={() => logout()}>
-              <Ionicons name="log-out-outline" size={18} color={colors.error} />
-              <Text style={styles.logoutText}>{t('settings.logout')}</Text>
+            <InfoCard
+              testID="settings-privacy-policy"
+              icon="shield-checkmark-outline"
+              title={t('settings.privacyPolicy')}
+              subtitle={t('settings.privacyPolicySubtitle')}
+              onPress={() => openLegalPage('privacy')}
+            />
+          </AnimatedEntrance>
+
+          <AnimatedEntrance delay={step(11)} style={styles.block}>
+            <DangerButton
+              testID="settings-logout"
+              icon="log-out-outline"
+              title={t('settings.logout')}
+              onPress={() => logout()}
+            />
+          </AnimatedEntrance>
+
+          {/* Quieter than Log out on purpose. It has to be easy to find — the
+              stores check — but it should never be the thing a thumb lands on
+              while reaching for the button above. The screen it opens says what
+              will go and asks for the password before anything happens. */}
+          <AnimatedEntrance delay={step(12)}>
+            <PressableScale
+              testID="settings-delete-account"
+              style={styles.deleteLink}
+              scaleTo={0.97}
+              onPress={() => navigation.navigate('DeleteAccount')}
+            >
+              <Text style={styles.deleteLinkText}>{t('settings.deleteAccount')}</Text>
             </PressableScale>
           </AnimatedEntrance>
         </ScrollView>
@@ -278,16 +309,6 @@ const styles = StyleSheet.create({
   },
   rowLabel: { fontSize: 13.5, color: colors.textSecondary },
   rowValue: { fontSize: 13.5, fontWeight: '600', color: colors.text, flexShrink: 1, textAlign: 'right' },
-  logout: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderWidth: 1.5,
-    borderColor: colors.error,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md + 2,
-    backgroundColor: colors.surface,
-  },
-  logoutText: { color: colors.error, fontSize: 15, fontWeight: '700' },
+  deleteLink: { alignSelf: 'center', marginTop: spacing.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+  deleteLinkText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: '600', textDecorationLine: 'underline' },
 });

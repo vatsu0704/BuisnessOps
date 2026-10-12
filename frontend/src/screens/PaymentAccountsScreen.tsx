@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -19,6 +19,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import UpiAccountEditor from '@/components/payments/UpiAccountEditor';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
+import { useScreenEdges } from '@/hooks/useScreenEdges';
 
 /**
  * Payment QR codes — where branches' money goes (requirement 26).
@@ -36,6 +37,7 @@ import { step } from '@/theme/motion';
  * nobody can find their way down.
  */
 export default function PaymentAccountsScreen() {
+  const edges = useScreenEdges();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const businessId = useBusinessId();
@@ -82,7 +84,7 @@ export default function PaymentAccountsScreen() {
   return (
     <View style={styles.container}>
       <ScreenBackground />
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={edges}>
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.title}>{t('paymentAccounts.title')}</Text>
@@ -93,7 +95,7 @@ export default function PaymentAccountsScreen() {
           </PressableScale>
         </View>
 
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.flex} behavior="padding">
           <ScrollView
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"

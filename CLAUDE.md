@@ -24,6 +24,7 @@ from code.
 | `Docs/FIREBASE_SETUP.md` | Creating the Firebase project and the two credential files push notifications need. Neither file is in git |
 | `Docs/DEPLOYMENT.md` | Running `backend/` somewhere other than a laptop: the production environment, the two shapes migrations can take, the image, health and the JSON logs — and what is still unbuilt before it can be called live |
 | `Docs/TEST_DATA_SEED.md` | `backend/scripts/seed-test-data.sql`: seven months of test data for the owner's two businesses, landing each month on a fixed net profit, and how to re-run or remove it |
+| `Docs/PLAY_STORE_RELEASE.md` | Getting the app onto Google Play: what blocks an upload today, the code work that clears it and its status, and the owner's own steps — paperwork, hosting, signing key, Play Console forms and the Data safety answers |
 
 A new document of this kind belongs in `Docs/` too. Only `CLAUDE.md` and
 `README.md` stay at the repository root, because Claude Code loads the rule book
@@ -117,6 +118,7 @@ Frontend (from `frontend/`):
 | `npm start` | Metro for an existing dev build |
 | `npm run android` | Build the native app and install it on a connected device |
 | `npm run web` | Browser preview, useful for quick UI checks |
+| `npm run build:play -- --api-url https://…/api` | The `.aab` Google Play takes. Refuses a non-https or local API address, a missing signing key, a Firebase file for another package; then checks the bundle. See `Docs/PLAY_STORE_RELEASE.md` |
 
 ## Running the app
 
@@ -435,17 +437,21 @@ branch card kept showing a stale list until the app was killed and reopened.
 - Haptics go through `src/utils/haptics.ts`, which no-ops on web — call that
   wrapper rather than `expo-haptics` directly.
 - Shared UI lives in `src/components` (`FormInput`, `PrimaryButton`,
-  `PressableScale`, `BrandMark`, `Wordmark`, `AnimatedSplash`, `ScreenBackground`).
-  Reuse these before writing a new variant. The brand fill for buttons, hero cards
-  and avatars is `gradient.brand` in the theme, not a pair of hex codes.
+  `DangerButton`, `PressableScale`, `BrandMark`, `Wordmark`, `AnimatedSplash`,
+  `ScreenBackground`). Reuse these before writing a new variant. The brand fill for
+  buttons, hero cards and avatars is `gradient.brand` in the theme, not a pair of
+  hex codes; the red one for Log out and for an irreversible final step is
+  `DangerButton` (`outline` / `solid`), not a third inline copy of its style.
 - **The mark is drawn once, in `src/constants/brandMark.json`** — traced from the
   supplied logo and fitted to Béziers, with each part's box and paints.
   `BrandMark.tsx` renders it in the app, and `scripts/generate-brand-assets.js`
-  renders every PNG in `frontend/assets/` from it (launcher icon, adaptive icon,
-  splash, favicon, notification icon), so the in-app logo and the launcher icon
-  cannot drift apart. Change the JSON, re-run the script (its header says how to
-  get its renderer, which is deliberately not a dependency), then rebuild. Its
-  `blue` is also `colors.primary`, and the backend's printed documents repeat it
+  renders every PNG in `frontend/assets/` from it (launcher icon, adaptive icon —
+  which is also the launch splash's icon — favicon, notification icon), and the
+  Play listing's icon and feature graphic into `frontend/store-listing/`, so the
+  in-app logo, the launcher icon and the store page cannot drift apart. Change
+  the JSON, re-run the script (its header says how to get its renderer, which is
+  deliberately not a dependency), then rebuild. Its `blue` is also
+  `colors.primary`, and the backend's printed documents and legal pages repeat it
   as `BRAND` in `documents/layout.js`.
 
 ## Translations
@@ -503,6 +509,17 @@ device render it — the export's double-count warning travels in its JSON as
 it as a sentence. `?lang=` is what makes a *document* the exception; it does not
 license prose in an ordinary API response.
 
+**The privacy policy and the account-deletion page are not a fourth exception**,
+though they are prose from the backend (`backend/src/legal/pages.js`, served at
+`/privacy` and `/delete-account`). They are public web pages, not API responses:
+the app store's reviewers and anyone following the store listing's link read them
+in a browser, with no app on the other end to render anything, and the app itself
+only opens them there (`utils/legalLinks.ts`). They are English because each is a
+legal statement and nobody has reviewed a translation of one. They describe what
+the code collects, so **a feature that starts collecting something new changes
+`pages.js` in the same change**, and the Data safety table in
+`Docs/PLAY_STORE_RELEASE.md` with it.
+
 **This applies to the backend too, which does not translate and must not try.**
 It cannot know the reader's language — the choice lives on the device and may
 differ from the account's `preferredLocale`. So never write a message as prose
@@ -525,11 +542,23 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
 - `android/` and `ios/` are generated by `expo prebuild` and are gitignored.
   **Never hand-edit files inside them** — edits are silently discarded on the next
   prebuild. Express native changes as Expo config plugins in `app.json`; see
-  `frontend/plugins/withAndroid12SplashScreen.js` for a file it writes and
+  `frontend/plugins/withReleaseSigning.js` for a Gradle file it edits and
   `frontend/plugins/withAndroidArchitectures.js` for a Gradle property it sets.
-- React Native 0.74's Gradle cannot run on JDK 24/25. JDK 17 is pinned per-project
-  via `org.gradle.java.home` in `android/gradle.properties`, so the machine's global
-  `JAVA_HOME` can stay on a newer JDK for other work. Do not change the global one.
+  **A plugin that edits a file by matching text must throw when the text is not
+  there.** `withReleaseSigning` used to `replace` quietly, so a React Native template
+  change would have produced a "release" signed with the debug key — a build that
+  succeeds and that Play refuses. It now stops prebuild and says which piece moved.
+- **Expo SDK 54, React Native 0.81, and the old architecture** (`newArchEnabled:
+  false`). SDK 54 is the last SDK that allows the old one, and the upgrade was made
+  for Google Play's target-API rule (API 36), not for the New Architecture — so
+  `react-native-reanimated` stays on 3.x, because 4.x requires it.
+  `expo.install.exclude` in `package.json` stops `npx expo install --fix` from
+  "fixing" that back to 4.x. Play raises the target every August; the 2027 one
+  needs SDK 56 or later, and with it the New Architecture.
+- React Native's Gradle (8.14 on RN 0.81) cannot run on JDK 25. JDK 17 is pinned
+  per-project via `org.gradle.java.home` in `android/gradle.properties`, so the
+  machine's global `JAVA_HOME` can stay on a newer JDK for other work. Do not change
+  the global one.
 - **`frontend/google-services.json` must exist before a build**, or the app has
   no Firebase config compiled into it and no push will ever arrive — the same
   build-time trap as `EXPO_PUBLIC_API_URL`, and just as silent. It is gitignored;
@@ -554,7 +583,10 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
   `android/app/build/outputs/apk/release/app-release.apk` with the bundle, and
   therefore the `EXPO_PUBLIC_API_URL` that was in `.env` at build time, compiled
   in. Without `frontend/keystore.properties` it is signed with the debug key —
-  fine for sideloading, not acceptable for the Play Store.
+  fine for sideloading, not acceptable for the Play Store. **What Play takes is an
+  `.aab`, built by `npm run build:play`** (see *Commands*), which sets the API
+  address from its argument rather than `.env` and refuses the mistakes above
+  before Gradle starts.
 - **`frontend/tsconfig.json` must keep excluding `android` and `ios`**, and its
   `exclude` list must keep repeating the four entries from `expo/tsconfig.base` —
   `exclude` replaces that list rather than merging with it. `expo/tsconfig.base`
@@ -566,14 +598,43 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
   in `api/client.ts` — a file nobody edited, breaking because somebody ran
   `npm run android`, and clean again the moment `android/` is deleted. Hunting it
   in the frontend source finds nothing, because it is not there.
-- On Android 12+ the OS draws its own splash before app code runs. It needs
-  `windowSplashScreenBackground`, which Expo SDK 51 does not emit — the config
-  plugin above supplies it, together with `windowSplashScreenAnimatedIcon` set to
-  the adaptive icon's foreground (the bare mark). Without the first the launch
-  starts on a black screen; without the second it shows the whole launcher icon.
-  Both splashes and `AnimatedSplash` are the same white (`#FFFFFF`, repeated in
-  `app.json` because JSON cannot import it), and `androidStatusBar` asks for dark
-  status-bar icons so the clock does not vanish into it before JS starts.
+- **The launch splash is Android's own, configured by the `expo-splash-screen`
+  plugin in `app.json`.** Its icon is `adaptive-icon.png` (the bare mark, inside the
+  launcher's safe circle) at `imageWidth` 288dp, which Android 12+ masks to a 192dp
+  circle the whole mark fits inside. That puts the mark at 288 × 500/1024 = 140.6dp,
+  which is `splashMarkWidth` in `constants/brandMark.json`, and `AnimatedSplash`
+  draws it at exactly that width so the hand-over does not jump;
+  `scripts/generate-brand-assets.js` throws if the three stop agreeing. Up to SDK 51
+  a custom plugin, `withAndroid12SplashScreen`, supplied what Expo did not emit.
+  **Do not bring it back**: SDK 52+ derives the splash theme from
+  `Theme.SplashScreen`, and its `parent="AppTheme"` override would break the
+  splash. The splash and `AnimatedSplash` are the same white (`#FFFFFF`, repeated in
+  `app.json` because JSON cannot import it), and `androidStatusBar.barStyle` asks for
+  dark status-bar icons so the clock does not vanish into it before JS starts.
+- **Every Android screen is edge-to-edge, and there is no way out.** Android 16
+  enforces it for an app targeting API 36, and SDK 54 turns it on for every
+  version: the app draws under the status bar and the navigation bar. So
+  `androidStatusBar.backgroundColor` does nothing any more, and anything pinned to
+  the bottom of a screen — a tray, a button bar, a form's submit — has to keep clear
+  of the navigation bar with `useSafeAreaInsets().bottom` or a `SafeAreaView` whose
+  `edges` include `bottom`. **A screen that is a tab for one role and a modal for
+  another takes its edges from `useScreenEdges()`**: inside the tab navigator the
+  tab bar already keeps clear of the system bar, so `bottom` must be left out or it
+  is padded twice; pushed as a modal there is no tab bar, and `bottom` is needed.
+  Twelve screens skipped `bottom` unconditionally, which was harmless before SDK 54
+  and put a modal's last button under the bar after it. Check it with both gesture
+  and 3-button navigation; nothing else will show it.
+- **The keyboard no longer shrinks the window.** Edge-to-edge breaks
+  `adjustResize`: Android hands the app the keyboard's size and resizes nothing.
+  So every screen with an input wraps its scroll view in
+  `<KeyboardAvoidingView behavior="padding">` **on Android as well as iOS** — the
+  `Platform.OS === 'ios' ? 'padding' : undefined` every form used to have now
+  leaves Android doing nothing, and a field near the bottom disappears under the
+  keyboard.
+- **`userInterfaceStyle: "light"` reaches Android only through `expo-system-ui`.**
+  SDK 54's template theme is `DayNight`, so without that package a phone in dark
+  mode draws the confirm dialogs and the date picker dark over a light app — and
+  prebuild says so only as a one-line warning.
 - **The debug APK is built for one CPU architecture, and that is deliberate.**
   React Native's default packages all four, which on this project meant **127MB of
   native libraries in a 147MB APK** — `arm64-v8a` 38.8MB, `x86` 34.4MB, `x86_64`
@@ -581,7 +642,13 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
   else, so ~88MB of every install was native code the device cannot execute.
   `plugins/withAndroidArchitectures.js` sets `reactNativeArchitectures` through
   `withGradleProperties`, so it survives prebuild instead of being a hand edit to
-  `android/gradle.properties` that the next one throws away.
+  `android/gradle.properties` that the next one throws away. **On React Native
+  0.81 the property alone does nothing for this app**: RN's Gradle plugin turns it
+  into `ndk.abiFilters` only under the New Architecture, so after the SDK 54
+  upgrade the APK quietly went back to all four ABIs and 145MB. The plugin
+  therefore also writes `abiFilters` into the app's `defaultConfig`, read from the
+  same property so a `-P` still wins. Do not drop that half while the app is on
+  the old architecture.
   **Two cases need it widened, and neither fails loudly**, so use the environment
   variable rather than editing the plugin: an **emulator** is usually `x86_64`, and
   a **release APK for distribution** that drops `armeabi-v7a` simply cannot be
@@ -589,6 +656,9 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
 
       EXPO_ANDROID_ARCHITECTURES=x86_64 npm run android
       EXPO_ANDROID_ARCHITECTURES=arm64-v8a,armeabi-v7a npx expo prebuild -p android
+
+  `npm run build:play` passes `armeabi-v7a,arm64-v8a,x86_64` to Gradle as `-P` for
+  the Play bundle, so it needs neither and leaves the debug setting alone.
 
 - **`adb.exe: failed to install … exited with non-zero code: 1` is not the error.**
   Expo's `spawnAsync` swallows adb's own message and reports only the exit code, so
@@ -628,7 +698,10 @@ and hand the body to one of the two helpers that exist for this:
   both are core APIs, so this needs no polyfill.
 
 Both split on `Platform.OS === 'web'`, where the useful action is a print dialog
-or an anchor download rather than a share sheet.
+or an anchor download rather than a share sheet. Both — and `utils/saveTemplate.ts`
+— import `expo-file-system/legacy`: SDK 54 made a new File/Directory API the
+package's default, and the legacy entry point is the API they were written
+against. Moving them is its own task, not a find-and-replace.
 
 ## Dependency overrides
 
@@ -649,23 +722,25 @@ React Native stay exactly where they are. That is the first thing to reach for.
 call site that consumes it.** This is the whole risk, and it does not show up as
 a type error or a failing test — it shows up as a broken build later, on someone
 else's machine. Two patched majors on record changed exactly the surface their
-consumer calls, both found by checking:
+consumer calls, both found by checking. One is still live:
 
-- **`tar` 7** is the only patched line (`<=7.5.20` is vulnerable; 6.x never got
-  a fix). `@expo/cli` does `_interopRequireDefault(require('tar')).default.extract(...)`,
-  and tar 7's CommonJS build sets `__esModule: true` with **no `default` export** —
-  so `.default` is `undefined` and the call throws. On **Windows this is the
-  primary path**: `extractAsync` skips the native `tar` binary when
-  `process.platform !== 'win32'` is false, so every tarball Expo extracts — the
-  prebuild template among them — goes through the JS module. Everything else
-  `@expo/cli` passes (`cwd`, `file`, `filter`, `strip`, and `onentry`, which tar 7
-  still maps to `onReadEntry`) behaves the same.
 - **`image-size` 2** is the only patched line (`<=2.0.2`; 1.x never got a fix,
-  so `npm audit`'s "fix available via `npm audit fix`" for it is false — metro asks
-  for `^1.0.2`). `metro/src/Assets.js` does `const getImageSize = require('image-size')`
-  and calls it with a Buffer **and with a file path**; image-size 2 is not callable
-  (it exports `{ imageSize }`) and measures bytes only. A bare override breaks
-  Metro's asset pipeline, which means every bundle.
+  so `npm audit`'s "fix available via `npm audit fix`" for it is false). On SDK 54
+  its consumer is **the metro pinned inside `@expo/metro`** — 0.83.3, at
+  `node_modules/@expo/metro/node_modules/metro` — which is the copy Expo bundles
+  with. Its `src/Assets.js` does `_interopRequireDefault(require("image-size")).default(...)`
+  with a Buffer in one place **and a file path** in the other; image-size 2's
+  CommonJS build sets `__esModule` with no `default`, and measures bytes only. A
+  bare override breaks Metro's asset pipeline, which means every bundle. The
+  top-level metro (0.83.8, pulled in by React Native's CLI) has its own image
+  parser and no image-size at all — which is how this pair will end.
+- **`tar` 7** was the other, until SDK 54. `@expo/cli` 0.18 did
+  `_interopRequireDefault(require('tar')).default.extract(...)` against a tar 7
+  with no `default`, and on **Windows** every tarball Expo extracts — the prebuild
+  template among them — went through it, because `extractAsync` only uses the
+  native `tar` binary elsewhere. SDK 54's `@expo/cli` asks for `tar ^7.5.2` itself
+  and calls it correctly, so the override and its patch were deleted in the
+  upgrade.
 
 Both were confirmed by installing the candidate version in a scratch directory
 and replicating the exact `require` and call, not by reading changelogs. Do that
@@ -673,26 +748,25 @@ rather than guessing: the failure mode is a build that works for you and not for
 CI.
 
 **When the break is only in how the consumer calls it, patch the consumer.**
-Both are overridden to the patched line anyway (`tar ^7.5.22`,
-`image-size ^2.0.4`), and `frontend/patches/` holds a few-line fix to each
-consumer: `@expo/cli`'s two `_tar()` loaders take `require('tar')` as the default
-directly, and metro's `getImageSize` becomes a wrapper that reads a path into
-bytes before calling `imageSize`. `patch-package --error-on-fail` applies them on
-`postinstall`, so `npm ci` in CI and on EAS gets them too. **An override and its
-patch only work as a pair** — neither half on its own leaves a working build.
+`image-size` is overridden to the patched line anyway (`^2.0.4`), and
+`frontend/patches/@expo+metro++metro+0.83.3.patch` turns metro's
+`_imageSize.default` into a wrapper that reads a path into bytes before calling
+`imageSize`. `patch-package --error-on-fail` applies it on `postinstall`, so
+`npm ci` in CI and on EAS gets it too. **An override and its patch only work as a
+pair** — neither half on its own leaves a working build.
 
-- A patch is written against an exact version (`@expo+cli+0.18.31.patch`,
-  `metro+0.80.12.patch`). When an Expo patch release moves either,
+- A patch is written against an exact version, and for a nested copy an exact
+  path: the `++` in the file name is patch-package's spelling of
+  `@expo/metro/node_modules/metro`. When an Expo release moves it,
   `--error-on-fail` stops the install instead of leaving the build half-patched.
   Regenerate the patch against the new version (edit the file in `node_modules`,
-  then `npx patch-package <name>`); don't drop the override to make the install
-  pass.
+  then `npx patch-package @expo/metro/metro`); don't drop the override to make the
+  install pass.
 - A patch that still applies but no longer works is what
-  `npm run lint:patched-deps` (in CI) catches. It calls the patched functions
-  themselves: `@expo/cli`'s template extractors, on a tarball with `HelloWorld`
-  paths that prebuild must rename, and metro's two measurers, checked against the
-  icon's own PNG header. Nothing else in CI reaches the tar path — only
-  `expo prebuild` does.
+  `npm run lint:patched-deps` (in CI) catches. It calls metro's two measurers
+  through `@expo/metro/metro/Assets` — the entry point Expo itself uses, not the
+  top-level `metro`, which is a different copy — and checks them against the
+  icon's own PNG header.
 - **A `file:` override cannot do this job**, and it was tried first, as a local
   adapter package standing in for `tar`. npm 10 resolves a `file:` override's
   path relative to **each package that depends on it**, not the project root, so
@@ -703,41 +777,48 @@ patch only work as a pair** — neither half on its own leaves a working build.
   change, read `npm ls` for `invalid`, not just the audit count.
 
 **What an override is allowed to be:** a patch within the same major
-(`postcss`, `ajv`, `send`, `qs`), or a major bump whose consumer provably only
-uses the surface that survived (`uuid` 8→11 is fine because `@expo/bunyan`,
-`xcode` and `gaxios` all call the named `v1`/`v4` exports, which uuid 11 still
-ships for CommonJS). `@xmldom/xmldom` stops at **0.8.15** rather than 0.9.x on
-purpose — `@expo/plist` passes the `errorHandler` option, which 0.9 removed.
+(`postcss` in the frontend, `qs` in the backend), or a major bump whose consumer
+provably only uses the surface that survived (`uuid` 7→11 is fine because
+`xcode`, its one consumer left on SDK 54, calls the named `v4` export, which
+uuid 11 still ships for CommonJS).
 
 **`qs` is the one that is actually attacker-reachable.** Everything else in
 either audit is developer tooling that never leaves this machine; `qs` parses
 request query strings on the live API. Express 4.22 asks for `~6.15.1` and every
 `6.15.x` is vulnerable, so 6.16.0 is the only fix and the override is the only
-way to get there. The 335-test suite goes through Express for every route, which
-is what makes that bump safe to make rather than safe to hope about.
+way to get there. The backend test suite goes through Express for every route,
+which is what makes that bump safe to make rather than safe to hope about.
 
-**`react-native: "0.74.5"` in the frontend is not a security fix.**
-`@react-native/virtualized-lists` declares `peer react-native: "*"`, and npm
-satisfied it by installing a **second, complete React Native** — 0.86.3, 49MB,
-nested at `node_modules/react-native/node_modules/react-native` — instead of
-deduping to the 0.74.5 the app is built against. It dragged in 127 packages and
-several advisories of its own. The override pins it out, but note that **`npm
-install` alone will not remove it**: npm honours an existing lockfile entry over
-an override, so the stale entries under that path have to be deleted from
-`package-lock.json` first. If `npm ls react-native` ever prints
-`invalid: react-native@0.86.3` again, that is what happened.
+**Three frontend advisories have no fixed version to override to.** On SDK 54,
+every one of the frontend's `npm audit` findings (29, as of 2026-10) traces to
+`braces` ≤3.0.3 (micromatch, in Metro's and Jest's file watchers and in
+patch-package), `node-forge` ≤1.4.0 (Expo's code-signing certificates, for signed
+updates this app does not use) or `sprintf-js` ≤1.1.3 (an old argparse under
+Jest's coverage tooling). Each is already the latest release of its package, all
+three are developer tooling, and none is in the app bundle. `npm audit`'s remedy
+for them is `expo@44` or `react-native@0.86` — see above. Re-check when a fixed
+version is published; that is when an override becomes possible.
+
+**There is no `react-native` override any more.** On SDK 51,
+`@react-native/virtualized-lists`' `peer react-native: "*"` made npm install a
+**second, complete React Native** (0.86.3, nested under `node_modules/react-native`),
+and an override pinned it out. React Native 0.81 dedupes to one copy. If
+`npm ls react-native` ever shows two again, an override is the fix — and **`npm
+install` alone will not apply it**: npm honours an existing lockfile entry over an
+override, so the stale entries have to be deleted from `package-lock.json` first.
+The same is true of any major upgrade: the React Navigation 6 entries had to be
+removed by hand before 7 would install.
 
 **After changing either `overrides` block, prove the toolchain still works** —
 neither `tsc` nor the parity gates can see any of this:
 
 - `cd frontend && npx expo config --type public` exercises the config plugins,
-  which is where `@xmldom/xmldom` and `@expo/plist` live.
+  which is where `@expo/plist` and the `xcode` → `uuid` path live.
 - `cd frontend && npx expo export --platform android --output-dir <tmp>` builds a
   real production bundle through Metro, and is the only check that covers the
   asset pipeline, `postcss`, and anything that ships in the app. Point it at a
   temp directory so it leaves nothing in the repo.
-- `cd frontend && npm run lint:patched-deps` covers the `tar` and `image-size`
-  patches, including the prebuild path that none of the others reach.
+- `cd frontend && npm run lint:patched-deps` covers the `image-size` patch.
 - `cd backend && npm test` covers `qs`, and `xlsx` through both the ingestion and
   export paths.
 
@@ -762,10 +843,11 @@ but CI does need to reach `cdn.sheetjs.com`, which is the trade. Note 0.20's
 throws; read `XLSX.version` instead.
 
 **Re-check the whole list when the Expo SDK is upgraded.** An override that has
-become unnecessary is a version pin nobody asked for, and the `tar` and
-`image-size` pairs above are exactly what an SDK upgrade fixes properly. Once
-`@expo/cli` and `metro` ask for those majors themselves, delete both overrides,
-both files in `patches/`, `lint:patched-deps` and its CI step — and
+become unnecessary is a version pin nobody asked for. The SDK 54 upgrade retired
+seven: `tar` with its patch, `react-native`, and `ajv`, `send`, `@xmldom/xmldom`,
+`fast-xml-parser` and `decode-uri-component`, which nothing in the new tree asks
+for at a vulnerable version. When `@expo/metro` moves past metro 0.83.3, delete
+the `image-size` override, its patch, `lint:patched-deps` and its CI step — and
 `patch-package` itself, if nothing else is patched by then.
 
 ## Environment
@@ -785,6 +867,14 @@ is what `npm run web` needs and what this has always done — the native app sen
 no `Origin` header and is not subject to CORS at all, so tightening it by default
 would break the browser preview and protect nobody. Set it in production if the
 web build is served.
+
+**`LEGAL_NAME`, `LEGAL_ADDRESS` and `SUPPORT_EMAIL` name the company on the public
+`/privacy` and `/delete-account` pages**, and are deliberately configuration, not
+code: the company is not registered yet, and when it is, setting them and
+restarting is the whole change. Until all three are set the pages say the
+operator's details are being finalised — never a blank where a name should be —
+and a production server warns at every start. It does not refuse to start; the
+API has to run before the company exists.
 
 **`NODE_ENV=production` is not decoration — it switches behaviour.** It is what
 turns on the strict secret rules above and what turns the access log from

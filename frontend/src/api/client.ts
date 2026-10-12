@@ -11,7 +11,7 @@ import { translateApiError, type ApiErrorBody } from '@/api/errorMessages';
 // release APK built against the hosted API showed it, as "cannot reach the HisabKitab
 // server at http://localhost:4000/api". No cast is needed to type it — @types/node
 // declares process.env as a string dictionary.
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

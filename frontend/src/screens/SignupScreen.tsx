@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/AuthNavigator';
+import { openLegalPage } from '@/utils/legalLinks';
 import { useAuthStore } from '@/store/authStore';
 import type { Industry } from '@/types/business';
 import { INDUSTRY_OPTIONS } from '@/constants/industries';
@@ -110,6 +111,13 @@ export default function SignupScreen({ navigation }: Props) {
         timezone.trim().length > 0)) &&
     !isSubmitting;
 
+  // Back to the Login screen this was opened from, not a second copy on top of
+  // it: since React Navigation 7, `navigate` to a screen already in the stack
+  // pushes another one unless asked to pop.
+  function goToLogin() {
+    navigation.navigate('Login', undefined, { pop: true });
+  }
+
   async function handleSubmit() {
     if (!canSubmit) return;
     try {
@@ -144,10 +152,10 @@ export default function SignupScreen({ navigation }: Props) {
     <View style={styles.container}>
       <ScreenBackground />
       <SafeAreaView style={styles.safe}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+        <KeyboardAvoidingView behavior="padding" style={styles.flex}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <AnimatedEntrance delay={step(0)}>
-              <AuthHeader caption={t('signup.headerCaption')} onBack={() => navigation.navigate('Login')} />
+              <AuthHeader caption={t('signup.headerCaption')} onBack={goToLogin} />
             </AnimatedEntrance>
 
             <AnimatedEntrance delay={step(1)} style={styles.intro}>
@@ -298,6 +306,24 @@ export default function SignupScreen({ navigation }: Props) {
                 disabled={!canSubmit}
                 onPress={handleSubmit}
               />
+              {/* One sentence with the link tagged inside it, not a prefix plus
+                  a link: Hindi, Gujarati and Marathi put the policy's name
+                  before the verb, so splitting it would fix the English order. */}
+              <Text style={styles.privacy}>
+                <Trans
+                  i18nKey="signup.privacyNotice"
+                  components={{
+                    link: (
+                      <Text
+                        testID="signup-privacy-policy"
+                        style={styles.privacyLink}
+                        onPress={() => openLegalPage('privacy')}
+                        accessibilityRole="link"
+                      />
+                    ),
+                  }}
+                />
+              </Text>
             </AnimatedEntrance>
 
             <AnimatedEntrance delay={step(5)} style={styles.infoWrap}>
@@ -311,7 +337,7 @@ export default function SignupScreen({ navigation }: Props) {
             <AnimatedEntrance delay={step(6)}>
               <PressableScale
                 testID="signup-goto-login"
-                onPress={() => navigation.navigate('Login')}
+                onPress={goToLogin}
                 style={styles.linkWrap}
                 scaleTo={0.97}
               >
@@ -376,6 +402,14 @@ const styles = StyleSheet.create({
   },
   errorText: { color: colors.error, fontSize: 13, flex: 1 },
   infoWrap: { marginTop: spacing.lg },
+  privacy: {
+    fontSize: 12.5,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: spacing.md,
+  },
+  privacyLink: { color: colors.primary, fontWeight: '700', textDecorationLine: 'underline' },
   linkWrap: { marginTop: spacing.xl, alignItems: 'center' },
   link: { color: colors.textSecondary, fontSize: 14 },
   linkStrong: { color: colors.primary, fontWeight: '700' },

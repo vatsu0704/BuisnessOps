@@ -26,6 +26,7 @@ import { haptics } from '@/utils/haptics';
 import { payeeOf, upiNote } from '@/utils/upi';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
+import { useScreenEdges } from '@/hooks/useScreenEdges';
 
 type Tab = 'pay' | 'confirm';
 
@@ -67,6 +68,7 @@ const payeeKey = (order: SupplyPaymentOrder) => order.vendorId ?? 'WAREHOUSE';
  * and the history are in front of whoever is saying it.
  */
 export default function SupplyPaymentsScreen() {
+  const edges = useScreenEdges();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const businessId = useBusinessId();
@@ -226,7 +228,7 @@ export default function SupplyPaymentsScreen() {
     return (
       <View style={styles.container}>
         <ScreenBackground />
-        <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <SafeAreaView style={styles.safe} edges={edges}>
           <View style={styles.header}>
             <View style={styles.headerText}>
               <Text style={styles.title}>{t('payments.payTitle')}</Text>
@@ -275,7 +277,7 @@ export default function SupplyPaymentsScreen() {
   return (
     <View style={styles.container}>
       <ScreenBackground />
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={edges}>
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.title}>{t('payments.title')}</Text>

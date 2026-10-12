@@ -19,6 +19,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
+import { useScreenEdges } from '@/hooks/useScreenEdges';
 
 /**
  * The catalog — requirement 4.
@@ -28,6 +29,7 @@ import { step } from '@/theme/motion';
  * with one gets no picker at all rather than a control with a single option.
  */
 export default function ProductsScreen() {
+  const edges = useScreenEdges();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const business = useAuthStore((s) => s.business);
@@ -66,7 +68,7 @@ export default function ProductsScreen() {
   return (
     <View style={styles.container}>
       <ScreenBackground />
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={edges}>
         <View style={styles.header}>
           <Text style={styles.title}>{t('products.title')}</Text>
           {canManage && branchId ? (

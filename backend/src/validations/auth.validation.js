@@ -45,4 +45,13 @@ function validateLogin(body) {
   return errors;
 }
 
-module.exports = { validateSignup, validateLogin };
+// The password again, because the token alone is not enough to end an account:
+// a phone left unlocked on a counter should not be one tap from deleting a
+// business.
+function validateDeleteAccount(body) {
+  const errors = [];
+  if (!body.password || typeof body.password !== 'string') errors.push(required('password'));
+  return errors;
+}
+
+module.exports = { validateSignup, validateLogin, validateDeleteAccount };

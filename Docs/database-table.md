@@ -89,6 +89,21 @@ Global login identity — not tenant-scoped itself (a person could belong to mor
 | status | Enum: `ACTIVE, INVITED, DISABLED` | |
 | createdAt / updatedAt | DateTime | |
 
+**A deleted account is an anonymised row, not a missing one.** Deleting your own
+account (`POST /auth/me/delete`, `services/account.service.js`) keeps the `User`
+row and empties it: `email` becomes `deleted+<id>@deleted.invalid`, `name` and
+`phone` are cleared, `passwordHash` is replaced with a hash of random bytes nobody
+holds, and `status` becomes `DISABLED`, which `requireAuth` refuses on the next
+request. The row cannot simply go, because `Membership.user` cascades and every
+audit pointer at a membership — `Attendance.markedByMembershipId`, the supply
+order and expense actors, the UPI `…UpdatedByMembershipId` columns — is
+`SetNull`: deleting it would quietly erase who-did-what from *other* businesses'
+records. Alongside: businesses the person owned alone are deleted (their
+expenses first, because `Expense.category` is `Restrict` and Postgres does not
+order a cascade), their other memberships become `REVOKED`, `StaffMember.userId`
+is cleared, and their `DeviceToken`, `Notification` and `NotificationPreference`
+rows are deleted. No column was added for it.
+
 ### `Membership`
 One row per (user, business) — carries the role. Replaces a naive `User.businessId` column, which couldn't model a consultant or franchisor-with-multiple-businesses.
 

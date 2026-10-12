@@ -23,6 +23,7 @@ import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
+import { isDeletedAccount } from '@/utils/account';
 import { confirm } from '@/utils/confirm';
 import { haptics } from '@/utils/haptics';
 import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
@@ -335,12 +336,13 @@ export default function TeamScreen({ navigation }: Props) {
           {members.map((member, index) => {
             const revoked = member.status === 'REVOKED';
             const isYou = member.id === viewer?.id;
+            const deleted = isDeletedAccount(member.user);
             return (
               <AnimatedEntrance key={member.id} delay={step(Math.min(index + 1, 5))} style={styles.block}>
                 <View style={[styles.card, revoked && styles.revokedCard]}>
                   <View style={styles.cardHead}>
                     <Text style={[styles.name, revoked && styles.nameRevoked]}>
-                      {member.user.name ?? member.user.email}
+                      {deleted ? t('team.deletedAccount') : member.user.name ?? member.user.email}
                       {isYou ? ` · ${t('team.you')}` : ''}
                     </Text>
                     <Pill
@@ -348,7 +350,7 @@ export default function TeamScreen({ navigation }: Props) {
                       tone={revoked ? 'muted' : 'brand'}
                     />
                   </View>
-                  <Text style={styles.meta}>{member.user.email}</Text>
+                  {deleted ? null : <Text style={styles.meta}>{member.user.email}</Text>}
 
                   {revoked ? (
                     <Text style={styles.branchNote}>{t('team.revokedNote')}</Text>

@@ -52,6 +52,33 @@ function render(code, locale, params = {}) {
   };
 }
 
+/**
+ * The service-account credential, from whichever form the host can supply.
+ *
+ * A **path** is what a laptop has, and what a host with secret files mounts.
+ * Most hosts have no secret files, only environment variables, so the variable
+ * may instead hold the **JSON itself**. A service account's JSON always starts
+ * with `{` and a path never does, so the first character decides and there is
+ * nothing else to configure. The `\n`s inside its `private_key` are JSON
+ * escapes, which survive an environment variable unharmed.
+ *
+ * A parse failure on inline JSON is rethrown without the parser's message,
+ * because V8's message quotes the text it choked on — and that text is the
+ * private key, which `init` would then write to the log.
+ */
+function readServiceAccount(configured) {
+  const value = configured.trim();
+  if (value.startsWith('{')) {
+    try {
+      return JSON.parse(value);
+    } catch {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT looks like inline JSON but does not parse');
+    }
+  }
+  const resolved = path.isAbsolute(value) ? value : path.join(process.cwd(), value);
+  return JSON.parse(fs.readFileSync(resolved, 'utf8'));
+}
+
 function init() {
   if (initialised) return;
   initialised = true;
@@ -67,8 +94,7 @@ function init() {
     // Required lazily so a machine with no Firebase never pays for loading the
     // SDK, and so a broken credential cannot stop the API booting.
     const admin = require('firebase-admin');
-    const resolved = path.isAbsolute(configured) ? configured : path.join(process.cwd(), configured);
-    const credential = JSON.parse(fs.readFileSync(resolved, 'utf8'));
+    const credential = readServiceAccount(configured);
 
     const app = admin.apps.length
       ? admin.app()
@@ -146,4 +172,4 @@ async function sendToDevice({ token, locale, code, params, deepLink }) {
   }
 }
 
-module.exports = { sendToDevice, isEnabled, render };
+module.exports = { sendToDevice, isEnabled, render, readServiceAccount };

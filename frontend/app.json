@@ -5,15 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "newArchEnabled": false,
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
-    },
     "androidStatusBar": {
-      "barStyle": "dark-content",
-      "backgroundColor": "#FFFFFF"
+      "barStyle": "dark-content"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -27,6 +22,7 @@
     },
     "android": {
       "package": "com.biziq.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
@@ -51,17 +47,12 @@
         }
       ],
       [
-        "expo-build-properties",
+        "expo-splash-screen",
         {
-          "android": {
-            "usesCleartextTraffic": true
-          }
-        }
-      ],
-      [
-        "./plugins/withAndroid12SplashScreen",
-        {
-          "backgroundColor": "#FFFFFF"
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/adaptive-icon.png",
+          "imageWidth": 288,
+          "resizeMode": "contain"
         }
       ],
       "./plugins/withReleaseSigning",

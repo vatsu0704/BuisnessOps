@@ -1,4 +1,4 @@
-const { withGradleProperties } = require('@expo/config-plugins');
+const { withAppBuildGradle, withGradleProperties } = require('@expo/config-plugins');
 
 /**
  * Build only the CPU architectures you are actually installing onto.
@@ -48,29 +48,75 @@ const { withGradleProperties } = require('@expo/config-plugins');
  * Read as a member expression, not destructured: `frontend/.env` values are
  * rewritten by Expo's Babel transform and this one is not, but keeping the same
  * shape everywhere is what stops the two being confused.
+ *
+ * ## Why it also writes abiFilters into android/app/build.gradle
+ *
+ * The property alone stopped working at React Native 0.81. React Native's Gradle
+ * plugin turns `reactNativeArchitectures` into `ndk.abiFilters` only under the New
+ * Architecture (`NdkConfiguratorUtils.configureReactNativeNdk` returns early for
+ * the old one), and this app runs the old one. The libraries still compiled one
+ * set each, but the APK packaged all four from prebuilt `.aar`s — back to 145MB.
+ * So the app's `defaultConfig` asks for the same property itself. It reads the
+ * property rather than a value baked in here, so `-PreactNativeArchitectures=…`
+ * (which `npm run build:play` passes, and `expo run:android` passes for the
+ * connected device) still wins over `gradle.properties`. Under the New
+ * Architecture React Native adds the same list to the same set, which is harmless.
  */
 const DEFAULT_ARCHITECTURES = 'arm64-v8a';
+
+const PROPERTY_COMMENT =
+  'Set by plugins/withAndroidArchitectures.js — override with EXPO_ANDROID_ARCHITECTURES.';
+
+const ABI_FILTERS_MARKER = '// Set by plugins/withAndroidArchitectures.js';
+
+const ABI_FILTERS = `        ${ABI_FILTERS_MARKER}: React Native 0.81 applies
+        // reactNativeArchitectures only under the New Architecture.
+        ndk {
+            abiFilters.addAll((findProperty('reactNativeArchitectures') ?: 'armeabi-v7a,arm64-v8a,x86,x86_64').split(',').collect { it.trim() })
+        }
+`;
+
+function withArchitecturesProperty(config, value) {
+  return withGradleProperties(config, (cfg) => {
+    // Replace rather than append: gradle.properties already ships the property
+    // with all four ABIs, and a duplicate key would leave the last one winning
+    // by accident rather than by intent. The comment goes too, or every prebuild
+    // that keeps the file would add another copy of it.
+    cfg.modResults = cfg.modResults.filter(
+      (item) =>
+        !(item.type === 'property' && item.key === 'reactNativeArchitectures') &&
+        !(item.type === 'comment' && item.value === PROPERTY_COMMENT)
+    );
+    cfg.modResults.push({ type: 'comment', value: PROPERTY_COMMENT });
+    cfg.modResults.push({ type: 'property', key: 'reactNativeArchitectures', value });
+    return cfg;
+  });
+}
+
+function withAbiFilters(config) {
+  return withAppBuildGradle(config, (cfg) => {
+    const contents = cfg.modResults.contents;
+    if (contents.includes(ABI_FILTERS_MARKER)) {
+      return cfg;
+    }
+    // Matched by text, so a template change has to stop prebuild rather than
+    // quietly leave every ABI in the APK again — see withReleaseSigning.js.
+    const anchor = /^ {4}defaultConfig \{\r?\n/m;
+    if (!anchor.test(contents)) {
+      throw new Error(
+        'withAndroidArchitectures: could not find "defaultConfig {" in android/app/build.gradle. ' +
+          'The React Native template has changed; update plugins/withAndroidArchitectures.js ' +
+          'to match it, or the APK will carry all four CPU architectures again.'
+      );
+    }
+    cfg.modResults.contents = contents.replace(anchor, (line) => line + ABI_FILTERS);
+    return cfg;
+  });
+}
 
 module.exports = function withAndroidArchitectures(config, { architectures } = {}) {
   const value =
     process.env.EXPO_ANDROID_ARCHITECTURES || architectures || DEFAULT_ARCHITECTURES;
 
-  return withGradleProperties(config, (cfg) => {
-    // Replace rather than append: gradle.properties already ships the property
-    // with all four ABIs, and a duplicate key would leave the last one winning
-    // by accident rather than by intent.
-    cfg.modResults = cfg.modResults.filter(
-      (item) => !(item.type === 'property' && item.key === 'reactNativeArchitectures')
-    );
-    cfg.modResults.push({
-      type: 'comment',
-      value: 'Set by plugins/withAndroidArchitectures.js — override with EXPO_ANDROID_ARCHITECTURES.',
-    });
-    cfg.modResults.push({
-      type: 'property',
-      key: 'reactNativeArchitectures',
-      value,
-    });
-    return cfg;
-  });
+  return withAbiFilters(withArchitecturesProperty(config, value));
 };

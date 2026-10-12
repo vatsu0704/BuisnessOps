@@ -7,7 +7,12 @@ import {
   isTransportFailure,
   setSessionEndedHandler,
 } from '@/api/client';
-import { signup as signupRequest, login as loginRequest, fetchSession } from '@/api/auth';
+import {
+  signup as signupRequest,
+  login as loginRequest,
+  fetchSession,
+  deleteAccount as deleteAccountRequest,
+} from '@/api/auth';
 import type { SignupPayload, LoginPayload } from '@/api/auth';
 import { getBusiness, createBusiness as createBusinessRequest } from '@/api/business';
 import type { CreateBusinessPayload } from '@/api/business';
@@ -73,6 +78,12 @@ interface AuthState {
    * it. Resolves with the new business so the caller can name it.
    */
   addBusiness: (payload: CreateBusinessPayload) => Promise<Business>;
+  /**
+   * Delete this account for good, then sign out. Rejects — with the reason on
+   * `error` — when the password is wrong or a business it owns still has a team,
+   * in which case nothing on the server has changed.
+   */
+  deleteAccount: (password: string) => Promise<void>;
   /**
    * Re-read the session without disturbing anything else. Called when the app
    * returns to the foreground, because role now decides which tabs exist.
@@ -188,6 +199,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // logged out whatever the network is doing.
     await unregisterFromPush(await currentPushToken());
     set({ token: null, user: null, business: null, activeBusinessId: null });
+  },
+
+  deleteAccount: async (password) => {
+    set({ isSubmitting: true, error: null });
+    try {
+      await deleteAccountRequest(password);
+    } catch (err) {
+      set({ isSubmitting: false, error: extractErrorMessage(err) });
+      throw err;
+    }
+    set({ isSubmitting: false });
+    // The server has already disabled the account and dropped this device's
+    // push token, so the token in hand is dead. `logout` is still the right
+    // teardown — the same caches emptied, the same keys removed — and its push
+    // unregister fails quietly, which is all it has to do here.
+    await get().logout();
   },
 
   /**

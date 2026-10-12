@@ -76,12 +76,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # The tar and image-size overrides reach the only patched line of each,
-      # and that line changed the interface @expo/cli and metro call — so each
-      # is paired with a patch in patches/ that postinstall applies. patch-package
-      # already fails the install above when a patch stops applying; this catches
-      # one that applies and no longer works. Nothing else here runs the tar
-      # patch's path, because only `expo prebuild` reaches it.
+      # The image-size override reaches the only patched line, and that line
+      # changed the interface the metro inside @expo/metro calls — so it is
+      # paired with a patch in patches/ that postinstall applies. patch-package
+      # already fails the install above when the patch stops applying; this
+      # catches one that applies and no longer works.
       - name: Check patched build dependencies
         run: npm run lint:patched-deps
 

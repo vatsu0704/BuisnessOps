@@ -30,6 +30,7 @@ import StatTile from '@/components/StatTile';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import type { Expense, ExpenseBreakdownRow, ExpenseDaySummary, ExpenseMonthSummary } from '@/types/expense';
+import { useScreenEdges } from '@/hooks/useScreenEdges';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Expenses'>;
 
@@ -47,6 +48,7 @@ type Props = NativeStackScreenProps<AppStackParamList, 'Expenses'>;
  * being offered a way to spend that branch's money.
  */
 export default function ExpensesScreen({ navigation, route }: Props) {
+  const edges = useScreenEdges();
   const { t } = useTranslation();
   const businessId = useBusinessId();
   const membership = useMembership();
@@ -153,7 +155,7 @@ export default function ExpensesScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <ScreenBackground />
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={edges}>
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.title}>{t('expenses.title')}</Text>
