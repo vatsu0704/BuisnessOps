@@ -1,0 +1,25 @@
+.fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* The section label the app puts over every card's content. */
+.legend {
+  float: none;
+  margin-bottom: var(--space-md);
+  padding: 0;
+  font: var(--text-label);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+/* As many columns as fit at a readable width — two on a 320px phone, as the
+   app sets them — and a long branch name wraps inside its tile. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-sm);
+}

@@ -17,13 +17,15 @@ type Props = {
 
 /**
  * One catalog row: name, what it is sold by, and what *this branch* charges — a
- * branch override shows as the price, never the business-wide default.
+ * branch override shows as the price, never the business-wide default. A
+ * withdrawn product (listed only when asked for) says so and is drawn faded.
  */
 export default function ProductRow({ product, currency, to }: Props) {
   const { t } = useTranslation();
   const price = product.effectiveSellPrice;
   const isBranchOwn = product.branchId !== null;
   const isOverridden = product.branchDetail !== null;
+  const isWithdrawn = !product.effectiveIsActive;
 
   const body: ReactNode = (
     <>
@@ -31,6 +33,7 @@ export default function ProductRow({ product, currency, to }: Props) {
         <span className={styles.titleRow}>
           <span className={styles.name}>{product.name}</span>
           {isBranchOwn ? <Pill label={t('products.branchOnly')} tone="brand" className={styles.pill} /> : null}
+          {isWithdrawn ? <Pill label={t('editProduct.withdrawn')} tone="muted" className={styles.pill} /> : null}
         </span>
         <span className={styles.meta}>{[product.unit, product.sku, product.category].filter(Boolean).join(' · ')}</span>
       </span>
@@ -46,10 +49,10 @@ export default function ProductRow({ product, currency, to }: Props) {
 
   if (to) {
     return (
-      <Link to={to} className={cx(styles.row, styles.interactive)}>
+      <Link to={to} className={cx(styles.row, styles.interactive, isWithdrawn && styles.withdrawn)}>
         {body}
       </Link>
     );
   }
-  return <div className={styles.row}>{body}</div>;
+  return <div className={cx(styles.row, isWithdrawn && styles.withdrawn)}>{body}</div>;
 }

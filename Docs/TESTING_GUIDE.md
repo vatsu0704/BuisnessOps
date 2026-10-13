@@ -19,8 +19,9 @@ slot. For the app stores, the privacy policy is reachable from Settings and sign
 (Flow 20) and anybody can delete their own account (Flow 21); the app runs on Expo
 SDK 54 and draws edge-to-edge on Android (Flow 0, Flow 10). A separate **web
 app** in `web/` has sign-in, sign-up, Home (Flow W1), Settings with the business
-switcher (Flow W2), the notification bell and centre (Flow W3), and branches and the
-work calendar (Flow W5) so far; its other pages say they are coming to the web.
+switcher (Flow W2), the notification bell and centre (Flow W3), branches and the work
+calendar (Flow W5), and products and sales upload (Flow W6) so far; its other pages
+say they are coming to the web.
 
 ---
 
@@ -2211,10 +2212,57 @@ The web's version of Flows 3, 11 and 19. Sign in as the owner. Location needs
 
 ---
 
+## Flow W6 — The web app: products and sales upload
+
+The web's version of Flows 4 and 17b. Sign in as the owner, in a business with at
+least two branches.
+
+1. **Products** in the sidebar.
+   - ✅ **Expected:** the first branch's catalog, grouped by category, with a tile per
+     branch above it. Click another branch: its catalog, its prices, and its id in the
+     address — reload and it stays.
+2. Type part of a product's name, then its code.
+   - ✅ **Expected:** the list narrows as you type; nonsense says nothing matches.
+3. **Add** → name `Kesar Lassi`, sold by `glass`, sells for `60`, *One branch only*,
+   the branch you were on → **Add product**.
+   - ✅ **Expected:** back on Products with it listed and a *Branch only* pill. Type
+     `abc` as a price first: *Enter a number* under that field and the button stays grey.
+4. Open **Cold Coffee** (or any business-wide product).
+   - ✅ **Expected:** its name as the title. Under *Price at one branch*, the fields
+     show what the chosen branch charges now, or are empty when it charges the business
+     price. Set `130` / `40` → **Save branch price** → *Branch price saved.* Products
+     shows ₹130 with *Branch price* for that branch only.
+5. Empty both fields → **Use the business price**.
+   - ✅ **Expected:** *Back to the business price.*, and the branch charges the default
+     again.
+6. **Withdraw from sale**.
+   - ✅ **Expected:** a question first; after it, a *Withdrawn* pill and the button
+     reads **Put back on sale** — which does not ask.
+7. Back on Products, switch on **Show withdrawn**.
+   - ✅ **Expected:** the product appears again, faded, with a *Withdrawn* pill; open it
+     and put it back on sale. (The app cannot find it again once you leave it.)
+8. **Upload sales data** → **Download template**.
+   - ✅ **Expected:** `hisabkitab-sales-template.csv` is saved. **How to fill in the
+     template** opens the column guide in the chosen language.
+9. Choose a branch, drop the untouched template on the file box, **Upload and import**.
+   - ✅ **Expected:** *Nothing to import yet* — the template's example rows are never
+     imported.
+10. Add a few rows of your own under the examples (one with quantity `0`), upload again.
+    - ✅ **Expected:** created / updated / skipped counts, a note that the example rows
+      were left out and how dates were read, and the bad row named in the chosen
+      language. Home's sales figure has moved.
+11. Drop a `.pdf` on the file box.
+    - ✅ **Expected:** refused on the page, before anything is sent.
+12. Sign in as a cashier.
+    - ✅ **Expected:** Products shows their branch with no branch tiles; **Add** offers
+      no *Who sells this* choice. **Upload sales data** says *Not part of your role*.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
-- **The web app has sign-in, sign-up, Home, Settings, notifications, branches and the
-  work calendar so far.** Every other page it lists
+- **The web app has sign-in, sign-up, Home, Settings, notifications, branches, the
+  work calendar, products and sales upload so far.** Every other page it lists
   shows *Coming to the web* until it is ported; use the mobile app for that work.
   Its Home also lacks four of the app's cards — today's punch-in, the branches to
   chase for expenses, and the two supply-payment cards.

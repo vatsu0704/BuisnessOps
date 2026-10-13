@@ -80,10 +80,26 @@ export const PAGES: Record<RouteKey, PageDef> = {
     Page: lazy(() => import('@/pages/WorkCalendarPage')),
   },
 
-  products: { titleKey: 'products.title', icon: IoPricetagsOutline },
-  addProduct: { titleKey: 'addProduct.title', icon: IoPricetagsOutline },
-  editProduct: { titleKey: 'editProduct.title', icon: IoPricetagsOutline },
-  upload: { titleKey: 'upload.title', icon: IoCloudUploadOutline },
+  products: {
+    titleKey: 'products.title',
+    icon: IoPricetagsOutline,
+    Page: lazy(() => import('@/pages/ProductsPage')),
+  },
+  addProduct: {
+    titleKey: 'addProduct.title',
+    icon: IoPricetagsOutline,
+    Page: lazy(() => import('@/pages/AddProductPage')),
+  },
+  editProduct: {
+    titleKey: 'editProduct.title',
+    icon: IoPricetagsOutline,
+    Page: lazy(() => import('@/pages/EditProductPage')),
+  },
+  upload: {
+    titleKey: 'upload.title',
+    icon: IoCloudUploadOutline,
+    Page: lazy(() => import('@/pages/UploadPage')),
+  },
 
   reports: { titleKey: 'reports.title', icon: IoBarChartOutline },
 

@@ -70,13 +70,15 @@ web/
     ├── api/                axios client, error translation, one file per resource
     ├── components/
     │   ├── brand/          BrandMark, Wordmark
-    │   ├── branches/       the two branch forms' shared fields: kind and payment model,
-    │   │                   the geofence card and its rules (geofence.ts)
+    │   ├── branches/       BranchPicker; the two branch forms' shared fields — kind and
+    │   │                   payment model, the geofence card and its rules (geofence.ts)
     │   ├── home/           Home's sections
+    │   ├── products/       ProductRow, and the catalog rules (grouping, search, a branch's price)
+    │   ├── upload/         TemplateGuide, and what an import's answer means
     │   ├── layout/         AppShell, Sidebar, TopBar, UserMenu, AuthHeader, ScreenBackground
-    │   └── ui/             FormInput, FormTextArea, DateField, PrimaryButton, Button, Dialog,
-    │                       ConfirmHost, PageHeader, OptionRow, ChipGroup, CheckChips, ChoiceTile,
-    │                       Pill, InfoCard, StatTile, …
+    │   └── ui/             FormInput, FormTextArea, DateField, SearchField, FileDrop,
+    │                       PrimaryButton, Button, ButtonLink, Dialog, ConfirmHost, PageHeader,
+    │                       OptionRow, ChipGroup, CheckChips, ChoiceTile, Pill, InfoCard, StatTile, …
     ├── constants/          navigation (every sidebar entry and who sees it), brand
     ├── hooks/              useBranches, useSalesSummary, useMembership, useRefreshOnFocus,
     │                       useGoBack (back to whichever page opened a form), …

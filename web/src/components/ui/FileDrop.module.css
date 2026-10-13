@@ -1,0 +1,57 @@
+.zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-xl) var(--space-lg);
+  border: 1.5px dashed #c9c6f7;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-light);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--duration-quick) ease, background-color var(--duration-quick) ease,
+    transform var(--duration-quick) var(--ease-snappy);
+}
+
+.zone:hover,
+.over {
+  border-color: var(--color-primary);
+}
+
+.over {
+  transform: scale(1.01);
+  background: #e3e1fc;
+}
+
+.zone:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.chosen {
+  border-style: solid;
+}
+
+.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.icon {
+  margin-bottom: 2px;
+  color: var(--color-primary);
+}
+
+/* A file name is one unbroken word more often than not; it breaks anywhere
+   rather than running out of the box. */
+.title {
+  max-width: 100%;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}

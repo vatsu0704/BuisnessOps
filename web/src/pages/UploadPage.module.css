@@ -1,0 +1,168 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 760px;
+}
+
+.page > header {
+  margin-bottom: var(--space-sm);
+}
+
+.template {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.fileError {
+  margin-top: var(--space-sm);
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--color-error);
+}
+
+.columns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.columnsLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+/* Headers to be typed exactly as shown; breaks after a comma or anywhere at all
+   rather than running out of the card at 320px. */
+.columnsMono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-primary);
+  overflow-wrap: anywhere;
+}
+
+.columnsHint {
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--color-text-tertiary);
+  overflow-wrap: anywhere;
+}
+
+.live:empty {
+  display: none;
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-xl);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.resultHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.good {
+  flex: none;
+  color: var(--color-success);
+}
+
+.warn {
+  flex: none;
+  color: var(--color-warning);
+}
+
+.resultTitle {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.resultBody {
+  font-size: 13.5px;
+  line-height: 20px;
+  color: var(--color-text-secondary);
+}
+
+/* Three figures; side by side while each label has room, as StatTile expects. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: var(--space-sm);
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notes li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.notes li svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.rowErrors {
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+}
+
+.rowErrorsLabel {
+  margin-bottom: var(--space-xs);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-error);
+}
+
+.rowErrors ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--color-text);
+}
+
+.more {
+  margin-top: var(--space-xs);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.submit {
+  display: flex;
+}
+
+@media (max-width: 600px) {
+  .result {
+    padding: var(--space-lg);
+  }
+}

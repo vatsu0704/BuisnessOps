@@ -56,5 +56,16 @@
     "removeBody": "{{date}} becomes an ordinary working day again, and payroll counts it as one.",
     "removeLabel": "Remove {{name}}",
     "oneWorkingDay": "At least one day a week has to be a working day, or payroll would have nothing to divide by."
+  },
+  "products": {
+    "search": "Search products",
+    "showWithdrawn": "Show withdrawn",
+    "noMatch": "Nothing here matches “{{query}}”."
+  },
+  "upload": {
+    "pick": "Choose a CSV or Excel file, or drop it here",
+    "pickChange": "Click, or drop another file, to change it",
+    "wrongType": "That is not a CSV or Excel file. Choose a .csv or .xlsx file.",
+    "tooLarge": "That file is larger than 5 MB. Split it into smaller files — a month or two each."
   }
 }

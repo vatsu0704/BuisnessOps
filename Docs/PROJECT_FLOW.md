@@ -1633,7 +1633,7 @@ ships on its own — it replaces placeholders, passes `lint`, `lint:i18n`,
 | W3 | Notifications in the app: bell, notification centre, preferences | ✅ |
 | W4 | Online on Render (static site, `CORS_ORIGINS`) | 🟡 repository ready; the Render steps are Vatsal's |
 | W5 | Add branch, branch settings, work calendar | ✅ |
-| W6 | Products, add / edit product, sales upload | ⏳ |
+| W6 | Products, add / edit product, sales upload | ✅ |
 | W7 | Reports and the month-end export | ⏳ |
 | W8 | Team and invites, staff, attendance and punch-in, payroll and payslips | ⏳ |
 | W9 | Expenses, the expense-gap card, the day-end export | ⏳ |
@@ -1735,4 +1735,28 @@ been deployed.
   because neither offers a branch when adding one.
 - Verification: `npm test` (40, with the geofence rules and the store's `fetchNow`),
   the W5 scenarios in `npm run shots`, Flow W5.
+
+### W6 — Products and sales upload ✅
+
+- **Products**: one branch's catalog at a time, grouped by category, the branch in
+  the address (`/products?branch=…`) so Home's *See all* opens the branch it showed.
+  Rows sit two or three across on a wide window.
+- **Two additions to the app's screen.** A search box over name, code and category;
+  and, for whoever holds `product:manage`, *Show withdrawn*. The app lists only what
+  is on sale, so a product withdrawn and left is never shown again and its *Put back
+  on sale* button cannot be reached — on the web it can. The app has the same gap.
+- **Add product** and **Edit product** as in the app: business-wide or one branch
+  (offered only to somebody who reaches every branch), the product's own fields, and
+  a separate save for one branch's price. Unlike the app, that branch's fields start
+  from the price it already charges, and *Use the business price* is offered only
+  when it has one of its own to drop. Withdrawing asks; putting back does not.
+- **Upload sales data**: the template download (the app's own CSV, shared), the
+  column guide, the branch, a file chosen or dropped on the page, and the result —
+  created, updated, skipped, how dates were read, and the skipped rows in the
+  reader's language. A dropped file skips the picker's type filter and the server
+  checks no type at all, so the page refuses anything but .csv/.xlsx/.xls, and
+  anything over the server's 5 MB, before sending it. A long import that outlives
+  the page's wait says it may still finish, as the app does.
+- Verification: `npm test` (47, with catalog grouping and search, the branch-price
+  decision and the upload summary), the W6 scenarios in `npm run shots`, Flow W6.
 

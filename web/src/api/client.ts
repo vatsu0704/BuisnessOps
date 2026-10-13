@@ -40,6 +40,11 @@ export function isTransportFailure(err: unknown): boolean {
   return axios.isAxiosError(err) && !err.response;
 }
 
+/** True when the request gave up waiting — which does not mean the server stopped working on it. */
+export function isTimeout(err: unknown): boolean {
+  return axios.isAxiosError(err) && (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT');
+}
+
 /** Called by authStore so every request after sign-in carries the bearer token. */
 export function setAuthToken(token: string | null) {
   if (token) {

@@ -1,0 +1,178 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* InfoCard's look, as a disclosure button. */
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: left;
+  transition: border-color var(--duration-base) ease, box-shadow var(--duration-base) ease;
+}
+
+.toggle:hover {
+  border-color: #d4d4f6;
+  box-shadow: var(--shadow-md);
+}
+
+.iconTile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.toggleText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.toggleTitle {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.toggleSubtitle {
+  margin-top: 2px;
+  font-size: 12.5px;
+  line-height: 17px;
+  color: var(--color-text-secondary);
+}
+
+.chevron {
+  flex: none;
+  color: var(--color-text-tertiary);
+  transition: transform var(--duration-base) var(--ease-gentle);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  animation: drop-in var(--duration-base) var(--ease-gentle) backwards;
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+/* Indic scripts carry marks above and below the line, so text here gets about
+   1.5x its size in line height. */
+.lead {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--color-text);
+}
+
+/* Required and optional side by side once each has a readable width. */
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: var(--space-lg) var(--space-xl);
+}
+
+.groupLabel {
+  margin-bottom: var(--space-xs);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.columns {
+  margin: 0;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+}
+
+.column + .column {
+  border-top: 1px solid var(--color-border);
+}
+
+/* A header is typed exactly as shown, so it reads as code. The longest,
+   transaction_external_id, still fits a 320px window at this size. */
+.columnName {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary);
+  overflow-wrap: anywhere;
+}
+
+.columnBody {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 19px;
+  color: var(--color-text-secondary);
+}
+
+.columnExample {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-tertiary);
+}
+
+.notes {
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+}
+
+.noteList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 19px;
+  color: var(--color-text);
+}
+
+.noteList li::marker {
+  color: var(--color-primary);
+}
+
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}

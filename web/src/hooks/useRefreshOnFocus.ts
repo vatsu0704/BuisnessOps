@@ -9,13 +9,18 @@ import { useEffect, useRef } from 'react';
  * background while a cashier rings up sales on a phone — that is the
  * visibility event, the browser's version of the app returning to the
  * foreground.
+ *
+ * Pass `onMount: false` when the data hook already fetches on mount
+ * (`useBranchProducts`), so the page does not ask twice.
  */
-export function useRefreshOnFocus(refresh: () => unknown) {
+export function useRefreshOnFocus(refresh: () => unknown, { onMount = true }: { onMount?: boolean } = {}) {
   const latest = useRef(refresh);
   latest.current = refresh;
+  // Read once: whether the first fetch is this hook's job or the data hook's.
+  const fetchOnMount = useRef(onMount);
 
   useEffect(() => {
-    void latest.current();
+    if (fetchOnMount.current) void latest.current();
     function onVisibility() {
       if (document.visibilityState === 'visible') void latest.current();
     }

@@ -5,9 +5,10 @@ import { useBranchProducts } from '@/hooks/useBranchProducts';
 import { useBranches } from '@/hooks/useBranches';
 import { useMembership } from '@/hooks/useBusinessId';
 import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
+import { pathTo } from '@/routes/paths';
 import { useAuthStore } from '@/store/authStore';
 import { hasCapability } from '@/utils/permissions';
-import ProductRow from './ProductRow';
+import ProductRow from '@/components/products/ProductRow';
 import styles from './BranchCatalogSection.module.css';
 
 const PREVIEW_COUNT = 5;
@@ -25,7 +26,8 @@ export default function BranchCatalogSection() {
 
   const branchId = tradingBranches[0]?.id ?? null;
   const { products, error, refresh } = useBranchProducts(branchId);
-  useRefreshOnFocus(refresh);
+  // useBranchProducts fetches on mount itself; this adds only the tab coming back.
+  useRefreshOnFocus(refresh, { onMount: false });
 
   // With no branch there is nowhere to price a catalog; Home already offers
   // "add your first branch" above.
@@ -41,7 +43,7 @@ export default function BranchCatalogSection() {
         <h2 id="home-catalog-title" className={styles.title}>
           {t('home.catalogTitle')}
         </h2>
-        <Link to={`/products?branch=${branchId}`} className={styles.link}>
+        <Link to={`${pathTo('products')}?branch=${encodeURIComponent(branchId)}`} className={styles.link}>
           <span>{t('home.catalogAll')}</span>
           <IoChevronForward size={14} aria-hidden="true" />
         </Link>
@@ -51,7 +53,7 @@ export default function BranchCatalogSection() {
 
       {!error && products.length === 0 ? (
         canManage ? (
-          <Link to={`/products/new?branch=${branchId}`} className={styles.empty}>
+          <Link to={`${pathTo('addProduct')}?branch=${encodeURIComponent(branchId)}`} className={styles.empty}>
             <IoPricetagsOutline size={20} aria-hidden="true" />
             <span>{t('home.catalogEmpty')}</span>
           </Link>
@@ -70,7 +72,7 @@ export default function BranchCatalogSection() {
               <ProductRow
                 product={product}
                 currency={currency}
-                to={canManage ? `/products/${product.id}/edit` : undefined}
+                to={canManage ? pathTo('editProduct', { productId: product.id }) : undefined}
               />
             </li>
           ))}

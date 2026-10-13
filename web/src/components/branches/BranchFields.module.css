@@ -104,3 +104,10 @@
 div.last {
   margin-bottom: 0;
 }
+
+/* The same for a pair that ends a card. Its fields keep their margins — they
+   stack on a narrow window and need the gap between them — and the pair takes
+   back the one under the last row. */
+.lastPair {
+  margin-bottom: calc(var(--space-lg) * -1);
+}

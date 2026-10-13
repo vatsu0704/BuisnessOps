@@ -91,6 +91,16 @@
   color: var(--color-primary);
 }
 
+.withdrawn {
+  border-style: dashed;
+  background: var(--color-background);
+}
+
+.withdrawn .name,
+.withdrawn .price {
+  color: var(--color-text-secondary);
+}
+
 .chevron {
   flex: none;
   color: var(--color-text-tertiary);

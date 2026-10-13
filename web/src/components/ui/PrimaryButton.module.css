@@ -37,3 +37,10 @@
   display: flex;
   width: 100%;
 }
+
+/* The size beside a page title: an action, not the end of a form. */
+.compact {
+  min-height: 44px;
+  padding: 10px var(--space-lg);
+  font-size: 14.5px;
+}
