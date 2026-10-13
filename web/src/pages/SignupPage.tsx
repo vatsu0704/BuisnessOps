@@ -3,27 +3,18 @@ import { Link } from 'react-router';
 import { Trans, useTranslation } from 'react-i18next';
 import {
   IoArrowForward,
-  IoBriefcaseOutline,
-  IoBusinessOutline,
-  IoCashOutline,
   IoCloudUploadOutline,
-  IoConstructOutline,
-  IoFlagOutline,
   IoGitBranchOutline,
   IoLockClosedOutline,
   IoMailOpenOutline,
   IoMailOutline,
   IoPersonOutline,
-  IoRestaurantOutline,
   IoShieldCheckmarkOutline,
-  IoStorefrontOutline,
-  IoTimeOutline,
 } from 'react-icons/io5';
-import type { IconType } from 'react-icons';
 import { lookupInvite } from '@/api/team';
+import BusinessFields, { isBusinessDraftComplete, type BusinessDraft } from '@/components/BusinessFields';
 import AuthHeader from '@/components/layout/AuthHeader';
 import ScreenBackground from '@/components/layout/ScreenBackground';
-import ChoiceTile from '@/components/ui/ChoiceTile';
 import Enter from '@/components/ui/Enter';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import FormInput from '@/components/ui/FormInput';
@@ -35,45 +26,11 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useShakeOnError } from '@/hooks/useShakeOnError';
 import { useAuthStore } from '@/store/authStore';
 import { step } from '@/theme/motion';
-import type { Industry } from '@/types/business';
 import type { InviteLookupResult } from '@/types/team';
 import { legalPageUrl } from '@/utils/legalLinks';
+import { browserTimeZone } from '@/utils/timezone';
 import { isValidEmail } from '@/utils/validation';
 import styles from './AuthPage.module.css';
-
-/** The industry picker's options, in the app's order (constants/industries.ts there). */
-const INDUSTRY_OPTIONS: { value: Industry; icon: IconType }[] = [
-  { value: 'RETAIL', icon: IoStorefrontOutline },
-  { value: 'FOOD_BEVERAGE', icon: IoRestaurantOutline },
-  { value: 'SERVICES', icon: IoConstructOutline },
-  { value: 'FRANCHISE_OTHER', icon: IoBusinessOutline },
-];
-
-/**
- * Chrome still reports some zones by their pre-2000s names — India as
- * "Asia/Calcutta". Both are valid, but the rest of the app writes the current
- * name, and a business's timezone is shown back to its owner.
- */
-const LEGACY_ZONES: Record<string, string> = {
-  'Asia/Calcutta': 'Asia/Kolkata',
-  'Asia/Katmandu': 'Asia/Kathmandu',
-  'Asia/Rangoon': 'Asia/Yangon',
-  'Asia/Saigon': 'Asia/Ho_Chi_Minh',
-};
-
-/**
- * The browser knows its own time zone, which the phone (without a dependable
- * Intl) cannot tell the app — so the web starts from it rather than from
- * Asia/Kolkata, and the owner can still change it.
- */
-function browserTimeZone(): string {
-  try {
-    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return (zone && LEGACY_ZONES[zone]) || zone || 'Asia/Kolkata';
-  } catch {
-    return 'Asia/Kolkata';
-  }
-}
 
 /**
  * Register a business — or, when the email already has a pending invite, join
@@ -83,14 +40,16 @@ function browserTimeZone(): string {
 export default function SignupPage() {
   const { t } = useTranslation();
   const [name, setName] = useState('');
-  const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [industry, setIndustry] = useState<Industry>('RETAIL');
-  const [country, setCountry] = useState('IN');
-  const [defaultCurrency, setDefaultCurrency] = useState('INR');
-  const [timezone, setTimezone] = useState(browserTimeZone);
+  const [draft, setDraft] = useState<BusinessDraft>(() => ({
+    name: '',
+    industry: 'RETAIL',
+    country: 'IN',
+    defaultCurrency: 'INR',
+    timezone: browserTimeZone(),
+  }));
   const [inviteInfo, setInviteInfo] = useState<InviteLookupResult | null>(null);
 
   const signup = useAuthStore((s) => s.signup);
@@ -136,11 +95,7 @@ export default function SignupPage() {
     !emailInvalid &&
     password.length >= 8 &&
     password === confirmPassword &&
-    (isInviteMode ||
-      (businessName.trim().length > 0 &&
-        country.trim().length > 0 &&
-        defaultCurrency.trim().length > 0 &&
-        timezone.trim().length > 0)) &&
+    (isInviteMode || isBusinessDraftComplete(draft)) &&
     !isSubmitting;
 
   async function handleSubmit(event: FormEvent) {
@@ -154,11 +109,11 @@ export default function SignupPage() {
         ...(isInviteMode
           ? {}
           : {
-              businessName: businessName.trim(),
-              industry,
-              country: country.trim(),
-              defaultCurrency: defaultCurrency.trim(),
-              timezone: timezone.trim(),
+              businessName: draft.name.trim(),
+              industry: draft.industry,
+              country: draft.country.trim(),
+              defaultCurrency: draft.defaultCurrency.trim(),
+              timezone: draft.timezone.trim(),
             }),
       });
     } catch {
@@ -267,54 +222,20 @@ export default function SignupPage() {
               <Enter delay={step(3)} as="section" className={`${styles.card} ${styles.signupCard}`}>
                 <h2 className={styles.sectionTitle}>{t('signup.businessSection')}</h2>
 
-                <FormInput
-                  label={t('signup.businessName')}
-                  icon={IoBriefcaseOutline}
-                  placeholder={t('signup.businessNamePlaceholder')}
-                  autoComplete="organization"
-                  value={businessName}
-                  onChange={onFieldChange(setBusinessName)}
-                />
-
-                <fieldset className={styles.choiceGrid}>
-                  <legend className={styles.fieldLabel}>{t('signup.industry')}</legend>
-                  {INDUSTRY_OPTIONS.map((option) => (
-                    <ChoiceTile
-                      key={option.value}
-                      name="industry"
-                      value={option.value}
-                      title={t(`industry.${option.value}`)}
-                      caption={t(`industry.${option.value}_caption`)}
-                      icon={option.icon}
-                      selected={industry === option.value}
-                      onSelect={() => setIndustry(option.value)}
-                    />
-                  ))}
-                </fieldset>
-
-                <div className={styles.pair}>
-                  <FormInput
-                    label={t('signup.country')}
-                    icon={IoFlagOutline}
-                    autoCapitalize="characters"
-                    autoComplete="country"
-                    value={country}
-                    onChange={onFieldChange((v) => setCountry(v.toUpperCase()))}
-                  />
-                  <FormInput
-                    label={t('signup.currency')}
-                    icon={IoCashOutline}
-                    autoCapitalize="characters"
-                    value={defaultCurrency}
-                    onChange={onFieldChange((v) => setDefaultCurrency(v.toUpperCase()))}
-                  />
-                </div>
-
-                <FormInput
-                  label={t('signup.timezone')}
-                  icon={IoTimeOutline}
-                  value={timezone}
-                  onChange={onFieldChange(setTimezone)}
+                <BusinessFields
+                  value={draft}
+                  onChange={(next) => {
+                    setDraft(next);
+                    if (error) clearError();
+                  }}
+                  labels={{
+                    name: t('signup.businessName'),
+                    namePlaceholder: t('signup.businessNamePlaceholder'),
+                    industry: t('signup.industry'),
+                    country: t('signup.country'),
+                    currency: t('signup.currency'),
+                    timezone: t('signup.timezone'),
+                  }}
                 />
               </Enter>
             ) : null}

@@ -1,0 +1,74 @@
+.dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-lg);
+}
+
+.md {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.dialog[open] {
+  animation: rise var(--duration-base) var(--ease-gentle);
+}
+
+.dialog::backdrop {
+  background: rgba(24, 24, 27, 0.45);
+  animation: fade var(--duration-base) ease;
+}
+
+.body {
+  padding: var(--space-xl);
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: var(--color-text);
+}
+
+.content {
+  margin-top: var(--space-sm);
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--color-text-secondary);
+}
+
+/* Side by side when both labels fit; stacked, the main action on top, when a
+   long translation would squeeze them. */
+.footer {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-xl);
+}
+
+.footer > * {
+  flex: 1 1 auto;
+}
+
+@media (min-width: 480px) {
+  .footer > * {
+    flex: 0 1 auto;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}

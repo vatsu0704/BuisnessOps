@@ -11,17 +11,19 @@ type Props = {
   subtitle: string;
   /** A route to open. */
   to?: string;
+  /** A page outside the app — the privacy policy — opened in a new tab. */
+  href?: string;
   onClick?: () => void;
   className?: string;
 };
 
 /**
  * An icon tile, a title and a line under it — and a chevron when it goes
- * somewhere. A link when given `to`, a button when given `onClick`, otherwise
- * just a card.
+ * somewhere. A link when given `to` (or `href`, for a page outside the app), a
+ * button when given `onClick`, otherwise just a card.
  */
-export default function InfoCard({ icon: Icon, title, subtitle, to, onClick, className }: Props) {
-  const interactive = !!to || !!onClick;
+export default function InfoCard({ icon: Icon, title, subtitle, to, href, onClick, className }: Props) {
+  const interactive = !!to || !!href || !!onClick;
   const body: ReactNode = (
     <>
       <span className={styles.iconTile} aria-hidden="true">
@@ -41,6 +43,13 @@ export default function InfoCard({ icon: Icon, title, subtitle, to, onClick, cla
       <Link to={to} className={classes}>
         {body}
       </Link>
+    );
+  }
+  if (href) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={classes}>
+        {body}
+      </a>
     );
   }
   if (onClick) {

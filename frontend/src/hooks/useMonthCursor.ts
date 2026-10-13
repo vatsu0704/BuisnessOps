@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { addMonths, monthLabel } from '@/utils/date';
+import { addMonths, monthLabel } from '../utils/date';
 
 /**
  * 1-12/year cursor for "which month am I looking at", defaulting to the

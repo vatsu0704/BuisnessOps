@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { IoAdd, IoChevronForward, IoLocation } from 'react-icons/io5';
 import { useBranches } from '@/hooks/useBranches';
+import { pathTo } from '@/routes/paths';
 import { cx } from '@/utils/cx';
 import styles from './BranchesSection.module.css';
 
@@ -24,7 +25,7 @@ export default function BranchesSection() {
         <h2 id="home-branches-title" className={styles.title}>
           {t('home.branchesTitle')}
         </h2>
-        <Link to="/branches/new" className={styles.add}>
+        <Link to={pathTo('addBranch')} className={styles.add}>
           <IoAdd size={16} aria-hidden="true" />
           <span>{t('home.addBranch')}</span>
         </Link>
@@ -33,7 +34,7 @@ export default function BranchesSection() {
       <ul className={styles.list}>
         {branches.slice(0, PREVIEW_COUNT).map((branch) => (
           <li key={branch.id}>
-            <Link to={`/branches/${branch.id}`} className={styles.row}>
+            <Link to={pathTo('branchSettings', { branchId: branch.id })} className={styles.row}>
               <span
                 className={cx(styles.dot, branch.status === 'ACTIVE' && styles.dotActive)}
                 aria-hidden="true"

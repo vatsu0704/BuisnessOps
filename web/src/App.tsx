@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import ConfirmHost from '@/components/ui/ConfirmHost';
 import { restoreLanguage } from '@/i18n';
 import AppRoutes from '@/routes/AppRoutes';
 import { useAuthStore } from '@/store/authStore';
@@ -30,5 +31,11 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [refreshSession]);
 
-  return <AppRoutes />;
+  return (
+    <>
+      <AppRoutes />
+      {/* Whatever confirm() is asking, over every page. */}
+      <ConfirmHost />
+    </>
+  );
 }

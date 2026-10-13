@@ -1,4 +1,4 @@
-import type { PaymentMethod } from '@/types/counter';
+import type { PaymentMethod } from './counter';
 
 /**
  * Branch expenses — requirement 10.

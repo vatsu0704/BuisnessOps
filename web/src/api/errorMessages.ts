@@ -1,3 +1,4 @@
+import { explainPermissionDenied } from '@shared/permissions/explain';
 import i18n from '@/i18n';
 
 /**
@@ -7,10 +8,6 @@ import i18n from '@/i18n';
  * sentence needs, and the wording lives in the shared locale files
  * (`errors.api.*`, `errors.validation.*`), so the web app reads exactly the
  * sentences the mobile app does.
- *
- * Not yet ported: the app's `explainPermissionDenied`, which turns a
- * PERMISSION_DENIED into "Only Warehouse can …". Until it is, a refusal reads
- * as the plain `errors.api.PERMISSION_DENIED` sentence.
  */
 
 export interface ApiErrorDetail {
@@ -55,6 +52,15 @@ export function translateDetail(detail: ApiErrorDetail): string | null {
 /** The message for an error body, or null when this build has no wording for it. */
 export function translateApiError(body: ApiErrorBody | undefined): string | null {
   if (!body) return null;
+
+  // Requirement 19: a refusal names the action and the roles that hold it —
+  // "Only Warehouse can accept, pack and dispatch a supply order" — built from the
+  // shared matrix. Falls through to the plain sentence for a capability this
+  // build does not know.
+  if (body.code === 'PERMISSION_DENIED') {
+    const explained = explainPermissionDenied(body.params?.capability);
+    if (explained) return explained;
+  }
 
   if (body.code === 'VALIDATION_FAILED' && body.details?.length) {
     const lines = body.details.map(translateDetail).filter((line): line is string => !!line);

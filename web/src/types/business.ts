@@ -1,19 +1,7 @@
-import type { Locale } from './user';
+/** The app's own definitions, shared rather than copied — see web/README.md. */
+export type * from '@shared/types/business';
 
-export type Industry = 'RETAIL' | 'FOOD_BEVERAGE' | 'SERVICES' | 'FRANCHISE_OTHER';
-
-export interface Business {
-  id: string;
-  name: string;
-  industry: Industry;
-  country: string;
-  defaultCurrency: string;
-  defaultLocale: Locale;
-  timezone: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
+/** One currency's takings. The app declares this beside its API call, not with its types. */
 export interface SalesSummaryByCurrency {
   currency: string;
   /** A Decimal, serialised as a string. */

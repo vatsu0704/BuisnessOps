@@ -4,6 +4,7 @@ import { IoCheckmark, IoLanguageOutline } from 'react-icons/io5';
 import { useDismiss } from '@/hooks/useDismiss';
 import { useLanguage } from '@/hooks/useLanguage';
 import { cx } from '@/utils/cx';
+import popover from '@/components/ui/Popover.module.css';
 import styles from './LanguageMenu.module.css';
 
 /**
@@ -23,7 +24,7 @@ export default function LanguageMenu({ align = 'right' }: { align?: 'left' | 'ri
   useDismiss(wrapRef, open, close, buttonRef);
 
   return (
-    <div className={styles.wrap} ref={wrapRef}>
+    <div className={popover.wrap} ref={wrapRef}>
       <button
         ref={buttonRef}
         type="button"
@@ -39,7 +40,7 @@ export default function LanguageMenu({ align = 'right' }: { align?: 'left' | 'ri
       </button>
 
       {open ? (
-        <ul id={menuId} className={cx(styles.menu, align === 'left' && styles.menuLeft)} aria-label={t('language.title')}>
+        <ul id={menuId} className={cx(popover.panel, align === 'left' && popover.panelLeft)} aria-label={t('language.title')}>
           {languages.map((language) => {
             const selected = language.code === current.code;
             return (
@@ -47,7 +48,7 @@ export default function LanguageMenu({ align = 'right' }: { align?: 'left' | 'ri
                 <button
                   type="button"
                   lang={language.code}
-                  className={cx(styles.option, selected && styles.optionSelected)}
+                  className={cx(popover.option, selected && popover.optionSelected)}
                   aria-current={selected || undefined}
                   onClick={() => {
                     setOpen(false);

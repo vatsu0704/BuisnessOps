@@ -11,6 +11,8 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> & {
   isPassword?: boolean;
   /** Small muted note at the right end of the label row. */
   hint?: string;
+  /** A sentence under the field saying what it is for — read with the field by a screen reader. */
+  description?: string;
   /** A problem with this field, said under it and announced with it. */
   error?: string | null;
 };
@@ -20,10 +22,12 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> & {
  * eye that shows what was typed. The border and the icon tile turn brand blue
  * while the field has focus.
  */
-export default function FormInput({ label, icon: Icon, isPassword, hint, error, type, className, ...rest }: Props) {
+export default function FormInput({ label, icon: Icon, isPassword, hint, description, error, type, className, ...rest }: Props) {
   const { t } = useTranslation();
   const id = useId();
   const errorId = `${id}-error`;
+  const descriptionId = `${id}-description`;
+  const describedBy = [description && descriptionId, error && errorId].filter(Boolean).join(' ') || undefined;
   const [secure, setSecure] = useState(true);
 
   return (
@@ -44,7 +48,7 @@ export default function FormInput({ label, icon: Icon, isPassword, hint, error, 
           className={styles.input}
           type={isPassword ? (secure ? 'password' : 'text') : (type ?? 'text')}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={describedBy}
           {...rest}
         />
         {isPassword ? (
@@ -60,6 +64,11 @@ export default function FormInput({ label, icon: Icon, isPassword, hint, error, 
         ) : null}
       </div>
 
+      {description ? (
+        <p id={descriptionId} className={styles.description}>
+          {description}
+        </p>
+      ) : null}
       {error ? (
         <p id={errorId} className={styles.error}>
           {error}

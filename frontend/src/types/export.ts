@@ -1,7 +1,7 @@
-import type { BranchKind } from '@/types/branch';
-import type { AttendanceStatus, SalarySlipStatus } from '@/types/staffing';
-import type { CounterOrderStatus, PaymentMethod } from '@/types/counter';
-import type { SupplyOrderStatus, SupplyPaymentMode, SupplyPaymentStatus } from '@/types/supply';
+import type { BranchKind } from './branch';
+import type { AttendanceStatus, SalarySlipStatus } from './staffing';
+import type { CounterOrderStatus, PaymentMethod } from './counter';
+import type { SupplyOrderStatus, SupplyPaymentMode, SupplyPaymentStatus } from './supply';
 
 /**
  * Day-end and month-end export — requirement 17.

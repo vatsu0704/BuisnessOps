@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { useNotificationPolling } from '@/hooks/useNotifications';
+import { useAuthStore } from '@/store/authStore';
+import PageLoader from './PageLoader';
 import ScreenBackground from './ScreenBackground';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
@@ -12,7 +15,10 @@ const SIDEBAR_ID = 'app-sidebar';
 export default function AppShell() {
   const { t } = useTranslation();
   const location = useLocation();
+  const activeBusinessId = useAuthStore((s) => s.activeBusinessId);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // The bell has no push to wake it yet; this keeps its count current.
+  useNotificationPolling();
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   // Following a link in the drawer closes it.
@@ -40,7 +46,13 @@ export default function AppShell() {
       <div className={styles.column}>
         <TopBar sidebarId={SIDEBAR_ID} sidebarOpen={drawerOpen} onOpenSidebar={() => setDrawerOpen(true)} />
         <main id="main" className={styles.main} tabIndex={-1}>
-          <Outlet />
+          {/* Each page is its own chunk; the shell stays put while one loads.
+              Keyed on the business, so switching remounts the page: a half-typed
+              form belongs to the business it was started in, as in the app,
+              which remounts its navigator when the role changes. */}
+          <Suspense key={activeBusinessId ?? 'none'} fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

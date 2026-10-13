@@ -1,0 +1,58 @@
+.group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.label {
+  margin-bottom: var(--space-sm);
+  padding: 0;
+  font: var(--text-label);
+  color: var(--color-text);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+/* No flex and no width: a chip is as wide as what is written on it. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px var(--space-md);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--duration-quick) ease, border-color var(--duration-quick) ease,
+    color var(--duration-quick) ease;
+}
+
+.chip:hover {
+  border-color: #c9c6f7;
+}
+
+.chip:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.group:disabled .chip,
+.chipDisabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

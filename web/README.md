@@ -25,28 +25,34 @@ set it in production to wherever this app is served.
 | `npm run preview` | Serve the `dist/` build locally |
 | `npm run lint` | Type-check (`tsc -b`) — the type gate |
 | `npm run lint:i18n` | The web's own strings exist in all four languages, and no translation it reads uses a tag `<Trans>` would empty |
+| `npm run lint:shared` | Every file reached in `frontend/src` imports only relative paths and the four pinned packages |
+| `npm test` | Vitest + Testing Library on jsdom |
+| `npm run shots [-- <filter>] [--widths=320,1440] [--langs=en,gu]` | Build, serve the build, and screenshot every scenario against a pretend API into `shots/`; fails on sideways scroll or a page error |
 
 `VITE_API_URL` is inlined at build time, exactly like the app's
 `EXPO_PUBLIC_API_URL`: a build calls whatever was in `.env` when it was made.
 
 ## What it shares with the mobile app
 
-The web app does **not** copy the mobile app's data files. `@shared/` resolves to
+The web app does **not** copy the mobile app's code. `@shared/` resolves to
 `../frontend/src`, and these are read from there:
 
-| Shared file | Why it must be one copy |
+| Shared | Why it must be one copy |
 | --- | --- |
 | `i18n/locales/{en,hi,gu,mr}.json` | Every sentence, including every API error code's wording |
-| `permissions/index.ts` + `matrix.json` | The capability matrix, itself a mirror of the backend's catalog |
-| `constants/brand.ts` | The product's name |
-| `constants/brandMark.json` | The logo, drawn by `components/brand/BrandMark.tsx` |
-| `utils/format.ts`, `utils/validation.ts` | Indian-grouped amounts, email validation |
+| `permissions/index.ts`, `matrix.json`, `explain.ts`, `staffBase.ts` | The capability matrix (a mirror of the backend's) and R19's "Only Warehouse can …" sentences |
+| `navigation/routeCapabilities.ts` | What opening each screen needs — the web's pages open on the same rule |
+| `types/*.ts` (all but `notification.ts`) | The API's shapes |
+| `constants/brand.ts`, `brandMark.json`, `salesTemplate.ts` | The name, the logo, the sales-upload template |
+| `utils/format.ts`, `validation.ts`, `date.ts`, `upiUri.ts`, `expenseCategory.ts`, `hooks/useMonthCursor.ts` | Amounts in Indian grouping, dates through the translation files, UPI links |
 
-**A shared file may import nothing but its own siblings.** It is compiled by the
-web's toolchain, where `@/` means `web/src` and there is no React Native — so an
-`@/` import, or anything from `react-native` or `expo-*`, added to one of these
-files breaks the web build. `npm run lint` here catches it; the mobile app's own
-checks cannot.
+**A shared file imports only relative paths and `i18next`, `react`, `react-dom`
+or `react-i18next`.** It is compiled by the web's toolchain, where `@/` means
+`web/src` and there is no React Native. And a bare import from `frontend/src`
+would otherwise resolve to `frontend/node_modules` — a second copy of the package,
+or in CI none — so `vite.config.ts` dedupes those four and `tsconfig.app.json`
+maps them to `web/node_modules`. `npm run lint:shared` names any import that
+breaks this.
 
 The strings only the web needs (its sidebar, its placeholder pages) live in
 `src/i18n/locales/` and are merged under `web.*`. Only English ships in the main
@@ -58,21 +64,29 @@ bundle; Hindi, Gujarati and Marathi are fetched when chosen.
 web/
 ├── index.html
 ├── public/                 favicon (the app's own, from frontend/assets)
-├── scripts/                check-i18n-parity.js
+├── scripts/                check-i18n-parity.js, check-shared-imports.js,
+│                           shots/ (the screenshot harness: run, scenarios, pretend API)
 └── src/
     ├── api/                axios client, error translation, one file per resource
     ├── components/
     │   ├── brand/          BrandMark, Wordmark
+    │   ├── branches/       the two branch forms' shared fields: kind and payment model,
+    │   │                   the geofence card and its rules (geofence.ts)
     │   ├── home/           Home's sections
     │   ├── layout/         AppShell, Sidebar, TopBar, UserMenu, AuthHeader, ScreenBackground
-    │   └── ui/             FormInput, PrimaryButton, Pill, InfoCard, StatTile, ChoiceTile, …
+    │   └── ui/             FormInput, FormTextArea, DateField, PrimaryButton, Button, Dialog,
+    │                       ConfirmHost, PageHeader, OptionRow, ChipGroup, CheckChips, ChoiceTile,
+    │                       Pill, InfoCard, StatTile, …
     ├── constants/          navigation (every sidebar entry and who sees it), brand
-    ├── hooks/              useBranches, useSalesSummary, useMembership, useRefreshOnFocus, …
+    ├── hooks/              useBranches, useSalesSummary, useMembership, useRefreshOnFocus,
+    │                       useGoBack (back to whichever page opened a form), …
     ├── i18n/               i18next setup, the web-only locale files
-    ├── pages/              LoginPage, SignupPage, HomePage, ComingSoonPage, NoticePage
+    ├── pages/              one per ported screen (Settings, Notifications, AddBranch, …),
+    │                       plus ComingSoonPage and NoticePage
     ├── permissions/        re-exports the shared matrix
-    ├── routes/             AppRoutes, guards (RequireAuth, GuestOnly, RequireAccess)
-    ├── store/              zustand: authStore, branchStore, salesStore
+    ├── routes/             paths (every route and who may open it), pages (what each shows),
+    │                       AppRoutes, guards (RequireAuth, GuestOnly, RequireAccess)
+    ├── store/              zustand: authStore, branchStore, salesStore, notificationStore
     ├── styles/             tokens.css (the app's theme as CSS variables), global.css
     ├── theme/              motion values JavaScript needs
     ├── types/
@@ -82,6 +96,18 @@ web/
 ## Conventions
 
 They are the mobile app's, from `CLAUDE.md`, applied to the web:
+
+- **A page opens on the app's rule for the same screen.** Every route in
+  `routes/paths.ts` names the app route it stands for (or, for a tab, the
+  capability); `routes/pages.ts` is a `Record` over every route, so a new route
+  fails `tsc` until it has a page or a placeholder. Porting a screen = writing the
+  page and adding its `Page` there.
+- **Anything irreversible asks first** through `confirm()` in `utils/confirm.ts` —
+  the app's API, rendered once by `ConfirmHost` on a `<dialog>`. Only the
+  destructive direction asks.
+- **Files go through `apiClient`** (`utils/downloadApiFile.ts`), never a bare link,
+  so a refusal is reported rather than saved as a `.xlsx`. Server-rendered HTML
+  prints through `utils/printHtml.ts`.
 
 - **Never check a role name** — gate on a capability, narrowed with
   `hideWhen: { holds, unless }` where holding it does not make it the person's job
@@ -95,7 +121,8 @@ They are the mobile app's, from `CLAUDE.md`, applied to the web:
 - **Styles use the tokens** in `styles/tokens.css`, which repeat
   `frontend/src/theme/index.ts` value for value. Change both together.
 - **A layout must survive Gujarati at 320px.** Prefer grids that wrap
-  (`repeat(auto-fill, minmax(…))`) or a container query over fixed rows; check
-  the screen at 320, 390, 820 and 1440 wide before calling it done.
+  (`repeat(auto-fill, minmax(…))`) or a container query over fixed rows, and add
+  the page to `scripts/shots/scenarios.mjs` so `npm run shots` checks it at 320,
+  390, 820 and 1440 wide before it is called done.
 - **A `<Trans>` tag must not be named after a void HTML element** (`link`, `br`,
   `img`, `input`, …). react-i18next parses its markup as HTML and empties it.

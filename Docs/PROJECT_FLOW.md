@@ -15,8 +15,8 @@ delivers part of Phase 4.
 
 **A third track started 2026-10-12: a web app** (`web/`, Section 15) that brings
 the mobile app's functionality to the browser, against the same API. Its
-foundation, sign-in, sign-up and Home are done; the order the rest is ported in
-is still to be planned.
+foundation, sign-in, sign-up and Home are done, and the parity plan — thirteen
+phases, W1 to W13 — was agreed on 2026-10-13.
 
 ---
 
@@ -1565,8 +1565,7 @@ development machine — so the Dockerfile is reviewed, not proven.
 
 The same product in a browser: `web/`, React 19 + Vite + React Router, calling
 the same API as the mobile app. The goal is parity with the mobile app's
-functionality; the order screens are ported in is the plan still to be agreed
-(*Next* below).
+functionality, ported in the order of the plan below.
 
 ### How it is built
 
@@ -1616,16 +1615,124 @@ cashier, delivery agent and staff, with no horizontal overflow at any size. It h
 not been clicked through against the real backend yet — `Docs/TESTING_GUIDE.md`
 Flow W1 is that walkthrough.
 
-### Next — parity (to be planned)
+### The parity plan (agreed 2026-10-13)
 
-What parity means, grouped by area — every screen in `frontend/src/screens`:
+Decided with Vatsal: **share** the app's types and pure logic rather than copy
+them; **in-app notifications early, browser push last and optional**; **office
+work first** (settings, catalog, reports, people), the phone-first operations
+(supply, counter) last; the web **hosted on Render** beside the API. Each phase
+ships on its own — it replaces placeholders, passes `lint`, `lint:i18n`,
+`lint:shared`, `npm test` and `npm run shots`, and brings its Flow in
+`TESTING_GUIDE.md`.
 
-| Area | Mobile screens to port |
-| --- | --- |
-| Account | Settings (language, business switcher, add a business, privacy, delete account), Add business, Delete account, Notifications and their settings |
-| Branches | Add branch, Branch settings (address, geofence, timezone, weekly off), Work calendar |
-| Selling | Counter (tokens, editing, closing the day), Products, Add / Edit product, Upload sales data |
-| Money | Expenses, Add expense, day- and month-end export, Reports (branch × month, net profit, cross-business), Payment accounts (UPI), Supply payments |
-| Supply | Supply catalog and cart, Supply item form, Supply orders and order detail, Warehouse desk, Delivery queue, Vendors and vendor form |
-| People | Staff hub, Add / Edit staff, Staff detail, Attendance (punch in and out with the browser's location), Payroll run and payslips, Team, Invite member |
-| Cross-cutting | R19's refusal explanations, the confirm dialog, file downloads, the notification bell; and a decision on push notifications in the browser, which FCM supports for the web but the app does not use yet |
+| Phase | Scope | Status |
+| --- | --- | --- |
+| W0 | Foundation scaffold, sign-in, sign-up, Home | ✅ |
+| W1 | Shared code, the app's route gates, web primitives, tests, screenshot harness, code splitting | ✅ |
+| W2 | Settings, business switcher, add a business, delete account | ✅ |
+| W3 | Notifications in the app: bell, notification centre, preferences | ✅ |
+| W4 | Online on Render (static site, `CORS_ORIGINS`) | 🟡 repository ready; the Render steps are Vatsal's |
+| W5 | Add branch, branch settings, work calendar | ✅ |
+| W6 | Products, add / edit product, sales upload | ⏳ |
+| W7 | Reports and the month-end export | ⏳ |
+| W8 | Team and invites, staff, attendance and punch-in, payroll and payslips | ⏳ |
+| W9 | Expenses, the expense-gap card, the day-end export | ⏳ |
+| W10 | Supply catalog and cart, orders and order detail, the desk, deliveries | ⏳ |
+| W11 | Supply payments, payment accounts, vendors, UPI QR | ⏳ |
+| W12 | Counter | ⏳ |
+| W13 | Browser push (needs a Firebase web app and a VAPID key) | ⏳ |
+
+### W1 — Foundation ✅
+
+- **Shared, not copied.** In the app, with no change in behaviour: the `types/`
+  files and `useMonthCursor`/`expenseCategory` import each other relatively,
+  `explain.ts` imports `i18next` itself, `utils/upi.ts` is split (`upiUri.ts` is the
+  pure half), and `ROUTE_CAPABILITY` moved to `navigation/routeCapabilities.ts` as
+  pure data, `routeAccess.ts` asserting every key is a real route. The app's `tsc`
+  and every `lint:*` are unchanged-green, which is the proof.
+- **Found while doing it:** a bare import inside `frontend/src` resolves to
+  `frontend/node_modules`. The web got a second, uninitialised i18next, so every
+  refusal sentence came back empty — and in CI, which installs no app
+  dependencies, it would not have built. Four packages are now pinned to the web's
+  copy (Vite `dedupe`, TypeScript `paths`), and `npm run lint:shared` fails on any
+  other bare import, or any `@/` or React Native import, in a shared file.
+- **Pages open on the app's rules.** `web/src/routes/paths.ts` names the app route
+  each page stands for; three W0 gates were wrong and are fixed — Expenses opens
+  on `expense:view`, the supply catalog on `supplyItem:view`, Payments on
+  `supplyPayment:verify`. Tests prove every gated app screen has a web route and
+  no role is shown a sidebar entry it cannot open. Refusals now say what the rule
+  is (R19), from the shared `explain.ts`.
+- **Primitives** for the phases ahead: `Dialog` (`<dialog>`), `confirm()` with the
+  app's API, `Button` (secondary / danger / danger solid), `PageHeader`,
+  `DateField`, `OptionRow`, `ChipGroup`, and `printHtml`, `downloadApiFile`,
+  `location` helpers. The list-to-table component and the file drop are built
+  with their first page (W8, W6) so their shape comes from a real use.
+- **Tooling:** Vitest with Testing Library (23 tests), `npm run shots`, each page
+  its own chunk and React in its own — the app's chunk is 249 KB (82 KB gzipped).
+
+### W2 — Account and business ✅
+
+- **Settings** with everything the app's has: account, the business switcher, *Add
+  another business* (offered to an owner, and to somebody revoked from every
+  business — who holds no capability at all, so its route is open, as in the app),
+  the business's details, the set-up-once pages per capability, the language as a
+  list, the privacy policy, log out and delete account. Two columns on a wide
+  window; the app's single column below 1000px.
+- **The business switcher is also in the top bar** for anyone in more than one
+  business. Switching reloads every store keyed on the business, and the page under
+  it remounts — a half-typed form belongs to the business it was started in.
+- **Add business** and **Delete account** as in the app; sign-up's business section
+  is now a shared `BusinessFields`, so the two forms cannot offer different choices.
+- Notification preferences, the app's other Settings card, arrive with W3.
+- Verification: `npm test` (27, four of them the switch / delete store rules), the
+  W2 scenarios in `npm run shots`, Flow W2.
+
+### W3 — Notifications in the app ✅
+
+- **The bell** in the top bar, with the unread count, and **the notification
+  centre**: sentences rebuilt from their codes in the chosen language, mark one or
+  all read (optimistically — a refused mark puts the dot back on the next fetch),
+  and a click goes where the notification points.
+- **Deep links** (`web/src/routes/deepLink.ts`) map the app route a notification
+  names to a web page with the same parameter names; a page the role can no longer
+  open, or a route this build does not know, lands on Home, as in the app.
+- **No push yet**, so the bell asks every minute while its tab is in view and at
+  once when the tab comes back; a hidden tab asks nothing.
+- **What to send me** in Settings — the app's per-category switches, *Always on*
+  for attendance. Where the app says whether this device receives notifications,
+  the web says it does not pop them up yet and where they arrive.
+- Verification: `npm test` (33, with deep-link resolution and the optimistic mark),
+  the W3 scenarios in `npm run shots`, Flow W3.
+
+### W4 — Online on Render 🟡
+
+The repository side is done: `render.yaml` describes the web app as a Render static
+site (the whole repository checked out, `web/dist` published, every address
+rewritten to `index.html`, hashed assets cached for good, a build filter so
+backend-only commits do not rebuild it), and `Docs/DEPLOYMENT.md` *The web app*
+lists the steps. What is left is Vatsal's: create the Blueprint, check
+`VITE_API_URL`, add the site's address to the API's `CORS_ORIGINS`. Nothing has
+been deployed.
+
+### W5 — Branches and the work calendar ✅
+
+- **Add branch** and **Branch settings** as in the app: what the place is, who pays
+  for its raw material (never preselected on a new branch), the delivery address,
+  the timezone, and the punch-in geofence — coordinates, *Use my current location*
+  through the browser, a radius, *Turn off geofencing*. The geofence rules (a radius
+  needs a point; a radius must be above zero) are said under the field before the
+  request, as the server would refuse them. Both refresh the shared branch list
+  before going back to the page that opened them.
+- **One addition, the map link.** A laptop's location is usually a Wi-Fi fix good to
+  tens of metres, so *See it on the map* opens the typed point in Google Maps before
+  a radius is measured from it. When the browser blocks location the page says how
+  to allow it, rather than the app's "allow HisabKitab" sentence.
+- **Workweek & holidays**: the weekly off as chips that save on click (the seventh
+  is disabled once six are off, with the reason under it), *Days with no record*,
+  adding a holiday, and the year's list. Two columns on a wide window.
+- **Removing a holiday asks first**, which the app does not. It changes what payroll
+  divides by, and a branch-only holiday cannot be put back from either client,
+  because neither offers a branch when adding one.
+- Verification: `npm test` (40, with the geofence rules and the store's `fetchNow`),
+  the W5 scenarios in `npm run shots`, Flow W5.
+

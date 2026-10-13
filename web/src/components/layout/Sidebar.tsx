@@ -6,6 +6,7 @@ import BrandMark from '@/components/brand/BrandMark';
 import Wordmark from '@/components/brand/Wordmark';
 import { NAV_GROUPS, SETTINGS_ENTRY, type NavEntry } from '@/constants/navigation';
 import { useMembership } from '@/hooks/useBusinessId';
+import { ROUTES } from '@/routes/paths';
 import { cx } from '@/utils/cx';
 import { passesAnyGate } from '@/utils/permissions';
 import styles from './Sidebar.module.css';
@@ -23,8 +24,8 @@ function NavItem({ entry }: { entry: NavEntry }) {
   return (
     <li>
       <NavLink
-        to={entry.path}
-        end={entry.path === '/'}
+        to={ROUTES[entry.route].path}
+        end={entry.route === 'home'}
         className={({ isActive }) => cx(styles.link, isActive && styles.active)}
       >
         <Icon size={18} aria-hidden="true" className={styles.linkIcon} />

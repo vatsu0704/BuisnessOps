@@ -6,10 +6,16 @@ import {
   setSessionEndedHandler,
   warmUpServer,
 } from '@/api/client';
-import { fetchSession, login as loginRequest, signup as signupRequest } from '@/api/auth';
+import {
+  deleteAccount as deleteAccountRequest,
+  fetchSession,
+  login as loginRequest,
+  signup as signupRequest,
+} from '@/api/auth';
 import type { LoginPayload, SignupPayload } from '@/api/auth';
-import { getBusiness } from '@/api/business';
+import { createBusiness as createBusinessRequest, getBusiness, type CreateBusinessPayload } from '@/api/business';
 import { useBranchStore } from '@/store/branchStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import { useSalesStore } from '@/store/salesStore';
 import type { Business } from '@/types/business';
 import type { User } from '@/types/user';
@@ -45,6 +51,17 @@ interface AuthState {
   login: (payload: LoginPayload) => Promise<void>;
   signup: (payload: SignupPayload) => Promise<void>;
   logout: () => void;
+  isSwitchingBusiness: boolean;
+  /** Act under a different business. Ignores any id that is not an ACTIVE membership. */
+  switchBusiness: (businessId: string) => Promise<void>;
+  /** Add a business to this account and start acting under it. Resolves with the new business. */
+  addBusiness: (payload: CreateBusinessPayload) => Promise<Business>;
+  /**
+   * Delete this account for good, then sign out. Rejects — with the reason on
+   * `error` — when the password is wrong or an owned business still has a team,
+   * in which case nothing on the server has changed.
+   */
+  deleteAccount: (password: string) => Promise<void>;
   /** Re-read the session quietly — when the tab comes back into view. */
   refreshSession: () => Promise<void>;
   clearError: () => void;
@@ -53,6 +70,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()((set, get) => ({
   isBootstrapping: true,
   isSubmitting: false,
+  isSwitchingBusiness: false,
   activeBusinessId: null,
   token: null,
   user: null,
@@ -140,7 +158,62 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // The shared caches outlive this store's state, so they are emptied too.
     useBranchStore.getState().reset();
     useSalesStore.getState().reset();
+    useNotificationStore.getState().reset();
     set({ token: null, user: null, business: null, activeBusinessId: null, error: null });
+  },
+
+  /**
+   * Nothing changes until the new business has been fetched, so a failed switch
+   * leaves the app acting under the business it was already on, not under an id
+   * with no record behind it. Every store keyed on the business reloads itself
+   * when `activeBusinessId` moves.
+   */
+  switchBusiness: async (businessId) => {
+    const { user, activeBusinessId } = get();
+    if (businessId === activeBusinessId) return;
+    if (activeMembership(user, businessId)?.businessId !== businessId) return;
+
+    set({ isSwitchingBusiness: true });
+    try {
+      const business = await getBusiness(businessId);
+      storage.set(STORAGE_KEYS.businessId, businessId);
+      set({ business, activeBusinessId: businessId, isSwitchingBusiness: false });
+    } catch (err) {
+      set({ isSwitchingBusiness: false });
+      throw err;
+    }
+  },
+
+  /**
+   * Create a business and switch to it. The session is re-read rather than the
+   * membership appended by hand, because the switcher reads `user.memberships`
+   * and a hand-built row would be a second copy of the server's shape.
+   */
+  addBusiness: async (payload) => {
+    set({ isSubmitting: true, error: null });
+    try {
+      const { business } = await createBusinessRequest(payload);
+      const { user } = await fetchSession();
+      storage.set(STORAGE_KEYS.businessId, business.id);
+      set({ user, business, activeBusinessId: business.id, isSubmitting: false });
+      return business;
+    } catch (err) {
+      set({ isSubmitting: false, error: extractErrorMessage(err) });
+      throw err;
+    }
+  },
+
+  deleteAccount: async (password) => {
+    set({ isSubmitting: true, error: null });
+    try {
+      await deleteAccountRequest(password);
+    } catch (err) {
+      set({ isSubmitting: false, error: extractErrorMessage(err) });
+      throw err;
+    }
+    set({ isSubmitting: false });
+    // The token in hand is dead now; logout leaves exactly what a sign-out does.
+    get().logout();
   },
 
   /**

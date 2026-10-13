@@ -1,0 +1,58 @@
+.static,
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 10px;
+  margin-left: -10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  transition: background-color var(--duration-quick) ease;
+}
+
+.trigger:hover {
+  background: var(--color-surface);
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.panel {
+  min-width: 240px;
+  max-width: min(360px, calc(100vw - 32px));
+}
+
+.optionText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.optionName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optionRole {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}

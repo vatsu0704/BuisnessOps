@@ -157,10 +157,20 @@ jobs:
       - name: Check web translations
         run: npm run lint:i18n
 
-      # Covers the shared files too: one `@/` or React Native import added to
-      # them compiles fine for the phone and breaks here.
+      # A file the web shares with frontend/ may import only relative paths and
+      # the few packages the web pins to its own copy. One `@/` or React Native
+      # import compiles fine for the phone and breaks the web; this names the line.
+      - name: Check shared imports
+        run: npm run lint:shared
+
+      # Covers the shared files too, compiled with the web's settings.
       - name: Type-check
         run: npm run lint
+
+      # Route gates against the app's own route table, refusal sentences, the
+      # store rules, confirm().
+      - name: Tests
+        run: npm test
 
       - name: Build
         run: npx vite build

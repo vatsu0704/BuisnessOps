@@ -40,5 +40,21 @@
   "notFound": {
     "title": "Page not found",
     "body": "There is nothing at this address. The link may be mistyped, or the page may have moved."
+  },
+  "notifications": {
+    "browserNote": "This browser does not pop notifications up yet — they arrive in the bell at the top of the page.",
+    "unread": "Unread"
+  },
+  "location": {
+    "denied": "This browser is blocking location for this site. Allow it from the icon beside the address, then try again."
+  },
+  "branches": {
+    "viewOnMap": "See it on the map"
+  },
+  "workCalendar": {
+    "removeTitle": "Remove {{name}}?",
+    "removeBody": "{{date}} becomes an ordinary working day again, and payroll counts it as one.",
+    "removeLabel": "Remove {{name}}",
+    "oneWorkingDay": "At least one day a week has to be a working day, or payroll would have nothing to divide by."
   }
 }

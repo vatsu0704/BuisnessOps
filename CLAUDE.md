@@ -22,7 +22,7 @@ from code.
 | `Docs/database-table.md` | Data model notes |
 | `Docs/TESTING_GUIDE.md` | Click-by-click manual walkthrough of every user-facing flow that is built, in the order they have to be followed |
 | `Docs/FIREBASE_SETUP.md` | Creating the Firebase project and the two credential files push notifications need. Neither file is in git |
-| `Docs/DEPLOYMENT.md` | Running `backend/` somewhere other than a laptop: the production environment, the two shapes migrations can take, the image, health and the JSON logs — and what is still unbuilt before it can be called live |
+| `Docs/DEPLOYMENT.md` | Running `backend/` somewhere other than a laptop: the production environment, the two shapes migrations can take, the image, health and the JSON logs — and what is still unbuilt before it can be called live. Also the web app as a static site (`render.yaml`) |
 | `Docs/TEST_DATA_SEED.md` | `backend/scripts/seed-test-data.sql`: seven months of test data for the owner's two businesses, landing each month on a fixed net profit, and how to re-run or remove it |
 | `Docs/PLAY_STORE_RELEASE.md` | Getting the app onto Google Play: what blocks an upload today, the code work that clears it and its status, and the owner's own steps — paperwork, hosting, signing key, Play Console forms and the Data safety answers |
 
@@ -128,6 +128,9 @@ Web (from `web/`, serves on port 5173):
 | `npm run dev` | The web app with hot reload |
 | `npm run lint` | Type-check (`tsc -b`), which also compiles the files it shares with `frontend/` |
 | `npm run lint:i18n` | The web's own strings in all four languages, and no `<Trans>` tag named after a void HTML element in any translation it reads |
+| `npm run lint:shared` | Every file the web reaches in `frontend/src` imports only what the web can resolve — see *Web app* |
+| `npm test` | Vitest: route gates against the app's route table, refusal sentences, store rules, `confirm()` |
+| `npm run shots [-- <filter>]` | Build, then screenshot every scenario at 320/390/820/1440 in English and Gujarati against a pretend API, into `web/shots/`. Drives the installed Chrome; never a dev server |
 | `npm run build` | Type-check, then the production bundle in `dist/` |
 
 ## Running the app
@@ -562,22 +565,45 @@ which screens are on the web, and every one that is not yet renders a "coming to
 the web" page at its real route, so the navigation is already the finished one.
 `web/README.md` has the layout and the commands.
 
-- **It reads the mobile app's data, it does not copy it.** `@shared/` is
-  `frontend/src`, and the web imports the four locale files, `permissions/index.ts`
-  with `matrix.json`, `constants/brand.ts`, `constants/brandMark.json`,
-  `utils/format.ts` and `utils/validation.ts` from there. A third copy of the
-  matrix or the translations would drift exactly as the mirror is checked not to.
-- **So those files may import nothing but their own siblings** — the same fence as
-  `permissions/catalog.js`. The web compiles them with its own toolchain, where
-  `@/` means `web/src` and React Native does not exist; one `@/` import or one
-  `expo-*` import in them breaks the web build with an error that points at the
-  web, not at the line that caused it. `web/`'s `npm run lint` is the check.
+- **It reads the mobile app's code, it does not copy it.** `@shared/` is
+  `frontend/src`, and the web imports from there: the four locale files, the
+  matrix (`permissions/index.ts`, `matrix.json`), the refusal sentences
+  (`permissions/explain.ts`) and `staffBase.ts`, every file in `types/` but
+  `notification.ts`, `navigation/routeCapabilities.ts`, the brand name and mark,
+  and the pure helpers — `utils/format.ts`, `validation.ts`, `date.ts`,
+  `upiUri.ts`, `expenseCategory.ts`, `hooks/useMonthCursor.ts`,
+  `constants/salesTemplate.ts`. A second copy of any of them would drift exactly
+  as the mirrors are checked not to.
+- **So a shared file imports only relative paths and four packages** — `i18next`,
+  `react`, `react-dom`, `react-i18next` — the same fence as
+  `permissions/catalog.js`. The web compiles these files with its own toolchain,
+  where `@/` means `web/src` and React Native does not exist; and a bare import
+  from `frontend/src` resolves to **`frontend/node_modules`**, a second copy of the
+  package (a second, uninitialised i18next made every refusal sentence come back
+  empty) or, in CI, none at all. `web/vite.config.ts` (`dedupe`) and
+  `web/tsconfig.app.json` (`paths`) pin those four to the web's own copy, and
+  `web/`'s **`npm run lint:shared`** fails on anything else, naming the file and
+  the import. That is why `utils/upi.ts` is split — `upiUri.ts` is the pure half,
+  `upi.ts` keeps the `Linking` opener and re-exports the rest — and why
+  `explain.ts` imports `i18next` itself rather than `@/i18n`.
+- **A web page opens on the app's own route rule.** `ROUTE_CAPABILITY` lives in
+  `navigation/routeCapabilities.ts` as pure data (`routeAccess.ts` imports it and
+  checks every key is a real route), and `web/src/routes/paths.ts` names the app
+  route each page stands for. Add an app screen there and `web/`'s tests fail until
+  the web has a route for it. Whether a page *appears* in the sidebar is the
+  separate, job-based question — `web/src/constants/navigation.ts` — and a test
+  proves no role is shown an entry it cannot open.
 - **Every convention in this file applies there too**: capabilities never role
   names (`passesGate` with the same `{ holds, unless }` shape as Home), no
   hardcoded strings (web-only wording goes in `web/src/i18n/locales` under
   `web.*`, in all four languages), shared server data in a zustand store with
-  `loadedFor`, and the design looked at — at 320, 390, 820 and 1440 wide, in
-  Gujarati — before a screen is called done.
+  `loadedFor`, anything irreversible through `utils/confirm.ts` (the same
+  `if (await confirm({...}))`, on a `<dialog>`), and the design looked at — at
+  320, 390, 820 and 1440 wide, in Gujarati — before a screen is called done.
+  **`npm run shots`** does that looking: it builds, serves the build, and
+  photographs every scenario in `web/scripts/shots/scenarios.mjs` at those widths
+  and languages against a pretend API, failing on sideways scroll or a page
+  error. Add a ported page's scenarios there in the same change.
 - **The web is not React Native**, so the reasons behind a few app rules do not
   hold there, and it should not imitate the workaround: it has a full `Intl`
   (it fills sign-up's timezone from the browser), a real `localStorage`, CSS
@@ -1019,3 +1045,10 @@ rather than steps, and each one breaks quietly:
 inlined at build time, so a release APK calls whatever was in `frontend/.env`
 when the bundle was made. There is no run-time configuration to correct it
 afterwards.
+
+**The web app is a static site, built the same way** — `render.yaml` describes it
+for Render. Three things about it are invariants: the build checks out the whole
+repository (it compiles `frontend/src`'s shared files), every address is rewritten
+to `index.html` (the pages are drawn in the browser), and once it is served the
+API's `CORS_ORIGINS` must name its origin. `Docs/DEPLOYMENT.md` *The web app* has
+the steps.

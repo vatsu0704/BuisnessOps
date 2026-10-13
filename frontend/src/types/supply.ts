@@ -1,4 +1,4 @@
-import type { BranchOperatingModel } from '@/types/branch';
+import type { BranchOperatingModel } from './branch';
 
 /**
  * Supply orders — requirements 3, 5, 5.1, 9, 11 and 12.

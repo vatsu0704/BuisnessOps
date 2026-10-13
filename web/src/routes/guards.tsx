@@ -6,7 +6,7 @@ import FullPageLoader from '@/components/layout/FullPageLoader';
 import { useMembership } from '@/hooks/useBusinessId';
 import NoticePage from '@/pages/NoticePage';
 import { useAuthStore } from '@/store/authStore';
-import { passesAnyGate, type Gate } from '@/utils/permissions';
+import { canOpenRoute, type RouteKey } from './paths';
 
 type FromState = { from?: { pathname: string; search?: string } } | null;
 
@@ -41,21 +41,15 @@ export function GuestOnly() {
 }
 
 /**
- * A page this role may open. Anyone else is told it is not part of their role,
- * rather than shown a page whose every request would be refused. The server
- * refuses them anyway; this is so the screen says why.
+ * A page this role may open, by the same rule the app opens the screen on. Anyone
+ * else is told it is not part of their role, rather than shown a page whose every
+ * request would be refused. The server refuses them anyway; this says why.
  */
-export function RequireAccess({ gates, children }: { gates: Gate[] | null; children: ReactNode }) {
+export function RequireAccess({ route, children }: { route: RouteKey; children: ReactNode }) {
   const { t } = useTranslation();
   const membership = useMembership();
-  if (!passesAnyGate(membership, gates)) {
-    return (
-      <NoticePage
-        icon={IoLockClosedOutline}
-        title={t('web.noAccess.title')}
-        body={t('web.noAccess.body')}
-      />
-    );
+  if (!canOpenRoute(membership, route)) {
+    return <NoticePage icon={IoLockClosedOutline} title={t('web.noAccess.title')} body={t('web.noAccess.body')} />;
   }
   return <>{children}</>;
 }

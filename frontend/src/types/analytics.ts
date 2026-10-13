@@ -1,5 +1,5 @@
-import type { BranchKind, BranchStatus } from '@/types/branch';
-import type { MembershipRole } from '@/types/user';
+import type { BranchKind, BranchStatus } from './branch';
+import type { MembershipRole } from './user';
 
 /**
  * The branch × month grid — requirements 13 and 15.

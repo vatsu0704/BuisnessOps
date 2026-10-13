@@ -1,7 +1,2 @@
-import type { MembershipRole } from './user';
-
-/** A pending invite for an email that has no account yet. */
-export interface InviteLookupResult {
-  businessName: string;
-  role: MembershipRole;
-}
+/** The app's own definitions, shared rather than copied — see web/README.md. */
+export type * from '@shared/types/team';

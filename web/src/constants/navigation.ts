@@ -14,6 +14,7 @@ import {
   IoReceiptOutline,
   IoWalletOutline,
 } from 'react-icons/io5';
+import type { ParamlessRoute } from '@/routes/paths';
 import type { Gate } from '@/utils/permissions';
 
 /**
@@ -28,9 +29,9 @@ import type { Gate } from '@/utils/permissions';
  * an entry the app hides because it is not that person's *job* (an owner's
  * deliveries) is hidden here too.
  *
- * `built: true` marks the pages the web has so far. Every other entry opens the
- * "coming to the web" page — the route exists, so the sidebar is the real one
- * and each page replaces its placeholder as it is ported.
+ * Showing an entry is not what lets someone open it: the page's own route says
+ * that (`routes/paths.ts`, the app's route table). A test proves every entry a
+ * role is shown is one that role can open.
  */
 export type NavLabelKey =
   | 'tabs.home'
@@ -49,12 +50,11 @@ export type NavLabelKey =
 
 export type NavEntry = {
   key: string;
-  path: string;
+  route: ParamlessRoute;
   icon: IconType;
   labelKey: NavLabelKey;
   /** Shown to anyone who passes any one gate; null means everyone. */
   gates: Gate[] | null;
-  built?: boolean;
 };
 
 export type NavGroup = {
@@ -68,17 +68,17 @@ export const NAV_GROUPS: NavGroup[] = [
     key: 'overview',
     labelKey: 'web.nav.overview',
     entries: [
-      { key: 'home', path: '/', icon: IoHomeOutline, labelKey: 'tabs.home', gates: null, built: true },
+      { key: 'home', route: 'home', icon: IoHomeOutline, labelKey: 'tabs.home', gates: null },
       {
         key: 'reports',
-        path: '/reports',
+        route: 'reports',
         icon: IoBarChartOutline,
         labelKey: 'tabs.reports',
         gates: [{ capability: 'analytics:viewBusiness' }],
       },
       {
         key: 'upload',
-        path: '/upload',
+        route: 'upload',
         icon: IoCloudUploadOutline,
         labelKey: 'upload.title',
         gates: [{ capability: 'dataSource:manage' }],
@@ -91,21 +91,21 @@ export const NAV_GROUPS: NavGroup[] = [
     entries: [
       {
         key: 'counter',
-        path: '/counter',
+        route: 'counter',
         icon: IoCalculatorOutline,
         labelKey: 'tabs.counter',
         gates: [{ capability: 'counterOrder:create' }],
       },
       {
         key: 'products',
-        path: '/products',
+        route: 'products',
         icon: IoPricetagsOutline,
         labelKey: 'tabs.products',
         gates: [{ capability: 'product:view' }],
       },
       {
         key: 'expenses',
-        path: '/expenses',
+        route: 'expenses',
         icon: IoWalletOutline,
         labelKey: 'expenses.title',
         gates: [{ capability: 'expense:log' }],
@@ -120,7 +120,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // behind it is also the desk's way in to stocking and pricing it.
       {
         key: 'supply',
-        path: '/supply',
+        route: 'supply',
         icon: IoCubeOutline,
         labelKey: 'tabs.supply',
         gates: [
@@ -130,14 +130,14 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       {
         key: 'supplyOrders',
-        path: '/supply-orders',
+        route: 'supplyOrders',
         icon: IoReceiptOutline,
         labelKey: 'web.nav.supplyOrders',
         gates: [{ capability: 'supplyOrder:view' }],
       },
       {
         key: 'desk',
-        path: '/desk',
+        route: 'desk',
         icon: IoFileTrayFullOutline,
         labelKey: 'tabs.desk',
         gates: [{ capability: 'supplyOrder:fulfil' }],
@@ -145,7 +145,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // Whoever runs the desk is not who carries the run.
       {
         key: 'deliveries',
-        path: '/deliveries',
+        route: 'deliveries',
         icon: IoBicycleOutline,
         labelKey: 'tabs.deliveries',
         gates: [{ capability: 'supplyOrder:deliver', hideWhen: { holds: 'supplyOrder:fulfil' } }],
@@ -153,7 +153,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // Paying (accounts) and confirming a payment arrived (the desk) are one screen.
       {
         key: 'payments',
-        path: '/payments',
+        route: 'payments',
         icon: IoCardOutline,
         labelKey: 'tabs.payments',
         gates: [{ capability: 'supplyPayment:settle' }, { capability: 'supplyPayment:verify' }],
@@ -165,7 +165,7 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: 'web.nav.people',
     entries: [
       // Everyone has their own attendance, so everyone has Staff.
-      { key: 'staff', path: '/staff', icon: IoPeopleOutline, labelKey: 'tabs.staff', gates: null },
+      { key: 'staff', route: 'staff', icon: IoPeopleOutline, labelKey: 'tabs.staff', gates: null },
     ],
   },
 ];
@@ -173,7 +173,7 @@ export const NAV_GROUPS: NavGroup[] = [
 /** Pinned to the foot of the sidebar: the language, the account, the way out. */
 export const SETTINGS_ENTRY: NavEntry = {
   key: 'settings',
-  path: '/settings',
+  route: 'settings',
   icon: IoOptionsOutline,
   labelKey: 'tabs.settings',
   gates: null,

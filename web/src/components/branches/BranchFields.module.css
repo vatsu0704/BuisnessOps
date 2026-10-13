@@ -1,0 +1,106 @@
+/* The pieces both branch forms share: a section's heading and its sentence, and
+   the layouts their fields sit in. */
+
+.heading {
+  float: none;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.hint {
+  margin: 4px 0 var(--space-md);
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--color-text-tertiary);
+}
+
+.fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset + .fieldset {
+  margin-top: var(--space-xl);
+}
+
+/* A heading with no sentence under it still needs the gap before its options. */
+.legendGap {
+  height: var(--space-md);
+}
+
+/* Two options, so two across at every width — each tile wraps its own label. */
+.kindGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.modelList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* Side by side when there is room for both, stacked when there is not. */
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  column-gap: var(--space-md);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-lg);
+  margin: calc(var(--space-sm) * -1) 0 var(--space-md);
+}
+
+.textAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.textAction:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.textAction:disabled {
+  cursor: progress;
+  color: var(--color-text-secondary);
+}
+
+.textActionMuted {
+  color: var(--color-text-secondary);
+}
+
+.alert {
+  margin: calc(var(--space-sm) * -1) 0 var(--space-md);
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--color-error);
+}
+
+.note {
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--color-text-tertiary);
+}
+
+/* The last field in a card needs no space under it; the card has its own padding.
+   `div.` outranks FormInput's own margin whichever stylesheet loads first. */
+div.last {
+  margin-bottom: 0;
+}

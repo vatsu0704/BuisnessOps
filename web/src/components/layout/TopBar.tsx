@@ -3,9 +3,8 @@ import { IoMenu } from 'react-icons/io5';
 import BrandMark from '@/components/brand/BrandMark';
 import Wordmark from '@/components/brand/Wordmark';
 import LanguageMenu from '@/components/LanguageMenu';
-import Pill from '@/components/ui/Pill';
-import { useMembership } from '@/hooks/useBusinessId';
-import { useAuthStore } from '@/store/authStore';
+import BusinessMenu from './BusinessMenu';
+import NotificationBell from './NotificationBell';
 import UserMenu from './UserMenu';
 import styles from './TopBar.module.css';
 
@@ -16,14 +15,13 @@ type Props = {
 };
 
 /**
- * Which business this is and as whom, then the language and the account. Below
+ * Which business this is and as whom — and a switch, for someone in more than
+ * one — then the language, the notification bell and the account. Below
  * the desktop breakpoint it also carries the menu button and the brand, since
  * the sidebar that normally shows them is folded away.
  */
 export default function TopBar({ sidebarId, sidebarOpen, onOpenSidebar }: Props) {
   const { t } = useTranslation();
-  const business = useAuthStore((s) => s.business);
-  const membership = useMembership();
 
   return (
     <header className={styles.bar}>
@@ -44,12 +42,12 @@ export default function TopBar({ sidebarId, sidebarOpen, onOpenSidebar }: Props)
       </div>
 
       <div className={styles.context}>
-        {business ? <p className={styles.business}>{business.name}</p> : null}
-        {membership ? <Pill label={t(`role.${membership.role}`)} tone="muted" /> : null}
+        <BusinessMenu />
       </div>
 
       <div className={styles.actions}>
         <LanguageMenu />
+        <NotificationBell />
         <UserMenu />
       </div>
     </header>

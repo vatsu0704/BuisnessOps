@@ -18,8 +18,9 @@ until Phase 2's query engine exists. Alerts (Phase 5) has no tab at all; the Sta
 slot. For the app stores, the privacy policy is reachable from Settings and sign-up
 (Flow 20) and anybody can delete their own account (Flow 21); the app runs on Expo
 SDK 54 and draws edge-to-edge on Android (Flow 0, Flow 10). A separate **web
-app** in `web/` has sign-in, sign-up and Home so far (Flow W1); its other pages
-say they are coming to the web.
+app** in `web/` has sign-in, sign-up, Home (Flow W1), Settings with the business
+switcher (Flow W2), the notification bell and centre (Flow W3), and branches and the
+work calendar (Flow W5) so far; its other pages say they are coming to the web.
 
 ---
 
@@ -2102,17 +2103,125 @@ account from Flow 1, or the seed data's logins.
       (`Asia/Kolkata` in India). **Privacy policy** under the button is a link and
       opens the policy in a new tab.
 
+## Flow W2 — The web app: Settings, switching business, adding one, deleting an account
+
+Use an owner who belongs to two businesses (Flow 17a makes one). Web app running
+(section 0, step 7).
+
+1. Open **Settings** from the foot of the sidebar.
+   - ✅ **Expected:** on a laptop-width window, two columns: your name and email,
+     *Account* (email, role), *Business* with both businesses as a list, **Add
+     another business**, and the business's details on the left; **My attendance**,
+     **Workweek & holidays**, **Team & permissions**, **Payment QR codes**, the
+     **Language** list, **Privacy policy**, **Log out** and a quiet **Delete account**
+     link on the right. Narrower, one column in that order.
+2. Pick the other business in the *Business* card.
+   - ✅ **Expected:** the tick moves, the top bar names the new business, and Home's
+     figures and branches are the new business's when you go back to it — never the
+     old one's for a moment. Switch back.
+3. Click the business name in the top bar (laptop width).
+   - ✅ **Expected:** a menu of both businesses with your role in each; choosing one
+     switches exactly as step 2 did. Someone in one business sees the name and role
+     there, with no menu.
+4. In the *Language* card choose **हिन्दी**.
+   - ✅ **Expected:** the whole app changes at once; reload and it stays. Sign in on
+     the phone with the same account — it follows, unless the phone has its own
+     choice. Switch back to English.
+5. **Add another business** → fill in a name → **Create business**.
+   - ✅ **Expected:** industry, country, currency and timezone start as the current
+     business's. After creating, you are back on Settings acting under the new
+     business, and it is in the switcher.
+6. Sign in as a cashier and open Settings.
+   - ✅ **Expected:** no **Add another business**, no Team, Workweek or Payment QR
+     codes — only what a cashier can open.
+7. **Delete account** (use a throwaway account): type a wrong password and press the
+   red button, then confirm.
+   - ✅ **Expected:** a dialog asks first, naming the businesses that go with an
+     owner's account; **Cancel** leaves everything as it was. With the wrong password
+     the page says so and nothing is deleted. With the right one you are signed out
+     and cannot sign in again.
+8. **Log out** from Settings.
+   - ✅ **Expected:** back at sign-in.
+
+## Flow W3 — The web app: the bell and the notification centre
+
+Needs some notifications in the business — the seed data has them, or place and
+move a supply order from the phone (Flow 17g–17h).
+
+1. Sign in on the web as the branch's cashier.
+   - ✅ **Expected:** a bell in the top bar, with a red count of unread
+     notifications once there are any (9+ above nine).
+2. Click the bell.
+   - ✅ **Expected:** the notification centre: newest first, unread ones tinted with a
+     blue dot, each sentence in the chosen language with its date and time, and
+     **Mark all read** while anything is unread. Switch language: the whole history
+     re-renders in it.
+3. Click an unread notification about an order.
+   - ✅ **Expected:** its dot goes at once and it opens that order's page (until W10
+     ports it, the page says it is coming to the web). One the role can no longer
+     open goes to Home instead.
+4. Leave the tab open on any page, and from the phone have the warehouse accept an
+   order. Within a minute — or at once when you switch back to the tab:
+   - ✅ **Expected:** the bell's count rises without a reload.
+5. **Settings → What to send me.**
+   - ✅ **Expected:** a note that the browser does not pop notifications up yet, then
+     one switch per kind — **Attendance** reads *Always on* with no switch. Turning
+     one off saves at once and stays off after a reload, and on the phone.
+
+---
+
+## Flow W5 — The web app: branches and the work calendar
+
+The web's version of Flows 3, 11 and 19. Sign in as the owner. Location needs
+`localhost` or HTTPS — the browser offers it nowhere else.
+
+1. On **Home → Branches**, click **Add branch**.
+   - ✅ **Expected:** the form, with **Branch** chosen and neither payment model
+     chosen; **Create branch** stays grey until one is. Choose **Warehouse**: the
+     payment question goes away.
+2. Fill in a name and a code, type `150` as the radius and leave the coordinates
+   empty.
+   - ✅ **Expected:** red under the radius — *set the branch location first* — and
+     the button stays grey. Type `0`: *must be greater than zero*.
+3. Click **Use my current location** and allow it.
+   - ✅ **Expected:** latitude and longitude fill in to six decimal places, and
+     **See it on the map** appears; it opens that point in a new tab.
+   - Block location for the site instead (the icon beside the address): a sentence
+     saying the browser is blocking it and how to allow it.
+4. Create the branch.
+   - ✅ **Expected:** back on Home, the new branch is in the list at once, with a pin
+     if it has a radius.
+5. Click the branch.
+   - ✅ **Expected:** its name as the page title, *Branch settings* under it, and the
+     saved values in every field. **Turn off geofencing** empties the radius and
+     leaves the coordinates; save, reopen — the radius is gone, the point is not.
+6. Change the timezone to `Mars/Olympus_Mons` and save.
+   - ✅ **Expected:** refused, in the chosen language, beside the Save button.
+7. Open `/branches/nothing-here`.
+   - ✅ **Expected:** *That branch no longer exists*, with the way back to Home.
+8. **Settings → Workweek & holidays.**
+   - ✅ **Expected:** Sunday chosen as the weekly off. Click Saturday: it saves at
+     once, and holds after a reload. Choose six days: the seventh greys out and the
+     sentence under the chips says why.
+9. Add a holiday with a date and a name.
+   - ✅ **Expected:** it joins the list with an *All branches* pill. Click its bin:
+     a question naming it and its date; **Remove** takes it off the list.
+10. Sign in as a cashier and open `/branches/new` and `/work-calendar`.
+    - ✅ **Expected:** *Not part of your role* on both.
+
 ---
 
 ## Known limitations (not bugs — don't file these)
 
-- **The web app has sign-in, sign-up and Home only.** Every other page it lists
+- **The web app has sign-in, sign-up, Home, Settings, notifications, branches and the
+  work calendar so far.** Every other page it lists
   shows *Coming to the web* until it is ported; use the mobile app for that work.
   Its Home also lacks four of the app's cards — today's punch-in, the branches to
-  chase for expenses, and the two supply-payment cards — and there is no
-  notification bell or business switcher on the web yet. A refusal there reads as
-  the plain "your role does not allow this" sentence rather than naming the roles
-  that can, until R19's explanation is ported.
+  chase for expenses, and the two supply-payment cards.
+- **The web does not pop notifications up.** They arrive in the bell, which asks the
+  server every minute while its tab is in view and at once when the tab comes back.
+  Browser push is the last phase of the web plan (W13) and needs a Firebase web app
+  registered first.
 - **On the web the session lives in the browser's local storage** for seven days,
   like the app's. Signing out on a shared computer matters: closing the tab does
   not sign anybody out.

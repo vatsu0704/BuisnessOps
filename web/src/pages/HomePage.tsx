@@ -28,6 +28,7 @@ import { useMembership } from '@/hooks/useBusinessId';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
 import { useSalesSummary } from '@/hooks/useSalesSummary';
+import { pathTo } from '@/routes/paths';
 import { useAuthStore } from '@/store/authStore';
 import { step } from '@/theme/motion';
 import { cx } from '@/utils/cx';
@@ -167,7 +168,7 @@ export default function HomePage() {
             icon={IoStorefrontOutline}
             title={t('home.emptyTitle')}
             subtitle={t('home.emptySubtitle')}
-            to="/branches/new"
+            to={pathTo('addBranch')}
           />
         </Enter>
       ) : null}

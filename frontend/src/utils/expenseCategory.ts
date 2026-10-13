@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import type { ExpenseCategoryCode } from '@/types/expense';
+import type { ExpenseCategoryCode } from '../types/expense';
 
 /**
  * What to write on an expense category.

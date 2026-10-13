@@ -1,0 +1,52 @@
+# Render Blueprint — the web app (web/) as a static site.
+#
+# Only the web app is defined here. The API on buisnessops.onrender.com was set up
+# in Render's dashboard and is not touched by this file: creating a Blueprint from
+# it adds this one static site and nothing else. Docs/DEPLOYMENT.md ("The web app")
+# has the steps, and what must be set on the API afterwards (CORS_ORIGINS).
+services:
+  - type: web
+    name: hisabkitab-web
+    runtime: static
+    # The whole repository, not just web/: the build reads the translations, the
+    # permission matrix and the brand files straight out of frontend/src. It does
+    # not install frontend's dependencies.
+    rootDir: .
+    buildCommand: cd web && npm ci && npm run build
+    staticPublishPath: web/dist
+    # A commit that touches only the backend or the native build does not rebuild
+    # the site.
+    buildFilter:
+      paths:
+        - web/**
+        - frontend/src/**
+        - render.yaml
+    envVars:
+      # Inlined at build time — the site calls whatever this was when it was built.
+      # Prefer your own domain over the host's, so the API can move without a rebuild.
+      - key: VITE_API_URL
+        value: https://buisnessops.onrender.com/api
+      # Vite 8 needs Node 20.19 or newer.
+      - key: NODE_VERSION
+        value: 20.19.4
+    routes:
+      # Every address is the app's: /settings, /staff/s-1 and the rest are drawn in
+      # the browser, so the server answers all of them with index.html.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      # File names under /assets carry a hash of their contents, so a browser may
+      # keep them for good; a new build has new names.
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: X-Frame-Options
+        value: DENY

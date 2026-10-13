@@ -20,6 +20,8 @@ type BranchStore = {
   error: string | null;
   load: (businessId: string | null | undefined) => Promise<void>;
   refresh: () => Promise<void>;
+  /** Refetch now for this business, loaded or not — a page that edits a branch starts from the server's copy. */
+  fetchNow: (businessId: string) => Promise<void>;
   reset: () => void;
 };
 
@@ -65,6 +67,8 @@ export const useBranchStore = create<BranchStore>((set, get) => {
       const { loadedFor } = get();
       if (loadedFor) await fetchFor(loadedFor);
     },
+
+    fetchNow: fetchFor,
 
     reset() {
       pending = null;

@@ -158,34 +158,6 @@
   margin-top: var(--space-lg);
 }
 
-.fieldLabel {
-  padding: 0;
-  display: block;
-  margin-bottom: var(--space-sm);
-  font: var(--text-label);
-  color: var(--color-text);
-}
-
-/* Two across, as the app sets them: four industries make a square, and a
-   fifth would simply start a new row. Each tile grows with its label, so a
-   long translation wraps inside the tile instead of squeezing it. */
-.choiceGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-sm);
-  /* A fieldset is min-content wide by default, which would stop the grid wrapping. */
-  min-width: 0;
-  margin: 0 0 var(--space-lg);
-  padding: 0;
-  border: 0;
-}
-
-.pair {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  column-gap: var(--space-md);
-}
-
 .inviteBanner {
   display: flex;
   align-items: center;

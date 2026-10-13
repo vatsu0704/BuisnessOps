@@ -1,0 +1,31 @@
+/* A page that is one form: a readable column, its cards stacked, the submit last. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 720px;
+}
+
+.page > header {
+  margin-bottom: var(--space-sm);
+}
+
+.submit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-xxl);
+}
+
+.footnote {
+  font-size: 12.5px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}

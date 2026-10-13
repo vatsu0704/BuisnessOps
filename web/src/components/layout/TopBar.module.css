@@ -46,16 +46,6 @@
   min-width: 0;
 }
 
-.business {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--color-text);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .actions {
   display: flex;
   flex: none;

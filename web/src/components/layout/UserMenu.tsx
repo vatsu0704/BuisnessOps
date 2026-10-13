@@ -5,14 +5,8 @@ import { IoLogOutOutline, IoOptionsOutline } from 'react-icons/io5';
 import { useDismiss } from '@/hooks/useDismiss';
 import { useMembership } from '@/hooks/useBusinessId';
 import { useAuthStore } from '@/store/authStore';
+import { initials } from '@/utils/initials';
 import styles from './UserMenu.module.css';
-
-export function initials(name?: string | null, email?: string | null): string {
-  const source = name?.trim() || email || '';
-  const parts = source.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return source.slice(0, 2).toUpperCase();
-}
 
 /**
  * The avatar in the top bar: who is signed in, as what, and the way out. On the

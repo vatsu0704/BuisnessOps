@@ -1,4 +1,4 @@
-import type { Role } from '@/permissions';
+import type { Role } from '../permissions';
 
 /**
  * Derived from the permission matrix rather than written out by hand.

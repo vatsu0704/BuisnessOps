@@ -1,4 +1,6 @@
-import i18n from '@/i18n';
+// The i18next singleton itself rather than '@/i18n', which configures it: this file
+// is shared with the web app, which configures the same singleton its own way.
+import i18n from 'i18next';
 import matrix from './matrix.json';
 import { CAPABILITIES, ROLES, roleHas, type Capability, type Role } from './index';
 

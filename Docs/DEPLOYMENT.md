@@ -6,7 +6,8 @@ handful of things that will go wrong quietly if they are skipped.
 The app half is not deployed in the same sense — it is a native Android build
 installed on a phone. Its one deployment-shaped concern is at the bottom,
 because the API's address is **compiled into the APK** rather than configured
-at run time.
+at run time. The web app (`web/`) is a static site; it has its own section,
+*The web app*, near the end.
 
 ---
 
@@ -18,6 +19,7 @@ at run time.
 | `backend/.dockerignore` | Keeps `.env`, the Firebase credential and a host-built `node_modules` out of the image. |
 | `backend/Procfile` | For a host with a release phase — migrations run once per deploy instead of per container. |
 | `backend/.env.example` | Every variable, with what happens if it is wrong. |
+| `render.yaml` | The web app as a Render static site — see *The web app*. Defines nothing else. |
 
 Two npm scripts matter here:
 
@@ -223,6 +225,48 @@ needs a restart, not a deploy.
 
 Their paths are what matter, not their host: the app derives them from its API
 address, so when the API moves to your own domain, the pages move with it.
+
+---
+
+## The web app
+
+`web/` builds to plain files — HTML, JavaScript, CSS — that any static host can
+serve. `render.yaml` at the repository root describes it as a Render static site
+beside the API.
+
+**What to do, once** (Vatsal's steps; nothing here deploys by itself):
+
+1. Render dashboard → **New → Blueprint** → this repository. It finds
+   `render.yaml` and offers one static site, `hisabkitab-web`. The existing API
+   service is not in the file and is left alone.
+2. Before the first build, check **`VITE_API_URL`** on the new site. It defaults to
+   `https://buisnessops.onrender.com/api`; point it at your own domain once the API
+   has one, for the same reason as the app's address below.
+3. When the site is up, add its address to the API's **`CORS_ORIGINS`** (for
+   example `https://hisabkitab-web.onrender.com`, comma-separated with anything
+   already there) and redeploy the API. Unset, the API accepts any origin, which
+   works but lets any website call it from a visitor's browser. The phone app sends
+   no `Origin` and is unaffected either way.
+4. Sign in on the site against the hosted API. A request from an origin that is not
+   on the list is refused by the browser — that is the check that step 3 worked.
+
+**Four things that fail quietly:**
+
+- **`VITE_API_URL` is inlined at build time**, exactly like `EXPO_PUBLIC_API_URL`.
+  Changing it on Render does nothing until the site is rebuilt.
+- **Every address must serve `index.html`** — `/settings`, `/staff/s-1`. The pages
+  are drawn in the browser, so without the rewrite in `render.yaml` a reload or a
+  shared link on anything but `/` is a 404.
+- **The build needs the whole repository**, because it compiles the translations,
+  the permission matrix and the brand files out of `frontend/src`. A host set to
+  build only `web/` fails at `@shared/…`. It does *not* need `frontend`'s
+  dependencies installed.
+- **HTTPS is not optional.** The browser only gives a page the location (punch-in,
+  W8) or push (W13) over HTTPS or on `localhost`. Render serves HTTPS by default.
+
+The session is a bearer token kept in the browser's `localStorage`, as the API
+issues it. Nothing on the site is secret: the bundle contains the API's address
+and nothing else that is not already public.
 
 ---
 

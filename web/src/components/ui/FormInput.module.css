@@ -106,8 +106,27 @@
   box-shadow: inset var(--focus-ring);
 }
 
+.description {
+  margin-top: var(--space-sm);
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--color-text-tertiary);
+}
+
 .error {
   margin-top: var(--space-sm);
   font-size: 12.5px;
   color: var(--color-error);
+}
+
+/* FormTextArea: the same field, several lines tall, growing downwards only. */
+.textarea {
+  min-height: 84px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.fieldTall .iconBox {
+  align-items: flex-start;
+  padding-top: 15px;
 }

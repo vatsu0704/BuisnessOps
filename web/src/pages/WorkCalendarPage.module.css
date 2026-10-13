@@ -1,0 +1,134 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.page > header {
+  margin-bottom: var(--space-sm);
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-xxl);
+}
+
+/* The week on the left, the holidays on the right, once there is room for both. */
+.grid {
+  display: grid;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+@media (min-width: 1000px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.hint {
+  margin-top: var(--space-md);
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--color-text-tertiary);
+}
+
+/* Two answers; side by side while each label fits, one above the other when not. */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-sm);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.empty {
+  padding: var(--space-lg) 0;
+  font-size: 13.5px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The bin keeps the right edge. Name and date take the rest, and the branch
+   pill drops under them when a long name or a narrow window needs the width. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px 0;
+}
+
+.rowMain {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--space-sm);
+  min-width: 0;
+}
+
+.row + .row {
+  border-top: 1px solid var(--color-border);
+}
+
+.rowText {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin-top: 1px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.pill {
+  flex: none;
+  max-width: 100%;
+}
+
+.remove {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-error);
+  transition: background-color var(--duration-quick) ease, border-color var(--duration-quick) ease;
+}
+
+.remove:hover:not(:disabled) {
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
+}
+
+.remove:disabled {
+  cursor: progress;
+}
