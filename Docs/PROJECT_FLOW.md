@@ -13,6 +13,11 @@ supply orders, expenses, net profit. Tasks 1-10 of that track have landed; Task 
 amends Phase 0 (see the note under the Phase 0 exit criterion) and Task 8
 delivers part of Phase 4.
 
+**A third track started 2026-10-12: a web app** (`web/`, Section 15) that brings
+the mobile app's functionality to the browser, against the same API. Its
+foundation, sign-in, sign-up and Home are done; the order the rest is ported in
+is still to be planned.
+
 ---
 
 ## 1. Guiding Architecture Principles
@@ -1553,3 +1558,74 @@ directly against the app with `NODE_ENV=production` to confirm the access line
 parses as JSON and carries the id, since nothing in CI runs with that value.
 The image itself has **not** been built — Docker is not installed on the
 development machine — so the Dockerfile is reviewed, not proven.
+
+---
+
+## 15. Web app (a third track, started 2026-10-12)
+
+The same product in a browser: `web/`, React 19 + Vite + React Router, calling
+the same API as the mobile app. The goal is parity with the mobile app's
+functionality; the order screens are ported in is the plan still to be agreed
+(*Next* below).
+
+### How it is built
+
+- **It shares data with the app instead of copying it.** The four locale files,
+  the capability matrix, the brand name and mark, and the money formatter are
+  imported from `frontend/src` (`@shared/`). One sentence, one capability list,
+  one logo for both clients. Those files must stay free of imports beyond their
+  siblings — `CLAUDE.md` *Web app* has the rule.
+- **The app's rules, unchanged**: capability gates with `hideWhen` (never role
+  names), zustand stores that record `loadedFor`, translated error codes, no
+  hardcoded strings. The theme's tokens are repeated as CSS variables in
+  `web/src/styles/tokens.css`.
+- **Every surface the app has already has a route** with the same capability
+  gate as its tab or Home card. Until it is ported it shows a "coming to the web"
+  page; a role without the capability gets "not part of your role" instead. So the
+  sidebar is the finished one, and porting a screen replaces one placeholder.
+
+### W0 — Foundation, sign-in, sign-up, Home ✅
+
+- Project scaffold, theme tokens, the animated mark, the layout shell (sidebar
+  grouped by Overview / Branch / Supply / People, drawer below 1024px, top bar
+  with the business, the role, the language menu and the account menu).
+- **Sign in** and **sign up** with everything the app's screens do: the session
+  restore and server warm-up, the 45-second auth timeout, the session-ended
+  interceptor, the shake on error, password strength, the invite lookup that turns
+  sign-up into "Join <business>", the privacy link. Sign-up's timezone starts from
+  the browser's (the phone cannot know it without `Intl`).
+- **Home**: the greeting, the sales tiles, the branch list, the branch's catalog
+  preview, and shortcuts to every surface the role holds — each gated as the
+  app's Home gates it.
+- English ships in the main bundle; Hindi, Gujarati and Marathi load when chosen.
+- **Found on the way, fixed in both apps:** sign-up's privacy link was
+  untappable in the mobile app. The translation tagged it `<link>`, which
+  react-i18next parses as the void HTML element; it is `<policy>` now, and the
+  web's `lint:i18n` fails on a void tag name in any shared translation.
+
+**Not in W0, deliberately:** Home's punch-in card, the branches-to-chase card and
+the two supply-payment cards, which arrive with the pages they belong to; the
+notification bell; the business switcher; R19's "Only Warehouse can …"
+explanation of a refusal (a refusal reads as the plain sentence until it is
+ported).
+
+**Verification:** `npm run lint`, `npm run lint:i18n` and `npm run build` clean,
+and in CI. Every page was screenshotted in headless Chrome against a mocked API at
+320, 390, 820 and 1440 wide, in English, Hindi and Gujarati, and as owner,
+cashier, delivery agent and staff, with no horizontal overflow at any size. It has
+not been clicked through against the real backend yet — `Docs/TESTING_GUIDE.md`
+Flow W1 is that walkthrough.
+
+### Next — parity (to be planned)
+
+What parity means, grouped by area — every screen in `frontend/src/screens`:
+
+| Area | Mobile screens to port |
+| --- | --- |
+| Account | Settings (language, business switcher, add a business, privacy, delete account), Add business, Delete account, Notifications and their settings |
+| Branches | Add branch, Branch settings (address, geofence, timezone, weekly off), Work calendar |
+| Selling | Counter (tokens, editing, closing the day), Products, Add / Edit product, Upload sales data |
+| Money | Expenses, Add expense, day- and month-end export, Reports (branch × month, net profit, cross-business), Payment accounts (UPI), Supply payments |
+| Supply | Supply catalog and cart, Supply item form, Supply orders and order detail, Warehouse desk, Delivery queue, Vendors and vendor form |
+| People | Staff hub, Add / Edit staff, Staff detail, Attendance (punch in and out with the browser's location), Payroll run and payslips, Team, Invite member |
+| Cross-cutting | R19's refusal explanations, the confirm dialog, file downloads, the notification bell; and a decision on push notifications in the browser, which FCM supports for the web but the app does not use yet |

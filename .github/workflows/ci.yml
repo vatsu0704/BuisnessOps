@@ -129,3 +129,38 @@ jobs:
       # i18n in the request path, in a language nobody asked for.
       - name: Check the notification prose boundary
         run: npm run lint:notification-prose
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      # The whole repository, not just web/: the web app compiles the
+      # translations, the permission matrix and the brand files straight out of
+      # frontend/src. It does not need frontend's node_modules.
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Also scans every shared translation for a <Trans> tag named after a void
+      # HTML element (<link>, <br>, …), which react-i18next empties in both apps
+      # and which neither app's tsc nor frontend's lint:i18n can see.
+      - name: Check web translations
+        run: npm run lint:i18n
+
+      # Covers the shared files too: one `@/` or React Native import added to
+      # them compiles fine for the phone and breaks here.
+      - name: Type-check
+        run: npm run lint
+
+      - name: Build
+        run: npx vite build

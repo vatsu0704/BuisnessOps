@@ -1,0 +1,31 @@
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+  animation: drop var(--duration-base) var(--ease-gentle) both;
+}
+
+.icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--color-error);
+}
+
+.text {
+  flex: 1;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-error);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}

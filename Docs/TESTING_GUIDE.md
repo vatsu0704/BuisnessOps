@@ -17,7 +17,9 @@ question" bar is gone from Home entirely (requirement 7), hidden behind a flag
 until Phase 2's query engine exists. Alerts (Phase 5) has no tab at all; the Staff tab took its
 slot. For the app stores, the privacy policy is reachable from Settings and sign-up
 (Flow 20) and anybody can delete their own account (Flow 21); the app runs on Expo
-SDK 54 and draws edge-to-edge on Android (Flow 0, Flow 10).
+SDK 54 and draws edge-to-edge on Android (Flow 0, Flow 10). A separate **web
+app** in `web/` has sign-in, sign-up and Home so far (Flow W1); its other pages
+say they are coming to the web.
 
 ---
 
@@ -87,6 +89,11 @@ You run both servers yourself — nothing here starts them for you.
    profit, and gives every role orders waiting at each stage.
    [TEST_DATA_SEED.md](TEST_DATA_SEED.md) says how to run it, what each login
    will see, and how to remove it again.
+
+7. **For the web app (Flow W1)**: `cd web`, `npm install` once, then `npm run dev`,
+   and open `http://localhost:5173`. It calls `http://localhost:4000/api` unless
+   `web/.env` sets `VITE_API_URL`. It is a different app from the mobile app's
+   `npm run web` (step 2), which is the phone app drawn in a browser.
 
 Two browser profiles are genuinely useful for this app (owner in one, a
 teammate in another) — e.g. a normal window plus an Incognito/private window,
@@ -2040,7 +2047,75 @@ cannot be brought back. Each case starts at **Settings → Delete account**.
 
 ---
 
+## Flow W1 — The web app: sign in, register, Home
+
+Needs the backend running and the web app started (section 0, step 7). Use an
+account from Flow 1, or the seed data's logins.
+
+1. Open `http://localhost:5173/`.
+   - ✅ **Expected:** you are sent to `/login`. On a laptop-width window the page
+     is two columns — *Welcome to HisabKitab* with the blue hero card on the left,
+     the sign-in card on the right. The mark draws itself in the top-left corner.
+   - Narrow the window below about 960px: it becomes the app's single column, in
+     the app's order. At phone width nothing scrolls sideways.
+2. Open the **EN** chip in the top-right corner and pick **ગુજરાતી**.
+   - ✅ **Expected:** the whole page changes language at once, the name stays
+     "HisabKitab" and the chip shows **ગુજ**. Reload: it is still Gujarati. Switch
+     back to English.
+3. Sign in with a wrong password.
+   - ✅ **Expected:** the card shakes once and says the email or password is wrong
+     (in the chosen language). Typing in either field clears it.
+4. Sign in properly.
+   - ✅ **Expected:** Home. A sidebar on the left lists only what your role can
+     open, grouped *Overview / Branch / Supply / People*, with **Settings** at the
+     foot; the top bar names the business and your role. Home greets you by first
+     name, shows the business and its branch count, the sales, orders and branches
+     tiles, your branches, the first branch's products, and a **Shortcuts** column.
+     The sales figure uses Indian grouping (₹3,48,250).
+5. Click any sidebar entry other than Home — **Counter**, say.
+   - ✅ **Expected:** a card titled with that page's name and a **Coming to the
+     web** badge, saying the page works in the mobile app and is on its way here,
+     with **Back to Home**. That is correct for now, not a broken page.
+6. Sign in as a cashier or a delivery agent (a second browser profile helps).
+   - ✅ **Expected:** the sidebar and Home's cards match what that role has in the
+     app — a delivery agent sees Supply orders, Deliveries and Staff, and no sales
+     tiles. Type `/desk` into the address bar as a cashier: **Not part of your
+     role**, not the desk.
+7. Narrow the window to phone width.
+   - ✅ **Expected:** the sidebar folds away behind a menu button; it opens over a
+     dimmed page and closes with ✕, Escape, a click outside, or following a link.
+     The sales figure takes the first row of tiles, orders and branches the second.
+8. With Home open, ring up a sale or add a branch from the phone, then switch
+   back to the browser tab.
+   - ✅ **Expected:** the figures and the branch list catch up on their own — the
+     page refreshes when its tab comes back into view. The ↻ button beside the
+     greeting does the same on demand.
+9. Open the avatar in the top-right corner and choose **Log out**.
+   - ✅ **Expected:** back to sign-in. The browser's back button does not return to
+     Home.
+10. Click **New to HisabKitab?** and fill in sign-up. Type an email that has a
+    pending invite (Flow 7).
+    - ✅ **Expected:** the same rules as the app's sign-up — the password strength
+      bar, *Passwords do not match yet*, and for the invited email a blue line
+      naming the business and role, the business section gone, and the button
+      reading **Join <business>**. The timezone starts as this computer's
+      (`Asia/Kolkata` in India). **Privacy policy** under the button is a link and
+      opens the policy in a new tab.
+
+---
+
 ## Known limitations (not bugs — don't file these)
+
+- **The web app has sign-in, sign-up and Home only.** Every other page it lists
+  shows *Coming to the web* until it is ported; use the mobile app for that work.
+  Its Home also lacks four of the app's cards — today's punch-in, the branches to
+  chase for expenses, and the two supply-payment cards — and there is no
+  notification bell or business switcher on the web yet. A refusal there reads as
+  the plain "your role does not allow this" sentence rather than naming the roles
+  that can, until R19's explanation is ported.
+- **On the web the session lives in the browser's local storage** for seven days,
+  like the app's. Signing out on a shared computer matters: closing the tab does
+  not sign anybody out.
 
 - **No password reset and no way to change a password.** Signup, sign-in and
   sign-out are the whole of account management; somebody who forgets their

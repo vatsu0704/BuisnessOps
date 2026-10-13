@@ -1,0 +1,113 @@
+.wrap {
+  margin-bottom: var(--space-lg);
+  min-width: 0;
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.label {
+  font: var(--text-label);
+  color: var(--color-text);
+}
+
+.hint {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+}
+
+.field {
+  display: flex;
+  align-items: stretch;
+  min-height: 52px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+  transition: border-color var(--duration-quick) ease, box-shadow var(--duration-quick) ease;
+}
+
+.field:hover {
+  border-color: #d4d4d8;
+}
+
+/* The animated border is the focus indicator, so the input's own ring is off. */
+.field:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.fieldInvalid,
+.fieldInvalid:hover {
+  border-color: var(--color-error);
+}
+
+.iconBox {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text-tertiary);
+  transition: background-color var(--duration-quick) ease, color var(--duration-quick) ease;
+}
+
+.field:focus-within .iconBox {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-md);
+  border: 0;
+  background: transparent;
+  font-size: 15.5px;
+  color: var(--color-text);
+}
+
+.input:focus,
+.input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.eyeBox {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  border: 0;
+  border-left: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  transition: color var(--duration-quick) ease;
+}
+
+.eyeBox:hover {
+  color: var(--color-text-secondary);
+}
+
+.eyeBox:focus-visible {
+  box-shadow: inset var(--focus-ring);
+}
+
+.error {
+  margin-top: var(--space-sm);
+  font-size: 12.5px;
+  color: var(--color-error);
+}

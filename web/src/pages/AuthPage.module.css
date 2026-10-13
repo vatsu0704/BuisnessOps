@@ -1,0 +1,277 @@
+/* Shared by the sign-in and sign-up pages. */
+
+.page {
+  min-height: 100vh;
+}
+
+.container {
+  width: 100%;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-xl) 48px;
+}
+
+.header {
+  position: relative;
+  z-index: 2;
+}
+
+.heading {
+  font-size: 31px;
+  font-weight: 800;
+  line-height: 38px;
+  letter-spacing: -0.6px;
+  color: var(--color-text);
+}
+
+.headingBrand {
+  color: var(--color-primary);
+}
+
+.subtitle {
+  font-size: 14.5px;
+  line-height: 21px;
+  color: var(--color-text-secondary);
+}
+
+.introText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.card {
+  padding: var(--space-xl);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.cardError {
+  margin-bottom: var(--space-lg);
+}
+
+.footerCard {
+  margin-top: var(--space-lg);
+}
+
+.footerNote {
+  margin-top: var(--space-xl);
+  font-size: 12px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+}
+
+/* ---- sign in ---------------------------------------------------------------- */
+
+.loginGrid {
+  display: grid;
+  gap: var(--space-xl);
+  margin-top: var(--space-xl);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.formColumn {
+  min-width: 0;
+}
+
+/* The grid's gap already separates the divider from what is above it. */
+.divider {
+  margin-top: 0;
+}
+
+@media (min-width: 960px) {
+  .container {
+    padding-top: var(--space-xxl);
+  }
+
+  .loginGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+    align-items: center;
+    gap: 72px;
+    min-height: calc(100vh - 160px);
+    margin-top: 0;
+  }
+
+  .heading {
+    font-size: 40px;
+    line-height: 48px;
+    letter-spacing: -1px;
+  }
+
+  .subtitle {
+    max-width: 520px;
+    font-size: 16px;
+    line-height: 24px;
+  }
+}
+
+/* ---- sign up ---------------------------------------------------------------- */
+
+/*
+ * One column on a narrow window, in the app's order: intro, the form, then the
+ * "bring your data in" note. The side wrapper is `display: contents` there, so
+ * its two children are placed as rows of the grid on their own. On a wide
+ * window the wrapper becomes a sticky column beside the form.
+ */
+.signupGrid {
+  display: grid;
+  grid-template-areas:
+    'intro'
+    'form'
+    'aside';
+  gap: var(--space-xl);
+  margin-top: var(--space-xl);
+}
+
+.signupSide {
+  display: contents;
+}
+
+.signupIntro {
+  grid-area: intro;
+}
+
+.signupForm {
+  grid-area: form;
+  min-width: 0;
+}
+
+.signupAside {
+  grid-area: aside;
+}
+
+.sectionTitle {
+  margin-bottom: var(--space-lg);
+  font: var(--text-label);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.signupCard + .signupCard {
+  margin-top: var(--space-lg);
+}
+
+.fieldLabel {
+  padding: 0;
+  display: block;
+  margin-bottom: var(--space-sm);
+  font: var(--text-label);
+  color: var(--color-text);
+}
+
+/* Two across, as the app sets them: four industries make a square, and a
+   fifth would simply start a new row. Each tile grows with its label, so a
+   long translation wraps inside the tile instead of squeezing it. */
+.choiceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm);
+  /* A fieldset is min-content wide by default, which would stop the grid wrapping. */
+  min-width: 0;
+  margin: 0 0 var(--space-lg);
+  padding: 0;
+  border: 0;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  column-gap: var(--space-md);
+}
+
+.inviteBanner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 17px;
+  animation: drop var(--duration-base) var(--ease-gentle) both;
+}
+
+.inviteBanner svg {
+  flex: none;
+}
+
+.submitBlock {
+  margin-top: var(--space-lg);
+}
+
+.privacy {
+  margin-top: var(--space-md);
+  font-size: 12.5px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.privacy a {
+  font-weight: 700;
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.switchLink {
+  display: block;
+  margin-top: var(--space-xl);
+  font-size: 14px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.switchLink strong {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.switchLink:hover strong {
+  text-decoration: underline;
+}
+
+@media (min-width: 960px) {
+  .signupGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 560px);
+    grid-template-areas: 'side form';
+    column-gap: 72px;
+    margin-top: 48px;
+  }
+
+  .signupSide {
+    position: sticky;
+    top: var(--space-xxl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    grid-area: side;
+    align-self: start;
+  }
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: var(--space-lg) var(--space-lg) var(--space-xxl);
+  }
+
+  .card {
+    padding: var(--space-lg);
+  }
+}
+
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}

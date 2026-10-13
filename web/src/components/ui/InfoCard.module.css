@@ -1,0 +1,68 @@
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: left;
+}
+
+.interactive {
+  transition: transform var(--duration-quick) var(--ease-snappy), border-color var(--duration-base) ease,
+    box-shadow var(--duration-base) ease;
+}
+
+.interactive:hover {
+  border-color: #d4d4f6;
+  box-shadow: var(--shadow-md);
+}
+
+.interactive:hover .chevron {
+  color: var(--color-primary);
+  transform: translateX(2px);
+}
+
+.interactive:active {
+  transform: scale(0.98);
+}
+
+.iconTile {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.subtitle {
+  margin-top: 2px;
+  font-size: 12.5px;
+  line-height: 17px;
+  color: var(--color-text-secondary);
+}
+
+.chevron {
+  flex: none;
+  color: var(--color-text-tertiary);
+  transition: color var(--duration-base) ease, transform var(--duration-base) ease;
+}

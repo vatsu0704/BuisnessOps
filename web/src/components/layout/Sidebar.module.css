@@ -1,0 +1,163 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  border-right: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: var(--topbar-height);
+  padding: 0 var(--space-lg) 0 var(--space-xl);
+}
+
+.wordmark {
+  flex: 1;
+}
+
+.close {
+  display: none;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.close:hover {
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+.nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-sm) var(--space-md) var(--space-lg);
+}
+
+.group + .group {
+  margin-top: var(--space-lg);
+}
+
+.groupLabel {
+  padding: 0 var(--space-md) 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-height: 40px;
+  padding: 8px var(--space-md);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color var(--duration-quick) ease, color var(--duration-quick) ease;
+}
+
+.link:hover {
+  background: rgba(69, 57, 227, 0.06);
+  color: var(--color-text);
+}
+
+.linkIcon {
+  flex: none;
+}
+
+.linkLabel {
+  min-width: 0;
+}
+
+.active,
+.active:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.active::before {
+  content: '';
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: -12px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--color-primary);
+}
+
+.footer {
+  padding: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.backdrop {
+  display: none;
+}
+
+/* Below the desktop breakpoint the sidebar is a drawer over the page. */
+@media (max-width: 1023px) {
+  .sidebar {
+    width: min(var(--sidebar-width), 86vw);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-lg);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform var(--duration-base) var(--ease-gentle), visibility 0s linear var(--duration-base);
+  }
+
+  .open {
+    transform: none;
+    visibility: visible;
+    transition: transform var(--duration-base) var(--ease-gentle);
+  }
+
+  .close {
+    display: inline-flex;
+  }
+
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    display: block;
+    background: rgba(24, 24, 27, 0.45);
+    animation: fade var(--duration-base) ease;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}

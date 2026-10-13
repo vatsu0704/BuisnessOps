@@ -1,0 +1,19 @@
+.wordmark {
+  position: relative;
+  display: inline-flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  font-weight: 800;
+}
+
+.centred {
+  justify-content: center;
+}
+
+.ink {
+  color: var(--color-text);
+}
+
+.blue {
+  color: var(--color-primary);
+}

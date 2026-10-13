@@ -308,12 +308,16 @@ export default function SignupScreen({ navigation }: Props) {
               />
               {/* One sentence with the link tagged inside it, not a prefix plus
                   a link: Hindi, Gujarati and Marathi put the policy's name
-                  before the verb, so splitting it would fix the English order. */}
+                  before the verb, so splitting it would fix the English order.
+                  The tag is <policy>, never <link>: Trans parses its markup as
+                  HTML, where <link> is a void element, so it closed at once and
+                  rendered an empty link with the policy's name as plain text
+                  after it — nothing on screen was tappable. */}
               <Text style={styles.privacy}>
                 <Trans
                   i18nKey="signup.privacyNotice"
                   components={{
-                    link: (
+                    policy: (
                       <Text
                         testID="signup-privacy-policy"
                         style={styles.privacyLink}

@@ -1,0 +1,39 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  min-height: 54px;
+  padding: 14px var(--space-xl);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--gradient-brand);
+  color: var(--color-white);
+  font: var(--text-button);
+  text-align: center;
+  transition: transform var(--duration-quick) var(--ease-snappy), box-shadow var(--duration-base) ease,
+    filter var(--duration-base) ease;
+}
+
+.button:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: 0 8px 20px rgba(69, 57, 227, 0.28);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.button:disabled {
+  background: var(--gradient-disabled);
+}
+
+.button[aria-busy='true'] {
+  background: var(--gradient-brand);
+  cursor: progress;
+}
+
+.block {
+  display: flex;
+  width: 100%;
+}

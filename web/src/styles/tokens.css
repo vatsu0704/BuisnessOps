@@ -1,0 +1,78 @@
+/*
+ * Design tokens — the web copy of frontend/src/theme/index.ts and theme/motion.ts.
+ *
+ * Same names, same values, so a screen ported from the app keeps its look: read
+ * `colors.primary` there as `var(--color-primary)` here. When a value changes in
+ * the app's theme, change it here in the same commit.
+ *
+ * --color-primary is the logo's blue (brandMark.json's `blue`), so every button,
+ * chip and link matches the mark beside it.
+ */
+:root {
+  color-scheme: light;
+
+  /* colors */
+  --color-primary: #4539e3;
+  --color-primary-dark: #3a2fc4;
+  --color-primary-light: #eeedfd;
+  --color-background: #fafafb;
+  --color-surface: #ffffff;
+  --color-border: #e4e4e7;
+  --color-text: #18181b;
+  --color-text-secondary: #71717a;
+  --color-text-tertiary: #a1a1aa;
+  --color-error: #dc2626;
+  --color-error-bg: #fef2f2;
+  --color-success: #16a34a;
+  --color-success-bg: #e8f6ed;
+  --color-warning: #d97706;
+  --color-warning-bg: #fdf3e3;
+  --color-muted-bg: #f1f1f5;
+  --color-white: #ffffff;
+
+  /* The brand fill for buttons, hero cards and avatars (gradient.brand). */
+  --gradient-brand: linear-gradient(135deg, #5b4ff0 0%, var(--color-primary-dark) 100%);
+  --gradient-disabled: linear-gradient(135deg, #c7c7cc 0%, #aeaeb2 100%);
+
+  /* spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* shadow */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 18px 40px rgba(24, 24, 27, 0.14);
+
+  /* typography */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Nirmala UI', 'Helvetica Neue', Arial,
+    sans-serif;
+  --text-title: 700 28px / 1.2 var(--font-sans);
+  --text-label: 600 13px / 1.3 var(--font-sans);
+  --text-button: 600 16px / 1.2 var(--font-sans);
+
+  /* motion (theme/motion.ts) */
+  --duration-quick: 150ms;
+  --duration-base: 260ms;
+  --duration-slow: 420ms;
+  --stagger: 70ms;
+  /* The app's springs, approximated as curves: gentle settles, snappy overshoots. */
+  --ease-gentle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-snappy: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* layout */
+  --sidebar-width: 264px;
+  --topbar-height: 64px;
+  --content-max: 1180px;
+  --focus-ring: 0 0 0 3px rgba(69, 57, 227, 0.28);
+}

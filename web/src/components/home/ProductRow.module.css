@@ -1,0 +1,98 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.interactive {
+  transition: border-color var(--duration-quick) ease, transform var(--duration-quick) var(--ease-snappy);
+}
+
+.interactive:hover {
+  border-color: #d4d4f6;
+}
+
+.interactive:hover .chevron {
+  color: var(--color-primary);
+}
+
+.interactive:active {
+  transform: scale(0.99);
+}
+
+/* Takes the leftover width, so a long name truncates instead of pushing the price out. */
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* The pill drops under the name when both do not fit, rather than truncating
+   the name to make room for it. */
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-xs);
+  min-width: 0;
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pill {
+  flex: none;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.meta {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A figure never wraps, but "No price set" may — it runs long in Gujarati, and
+   without a ceiling it would take the name's room. */
+.priceCol {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 40%;
+  text-align: right;
+}
+
+.price {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.overridden {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.chevron {
+  flex: none;
+  color: var(--color-text-tertiary);
+  transition: color var(--duration-quick) ease;
+}

@@ -328,7 +328,7 @@
     "dataSubtitle": "Upload sales history from CSV or Excel once your account is set up.",
     "haveAccount": "Already have a {{appName}} account?",
     "logIn": "Log in",
-    "privacyNotice": "By creating an account you agree to the <link>Privacy policy</link>."
+    "privacyNotice": "By creating an account you agree to the <policy>Privacy policy</policy>."
   },
   "industry": {
     "RETAIL": "Retail",

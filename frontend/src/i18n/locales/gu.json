@@ -328,7 +328,7 @@
     "dataSubtitle": "ખાતું તૈયાર થયા પછી CSV અથવા Excel માંથી વેચાણ ઇતિહાસ અપલોડ કરો.",
     "haveAccount": "પહેલેથી {{appName}} ખાતું છે?",
     "logIn": "લૉગ ઇન કરો",
-    "privacyNotice": "ખાતું બનાવીને તમે <link>ગોપનીયતા નીતિ</link> સાથે સહમત થાઓ છો."
+    "privacyNotice": "ખાતું બનાવીને તમે <policy>ગોપનીયતા નીતિ</policy> સાથે સહમત થાઓ છો."
   },
   "industry": {
     "RETAIL": "રિટેલ",

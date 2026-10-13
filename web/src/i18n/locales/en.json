@@ -1,0 +1,44 @@
+{
+  "common": {
+    "back": "Back"
+  },
+  "form": {
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
+  },
+  "shell": {
+    "skipToContent": "Skip to content",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "mainNav": "Main navigation",
+    "accountMenu": "Account menu",
+    "loading": "Opening {{appName}}…"
+  },
+  "nav": {
+    "overview": "Overview",
+    "branch": "Branch",
+    "supply": "Supply",
+    "people": "People",
+    "supplyOrders": "Supply orders"
+  },
+  "language": {
+    "change": "Change language"
+  },
+  "home": {
+    "shortcuts": "Shortcuts",
+    "refresh": "Refresh"
+  },
+  "comingSoon": {
+    "badge": "Coming to the web",
+    "body": "This part of {{appName}} already works in the mobile app and is on its way to the web. Until it lands here, use the app on your phone.",
+    "backHome": "Back to Home"
+  },
+  "noAccess": {
+    "title": "Not part of your role",
+    "body": "Your role in this business does not include this page. If you need it, ask an owner or an admin."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "There is nothing at this address. The link may be mistyped, or the page may have moved."
+  }
+}

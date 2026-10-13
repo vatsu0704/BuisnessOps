@@ -93,9 +93,10 @@ about where a name may live, not just what it is:
 | --- | --- |
 | `backend/` | Express API in **JavaScript** (not TypeScript), Prisma + PostgreSQL |
 | `frontend/` | Expo / React Native app in TypeScript |
+| `web/` | React + Vite web app in TypeScript, being brought to parity with `frontend/` — see *Web app* |
 | `Docs/` | Project documents — see *Project documents* above |
 | `postman/` | API collection covering auth and data ingestion |
-| `.github/workflows/ci.yml` | Backend tests, migration check, frontend type-check |
+| `.github/workflows/ci.yml` | Backend tests, migration check, frontend type-check, web type-check and build |
 
 ## Commands
 
@@ -117,14 +118,23 @@ Frontend (from `frontend/`):
 | `npm run lint` | Type-check (`tsc --noEmit`) — the type gate, despite the name |
 | `npm start` | Metro for an existing dev build |
 | `npm run android` | Build the native app and install it on a connected device |
-| `npm run web` | Browser preview, useful for quick UI checks |
+| `npm run web` | The **mobile app** in a browser, through Expo — not the web app in `web/` |
 | `npm run build:play -- --api-url https://…/api` | The `.aab` Google Play takes. Refuses a non-https or local API address, a missing signing key, a Firebase file for another package; then checks the bundle. See `Docs/PLAY_STORE_RELEASE.md` |
+
+Web (from `web/`, serves on port 5173):
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | The web app with hot reload |
+| `npm run lint` | Type-check (`tsc -b`), which also compiles the files it shares with `frontend/` |
+| `npm run lint:i18n` | The web's own strings in all four languages, and no `<Trans>` tag named after a void HTML element in any translation it reads |
+| `npm run build` | Type-check, then the production bundle in `dist/` |
 
 ## Running the app
 
-Vatsal runs both dev servers himself, in his own terminal — backend's `npm run
-dev` and frontend's `npm run android` / Metro. **Never start or restart either
-one.** If a task mechanically requires a currently-running one to stop first
+Vatsal runs the dev servers himself, in his own terminal — backend's `npm run
+dev`, frontend's `npm run android` / Metro, and `web/`'s `npm run dev`. **Never
+start or restart any of them.** If a task mechanically requires a currently-running one to stop first
 (e.g. releasing the Windows file lock on the Prisma query engine DLL so
 `prisma generate` can complete), stop it, say so plainly, and leave it
 stopped for him to restart — don't start it back up yourself.
@@ -484,6 +494,15 @@ user-facing string** — render it with `t('section.key')` from
   write `getHours()` in a component, the helper already exists.
 - The Hindi, Gujarati and Marathi files were written without a native-speaker
   review. Treat wording fixes from a speaker as expected, not as defects.
+- **The web app reads these same files** (see *Web app*), so a key renamed or
+  removed here is renamed or removed there too, and `web/`'s `npm run lint`
+  fails on any key it still uses.
+- **Never name a `<Trans>` tag after a void HTML element** — `link`, `br`, `img`,
+  `input`, `hr` and the rest. react-i18next parses the markup as HTML, so
+  `<link>Privacy policy</link>` closed at `<link>` and rendered an empty link
+  with the words as plain text beside it: sign-up's privacy link was untappable
+  until it became `<policy>`. Neither `tsc` nor `lint:i18n` here can see it;
+  `web/`'s `lint:i18n` checks every shared translation for it.
 
 **Three files are allowed to break this, and all of them are fenced.** Each one
 earns it the same way — the rule's premise stops being true, rather than being
@@ -534,6 +553,44 @@ at the point you throw it:
   cannot catch it, because the key is assembled at runtime.
 - Anything that varies travels in `params`, never baked into the sentence — a
   translated sentence puts its numbers in a different place.
+
+## Web app
+
+`web/` is the browser version, React 19 + Vite + React Router, against the same
+API. It is being ported screen by screen; `Docs/PROJECT_FLOW.md` section 15 says
+which screens are on the web, and every one that is not yet renders a "coming to
+the web" page at its real route, so the navigation is already the finished one.
+`web/README.md` has the layout and the commands.
+
+- **It reads the mobile app's data, it does not copy it.** `@shared/` is
+  `frontend/src`, and the web imports the four locale files, `permissions/index.ts`
+  with `matrix.json`, `constants/brand.ts`, `constants/brandMark.json`,
+  `utils/format.ts` and `utils/validation.ts` from there. A third copy of the
+  matrix or the translations would drift exactly as the mirror is checked not to.
+- **So those files may import nothing but their own siblings** — the same fence as
+  `permissions/catalog.js`. The web compiles them with its own toolchain, where
+  `@/` means `web/src` and React Native does not exist; one `@/` import or one
+  `expo-*` import in them breaks the web build with an error that points at the
+  web, not at the line that caused it. `web/`'s `npm run lint` is the check.
+- **Every convention in this file applies there too**: capabilities never role
+  names (`passesGate` with the same `{ holds, unless }` shape as Home), no
+  hardcoded strings (web-only wording goes in `web/src/i18n/locales` under
+  `web.*`, in all four languages), shared server data in a zustand store with
+  `loadedFor`, and the design looked at — at 320, 390, 820 and 1440 wide, in
+  Gujarati — before a screen is called done.
+- **The web is not React Native**, so the reasons behind a few app rules do not
+  hold there, and it should not imitate the workaround: it has a full `Intl`
+  (it fills sign-up's timezone from the browser), a real `localStorage`, CSS
+  `gap` and container queries. It still reads the locale files with
+  `compatibilityJSON: 'v3'`, because the files are the app's.
+- **Its storage keys are `hisabkitab_*`, not `biziq_*`.** The app keeps its old
+  key names only because renaming them would sign out every installed copy; the
+  web had no installed copies to sign out. The token lives in `localStorage`,
+  which is what a bearer-token API leaves a browser — an httpOnly cookie would
+  need the backend to issue one.
+- **`VITE_API_URL` is inlined at build time**, the same trap as
+  `EXPO_PUBLIC_API_URL`. Serve the build from an origin the backend's
+  `CORS_ORIGINS` allows once that is set.
 
 ## Native Android builds
 

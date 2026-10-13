@@ -1,0 +1,41 @@
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-xl);
+  border-radius: var(--radius-xl);
+  background: var(--gradient-brand);
+  box-shadow: var(--shadow-md);
+}
+
+.icon {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  color: var(--color-white);
+  opacity: 0.16;
+}
+
+.eyebrow {
+  position: relative;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.title {
+  position: relative;
+  margin-top: var(--space-sm);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-white);
+}
+
+.subtitle {
+  position: relative;
+  margin-top: var(--space-xs);
+  font-size: 13px;
+  line-height: 19px;
+  color: rgba(255, 255, 255, 0.86);
+}

@@ -1,0 +1,76 @@
+.card {
+  padding: var(--space-lg);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.link {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  margin-right: -8px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.link:hover {
+  background: var(--color-primary-light);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-lg) var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+}
+
+a.empty:hover {
+  background: var(--color-background);
+  color: var(--color-primary);
+}
+
+.error {
+  margin-bottom: var(--space-sm);
+  font-size: 12.5px;
+  color: var(--color-error);
+}
+
+.more {
+  margin-top: var(--space-sm);
+  font-size: 12.5px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+}

@@ -328,7 +328,7 @@
     "dataSubtitle": "खाता तैयार होने के बाद CSV या Excel से बिक्री इतिहास अपलोड करें।",
     "haveAccount": "पहले से {{appName}} खाता है?",
     "logIn": "लॉग इन करें",
-    "privacyNotice": "खाता बनाकर आप <link>गोपनीयता नीति</link> से सहमत होते हैं।"
+    "privacyNotice": "खाता बनाकर आप <policy>गोपनीयता नीति</policy> से सहमत होते हैं।"
   },
   "industry": {
     "RETAIL": "रिटेल",
