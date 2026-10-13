@@ -1,4 +1,4 @@
-import { roleHas, type Capability } from '@/permissions';
+import { planAllows, planHasFeature, roleHas, type Capability, type PlanFeature } from '@/permissions';
 import type { Membership, User } from '@/types/user';
 
 /**
@@ -62,13 +62,40 @@ function isActive(membership: Membership | undefined): membership is Membership 
 }
 
 /**
+ * Does this membership's business plan unlock the capability (requirement 28)?
+ *
+ * A membership from a server that predates plans carries no subscription; that
+ * server enforces no plan, so nothing is narrowed rather than everything.
+ */
+function planUnlocks(m: Membership, capability: Capability): boolean {
+  const plan = m.business?.subscription?.plan;
+  return !m.business?.subscription || planAllows(plan, capability);
+}
+
+/**
  * The one check every screen should use.
  *
  * A revoked membership holds nothing, whatever its role says — that check lived
  * inside each `can.*` entry before and is now in exactly one place.
+ *
+ * Role AND plan, the same two questions the server asks on every request: a
+ * feature the business's plan does not include disappears the way a capability
+ * the role lacks does, so a control that renders is still a control whose
+ * request will succeed.
  */
 export function hasCapability(m: Membership | undefined, capability: Capability): boolean {
-  return isActive(m) && roleHas(m.role, capability);
+  return isActive(m) && roleHas(m.role, capability) && planUnlocks(m, capability);
+}
+
+/** A plan feature no capability can express — vendors, FOCO branches. */
+export function hasPlanFeature(m: Membership | undefined, feature: PlanFeature): boolean {
+  if (!isActive(m)) return false;
+  return !m.business?.subscription || planHasFeature(m.business.subscription.plan, feature);
+}
+
+/** Has this business's plan run out, so nothing new can be saved? */
+export function isReadOnly(m: Membership | undefined): boolean {
+  return m?.business?.subscription?.state === 'READ_ONLY';
 }
 
 /**
@@ -107,6 +134,8 @@ export const can = {
    * one tap and keeps Settings meaning "this business".
    */
   createBusiness: (m: Membership | undefined) => hasCapability(m, 'business:create'),
+  /** See this business's plan and when it renews — the owner's alone (requirement 28). */
+  manageBilling: (m: Membership | undefined) => hasCapability(m, 'billing:manage'),
   /** See the catalog. Everyone who can sell or price something needs this. */
   viewProducts: (m: Membership | undefined) => hasCapability(m, 'product:view'),
   /** Add, edit and price products — including a branch's own (requirement 4). */

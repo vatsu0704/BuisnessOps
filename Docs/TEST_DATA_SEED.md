@@ -37,6 +37,13 @@ is March to September 2026. The window moves with the date the script is run.
   picked up the same way.
 - The servers can stay running. The app reads the new rows straight away: pull
   down to refresh, or switch tabs.
+- **It does not touch either business's plan** (requirement 28). The subscriptions
+  migration gave both a 30-day Franchise trial from the day it was applied; after
+  that and 7 days of grace they turn read-only and the seeded supply orders,
+  warehouse and Reports stop accepting changes. To keep testing, put them on a plan
+  with `backend/scripts/dev-plan.sql` (`v_state := 'paid'`, `v_plan := 'FRANCHISE'`),
+  or with `backend/scripts/set-plan.js` (`Docs/DEPLOYMENT.md`, *Changing a business's
+  plan*), e.g. `--plan FRANCHISE --branches 10 --until 2027-12-31 --actor dev`.
 
 ## Running it
 

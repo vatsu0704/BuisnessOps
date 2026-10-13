@@ -252,6 +252,23 @@ scoped.post('/staff', requirePermission('staff:create'), staffController.createS
   though vendors are otherwise the desk's: the vendor edit route ignores a `upiId`
   in its body by picking fields, and a test proves the desk is refused. Every
   change stamps who and when beside the value.
+- **A business's plan is a second allow-list, and it is asked beside the role,
+  never instead of it** (requirement 28). `permissions/plans.js` — pure data,
+  requiring only `./catalog`, mirrored into `matrix.json` under `plans` and compared
+  by `lint:permissions` — says which capabilities each plan unlocks, two *features*
+  no capability can express (`vendors`, `focoBranches`), and which roles each plan
+  may invite. `tenantCan` and the app's `hasCapability` answer role AND plan, so an
+  owner's `'*'` is narrowed too; `requirePermission` asks them separately so the
+  refusal says which (`PERMISSION_DENIED` names the roles, `PLAN_FEATURE_LOCKED` the
+  plan). Never write `plan === 'GROWTH'`: ask for the capability. Lower plans are
+  explicit lists and Franchise is `'*'`, so a new capability lands on the top plan
+  only until somebody places it — **decide its plan in the same change**. Moving down
+  a plan never takes away what exists; it stops more being created.
+- **Read-only fails closed.** A lapsed plan refuses every write in `resolveTenant`
+  except the short `READ_ONLY_EXEMPT` list (taking access away, clearing one's own
+  notifications). A new write route is refused while read-only without anyone
+  remembering it — add it to that list only if a business that has stopped paying
+  must still be able to do it. Reads and exports always work.
 - **Confirming money is not running the desk.** `supplyPayment:verify` was split
   out of `supplyOrder:fulfil` so the accountant could say a payment arrived without
   being able to accept, pack or dispatch. The desk holds both. When a role needs
@@ -572,7 +589,8 @@ the web" page at its real route, so the navigation is already the finished one.
   `notification.ts`, `navigation/routeCapabilities.ts`, the brand name and mark,
   and the pure helpers — `utils/format.ts`, `validation.ts`, `date.ts`,
   `upiUri.ts`, `expenseCategory.ts`, `hooks/useMonthCursor.ts`,
-  `constants/salesTemplate.ts`. A second copy of any of them would drift exactly
+  `constants/salesTemplate.ts`, `constants/plans.ts` (how a plan is described, and
+  when Home's plan banner shows). A second copy of any of them would drift exactly
   as the mirrors are checked not to.
 - **So a shared file imports only relative paths and four packages** — `i18next`,
   `react`, `react-dom`, `react-i18next` — the same fence as

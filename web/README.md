@@ -68,12 +68,14 @@ web/
 │                           shots/ (the screenshot harness: run, scenarios, pretend API)
 └── src/
     ├── api/                axios client, error translation, one file per resource
-    ├── components/
+    ├── components/         BusinessFields, ExportActions (requirement 17's card), LanguageMenu, …
     │   ├── brand/          BrandMark, Wordmark
     │   ├── branches/       BranchPicker; the two branch forms' shared fields — kind and
     │   │                   payment model, the geofence card and its rules (geofence.ts)
     │   ├── home/           Home's sections
     │   ├── products/       ProductRow, and the catalog rules (grouping, search, a branch's price)
+    │   ├── reports/        Reports' cards, the month strip and bars, the branch × month table,
+    │   │                   and its rules (ranking, the month's reconciliation)
     │   ├── upload/         TemplateGuide, and what an import's answer means
     │   ├── layout/         AppShell, Sidebar, TopBar, UserMenu, AuthHeader, ScreenBackground
     │   └── ui/             FormInput, FormTextArea, DateField, SearchField, FileDrop,
@@ -88,7 +90,8 @@ web/
     ├── permissions/        re-exports the shared matrix
     ├── routes/             paths (every route and who may open it), pages (what each shows),
     │                       AppRoutes, guards (RequireAuth, GuestOnly, RequireAccess)
-    ├── store/              zustand: authStore, branchStore, salesStore, notificationStore
+    ├── store/              zustand: authStore, branchStore, salesStore, notificationStore,
+    │                       analyticsStore (keyed on the business and the month window)
     ├── styles/             tokens.css (the app's theme as CSS variables), global.css
     ├── theme/              motion values JavaScript needs
     ├── types/

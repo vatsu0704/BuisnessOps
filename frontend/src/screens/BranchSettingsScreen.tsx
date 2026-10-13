@@ -20,7 +20,8 @@ import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
 import { getCurrentCoords } from '@/utils/location';
-import { useBusinessId } from '@/hooks/useBusinessId';
+import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
+import { hasPlanFeature } from '@/utils/permissions';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'BranchSettings'>;
 
@@ -41,6 +42,7 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
   const businessId = useBusinessId();
   const { branchId } = route.params;
+  const planHasFoco = hasPlanFeature(useMembership(), 'focoBranches');
 
   const [branch, setBranch] = useState<Branch | null>(null);
   const [kind, setKind] = useState<BranchKind>('BRANCH');
@@ -226,14 +228,20 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
                       <Text style={styles.sectionTitle}>{t('addBranch.model')}</Text>
                       <Text style={styles.hint}>{t('branchSettings.modelHint')}</Text>
                       <View style={styles.modelList}>
-                        <OptionRow
-                          testID="branch-settings-model-FOCO"
-                          title={t('addBranch.modelFoco')}
-                          description={t('addBranch.modelFocoHint')}
-                          icon="business-outline"
-                          selected={operatingModel === 'FOCO'}
-                          onPress={() => setOperatingModel('FOCO')}
-                        />
+                        {/* Requirement 28: making a branch company-operated is
+                            part of Franchise. A branch that already is one keeps
+                            the option on any plan — moving down a plan never
+                            takes away what exists. */}
+                        {planHasFoco || branch?.operatingModel === 'FOCO' ? (
+                          <OptionRow
+                            testID="branch-settings-model-FOCO"
+                            title={t('addBranch.modelFoco')}
+                            description={t('addBranch.modelFocoHint')}
+                            icon="business-outline"
+                            selected={operatingModel === 'FOCO'}
+                            onPress={() => setOperatingModel('FOCO')}
+                          />
+                        ) : null}
                         <OptionRow
                           testID="branch-settings-model-FM"
                           title={t('addBranch.modelFm')}
@@ -243,6 +251,7 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
                           onPress={() => setOperatingModel('FM')}
                         />
                       </View>
+                      {planHasFoco ? null : <Text style={styles.planNote}>{t('plans.focoOnFranchise')}</Text>}
                     </View>
                   </AnimatedEntrance>
                 ) : null}
@@ -417,6 +426,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
   kindRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   modelList: { gap: spacing.xs, marginTop: spacing.sm },
+  planNote: { fontSize: 12.5, lineHeight: 17, color: colors.textTertiary, marginTop: spacing.sm },
   subLabel: {
     fontSize: 12,
     fontWeight: '700',

@@ -8,5 +8,14 @@
  * is a control whose request will succeed. Never check a role name — ask for a
  * capability, exactly as the app does.
  */
-export { roleHas, CAPABILITIES, ROLES } from '@shared/permissions';
-export type { Capability, Role } from '@shared/permissions';
+export {
+  roleHas,
+  CAPABILITIES,
+  ROLES,
+  PLANS,
+  planAllows,
+  planAllowsRole,
+  planHasFeature,
+  cheapestPlanFor,
+} from '@shared/permissions';
+export type { Capability, Role, Plan, PlanFeature } from '@shared/permissions';

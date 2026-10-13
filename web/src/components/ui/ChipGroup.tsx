@@ -14,6 +14,8 @@ type Props<V extends string> = {
   name: string;
   /** Visible label above the chips; also the group's accessible name. */
   label?: string;
+  /** Keep the label for screen readers only — when the page around it already says what it is. */
+  hideLabel?: boolean;
   options: ChipOption<V>[];
   value: V | null;
   onChange: (value: V) => void;
@@ -27,10 +29,18 @@ type Props<V extends string> = {
  * (it broke that way twice in the app); nothing here breaks however long a
  * translation runs.
  */
-export default function ChipGroup<V extends string>({ name, label, options, value, onChange, disabled }: Props<V>) {
+export default function ChipGroup<V extends string>({
+  name,
+  label,
+  hideLabel,
+  options,
+  value,
+  onChange,
+  disabled,
+}: Props<V>) {
   return (
     <fieldset className={styles.group} disabled={disabled}>
-      {label ? <legend className={styles.label}>{label}</legend> : null}
+      {label ? <legend className={cx(styles.label, hideLabel && 'visually-hidden')}>{label}</legend> : null}
       <div className={styles.chips}>
         {options.map((option) => {
           const selected = option.value === value;

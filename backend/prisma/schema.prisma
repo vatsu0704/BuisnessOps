@@ -163,6 +163,9 @@ model Business {
   expenseCategories     ExpenseCategory[]
   expenses              Expense[]
   notifications         Notification[]
+  // Requirement 28. Exactly one per business, created with it.
+  subscription          Subscription?
+  billingEvents         BillingEvent[]
 
   @@map("businesses")
 }
@@ -1456,4 +1459,106 @@ model NotificationPreference {
 
   @@unique([userId, category])
   @@map("notification_preferences")
+}
+
+// ---------------------------------------------------------------------------
+// Subscription plans (requirement 28, Task 13)
+// ---------------------------------------------------------------------------
+// What a business pays for: a plan, multiplied by its active trading branches.
+// What each plan UNLOCKS is code — src/permissions/plans.js, as data beside the
+// role matrix. What each plan COSTS is not stored anywhere in the app; it is a
+// commercial decision recorded in Docs/REQUIREMENTS.md R28.
+
+// Cheapest first, matching PLANS in src/permissions/plans.js.
+enum SubscriptionPlan {
+  STARTER
+  GROWTH
+  FRANCHISE
+}
+
+// Only the states somebody DECIDES. Grace and read-only are not here: they
+// follow from a date passing, and are derived from trialEndsAt /
+// currentPeriodEnd at request time (src/billing/access.js). Stored, they would
+// need a scheduled job to flip them — the repo has no job runner, and a job that
+// failed to run would leave a lapsed business open, or a paid one shut.
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  CANCELLED
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum BillingEventType {
+  TRIAL_STARTED
+  PLAN_SET
+  CANCELLED
+}
+
+model Subscription {
+  id         String   @id @default(uuid())
+  // One per business. The plan belongs to the tenant, not to the owner's
+  // account: one account can own several businesses (requirement 16), and each
+  // is on its own plan, checked by the same resolveTenant that resolves it.
+  businessId String   @unique
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  plan     SubscriptionPlan
+  status   SubscriptionStatus
+  interval BillingInterval?
+
+  // How many ACTIVE trading branches (kind BRANCH) have been paid for. A
+  // warehouse is free and an INACTIVE or CLOSED branch is not billed, so neither
+  // counts. Null means no limit, which is the trial: the owner is meant to try
+  // the whole product, branches included.
+  paidBranchCount Int?
+
+  // A trial ends at trialEndsAt; a paid plan at currentPeriodEnd. Either way the
+  // business has GRACE_DAYS more of full access before it turns read-only.
+  trialEndsAt      DateTime?
+  currentPeriodEnd DateTime?
+
+  // The payment gateway's ids, for stage 2. Until then a plan is set by
+  // scripts/set-plan.js after a UPI or bank payment, and these stay null.
+  provider               String?
+  providerSubscriptionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("subscriptions")
+}
+
+// Every change to a subscription, and the payment behind it. Append-only: the
+// Subscription row says what is true now, this says how it got that way and
+// who did it — which matters most for the changes made by hand.
+model BillingEvent {
+  id         String           @id @default(uuid())
+  businessId String
+  business   Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type       BillingEventType
+
+  plan            SubscriptionPlan?
+  paidBranchCount Int?
+  interval        BillingInterval?
+  periodEnd       DateTime?
+
+  // The payment, when there was one. `reference` is the UPI reference or the
+  // bank UTR the money arrived under, so a plan can always be traced to it.
+  amount    Decimal? @db.Decimal(12, 2)
+  currency  String?
+  reference String?
+  note      String?
+
+  // Who made the change. Not a membership: the operator running set-plan.js is
+  // not a member of the business, and the trial is started by nobody.
+  actor String
+
+  createdAt DateTime @default(now())
+
+  @@index([businessId, createdAt])
+  @@map("billing_events")
 }

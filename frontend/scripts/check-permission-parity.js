@@ -134,6 +134,52 @@ if (mirror.singleBranchRole !== SINGLE_BRANCH_ROLE) {
   problems.push(`singleBranchRole "${SINGLE_BRANCH_ROLE}" is not a role in the matrix`);
 }
 
+// --- 5a. What each subscription plan unlocks (requirement 28) --------------
+// The second allow-list beside the role matrix. The backend asks role AND plan
+// on every request; the app asks the same two questions before rendering a
+// control. A drift here is the same failure as a drifted role — a button that
+// 403s, or a feature the owner paid for and cannot find — so it is compared the
+// same way. ./plans requires only ./catalog, which is what makes this require
+// safe from inside frontend/.
+const PLANS_FILE = path.join(BACKEND, 'src', 'permissions', 'plans.js');
+if (!fs.existsSync(PLANS_FILE)) {
+  problems.push(`cannot find the backend plan catalog at ${PLANS_FILE}`);
+} else {
+  const backendPlans = require(PLANS_FILE);
+  const mirrorPlans = mirror.plans ?? {};
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const sortedOrStar = (list) => (list === '*' ? '*' : [...(list ?? [])].sort());
+
+  if (!same(backendPlans.PLANS, mirrorPlans.order)) {
+    problems.push(`plans.order is ${JSON.stringify(mirrorPlans.order)} in the mirror, ${JSON.stringify(backendPlans.PLANS)} in the backend`);
+  }
+  for (const [label, backendMap, mirrorMap] of [
+    ['capabilities', backendPlans.PLAN_CAPABILITIES, mirrorPlans.capabilities],
+    ['features', backendPlans.PLAN_FEATURES, mirrorPlans.features],
+    ['roles', backendPlans.PLAN_ROLES, mirrorPlans.roles],
+  ]) {
+    for (const plan of backendPlans.PLANS) {
+      if (!same(sortedOrStar(backendMap[plan]), sortedOrStar(mirrorMap?.[plan]))) {
+        problems.push(`plan ${plan}'s ${label} differ between the backend and the mirror`);
+      }
+    }
+  }
+  for (const [key, value] of [
+    ['trialPlan', backendPlans.TRIAL_PLAN],
+    ['trialDays', backendPlans.TRIAL_DAYS],
+    ['graceDays', backendPlans.GRACE_DAYS],
+  ]) {
+    if (mirrorPlans[key] !== value) problems.push(`plans.${key} is ${mirrorPlans[key]} in the mirror, ${value} in the backend`);
+  }
+  // A plan naming a role the matrix does not have would offer an invite the
+  // server refuses.
+  for (const [plan, roles] of Object.entries(backendPlans.PLAN_ROLES)) {
+    for (const role of roles) {
+      if (!ROLE_CAPABILITIES[role]) problems.push(`plan ${plan} lets a business invite "${role}", which is not a role`);
+    }
+  }
+}
+
 // --- 6. Every capability can explain its own refusal (requirement 19) ------
 // A 403 now renders as "Only Warehouse can accept, pack and dispatch a supply
 // order", built from the capability the server sent plus this app's mirror of the
@@ -207,6 +253,6 @@ if (problems.length) {
 
 console.log(
   `Permission parity OK — ${backendCaps.length} capabilities across ${backendRoles.length} roles match, ` +
-    `${SINGLE_BRANCH_ROLE} is the single-branch role on both sides, and every ` +
-    `capability can explain its own refusal.`
+    `${SINGLE_BRANCH_ROLE} is the single-branch role on both sides, the plans unlock the same ` +
+    `things on both sides, and every capability can explain its own refusal.`
 );

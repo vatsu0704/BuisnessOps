@@ -2,7 +2,7 @@
 // is shared with the web app, which configures the same singleton its own way.
 import i18n from 'i18next';
 import matrix from './matrix.json';
-import { CAPABILITIES, ROLES, roleHas, type Capability, type Role } from './index';
+import { CAPABILITIES, PLANS, ROLES, roleHas, type Capability, type Plan, type Role } from './index';
 
 /**
  * Requirement 19 — a refusal says what the rule is, not that a rule exists.
@@ -80,6 +80,7 @@ const ACTION_KEYS: Record<Capability, ActionKey> = {
   'analytics:viewBusiness': 'permissions.actions.analyticsViewBusiness',
   'export:dayEnd': 'permissions.actions.exportDayEnd',
   'export:monthEnd': 'permissions.actions.exportMonthEnd',
+  'billing:manage': 'permissions.actions.billingManage',
 };
 
 /** Is this string one of the capabilities this build knows about? */
@@ -133,4 +134,45 @@ export function explainPermissionDenied(capability: unknown): string | null {
     action,
     roles: holders.join(i18n.t('permissions.roleJoin')),
   });
+}
+
+const PLAN_FEATURE_ACTIONS = {
+  vendors: 'plans.featureAction.vendors',
+  focoBranches: 'plans.featureAction.focoBranches',
+} as const;
+
+function isPlan(value: unknown): value is Plan {
+  return typeof value === 'string' && (PLANS as string[]).includes(value);
+}
+
+/** A plan's name in the reader's language — "Growth", "ग्रोथ". */
+export function planName(plan: Plan): string {
+  return i18n.t(`plans.name.${plan}` as 'errors.unexpected');
+}
+
+/**
+ * Requirement 28 — a refusal because the business's PLAN does not include
+ * something, as a sentence: "To accept, pack and dispatch a supply order, this
+ * business needs the Growth plan."
+ *
+ * The server sends the capability (or the feature no capability can express)
+ * and the cheapest plan that includes it. The action phrase is the same one the
+ * role refusal uses, so the two sentences describe the same action the same way
+ * and differ only in what is missing. Null for anything this build cannot name,
+ * so the caller falls back to the plain translated message.
+ */
+export function explainPlanLocked(params: Record<string, unknown> | undefined): string | null {
+  const requiredPlan = params?.requiredPlan;
+  if (!isPlan(requiredPlan)) return null;
+
+  let actionKey: string | undefined;
+  if (isCapability(params?.capability)) actionKey = ACTION_KEYS[params.capability];
+  else if (typeof params?.feature === 'string' && params.feature in PLAN_FEATURE_ACTIONS) {
+    actionKey = PLAN_FEATURE_ACTIONS[params.feature as keyof typeof PLAN_FEATURE_ACTIONS];
+  }
+  if (!actionKey) return null;
+
+  const action = i18n.t(actionKey as 'errors.unexpected', { defaultValue: '' });
+  if (!action) return null;
+  return i18n.t('plans.locked', { action, plan: planName(requiredPlan) });
 }

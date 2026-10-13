@@ -26,7 +26,7 @@ import {
 import { monthKeyLabel } from '@/utils/date';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { useAuthStore } from '@/store/authStore';
-import { roleHas } from '@/permissions';
+import { hasCapability } from '@/utils/permissions';
 import { colors, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 import type { BranchMonthlyRow } from '@/types/analytics';
@@ -82,10 +82,9 @@ export default function ReportsScreen() {
   const user = useAuthStore((s) => s.user);
   const readableBusinessCount = useMemo(
     () =>
-      (user?.memberships ?? []).filter(
-        (membership) =>
-          membership.status === 'ACTIVE' && roleHas(membership.role, 'analytics:viewBusiness')
-      ).length,
+      // Role AND plan (requirement 28), the same filter the server applies to
+      // the roll-up, so the comparison is offered only when it will have rows.
+      (user?.memberships ?? []).filter((membership) => hasCapability(membership, 'analytics:viewBusiness')).length,
     [user]
   );
 

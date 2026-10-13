@@ -2,7 +2,7 @@ const express = require('express');
 const vendorController = require('../controllers/vendor.controller');
 const { requireAuth } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenant');
-const { requirePermission } = require('../middleware/rbac');
+const { requirePermission, requirePlanFeature } = require('../middleware/rbac');
 
 /**
  * Third-party vendors and payees — requirements 25 and 26.
@@ -20,7 +20,16 @@ scoped.use(requireAuth, resolveTenant);
 // catalog: anyone who can see what may be ordered can see who supplies it, and
 // the desk that runs the catalog adds and withdraws suppliers.
 scoped.get('/vendors', requirePermission('supplyItem:view'), vendorController.listVendors);
-scoped.post('/vendors', requirePermission('supplyItem:manage'), vendorController.createVendor);
+// Adding a vendor is part of the Franchise plan (requirement 28). Editing,
+// withdrawing and paying one that already exists are not gated by the plan: a
+// business that moves down keeps the vendors it has, and must be able to wind
+// them down.
+scoped.post(
+  '/vendors',
+  requirePermission('supplyItem:manage'),
+  requirePlanFeature('vendors'),
+  vendorController.createVendor
+);
 scoped.patch('/vendors/:vendorId', requirePermission('supplyItem:manage'), vendorController.updateVendor);
 
 // --- Where the money goes ------------------------------------------------------

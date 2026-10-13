@@ -70,6 +70,24 @@ const API_MESSAGES = {
   PAY_CHANGE_NOT_PERMITTED: 'You are not allowed to change pay',
   MEMBERSHIP_REVOKE_OUTRANKED: 'You cannot remove someone with equal or greater access than your own',
 
+  // --- The subscription (requirement 28) -----------------------------------
+  // Each says what the rule is, as requirement 19 asks of every refusal: which
+  // plan the thing is part of, not merely that it is unavailable. The plan
+  // travels as its code (`requiredPlan: 'GROWTH'`) and the app names it in the
+  // reader's language. PLAN_FEATURE_LOCKED also carries the `capability` or the
+  // `feature` that was refused, so the app can name the action too, the way it
+  // does for PERMISSION_DENIED.
+  PLAN_FEATURE_LOCKED:
+    "This is part of the {{requiredPlan}} plan, and this business is not on it. The business's owner can change the plan",
+  PLAN_ROLE_NOT_INCLUDED:
+    '{{role}} is part of the {{requiredPlan}} plan, and this business is not on it, so nobody can be invited as one',
+  PLAN_BRANCH_LIMIT:
+    "This business's plan covers {{paidBranchCount}} branch(es), and they are all in use. The owner can add branches to the plan, or close one first",
+  // 402 Payment Required. Reads and exports keep working, which is the half of
+  // this sentence that stops somebody panicking about their data.
+  SUBSCRIPTION_READ_ONLY:
+    "This business's plan has ended, so nothing new can be saved. Everything can still be viewed and exported, and the owner can renew the plan",
+
   // --- Counter billing ------------------------------------------------------
   COUNTER_ORDER_NOT_FOUND: 'Order not found',
   COUNTER_ORDER_VOIDED: 'This order was voided and can no longer be changed',

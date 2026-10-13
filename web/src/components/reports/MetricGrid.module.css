@@ -1,0 +1,46 @@
+/* Two across inside a 320px phone's card (each about 124px, enough for a label
+   and an amount up to a crore), as many as fit on a wide one. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: var(--space-sm);
+  margin: var(--space-md) 0 0;
+}
+
+.cell {
+  min-width: 0;
+  padding: 10px var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.label {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 15px;
+  color: var(--color-text-secondary);
+}
+
+.value {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.cost {
+  color: var(--color-error);
+}
+
+.good {
+  color: var(--color-success);
+}
+
+.caption {
+  margin: 1px 0 0;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}

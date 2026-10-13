@@ -1,0 +1,192 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-xxl);
+}
+
+/* The plan and its branches side by side once each can hold its sentence,
+   the two cards the same height so the row reads as one. */
+.top {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.top > * {
+  display: flex;
+  flex-direction: column;
+}
+
+.top > * > * {
+  flex: 1;
+}
+
+@media (min-width: 820px) {
+  .top {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.planName {
+  margin: 0;
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--color-text);
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.stateLine {
+  margin: var(--space-md) 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-secondary);
+}
+
+.branchesLine {
+  margin: 0;
+  font-size: 15px;
+  line-height: 21px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.note {
+  margin: var(--space-xs) 0 0;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--color-text-tertiary);
+}
+
+.contact {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-light);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text);
+}
+
+.contact svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--color-primary);
+}
+
+.contact a {
+  color: var(--color-primary);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.compare {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.sectionTitle {
+  margin: var(--space-sm) 0 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+/* As many columns as can each hold a Gujarati line — one on a phone, three
+   from a tablet up — rather than a breakpoint that guesses. Cards in a row
+   share its height. */
+.plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plans > li {
+  display: flex;
+  flex-direction: column;
+}
+
+.planCard {
+  flex: 1;
+}
+
+.planCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+.planCardCurrent {
+  border: 1.5px solid var(--color-primary);
+}
+
+/* Wraps, so a long name and its "Current" pill never squeeze each other. */
+.planHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.planTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.lead {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: var(--space-xs) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text);
+}
+
+.itemIcon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-success);
+}

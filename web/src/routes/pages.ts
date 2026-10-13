@@ -23,6 +23,7 @@ import {
   IoPricetagsOutline,
   IoQrCodeOutline,
   IoReceiptOutline,
+  IoRibbonOutline,
   IoStorefrontOutline,
   IoTrashOutline,
   IoWalletOutline,
@@ -58,6 +59,7 @@ export const PAGES: Record<RouteKey, PageDef> = {
     icon: IoTrashOutline,
     Page: lazy(() => import('@/pages/DeleteAccountPage')),
   },
+  plan: { titleKey: 'plans.title', icon: IoRibbonOutline, Page: lazy(() => import('@/pages/PlanPage')) },
   notifications: {
     titleKey: 'notificationCentre.title',
     icon: IoNotificationsOutline,
@@ -101,7 +103,7 @@ export const PAGES: Record<RouteKey, PageDef> = {
     Page: lazy(() => import('@/pages/UploadPage')),
   },
 
-  reports: { titleKey: 'reports.title', icon: IoBarChartOutline },
+  reports: { titleKey: 'reports.title', icon: IoBarChartOutline, Page: lazy(() => import('@/pages/ReportsPage')) },
 
   team: { titleKey: 'team.title', icon: IoPeopleOutline },
   inviteMember: { titleKey: 'inviteMember.title', icon: IoPersonAddOutline },

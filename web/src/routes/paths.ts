@@ -28,6 +28,8 @@ export const ROUTES = {
   // from every business — who holds no capability at all, and needs it most.
   addBusiness: { path: '/settings/add-business', access: null },
   deleteAccount: { path: '/settings/delete-account', access: null },
+  // Requirement 28. Opened from Settings, so it lives under it.
+  plan: { path: '/settings/plan', access: { appRoute: 'Plan' } },
   notifications: { path: '/notifications', access: null },
 
   addBranch: { path: '/branches/new', access: { appRoute: 'AddBranch' } },

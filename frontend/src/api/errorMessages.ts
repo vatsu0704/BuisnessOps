@@ -1,5 +1,5 @@
 import i18n from '@/i18n';
-import { explainPermissionDenied } from '@/permissions/explain';
+import { explainPermissionDenied, explainPlanLocked } from '@/permissions/explain';
 
 /**
  * Turns the API's error codes into a sentence in the reader's language.
@@ -63,8 +63,14 @@ function fieldLabel(field: string | null | undefined): string {
  * rather than blanking out, leaving a sentence that is ugly but still true.
  */
 function renderParams(params: Record<string, unknown> = {}): Record<string, unknown> {
-  if (typeof params.role !== 'string') return params;
-  return { ...params, role: translate(`role.${params.role}`) ?? params.role };
+  const rendered = { ...params };
+  if (typeof params.role === 'string') rendered.role = translate(`role.${params.role}`) ?? params.role;
+  // A plan arrives as its code (`GROWTH`) for the same reason a role does
+  // (requirement 28), and is named here the same way.
+  if (typeof params.requiredPlan === 'string') {
+    rendered.requiredPlan = translate(`plans.name.${params.requiredPlan}`) ?? params.requiredPlan;
+  }
+  return rendered;
 }
 
 /**
@@ -107,6 +113,13 @@ export function translateApiError(body: ApiErrorBody | undefined): string | null
    */
   if (body.code === 'PERMISSION_DENIED') {
     const explained = explainPermissionDenied(body.params?.capability);
+    if (explained) return explained;
+  }
+
+  // Requirement 28: refused because of the business's plan rather than the
+  // person's role — named the same way, with the plan that would allow it.
+  if (body.code === 'PLAN_FEATURE_LOCKED') {
+    const explained = explainPlanLocked(body.params);
     if (explained) return explained;
   }
 

@@ -19,6 +19,7 @@ import NoBusinessAccessNotice from '@/components/NoBusinessAccessNotice';
 import BranchCatalogSection from '@/components/home/BranchCatalogSection';
 import BranchesSection from '@/components/home/BranchesSection';
 import SalesTilesSection from '@/components/home/SalesTilesSection';
+import PlanBanner from '@/components/home/PlanBanner';
 import Enter from '@/components/ui/Enter';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import InfoCard from '@/components/ui/InfoCard';
@@ -155,6 +156,9 @@ export default function HomePage() {
           <NoBusinessAccessNotice />
         </Enter>
       ) : null}
+
+      {/* Requirement 28: nothing unless the plan is ending, in grace, or read-only. */}
+      <PlanBanner membership={membership} />
 
       {error || sales.error ? (
         <Enter delay={step(1)}>

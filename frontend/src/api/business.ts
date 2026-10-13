@@ -1,6 +1,7 @@
 import { apiClient } from '@/api/client';
 import type { Branch, BranchKind, BranchOperatingModel } from '@/types/branch';
 import type { Business } from '@/types/business';
+import type { SubscriptionSummary } from '@/types/user';
 
 /**
  * The full record for one business the caller belongs to. Switching business
@@ -117,4 +118,14 @@ export async function getSalesSummary(businessId: string): Promise<SalesSummaryB
     `/businesses/${businessId}/sales-summary`
   );
   return data.byCurrency;
+}
+
+/**
+ * Requirement 28 — the owner's view of the plan: where the subscription stands,
+ * branches in use against branches paid for, and what each plan includes.
+ * `billing:manage`, which only the owner holds.
+ */
+export async function getSubscription(businessId: string): Promise<SubscriptionSummary> {
+  const { data } = await apiClient.get<SubscriptionSummary>(`/businesses/${businessId}/subscription`);
+  return data;
 }

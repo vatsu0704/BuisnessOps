@@ -1,6 +1,7 @@
 const { Prisma } = require('@prisma/client');
 const prisma = require('../config/db');
 const { fail } = require('../errors');
+const { assertPlanFeature } = require('../billing/guards');
 const vendorService = require('./vendor.service');
 
 /**
@@ -85,7 +86,18 @@ async function resolveSupplier(businessId, vendorId) {
   return vendor.id;
 }
 
-async function createItem(businessId, { name, unit, category, unitPrice, vendorId, isActive }) {
+/**
+ * Naming a third-party vendor as an item's supplier is part of the Franchise
+ * plan (requirement 28). Only a CHANGE to a vendor is checked: an item a
+ * business already buys from a vendor keeps that vendor if the business moves
+ * down a plan, and can be moved back to the warehouse's own stock at any time.
+ */
+function assertVendorAllowed(plan, vendorId, currentVendorId = null) {
+  if (vendorId && vendorId !== currentVendorId) assertPlanFeature({ plan }, 'vendors');
+}
+
+async function createItem(businessId, { name, unit, category, unitPrice, vendorId, isActive }, { plan } = {}) {
+  assertVendorAllowed(plan, vendorId);
   await assertNameFree(businessId, name);
   const supplier = await resolveSupplier(businessId, vendorId);
   return prisma.inventoryItem.create({
@@ -110,8 +122,9 @@ async function createItem(businessId, { name, unit, category, unitPrice, vendorI
  * between "we have stopped supplying this" and "we have not settled on a price
  * yet", and both are real states.
  */
-async function updateItem(businessId, inventoryItemId, data) {
+async function updateItem(businessId, inventoryItemId, data, { plan } = {}) {
   const item = await getItem(businessId, inventoryItemId);
+  assertVendorAllowed(plan, data.vendorId, item.vendorId);
   if (data.name !== undefined) await assertNameFree(businessId, data.name, item.id);
   // Changing the supplier moves where the item is ordered FROM next time. Lines
   // already in a cart follow it at placement, because the cart is split by each

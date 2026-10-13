@@ -1,5 +1,6 @@
 const { fail } = require('../errors');
-const { tenantCan, assertKnownCapability } = require('../permissions');
+const { roleHas, planAllows, cheapestPlanFor, assertKnownCapability } = require('../permissions');
+const { assertPlanFeature } = require('../billing/guards');
 
 /**
  * Gate a route on a capability rather than a list of role names.
@@ -14,6 +15,12 @@ const { tenantCan, assertKnownCapability } = require('../permissions');
  * between a broken build and a production permissions mystery.
  *
  * Several capabilities are an AND, not an OR: the caller must hold all of them.
+ *
+ * Two questions, asked in this order (requirement 28): does the ROLE hold the
+ * capability, and does the business's PLAN unlock it? This is `tenantCan`
+ * split in two so the refusal can say which. A cashier refused supply orders on
+ * a Starter business is told they are part of Growth, not that cashiers cannot
+ * order — which would be false, and would send them to the wrong person.
  */
 function requirePermission(...capabilities) {
   capabilities.forEach(assertKnownCapability);
@@ -22,16 +29,36 @@ function requirePermission(...capabilities) {
     if (!req.tenant) return next(fail('PERMISSION_DENIED', 403));
 
     for (const capability of capabilities) {
-      if (!tenantCan(req.tenant, capability)) {
-        // The capability rides along on the ApiError for the server log. It is
-        // not a placeholder in PERMISSION_DENIED's template, so nothing
-        // untranslated reaches a screen — the device renders
-        // t('errors.api.PERMISSION_DENIED') exactly as it does today.
+      if (!roleHas(req.tenant.role, capability)) {
+        // The capability rides along so the app can say what the rule is —
+        // the action and the roles that hold it (permissions/explain.ts).
         return next(fail('PERMISSION_DENIED', 403, { capability }));
+      }
+      if (!planAllows(req.tenant.plan, capability)) {
+        return next(
+          fail('PLAN_FEATURE_LOCKED', 403, { capability, requiredPlan: cheapestPlanFor({ capability }) })
+        );
       }
     }
 
     next();
+  };
+}
+
+/**
+ * Refuses unless the business's plan includes a feature no capability can
+ * express — see FEATURES in permissions/plans.js. For a route that IS the
+ * feature (the vendor routes); where the request body decides it, services call
+ * billing/guards.js's assertPlanFeature directly.
+ */
+function requirePlanFeature(feature) {
+  return (req, res, next) => {
+    try {
+      assertPlanFeature(req.tenant, feature);
+      next();
+    } catch (err) {
+      next(err);
+    }
   };
 }
 
@@ -55,4 +82,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { requirePermission, requireRole };
+module.exports = { requirePermission, requireRole, requirePlanFeature };

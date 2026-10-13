@@ -7,6 +7,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { useVendors } from '@/hooks/useVendors';
+import { useMembership } from '@/hooks/useBusinessId';
+import { hasPlanFeature } from '@/utils/permissions';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import Pill from '@/components/Pill';
 import PressableScale from '@/components/PressableScale';
@@ -33,6 +35,9 @@ export default function VendorsScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { vendors, isLoading, error, refresh } = useVendors();
+  // Adding a vendor is part of Franchise (requirement 28). The list, and editing
+  // the vendors a business already has, stay on every plan.
+  const canAddVendors = hasPlanFeature(useMembership(), 'vendors');
 
   useFocusEffect(
     useCallback(() => {
@@ -99,15 +104,19 @@ export default function VendorsScreen() {
               ) : null}
               {/* Full width under the title rather than beside it: the title
                   and a button sharing one row is the row that breaks in Gujarati. */}
-              <PressableScale
-                testID="vendors-add"
-                style={styles.addButton}
-                scaleTo={0.98}
-                onPress={() => navigation.navigate('VendorForm', {})}
-              >
-                <Ionicons name="add" size={18} color={colors.white} />
-                <Text style={styles.addText}>{t('vendors.add')}</Text>
-              </PressableScale>
+              {canAddVendors ? (
+                <PressableScale
+                  testID="vendors-add"
+                  style={styles.addButton}
+                  scaleTo={0.98}
+                  onPress={() => navigation.navigate('VendorForm', {})}
+                >
+                  <Ionicons name="add" size={18} color={colors.white} />
+                  <Text style={styles.addText}>{t('vendors.add')}</Text>
+                </PressableScale>
+              ) : (
+                <Text style={styles.planNote}>{t('plans.vendorsOnFranchise')}</Text>
+              )}
             </View>
           }
           ListEmptyComponent={
@@ -208,4 +217,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   errorText: { color: colors.error, fontSize: 13, flex: 1 },
+  planNote: { fontSize: 13, lineHeight: 18, color: colors.textSecondary },
 });

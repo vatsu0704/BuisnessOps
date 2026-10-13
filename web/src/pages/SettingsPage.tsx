@@ -7,6 +7,7 @@ import {
   IoLogOutOutline,
   IoPeopleCircleOutline,
   IoQrCodeOutline,
+  IoRibbonOutline,
   IoShieldCheckmarkOutline,
 } from 'react-icons/io5';
 import NoBusinessAccessNotice from '@/components/NoBusinessAccessNotice';
@@ -26,6 +27,8 @@ import { step } from '@/theme/motion';
 import { legalPageUrl } from '@/utils/legalLinks';
 import { initials } from '@/utils/initials';
 import { hasCapability, hasNoActiveBusiness } from '@/utils/permissions';
+import { subscriptionStatusLabel } from '@shared/constants/plans';
+import { planName } from '@shared/permissions/explain';
 import styles from './SettingsPage.module.css';
 
 /**
@@ -119,6 +122,19 @@ export default function SettingsPage() {
 
         <div className={styles.column}>
           <Enter delay={step(4)} className={styles.links}>
+            {/* Requirement 28 — the plan. The owner's alone: an admin runs the
+                business, its bill is not theirs. */}
+            {hasCapability(membership, 'billing:manage') && membership?.business.subscription ? (
+              <InfoCard
+                icon={IoRibbonOutline}
+                title={t('plans.title')}
+                subtitle={t('plans.settingsSubtitle', {
+                  plan: planName(membership.business.subscription.plan),
+                  status: subscriptionStatusLabel(membership.business.subscription, t),
+                })}
+                to={pathTo('plan')}
+              />
+            ) : null}
             <InfoCard
               icon={IoFingerPrintOutline}
               title={t('settings.attendance')}

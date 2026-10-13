@@ -1,0 +1,76 @@
+/* The months share whatever width the card has, so twelve fit a phone and three
+   do not stretch into slabs on a desktop. */
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  max-width: 480px;
+  margin-top: var(--space-md);
+}
+
+.column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: 2px 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+}
+
+.column:hover {
+  background: var(--color-background);
+}
+
+.half {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  height: 26px;
+}
+
+.lower {
+  align-items: flex-start;
+}
+
+.bar {
+  width: 76%;
+  min-width: 4px;
+  max-width: 28px;
+  border-radius: 2px;
+  opacity: 0.55;
+}
+
+.profit {
+  background: var(--color-success);
+}
+
+.loss {
+  background: var(--color-error);
+}
+
+/* The month in focus at full strength, the rest faded — opacity rather than a
+   new colour, so profit stays green and loss stays red throughout. */
+.barSelected {
+  opacity: 1;
+}
+
+.zero {
+  width: 100%;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.tick {
+  margin-top: 3px;
+  font-size: 9.5px;
+  color: var(--color-text-tertiary);
+}
+
+.tickSelected {
+  font-weight: 800;
+  color: var(--color-primary);
+}

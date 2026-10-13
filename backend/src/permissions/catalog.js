@@ -108,6 +108,10 @@ const CAPABILITIES = {
   'analytics:viewBusiness': 'See every branch compared, month by month, with net profit',
   'export:dayEnd': "Export everything entered on a given day",
   'export:monthEnd': "Export everything entered in a given month",
+
+  // --- The subscription (Task 13, requirement 28) ---
+  'billing:manage':
+    "See this business's plan, what it unlocks and when it renews. The owner's alone, like starting a business: an admin runs the business they were given, and its bill is not part of that",
 };
 
 const ALL = Object.keys(CAPABILITIES);
@@ -135,7 +139,11 @@ const ALL = Object.keys(CAPABILITIES);
 // the one entry in Settings that is about the account rather than about the
 // business being administered. Excluding it here is what makes "owner only"
 // true without anyone checking a role name.
-const ADMIN_EXCLUDES = new Set(['attendance:punchAnywhere', 'business:create']);
+//
+// `billing:manage` is excluded for the same reason: whoever owns the business
+// pays for it. An admin who creates a branch past the paid count is told the
+// owner can add more, rather than being able to commit the owner's money.
+const ADMIN_EXCLUDES = new Set(['attendance:punchAnywhere', 'business:create', 'billing:manage']);
 const MANAGER_EXCLUDES = new Set([]);
 
 const ADMIN = ALL.filter((capability) => !ADMIN_EXCLUDES.has(capability));

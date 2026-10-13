@@ -1,6 +1,7 @@
 import { apiClient } from './client';
 import type { Branch, BranchKind, BranchOperatingModel } from '@/types/branch';
 import type { Business, SalesSummaryByCurrency } from '@/types/business';
+import type { SubscriptionSummary } from '@/types/user';
 
 /** The full record for one business the caller belongs to. */
 export async function getBusiness(businessId: string): Promise<Business> {
@@ -88,5 +89,14 @@ export async function createBusiness(
   payload: CreateBusinessPayload
 ): Promise<{ business: Business; membership: { id: string; role: string; status: string } }> {
   const { data } = await apiClient.post('/businesses', payload);
+  return data;
+}
+
+/**
+ * Requirement 28 — the owner's view of the plan. `billing:manage`, which only
+ * the owner holds.
+ */
+export async function getSubscription(businessId: string): Promise<SubscriptionSummary> {
+  const { data } = await apiClient.get<SubscriptionSummary>(`/businesses/${businessId}/subscription`);
   return data;
 }

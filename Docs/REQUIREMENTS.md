@@ -982,11 +982,121 @@ every branch's money is not reading every branch's people.
   the desk and adding a vendor.
 - They receive the "ready to pay" and "payment sent" pushes; the owner does not.
 
+### R28 — Subscription plans
+
+> How should I set the pricing for it and generate the income? Give me the options — per
+> owner login, per staff member onboarded, or something else.
+
+HisabKitab had no revenue model (`PROJECT_FLOW.md` §12). This requirement decides what a
+business pays for and builds the plans and their limits into the app; collecting the
+money online is a later stage.
+
+**The options weighed (2026-10-13).**
+
+| Model | Why it was not chosen, or was |
+| --- | --- |
+| Flat, per owner account | A one-shop owner and a thirty-branch franchise pay the same, and R16 lets a franchisor hold every business under one account — the biggest customers would pay the least per shop |
+| Per login seat | The app works because the whole team uses it. Charging per login pushes owners to share one, which breaks the audit trail (who voided, who marked attendance, `SupplyOrderEvent.actor`) and R18's one cashier per branch, and stops STAFF being invited at all |
+| Per employee on payroll | Fits the payroll module only — an add-on at most |
+| A share of sales, or per order | Bills that swing month to month, and no money passes through the app to take a share of (R5) |
+| **Per trading branch × plan tier** | **Chosen.** How Indian restaurant and retail software is sold (per outlet), grows with the customer, cannot be shared (a till belongs to one shop, R18), and the app already counts branches |
+
+**Confirmed:**
+
+- **The bill is a plan's rate × the business's active trading branches.** A warehouse is
+  free and an INACTIVE or CLOSED branch is not billed — only `kind = BRANCH`,
+  `status = ACTIVE` counts. **Users are unlimited** (a fair use of about 25 logins per
+  branch is stated, not enforced).
+- **The plan belongs to the business** (the tenant), not to the owner's account: each of
+  an owner's businesses is on its own plan, checked by the same `resolveTenant` that
+  resolves it.
+- **Three plans, each unlocking a set of capabilities** (`permissions/plans.js`, beside the
+  role matrix): **Starter** — counter, products, expenses, staff, attendance, payroll,
+  exports, each branch's figures; **Growth** — adds the warehouse, supply orders,
+  delivery, verifying payments, the warehouse's UPI, every branch's expenses and the
+  cross-branch net profit; **Franchise** — everything, including FOCO branches, adding
+  vendors, settling FOCO payments and the Accountant. Two gates no capability can express
+  are *features*: `vendors` and `focoBranches`. Which roles each plan may invite is a
+  third list.
+- **What someone may do is their role's capability AND their business's plan.** The
+  server asks both on every request; the app and the web ask both before rendering a
+  control. An owner's `'*'` is narrowed by the plan like anyone else's.
+- **A refusal names the plan** (R19): `PLAN_FEATURE_LOCKED` carries the capability or
+  feature and `requiredPlan`, and the app says "To add a vendor, this business needs the
+  Franchise plan." A role's refusal stays `PERMISSION_DENIED`, so the reader is sent to the
+  right person.
+- **A new business gets a 30-day trial of Franchise**, with no branch limit. Every
+  business that existed before this change was given the same trial by the migration.
+- **When a trial or paid period ends, 7 days of grace with full access, then read-only.**
+  Read-only refuses every write (`SUBSCRIPTION_READ_ONLY`, 402) except taking access away
+  (revoking a member or an invite, narrowing a branch grant) and clearing one's own
+  notifications. **Reads and exports always work and nothing is ever deleted.** A
+  cancelled plan is read-only at once, with no grace. Grace and read-only are derived from
+  dates on each request, not stored, so no scheduled job is needed.
+- **Moving down a plan takes nothing away that exists.** Members keep their roles,
+  existing vendors and FOCO branches keep working and can still be edited, and an
+  in-flight vendor order can still be received (`supplyOrder:receive` is on Growth for
+  exactly this). What the lower plan lacks can no longer be *created*.
+- **Paying for the business is the owner's** (`billing:manage`, excluded from ADMIN like
+  `business:create`). Only the owner sees the Plan screen; an admin who creates a branch
+  past the paid count is told the owner can add more.
+- **Payment is manual until a gateway exists.** The owner pays by UPI or bank transfer and
+  the operator runs `backend/scripts/set-plan.js`, which records the amount, the payment
+  reference and who made the change. It refuses a branch count below the branches
+  already trading, so it never has to choose which shop to shut. There is deliberately no
+  platform-operator role in the API.
+- **No prices in code, and no buy button in the Android app.** The app knows plan codes and
+  what each unlocks; prices are below. Google Play requires Play Billing (about 15%) for
+  digital services bought in an app, and limits what an app may say about paying
+  elsewhere — so the web Plan page names whom to write to (`SUPPORT_EMAIL`) and the app's
+  does not. Check Google's current payments policy before the gateway stage (the sources
+  read while deciding were from 2022–2024).
+
+**The price card to test with five to ten owners** — ₹ per trading branch per month,
+excluding 18% GST. The structure is the decision; these amounts are a starting
+hypothesis.
+
+| Plan | Paid yearly | Paid monthly |
+| --- | --- | --- |
+| Starter | ₹499 | ₹599 |
+| Growth | ₹999 | ₹1,199 |
+| Franchise | ₹1,499 | ₹1,799 |
+| Enterprise (25+ branches) | quoted, invoiced yearly | — |
+
+An optional one-time setup fee (₹2,000–5,000: menu import, branch and team setup) and, once
+the query engine exists, AI questions as a per-branch monthly allowance with top-up packs
+— the only feature whose cost grows with use. RBI caps an AFA-free recurring e-mandate debit
+at ₹15,000, which is the other reason a large account pays yearly by invoice.
+
+| | |
+| --- | --- |
+| **Who** | `OWNER` sees and pays for the plan (`billing:manage`); every member is bound by it |
+| **Entities** | `Subscription`, `BillingEvent`, `SubscriptionPlan`, `SubscriptionStatus`, `BillingInterval`, `BillingEventType` |
+| **Task** | [Task 13](#task-13--subscription-plans-stage-1) |
+
+**Acceptance criteria**
+
+- Signing up, or adding a second business, starts a 30-day Franchise trial.
+- An owner on Starter does not see supply orders, the desk, cross-branch reports, FOCO or
+  adding vendors; a request for one is refused with the plan that includes it.
+- An owner on Starter is not offered WAREHOUSE, DELIVERY_AGENT or ACCOUNTANT on the invite
+  screen, and the server refuses them.
+- A trading branch past the paid count is refused (`PLAN_BRANCH_LIMIT`), including one
+  reopened or turned from a warehouse into a shop; a warehouse is never counted; two
+  simultaneous creates cannot both take the last slot.
+- Through grace everything works and the owner sees a banner; after it, every save is
+  refused with a sentence saying why, while reading, exporting and revoking access still
+  work.
+- The owner's Plan screen shows the plan, its status and end date, branches in use against
+  branches paid for, and what each plan includes; an admin cannot open it.
+- `set-plan.js` puts a business on a paid plan, recording who, how much and the payment
+  reference, and refuses a branch count below what is trading.
+
 ---
 
 ## 4. Tasks
 
-Twelve tasks. **Task 1 lands first** — it is the only one that changes existing behaviour,
+Thirteen tasks. **Task 1 lands first** — it is the only one that changes existing behaviour,
 and every other task assumes its roles exist.
 
 ### Task 1 — Roles and the permission matrix
@@ -1278,6 +1388,40 @@ exception and the new lint scripts.
   cascades to its vendors, items and orders in one statement; `NO ACTION` is checked at
   its end, `RESTRICT` part-way through, which would depend on cascade order.
 
+### Task 13 — Subscription plans, stage 1
+*Requirement: R28.*
+
+1. `permissions/plans.js` — what each plan unlocks (capabilities, features, invitable
+   roles), pure data beside the catalog, mirrored into `matrix.json` under `plans` and
+   compared by `lint:permissions`. `billing:manage`, owner-only.
+2. `Subscription` and `BillingEvent`; a migration that backfills a 30-day trial for every
+   existing business. `createBusinessForUser` starts the trial for every new one.
+3. `billing/access.js` — FULL / GRACE / READ_ONLY from dates. `resolveTenant` reads the
+   subscription in the membership query it already makes and refuses writes when
+   read-only; `tenantCan` and `requirePermission` ask the plan beside the role;
+   `billing/guards.js` checks the two features and the invited role.
+4. The branch limit, under `SELECT … FOR UPDATE` on the subscription, in branch create
+   and update. The cross-business roll-up leaves out a business whose plan lacks the view.
+5. `GET /businesses/:id/subscription`; every membership carries `{ plan, state, endsAt … }`.
+6. App: role ∩ plan in `hasCapability`; the Plan screen from Settings; the Home banner;
+   the FOCO option, adding vendors, a vendor as supplier and the invitable roles follow
+   the plan; refusals name the plan. Web: the same, plus the Plan page names whom to write
+   to, and a plan-locked page says which plan includes it. Translations ×4.
+7. `scripts/set-plan.js` for manual activation.
+8. Tests: `subscription.test.js` (trial, role vs plan refusals, features, invites, the
+   branch limit and its race, grace, read-only and what still works, set-plan), web
+   `plans.test.ts`.
+
+**Later stages, not built:**
+
+- **S2 — online payment** on the web app: plan picker and branch count, Razorpay or
+  Cashfree subscriptions (UPI AutoPay and card mandates), a signed, idempotent webhook
+  writing `BillingEvent`s, GST invoices with the customer's GSTIN, and an owner-confirmed
+  prorated branch add. Blocked on the company's registration, a GSTIN, the gateway's KYC,
+  and a check of Google Play's payments policy.
+- **S3 — AI metering**, once Phase 2 exists: a monthly question allowance per branch on
+  each plan, and top-up packs.
+
 ---
 
 ## 5. Open decisions
@@ -1345,6 +1489,15 @@ is "unspecified". But cash-vs-digital mix is a named Phase 5 metric, and it cost
 optional tap to capture. Current plan: optional, defaults to unspecified. Worth
 revisiting once a real counter is in use.
 
+**What do the plans cost?** (R28.) The structure — per trading branch, three tiers,
+warehouses free, users unlimited, a 30-day trial — is decided. The rupee amounts in R28
+are a starting hypothesis to put in front of five to ten owners before any business is
+charged, and live only in this document, so changing them needs no release.
+
+**What may the Android app say about paying?** (R28.) Nothing, for now: it shows the plan
+and never a price or a way to pay. Google Play's payments policy decides whether it may
+link to the web Plan page; settle that before stage 2.
+
 ---
 
 ## 6. Not in scope
@@ -1353,6 +1506,8 @@ Deliberate exclusions, recorded so they are not mistaken for oversights:
 
 - **Real payment collection.** Record-only by decision (R5), and still record-only
   after R26: the QR is paid in the payer's own UPI app.
+- **Collecting a subscription online** (R28). Stage 1 records a payment made by UPI or
+  bank transfer and sets the plan by hand; the gateway is stage 2.
 - **Detecting that a payment arrived.** The receiver confirms it (R26). A gateway could
   automate this for the warehouse later; it can never see a vendor's own account.
 - **Vendors using the app.** An order reaches them over WhatsApp, and the branch says

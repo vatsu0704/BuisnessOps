@@ -17,7 +17,8 @@ import FormTextArea from '@/components/ui/FormTextArea';
 import PageHeader from '@/components/ui/PageHeader';
 import PrimaryButton from '@/components/ui/PrimaryButton';
 import Spinner from '@/components/ui/Spinner';
-import { useBusinessId } from '@/hooks/useBusinessId';
+import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
+import { hasPlanFeature } from '@/utils/permissions';
 import { useGoBack } from '@/hooks/useGoBack';
 import { pathTo } from '@/routes/paths';
 import { refreshBranches, useBranchStore } from '@/store/branchStore';
@@ -60,6 +61,7 @@ export default function BranchSettingsPage() {
   const businessId = useBusinessId();
   const { branchId } = useParams<'branchId'>();
   const goBack = useGoBack(pathTo('home'));
+  const planHasFoco = hasPlanFeature(useMembership(), 'focoBranches');
 
   const [load, setLoad] = useState<Load>({ state: 'loading' });
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -161,6 +163,8 @@ export default function BranchSettingsPage() {
             onModelChange={(operatingModel) => set({ operatingModel })}
             kindHint={t('branchSettings.kindHint')}
             modelHint={t('branchSettings.modelHint')}
+            offerFoco={planHasFoco || branch.operatingModel === 'FOCO'}
+            planIncludesFoco={planHasFoco}
           />
         </Card>
       </Enter>

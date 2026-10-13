@@ -6,7 +6,8 @@ import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
-import { useBusinessId } from '@/hooks/useBusinessId';
+import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
+import { hasPlanFeature } from '@/utils/permissions';
 import { useVendors } from '@/hooks/useVendors';
 import { extractErrorMessage } from '@/api/client';
 import { createSupplyItem, listSupplyItems, updateSupplyItem } from '@/api/supply';
@@ -56,7 +57,14 @@ export default function SupplyItemFormScreen() {
   const [price, setPrice] = useState('');
   // null is the warehouse's own stock.
   const [vendorId, setVendorId] = useState<string | null>(null);
-  const { activeVendors } = useVendors();
+  const { activeVendors: allActiveVendors } = useVendors();
+  // Naming a vendor as a supplier is part of Franchise (requirement 28). On a
+  // lower plan an item keeps the vendor it already has, and can be moved back
+  // to the warehouse; no other vendor is offered.
+  const canChooseVendors = hasPlanFeature(useMembership(), 'vendors');
+  const activeVendors = canChooseVendors
+    ? allActiveVendors
+    : allActiveVendors.filter((vendor) => vendor.id === item?.vendorId);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

@@ -1,4 +1,4 @@
-import { explainPermissionDenied } from '@shared/permissions/explain';
+import { explainPermissionDenied, explainPlanLocked } from '@shared/permissions/explain';
 import i18n from '@/i18n';
 
 /**
@@ -39,10 +39,14 @@ function fieldLabel(field: string | null | undefined): string {
   return translate(`errors.field.${field}`) ?? field;
 }
 
-/** A `role` arrives as the enum name (WAREHOUSE) and is translated here. */
+/** A `role` (WAREHOUSE) or a plan (GROWTH) arrives as its enum name and is translated here. */
 function renderParams(params: Record<string, unknown> = {}): Record<string, unknown> {
-  if (typeof params.role !== 'string') return params;
-  return { ...params, role: translate(`role.${params.role}`) ?? params.role };
+  const rendered = { ...params };
+  if (typeof params.role === 'string') rendered.role = translate(`role.${params.role}`) ?? params.role;
+  if (typeof params.requiredPlan === 'string') {
+    rendered.requiredPlan = translate(`plans.name.${params.requiredPlan}`) ?? params.requiredPlan;
+  }
+  return rendered;
 }
 
 export function translateDetail(detail: ApiErrorDetail): string | null {
@@ -59,6 +63,13 @@ export function translateApiError(body: ApiErrorBody | undefined): string | null
   // build does not know.
   if (body.code === 'PERMISSION_DENIED') {
     const explained = explainPermissionDenied(body.params?.capability);
+    if (explained) return explained;
+  }
+
+  // Requirement 28: refused because of the business's plan, not the role —
+  // "To add a vendor, this business needs the Franchise plan."
+  if (body.code === 'PLAN_FEATURE_LOCKED') {
+    const explained = explainPlanLocked(body.params);
     if (explained) return explained;
   }
 

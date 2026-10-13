@@ -1,6 +1,8 @@
 const businessService = require('../services/business.service');
 const { fail, validationFailure } = require('../errors');
 const inviteService = require('../services/invite.service');
+const subscriptionService = require('../services/subscription.service');
+const { assertPlanRole } = require('../billing/guards');
 const {
   validateCreateBusiness,
   validateCreateBranch,
@@ -44,7 +46,9 @@ async function createBranch(req, res, next) {
     const errors = validateCreateBranch(req.body);
     if (errors.length) return res.status(400).json(validationFailure(errors));
 
-    const branch = await businessService.createBranch(req.tenant.businessId, req.body);
+    const branch = await businessService.createBranch(req.tenant.businessId, req.body, {
+      plan: req.tenant.plan,
+    });
     res.status(201).json(branch);
   } catch (err) {
     next(err);
@@ -62,7 +66,8 @@ async function updateBranch(req, res, next) {
     const branch = await businessService.updateBranch(
       req.tenant.businessId,
       req.params.branchId,
-      req.body
+      req.body,
+      { plan: req.tenant.plan }
     );
     res.json(branch);
   } catch (err) {
@@ -93,6 +98,13 @@ async function createMembership(req, res, next) {
   try {
     const errors = validateCreateMembership(req.body);
     if (errors.length) return res.status(400).json(validationFailure(errors));
+
+    // Requirement 28: a role the plan does not include cannot be invited — a
+    // Starter business has no warehouse desk for anyone to sit at. Checked at
+    // the invite, which is where the decision is made; an invite already
+    // pending when the plan changed is honoured when it is claimed, and its
+    // holder's plan-locked work simply refuses with a sentence saying why.
+    assertPlanRole(req.tenant, req.body.role);
 
     const result = await inviteService.inviteMember(req.tenant.businessId, req.body);
     res.status(201).json(result.pending ? { pending: true, ...result.invite } : { pending: false, ...result.membership });
@@ -223,6 +235,19 @@ async function removeBranchAccess(req, res, next) {
   }
 }
 
+/**
+ * Requirement 28 — the owner's Plan screen: where the subscription stands, the
+ * trading branches in use against the ones paid for, and what each plan
+ * unlocks. Gated on `billing:manage`, which only the owner holds.
+ */
+async function getSubscription(req, res, next) {
+  try {
+    res.json(await subscriptionService.getSubscriptionSummary(req.tenant.businessId));
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function revokeInvite(req, res, next) {
   try {
     const invite = await inviteService.revokeInvite(req.tenant.businessId, req.params.inviteId);
@@ -237,6 +262,7 @@ module.exports = {
   getBusiness,
   createBranch,
   updateBranch,
+  getSubscription,
   listBranches,
   getBranch,
   createMembership,

@@ -1,4 +1,4 @@
-import { roleHas, type Capability } from '@/permissions';
+import { planAllows, planHasFeature, roleHas, type Capability, type PlanFeature } from '@/permissions';
 import type { Membership, User } from '@/types/user';
 
 /**
@@ -29,9 +29,25 @@ export function hasNoActiveBusiness(user: User | null | undefined): boolean {
   return !!user && switchableMemberships(user).length === 0;
 }
 
-/** The one check every page uses. A revoked membership holds nothing. */
+/**
+ * The one check every page uses. A revoked membership holds nothing.
+ *
+ * Role AND plan (requirement 28) — the same two questions the server asks, so a
+ * feature the business's plan does not include disappears the way a capability
+ * the role lacks does. A server from before plans sends no subscription, and
+ * then the plan narrows nothing.
+ */
 export function hasCapability(m: Membership | undefined, capability: Capability): boolean {
-  return !!m && m.status === 'ACTIVE' && roleHas(m.role, capability);
+  if (!m || m.status !== 'ACTIVE' || !roleHas(m.role, capability)) return false;
+  const subscription = m.business?.subscription;
+  return !subscription || planAllows(subscription.plan, capability);
+}
+
+/** A plan feature no capability can express — vendors, FOCO branches. */
+export function hasPlanFeature(m: Membership | undefined, feature: PlanFeature): boolean {
+  if (!m || m.status !== 'ACTIVE') return false;
+  const subscription = m.business?.subscription;
+  return !subscription || planHasFeature(subscription.plan, feature);
 }
 
 /**

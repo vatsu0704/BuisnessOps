@@ -34,6 +34,7 @@ import ExpenseGapsCard from '@/components/expense/ExpenseGapsCard';
 import BranchCatalogSection from '@/components/home/BranchCatalogSection';
 import BranchesSection from '@/components/home/BranchesSection';
 import SalesTilesSection from '@/components/home/SalesTilesSection';
+import PlanBanner from '@/components/home/PlanBanner';
 import { colors, gradient, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 
@@ -437,6 +438,10 @@ export default function HomeScreen({ navigation }: Props) {
               <NoBusinessAccessNotice />
             </AnimatedEntrance>
           ) : null}
+
+          {/* Requirement 28: nothing at all unless the plan is ending, in grace,
+              or has gone read-only. */}
+          <PlanBanner membership={membership} onOpenPlan={() => rootNavigation.navigate('Plan')} />
 
           {error || sales.error ? (
             <AnimatedEntrance delay={step(1)} style={styles.block}>

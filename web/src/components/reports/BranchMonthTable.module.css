@@ -1,0 +1,125 @@
+/* Only where a matrix of rupee figures can be read; the cards carry the same
+   numbers below this width. */
+@media (max-width: 999px) {
+  .card {
+    display: none;
+  }
+}
+
+/* Twelve months plus a branch column can outgrow even a wide card; the table
+   scrolls inside it, with the branch column pinned so a row stays readable. */
+.scroller {
+  margin: var(--space-md) calc(var(--space-xl) * -1) 0;
+  padding: 0 var(--space-xl);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover th,
+.table tbody tr:hover td {
+  background: var(--color-background);
+}
+
+.branchHead,
+.branch {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 160px;
+  max-width: 220px;
+  background: var(--color-surface);
+  text-align: left;
+}
+
+.branchHead {
+  font: var(--text-label);
+  color: var(--color-text-secondary);
+}
+
+.branch {
+  white-space: normal;
+}
+
+.branchName {
+  display: block;
+  font-weight: 700;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.costCentre {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+thead .num {
+  font-weight: 700;
+}
+
+.monthButton {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.monthButton:hover {
+  color: var(--color-primary);
+}
+
+.focus {
+  background: var(--color-primary-light);
+}
+
+.table tbody tr:hover .focus {
+  background: #e3e1fc;
+}
+
+.focus .monthButton {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.total {
+  font-weight: 800;
+}
+
+thead .total {
+  font: var(--text-label);
+  color: var(--color-text-secondary);
+}
+
+.loss {
+  color: var(--color-error);
+}

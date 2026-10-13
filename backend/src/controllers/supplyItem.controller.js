@@ -35,7 +35,9 @@ async function createItem(req, res, next) {
     const errors = validateCreateItem(req.body);
     if (errors.length) return res.status(400).json(validationFailure(errors));
 
-    const item = await supplyItemService.createItem(req.tenant.businessId, req.body);
+    const item = await supplyItemService.createItem(req.tenant.businessId, req.body, {
+      plan: req.tenant.plan,
+    });
     res.status(201).json(item);
   } catch (err) {
     next(err);
@@ -50,7 +52,8 @@ async function updateItem(req, res, next) {
     const item = await supplyItemService.updateItem(
       req.tenant.businessId,
       req.params.inventoryItemId,
-      req.body
+      req.body,
+      { plan: req.tenant.plan }
     );
     res.json(item);
   } catch (err) {

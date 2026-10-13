@@ -6,7 +6,9 @@ import FullPageLoader from '@/components/layout/FullPageLoader';
 import { useMembership } from '@/hooks/useBusinessId';
 import NoticePage from '@/pages/NoticePage';
 import { useAuthStore } from '@/store/authStore';
-import { canOpenRoute, type RouteKey } from './paths';
+import { planName } from '@shared/permissions/explain';
+import { cheapestPlanFor, roleHas } from '@/permissions';
+import { canOpenRoute, requiredCapability, type RouteKey } from './paths';
 
 type FromState = { from?: { pathname: string; search?: string } } | null;
 
@@ -49,6 +51,20 @@ export function RequireAccess({ route, children }: { route: RouteKey; children: 
   const { t } = useTranslation();
   const membership = useMembership();
   if (!canOpenRoute(membership, route)) {
+    // Requirement 28: the role may do this and the business's PLAN does not
+    // include it. "Not part of your role" would be false, and would send them
+    // to ask an admin who cannot help; name the plan instead.
+    const capability = requiredCapability(route);
+    const requiredPlan = capability ? cheapestPlanFor(capability) : null;
+    if (capability && requiredPlan && membership && roleHas(membership.role, capability)) {
+      return (
+        <NoticePage
+          icon={IoLockClosedOutline}
+          title={t('web.noAccess.planTitle', { plan: planName(requiredPlan) })}
+          body={t('web.noAccess.planBody')}
+        />
+      );
+    }
     return <NoticePage icon={IoLockClosedOutline} title={t('web.noAccess.title')} body={t('web.noAccess.body')} />;
   }
   return <>{children}</>;

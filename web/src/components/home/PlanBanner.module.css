@@ -1,0 +1,57 @@
+.banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+}
+
+.trialEnding {
+  background: var(--color-primary-light);
+  --plan-tint: var(--color-primary);
+}
+
+.grace {
+  background: var(--color-warning-bg);
+  --plan-tint: var(--color-warning);
+}
+
+.readOnly {
+  background: var(--color-error-bg);
+  --plan-tint: var(--color-error);
+}
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 19px;
+  color: var(--color-text);
+}
+
+.icon {
+  flex: none;
+  margin-top: 1px;
+  font-size: 18px;
+  color: var(--plan-tint);
+}
+
+/* Lined up under the sentence, past the icon. */
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  align-self: flex-start;
+  margin-left: 26px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--plan-tint);
+  text-decoration: none;
+}
+
+.link:hover,
+.link:focus-visible {
+  text-decoration: underline;
+}

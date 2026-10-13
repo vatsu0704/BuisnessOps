@@ -31,6 +31,10 @@
       "PAY_SET_NOT_PERMITTED": "You are not allowed to set pay.",
       "PAY_CHANGE_NOT_PERMITTED": "You are not allowed to change pay.",
       "MEMBERSHIP_REVOKE_OUTRANKED": "You cannot remove someone with equal or greater access than your own.",
+      "PLAN_FEATURE_LOCKED": "This is part of the {{requiredPlan}} plan, and this business is not on it. The business's owner can change the plan.",
+      "PLAN_ROLE_NOT_INCLUDED": "{{role}} is part of the {{requiredPlan}} plan, and this business is not on it, so nobody can be invited as one yet.",
+      "PLAN_BRANCH_LIMIT": "Every branch this business's plan pays for is in use ({{paidBranchCount}}). The owner can add branches to the plan, or close one first.",
+      "SUBSCRIPTION_READ_ONLY": "This business's plan has ended, so nothing new can be saved. Everything can still be viewed and exported, and the owner can renew the plan.",
       "COUNTER_ORDER_NOT_FOUND": "Order not found.",
       "COUNTER_ORDER_VOIDED": "This order was voided and can no longer be changed.",
       "COUNTER_ORDER_DAY_CLOSED": "This day has been closed, so its orders can no longer be changed.",
@@ -1360,10 +1364,79 @@
       "analyticsViewBusiness": "compare every branch, month by month",
       "exportDayEnd": "export a day's entries",
       "exportMonthEnd": "export a month's entries",
+      "billingManage": "see this business's plan",
       "supplyOrderReceive": "mark a vendor’s goods as received",
       "supplyPaymentSettle": "pay for company branches’ supply orders",
       "supplyPaymentVerify": "confirm a branch’s payment arrived",
       "paymentAccountManage": "change where payments go"
+    }
+  },
+  "plans": {
+    "name": {
+      "STARTER": "Starter",
+      "GROWTH": "Growth",
+      "FRANCHISE": "Franchise"
+    },
+    "locked": "To {{action}}, this business needs the {{plan}} plan. The owner can change the plan.",
+    "featureAction": {
+      "vendors": "add a vendor",
+      "focoBranches": "make a branch company-operated"
+    },
+    "focoOnFranchise": "Company-operated branches, whose raw material your accounts team pays for, are part of the Franchise plan.",
+    "vendorsOnFranchise": "Adding vendors is part of the Franchise plan. The vendors you already have stay here, and can still be edited.",
+    "moreRoles": "Other roles come with a higher plan.",
+    "title": "Your plan",
+    "subtitle": "What this business is on, and what each plan includes.",
+    "settingsSubtitle": "{{plan}} · {{status}}",
+    "currentPlan": "Current plan",
+    "status": {
+      "TRIALING": "Free trial",
+      "ACTIVE": "Paid",
+      "ENDED": "Ended",
+      "CANCELLED": "Cancelled",
+      "NONE": "No plan on record"
+    },
+    "state": {
+      "trialUntil": "Free trial until {{date}}",
+      "paidUntil": "Paid until {{date}}",
+      "openEnded": "Paid, with no end date",
+      "grace": "Ended on {{date}}. Everything keeps working until {{graceDate}}, then the business becomes read-only.",
+      "readOnly": "Ended. Everything can still be viewed and exported, but nothing new can be saved until the plan is renewed."
+    },
+    "interval": {
+      "MONTHLY": "Billed monthly",
+      "YEARLY": "Billed yearly"
+    },
+    "branchesTitle": "Branches",
+    "branchesUsed": "{{used}} in use, of {{paid}} paid for",
+    "branchesTrial": "{{used}} in use. No limit during the free trial",
+    "branchesNote": "Each trading branch is billed. Warehouses are free, and closed branches are not counted.",
+    "compareTitle": "What each plan includes",
+    "current": "Current",
+    "lead": {
+      "STARTER": "For running your shops:",
+      "GROWTH": "Everything in Starter, and:",
+      "FRANCHISE": "Everything in Growth, and:"
+    },
+    "item": {
+      "counter": "Counter billing and tokens",
+      "products": "Products, priced per branch",
+      "expenses": "Daily expenses",
+      "people": "Staff, attendance and payroll",
+      "exports": "Day-end and month-end exports",
+      "branchFigures": "Each branch's sales and costs",
+      "warehouse": "A warehouse and supply orders",
+      "delivery": "Delivery agents",
+      "netProfit": "Net profit across every branch",
+      "foco": "Company-operated (FOCO) branches",
+      "vendors": "Third-party vendors",
+      "accountant": "The Accountant role"
+    },
+    "banner": {
+      "trialEnding": "Your free trial ends on {{date}}.",
+      "grace": "This business's plan ended on {{date}}. It becomes read-only on {{graceDate}}.",
+      "readOnly": "This business's plan has ended. Everything can still be viewed and exported, but nothing new can be saved.",
+      "seePlan": "See plan"
     }
   },
   "paymentAccounts": {

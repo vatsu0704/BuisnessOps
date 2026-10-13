@@ -24,7 +24,8 @@ import FormInput from '@/components/ui/FormInput';
 import FormTextArea from '@/components/ui/FormTextArea';
 import PageHeader from '@/components/ui/PageHeader';
 import PrimaryButton from '@/components/ui/PrimaryButton';
-import { useBusinessId } from '@/hooks/useBusinessId';
+import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
+import { hasPlanFeature } from '@/utils/permissions';
 import { useGoBack } from '@/hooks/useGoBack';
 import { pathTo } from '@/routes/paths';
 import { useAuthStore } from '@/store/authStore';
@@ -59,8 +60,12 @@ export default function AddBranchPage() {
 
   const [kind, setKind] = useState<BranchKind>('BRANCH');
   // Nothing is preselected: it decides whether a cashier is ever asked to pay,
-  // which is not a thing to default quietly.
-  const [operatingModel, setOperatingModel] = useState<BranchOperatingModel | null>(null);
+  // which is not a thing to default quietly — unless the plan leaves only one
+  // answer (requirement 28: company-operated is Franchise).
+  const canFoco = hasPlanFeature(useMembership(), 'focoBranches');
+  const [operatingModel, setOperatingModel] = useState<BranchOperatingModel | null>(() =>
+    canFoco ? null : 'FM'
+  );
   const [details, setDetails] = useState<Details>(() => ({
     name: '',
     code: '',
@@ -131,6 +136,8 @@ export default function AddBranchPage() {
             onModelChange={setOperatingModel}
             modelHint={t('addBranch.modelHint')}
             withCaptions
+            offerFoco={canFoco}
+            planIncludesFoco={canFoco}
           />
         </Card>
       </Enter>

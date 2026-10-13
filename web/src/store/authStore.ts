@@ -14,6 +14,7 @@ import {
 } from '@/api/auth';
 import type { LoginPayload, SignupPayload } from '@/api/auth';
 import { createBusiness as createBusinessRequest, getBusiness, type CreateBusinessPayload } from '@/api/business';
+import { useAnalyticsStore } from '@/store/analyticsStore';
 import { useBranchStore } from '@/store/branchStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useSalesStore } from '@/store/salesStore';
@@ -159,6 +160,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     useBranchStore.getState().reset();
     useSalesStore.getState().reset();
     useNotificationStore.getState().reset();
+    // Cross-business totals belong to the account, not a business — the next
+    // person to sign in on this browser must not see them for a frame.
+    useAnalyticsStore.getState().reset();
     set({ token: null, user: null, business: null, activeBusinessId: null, error: null });
   },
 

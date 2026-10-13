@@ -1,7 +1,8 @@
 const { Prisma } = require('@prisma/client');
 const prisma = require('../config/db');
 const { fail } = require('../errors');
-const { roleHas } = require('../permissions');
+const { tenantCan } = require('../permissions');
+const { accessState } = require('../billing/access');
 const {
   dateOnly,
   dateKeyOf,
@@ -666,11 +667,19 @@ async function resolveCrossBusinessWindow(readable, { from, to }) {
 async function getCrossBusiness(userId, { from, to } = {}) {
   const memberships = await prisma.membership.findMany({
     where: { userId, status: 'ACTIVE' },
-    include: { business: true },
+    include: { business: { include: { subscription: true } } },
     orderBy: { business: { name: 'asc' } },
   });
 
-  const readable = memberships.filter((membership) => roleHas(membership.role, 'analytics:viewBusiness'));
+  // Role AND plan, as resolveTenant would answer for each business on its own:
+  // a business whose plan does not include the cross-branch view (requirement
+  // 28) is left out of the comparison rather than shown through a side door.
+  const readable = memberships.filter((membership) =>
+    tenantCan(
+      { role: membership.role, plan: accessState(membership.business.subscription).plan },
+      'analytics:viewBusiness'
+    )
+  );
 
   // **Resolved once, here, and passed down as concrete months.**
   //

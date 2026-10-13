@@ -205,6 +205,35 @@ rather than a step.
   correct hop count, never `true`, which would let a client pick its own
   identity with an `X-Forwarded-For` header.
 
+
+---
+
+## Changing a business's plan
+
+Until a payment gateway exists (requirement 28, stage 2), a plan is changed by hand
+after the owner has paid by UPI or bank transfer. Run it in the service's shell, where
+`DATABASE_URL` is already set — on Render, the service's **Shell** tab — from the
+`backend` directory:
+
+    node scripts/set-plan.js --business <businessId> --show
+    node scripts/set-plan.js --business <businessId> --plan GROWTH --branches 3       --interval YEARLY --until 2027-10-13 --amount 35964 --reference <UTR> --actor <your name>
+    node scripts/set-plan.js --business <businessId> --cancel --actor <your name> --note "<why>"
+
+- `--branches` is how many **trading** branches are paid for. Warehouses are free and
+  closed branches are not counted. The script refuses a number below the branches
+  already trading — the owner closes one first; it never chooses which shop to shut.
+- `--until` covers that whole day. After it the business has 7 days of grace with
+  everything working, then turns read-only; nothing is ever deleted.
+- Every run is recorded in `billing_events` with `--actor`, the amount and the
+  reference, so a plan can be traced to the money behind it.
+- `--cancel` makes the business read-only **at once**, with no grace. To let a plan run
+  out instead, do nothing — it ends at `--until`.
+- There is deliberately no API endpoint for this: one would need an operator above every
+  business's owner, a role the API does not have.
+
+The migration that added subscriptions gave every existing business a 30-day trial
+from the day it was applied — set a plan for each paying business before it runs out.
+
 ---
 
 ## The public pages

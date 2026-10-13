@@ -1204,3 +1204,72 @@ statement. A vendor still in use is refused either way.
 it is that branch's cost. The analytics query now groups by `(branchId, vendorId)` to
 report the vendor part beside it as `vendorSpend`, which the business roll-up subtracts
 because it left the business. `internalTransfer` is `materialSpend − vendorSpend`.
+
+## 22. Subscription plans — built (Branch Operations Task 13)
+
+Requirement 28. One migration, `20261013120000_subscriptions`, which **does backfill**:
+every business that existed gets a 30-day Franchise trial from the day it is applied, and
+a `TRIAL_STARTED` event with actor `migration`. Without a row a business reads as having
+no plan on record — Starter, read-only — which is the right default for a row missing by
+mistake and the wrong thing to do to every customer on the day this ships.
+
+What each plan **unlocks** is not in the database: it is `backend/src/permissions/plans.js`,
+data beside the role matrix. What each plan **costs** is not stored anywhere in the app.
+
+### New enums
+
+| Enum | Values | Notes |
+|---|---|---|
+| `SubscriptionPlan` | `STARTER`, `GROWTH`, `FRANCHISE` | Cheapest first, matching `PLANS` in `plans.js` |
+| `SubscriptionStatus` | `TRIALING`, `ACTIVE`, `CANCELLED` | Only what somebody *decides*. Grace and read-only are not stored — see below |
+| `BillingInterval` | `MONTHLY`, `YEARLY` | |
+| `BillingEventType` | `TRIAL_STARTED`, `PLAN_SET`, `CANCELLED` | |
+
+### `Subscription` — new
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId | String | FK → Business, Cascade, **unique**. One per business: the plan belongs to the tenant, not to the owner's account |
+| plan | `SubscriptionPlan` | |
+| status | `SubscriptionStatus` | |
+| interval | `BillingInterval`? | Null during the trial |
+| paidBranchCount | Int? | ACTIVE trading branches (`kind = BRANCH`, `status = ACTIVE`) paid for. **Null = no limit**, which is the trial. Warehouses and closed branches are never counted |
+| trialEndsAt | DateTime? | Read while `TRIALING` |
+| currentPeriodEnd | DateTime? | Read while `ACTIVE`. Null = open-ended (an invoiced customer whose terms say so) |
+| provider / providerSubscriptionId | String? | The payment gateway's ids — stage 2. Null until then |
+| createdAt / updatedAt | DateTime | |
+
+**Grace and read-only are derived, not stored.** `billing/access.js` reads the relevant end
+date on each request: before it, FULL; for `GRACE_DAYS` (7) after it, GRACE — everything
+works and the owner is told; after that, READ_ONLY. `CANCELLED` is READ_ONLY at once.
+Stored, these would need a scheduled job to flip them, and the repo has none; a job that
+failed to run would leave a lapsed business open or a paid one shut.
+
+**Read in the membership query.** `resolveTenant` already fetches the membership on every
+request; it now includes `business.subscription` in the same query, so the plan costs no
+extra round trip.
+
+**The branch limit locks this row.** Creating, reopening or converting a branch into a
+trading one runs `SELECT … FOR UPDATE` on the subscription inside the insert's
+transaction, then counts — the `cashierAssignment.service.js` pattern — so two creates
+cannot both take the last paid slot.
+
+### `BillingEvent` — new, append-only
+
+| Column | Type | Notes |
+|---|---|---|
+| id | String (uuid) | PK |
+| businessId | String | FK → Business, Cascade |
+| type | `BillingEventType` | |
+| plan / paidBranchCount / interval / periodEnd | | What the change set, when it set one |
+| amount | Decimal(12,2)? | The payment behind a `PLAN_SET`, when there was one |
+| currency | String? | `INR` by default when an amount is given |
+| reference | String? | The UPI reference or bank UTR the money arrived under, so a plan can always be traced to it |
+| note | String? | |
+| actor | String | Who made the change. **Not a membership**: the operator running `set-plan.js` is not a member of the business, and a trial is started by `system` (or `migration`) |
+| createdAt | DateTime | |
+| index | (businessId, createdAt) | |
+
+The `Subscription` row says what is true now; this table says how it got that way. Nothing
+updates or deletes these rows.

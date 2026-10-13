@@ -20,8 +20,8 @@ slot. For the app stores, the privacy policy is reachable from Settings and sign
 SDK 54 and draws edge-to-edge on Android (Flow 0, Flow 10). A separate **web
 app** in `web/` has sign-in, sign-up, Home (Flow W1), Settings with the business
 switcher (Flow W2), the notification bell and centre (Flow W3), branches and the work
-calendar (Flow W5), and products and sales upload (Flow W6) so far; its other pages
-say they are coming to the web.
+calendar (Flow W5), products and sales upload (Flow W6), and Reports with the
+month-end export (Flow W7) so far; its other pages say they are coming to the web.
 
 ---
 
@@ -1972,6 +1972,73 @@ Requirement 27. Invite someone as **Accountant** (Flow 6).
 
 ---
 
+## Flow 17aa — Plans: the trial, a paid plan, the limits, and running out
+
+Requirement 28. You need the backend's database to change the plan by hand, as the
+operator will — `backend/scripts/set-plan.js` — and a SQL tool (or Prisma Studio) to move a
+date into the past. Use a business you own with at least two trading branches.
+
+**The quick way, in development: `backend/scripts/dev-plan.sql`.** Set five lines at the
+top — the email of somebody in the business, which of their businesses, the state
+(`show`, `trial`, `trial_ending`, `paid`, `no_end`, `grace`, `read_only`, `cancelled`),
+the plan and the branches paid for — and run the whole file in pgAdmin or DBeaver. It
+prints where every business of that email now stands, and refuses to run against any
+database but `buisnessops`. Each step below can be done with it instead of `set-plan.js`
+or a hand-written `UPDATE`; reopen the app after each run.
+
+1. Sign up a **new** account, or add a second business from Settings.
+   - ✅ **Expected:** Settings shows **Your plan** with *Franchise · Free trial*. Open it:
+     *Free trial until* a date 30 days away, *N in use. No limit during the free trial*,
+     and the three plans, Franchise marked **Current**. No price and no way to pay
+     anywhere in the app. An admin of the same business sees no **Your plan** entry.
+2. Find the business's id (`--show` needs it; Prisma Studio, `businesses`), then in
+   `backend/`:
+
+       node scripts/set-plan.js --business <id> --show
+       node scripts/set-plan.js --business <id> --plan STARTER --branches 1 --until 2027-10-13 --actor you
+
+   - ✅ **Expected:** the second command refuses — the business has more trading
+     branches in use than 1, and the script never picks which shop to shut.
+3. Run it again with `--branches 2 --interval YEARLY --amount 11976 --reference UTR123`,
+   then close and reopen the app — the plan travels with the session, which is loaded when the app starts.
+   - ✅ **Expected:** Settings reads *Starter · Paid*; the Plan screen *Paid until 13
+     October 2027*, *Billed yearly*, *2 in use, of 2 paid for*. On Home the supply cards,
+     *Payments* and the cross-branch Reports are gone. In Prisma Studio, `billing_events`
+     has a `PLAN_SET` row with your name, the amount and UTR123.
+4. **Add branch.**
+   - ✅ **Expected:** *Who pays for raw material?* offers only the FM row, already chosen,
+     with a line saying company-operated branches are part of Franchise. Fill it in and
+     save: refused — *Every branch this business's plan pays for is in use (2) …*. Choose
+     **Warehouse** instead and save: it is created (warehouses are free).
+5. **Team → Invite.**
+   - ✅ **Expected:** Admin, Manager, Cashier and Staff only, and *Other roles come with a
+     higher plan.* under them.
+6. Put the business on Growth (`--plan GROWTH --branches 3 …`) and reopen the app.
+   - ✅ **Expected:** supply orders, the desk and cross-branch Reports are back. **Vendors**
+     lists the ones you have, with no *Add vendor* button and a line saying adding vendors
+     is part of Franchise; an existing vendor can still be opened and edited. On a raw
+     material, *Supplied by* offers the warehouse and the item's own vendor only.
+7. Run out the plan: in SQL, `UPDATE subscriptions SET "currentPeriodEnd" = now() - interval '2 days' WHERE "businessId" = '<id>';`
+   and reopen the app.
+   - ✅ **Expected:** as the owner, a yellow banner on Home — *This business's plan ended
+     on … It becomes read-only on …* — with **See plan**; the Plan screen's pill says
+     **Ended**. Everything still saves. A cashier sees no banner.
+8. Push it past grace: `… - interval '8 days' …`, and reopen the app.
+   - ✅ **Expected:** a red banner for everyone — *This business's plan has ended …
+     nothing new can be saved* — with **See plan** for the owner only. Ring up a counter
+     order or log an expense: refused with the same sentence. Reports, the day-end export
+     and every list still open. **Team → remove someone** still works, and so does
+     clearing notifications.
+9. Restore it: `node scripts/set-plan.js --business <id> --plan FRANCHISE --branches 5 --until 2027-10-13 --actor you`.
+   - ✅ **Expected:** everything is back once the app is reopened.
+
+**On the web** (`npm run dev` in `web/`): the same Plan page is at **Settings → Your
+plan**, and also says whom to write to about changing the plan (the `SUPPORT_EMAIL` the
+server is configured with). With the business on Starter, open `/reports` directly:
+*Part of the Growth plan* rather than *Not part of your role*.
+
+---
+
 ## Flow 20 — The privacy policy
 
 Both app stores require a privacy policy that is reachable from inside the app,
@@ -2259,10 +2326,55 @@ least two branches.
 
 ---
 
+## Flow W7 — The web app: Reports and the month-end export
+
+The web's version of Flows 17r–17t. Sign in as the owner of a business with several
+months of figures — the seed data (`Docs/TEST_DATA_SEED.md`) is made for this.
+
+1. **Reports** in the sidebar.
+   - ✅ **Expected:** *6 months* chosen, the month strip ending on this month, the
+     business's net profit with its breakdown, *Needs attention*, the export card, and
+     one card per branch, best first with the warehouse last as a *Cost centre*.
+2. On a window 1000px or wider, look below the summary.
+   - ✅ **Expected:** *Net profit, branch by month* — a row per branch, a column per
+     month, this month marked, and the whole period at the end. Narrow the window: the
+     table goes and the cards stay.
+3. Click an earlier month — in the strip, a table heading, or a bar on any card.
+   - ✅ **Expected:** every card, the net profit and the export count move to that
+     month. When the branches paid your own warehouse that month, the sentence under
+     the net profit adds the month's branch figures and the transfer up to **the net
+     profit shown above it**. (On the phone it names the six months' totals instead.)
+4. Choose *12 months*, then *3 months*.
+   - ✅ **Expected:** the strip, the cards and the table follow; nothing from the
+     previous range shows for a moment.
+5. **Export → Spreadsheet**.
+   - ✅ **Expected:** `month-end-2026-10-all-branches.xlsx` (with the month chosen) is
+     downloaded and opens in Excel, its headings in the page's language.
+6. **Export → Printable summary**.
+   - ✅ **Expected:** the browser's print dialog with the month's summary; *Save as
+     PDF* saves it. A month with nothing entered says so and offers neither.
+7. With an account in two businesses, choose **All businesses**.
+   - ✅ **Expected:** the combined net profit across both, then one card each.
+     Businesses in different currencies show no combined figure, and say why.
+8. Sign in as a manager, then a cashier.
+   - ✅ **Expected:** the manager sees Reports; the cashier has no Reports in the
+     sidebar and `/reports` says *Not part of your role*.
+
+---
+
 ## Known limitations (not bugs — don't file these)
 
+- **A plan can only be changed by hand** (R28, stage 1). There is no way to pay inside the
+  app or on the web yet: the owner pays by UPI or bank transfer and the operator runs
+  `backend/scripts/set-plan.js`. The Android app deliberately shows no price and no way to
+  pay; the web Plan page names whom to write to.
+- **A plan change reaches an open app when it is next started** (or the web page
+  reloaded), because the plan travels on the session's memberships. The server applies it at once — a feature the new
+  plan lacks is refused, with a sentence saying so, before the screen catches up.
+- **The 25-logins-per-branch fair use is stated, not enforced.**
+
 - **The web app has sign-in, sign-up, Home, Settings, notifications, branches, the
-  work calendar, products and sales upload so far.** Every other page it lists
+  work calendar, products, sales upload and Reports so far.** Every other page it lists
   shows *Coming to the web* until it is ported; use the mobile app for that work.
   Its Home also lacks four of the app's cards — today's punch-in, the branches to
   chase for expenses, and the two supply-payment cards.

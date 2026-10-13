@@ -363,6 +363,7 @@ starts collecting something new.
 | Personal info → Email address | Yes | Account management | The login |
 | Personal info → Phone number | Yes | App functionality | Optional on the account; staff phone numbers on staff records |
 | Financial info → Other financial info | Yes | App functionality | Sales, expenses, salaries and payroll that the business enters or uploads; UPI IDs |
+| Financial info → Purchase history | Yes | Account management | The business's subscription payments to us (R28): plan, amount, date and the UPI or bank reference, recorded by the operator. No card or bank account numbers. Nothing is bought inside the app |
 | Files and docs | Yes, **processed ephemerally** | App functionality | Uploaded CSV or Excel files are read in memory and not kept. Their rows are stored as sales (already covered above) |
 | Device or other IDs | Yes | App functionality | The push notification token |
 | Photos, audio, contacts, messages, health, browsing history, crash logs, analytics | No | | |

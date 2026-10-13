@@ -35,7 +35,9 @@
   },
   "noAccess": {
     "title": "Not part of your role",
-    "body": "Your role in this business does not include this page. If you need it, ask an owner or an admin."
+    "body": "Your role in this business does not include this page. If you need it, ask an owner or an admin.",
+    "planTitle": "Part of the {{plan}} plan",
+    "planBody": "This business's plan does not include this page. The business's owner can change the plan."
   },
   "notFound": {
     "title": "Page not found",
@@ -67,5 +69,17 @@
     "pickChange": "Click, or drop another file, to change it",
     "wrongType": "That is not a CSV or Excel file. Choose a .csv or .xlsx file.",
     "tooLarge": "That file is larger than 5 MB. Split it into smaller files — a month or two each."
+  },
+  "reports": {
+    "range": "Period",
+    "scope": "Which businesses",
+    "month": "Month",
+    "tableTitle": "Net profit, branch by month",
+    "branchColumn": "Branch",
+    "totalColumn": "Whole period"
+  },
+  "plan": {
+    "contact": "To change the plan or pay for more branches, write to",
+    "contactUnset": "To change the plan or pay for more branches, contact {{appName}}."
   }
 }

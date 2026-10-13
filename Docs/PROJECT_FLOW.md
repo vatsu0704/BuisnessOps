@@ -43,7 +43,7 @@ These decisions shape every phase and shouldn't be revisited per-feature:
 | 4 | Reporting & cross-branch comparison | FR-06, FR-07 | 🟡 branch × month net profit and cross-business comparison done (Branch Operations Task 8); benchmarking against a company average, and city/region grouping, not started |
 | 5 | Proactive intelligence: alerts, benchmarking, wastage, cash-mix, seasonal correlation | FR-08–FR-12 | ⏳ not started (tab exists, shows a planned notice) |
 | 6 | Strategic & franchise: staff analytics, royalty automation, expansion what-if, forecasting | FR-13–FR-16 | ⏳ not started |
-| 7 | Hardening: security, compliance, performance, billing | NFRs (Section 7) | 🟡 store-launch code done — Expo SDK 54 (targets API 36), account deletion, privacy policy, the Play bundle build ([PLAY_STORE_RELEASE.md](PLAY_STORE_RELEASE.md)); the package rename waits on Firebase, and the security, compliance, load-test and billing work below is not started |
+| 7 | Hardening: security, compliance, performance, billing | NFRs (Section 7) | 🟡 store-launch code done — Expo SDK 54 (targets API 36), account deletion, privacy policy, the Play bundle build ([PLAY_STORE_RELEASE.md](PLAY_STORE_RELEASE.md)); the package rename waits on Firebase. **Billing stage 1 done** (Task 13: plans, trial, grace and read-only, manual activation); online payment is stage 2. The security, compliance and load-test work below is not started |
 
 Phase 3's UI half landed out of order, ahead of Phase 2 — that was a deliberate request, not a plan change. The phase ordering below still stands.
 
@@ -287,7 +287,7 @@ Runs partly in parallel with Phases 4–6, but nothing ships to real businesses 
 - Multi-tenancy audit: automated test suite that attempts cross-tenant access on every endpoint and asserts denial.
 - Performance: load test to the NFR targets (5s standard / 15s complex query, 99.5% uptime) at a representative multi-branch data volume.
 - Compliance review per target market (GDPR for EU, DPDP Act for India) before onboarding businesses there — PRD Section 12 flags this as unresolved; resolve it market-by-market, not globally, before the first business in that market goes live.
-- Pricing/subscription model validated alongside real users (PRD Section 12) — needed before any paid rollout, not before MVP demos.
+- Pricing/subscription model validated alongside real users (PRD Section 12) — needed before any paid rollout, not before MVP demos. **The model is decided and stage 1 is built** (Task 13, [REQUIREMENTS.md](REQUIREMENTS.md) R28): per trading branch × three plans, a 30-day trial, manual activation. The rupee amounts still need that validation, and online payment (stage 2) waits on the company's registration, a GSTIN and a gateway's KYC.
 
 **Exit criteria:** cross-tenant test suite passes, load test meets targets, and a compliance sign-off exists for each market being onboarded.
 
@@ -357,7 +357,7 @@ What's actually next:
 - **Gujarati NLU/voice quality** — validate early with real speakers; text-first fallback if voice accuracy is weak.
 - **POS integration breadth** — investigated Petpooja (the natural first pick for this PRD's market) directly: its public API has no data-export/reporting endpoint, only order-injection for aggregators. A live adapter needs either a different vendor with a genuine pull API, or a partner-level conversation with Petpooja for reporting access — neither resolved yet. CSV upload is not just a fallback for everyone else; for now it's the *only* path for Petpooja merchants specifically, and is working end-to-end.
 - **Data privacy regulation differs by market** — no market launch without its own compliance review (Phase 7).
-- **Pricing model** — undefined; validate during Phase 4–5 user testing, not assumed upfront.
+- **Pricing model** — decided 2026-10-13 (R28): per trading branch × Starter / Growth / Franchise, warehouses free, users unlimited, 30-day trial. The amounts are a hypothesis to validate with real owners before anyone is charged.
 - **PRD not yet validated with external owners** — treat Section 6 priorities (and thus this phase order) as provisional until early user interviews confirm them, especially the Phase 2/3 ordering of query-engine vs. voice.
 
 ---
@@ -1467,6 +1467,59 @@ would otherwise have made worse.
   caught and fixed a QR card 2dp wider than its panel and two rows of growing text that
   would not have fit; see `TESTING_GUIDE.md` for the walkthrough to do on a phone.
 
+### Task 13 — Subscription plans, stage 1 ✅
+
+Requirement 28. What a business pays for, and what each plan lets it do, built into the
+app before there is any way to pay online.
+
+**A plan is a second allow-list beside the role matrix.** `permissions/plans.js` says
+which capabilities each plan unlocks — Starter an explicit list, Growth that plus the
+supply chain and the cross-branch view, Franchise `'*'` so a capability added later
+reaches the top plan only — plus two *features* no capability can express (`vendors`,
+`focoBranches`) and the roles each plan may invite. It requires only `./catalog`, so
+the parity script loads it too, and `matrix.json` mirrors it under `plans`.
+`tenantCan` now asks role AND plan; `requirePermission` asks them separately so the
+refusal says which (`PERMISSION_DENIED` names the roles, `PLAN_FEATURE_LOCKED` the plan).
+
+**No extra query, no scheduler.** `resolveTenant` reads the subscription in the
+membership lookup it already makes, and `billing/access.js` turns its dates into FULL,
+GRACE or READ_ONLY on each request. Nothing stores "lapsed", so nothing has to run at
+midnight to set it. Read-only refuses every write except taking access away and clearing
+one's own notifications — matched by path and failing closed, so a write route added
+later is refused while read-only rather than forgotten.
+
+**The branch limit is the cashier rule's pattern.** A branch that starts counting
+(created, reopened, or turned from a warehouse into a shop) is checked under
+`SELECT … FOR UPDATE` on the subscription row inside the insert's transaction, so two
+creates cannot both take the last paid slot. During the trial there is no limit.
+
+**Moving down never takes anything away.** `supplyOrder:receive` sits on Growth, not
+Franchise, because a business that made vendor orders in its trial and then chose Growth
+would otherwise have orders nobody could close. FOCO branches and vendors that exist stay
+editable; only creating more is Franchise's.
+
+**Manual activation by script, on purpose.** `backend/scripts/set-plan.js` writes the plan
+and a `BillingEvent` with the amount, the UTR and who ran it. An endpoint would have
+needed a platform operator above every owner, a role this API does not have.
+
+**Screens.** App: role ∩ plan in `hasCapability`, so locked features vanish like any
+missing capability; the owner's Plan screen from Settings; a Home banner (trial's last 7
+days and grace to the owner, read-only to everyone); FOCO, adding vendors, choosing a
+vendor and the invitable roles follow the plan. Web: the same, the Plan page also says
+whom to write to (the app does not — Google Play's payments policy, R28), and a page the
+plan locks says which plan includes it instead of "not part of your role".
+
+- **Verification:** backend `npm test` — 431, with `subscription.test.js` (27: the trial,
+  role vs plan refusals, features, invites, the branch limit and its race, grace,
+  read-only and what still works, set-plan); frontend `lint`, `lint:permissions` (now
+  comparing the plans), `lint:errors`, `lint:i18n`; web `lint`, `lint:i18n`,
+  `lint:shared`, `npm test` (61, with `plans.test.ts`), and the plan scenarios in
+  `npm run shots` at 320/390/820/1440 in English and Gujarati.
+- **Not yet looked at on a phone:** the app's Plan screen and banner were built on the
+  same layout rules and checked by the web's shots of the shared content, but no device
+  run has been made.
+- **Stage 2 (not started):** online payment on the web — see R28's Task 13.
+
 ---
 
 ## 14. Deployment readiness (2026-10-02)
@@ -1634,7 +1687,7 @@ ships on its own — it replaces placeholders, passes `lint`, `lint:i18n`,
 | W4 | Online on Render (static site, `CORS_ORIGINS`) | 🟡 repository ready; the Render steps are Vatsal's |
 | W5 | Add branch, branch settings, work calendar | ✅ |
 | W6 | Products, add / edit product, sales upload | ✅ |
-| W7 | Reports and the month-end export | ⏳ |
+| W7 | Reports and the month-end export | ✅ |
 | W8 | Team and invites, staff, attendance and punch-in, payroll and payslips | ⏳ |
 | W9 | Expenses, the expense-gap card, the day-end export | ⏳ |
 | W10 | Supply catalog and cart, orders and order detail, the desk, deliveries | ⏳ |
@@ -1760,3 +1813,37 @@ been deployed.
 - Verification: `npm test` (47, with catalog grouping and search, the branch-price
   decision and the upload summary), the W6 scenarios in `npm run shots`, Flow W6.
 
+### W7 — Reports and the month-end export ✅
+
+- **Reports** as in the app: 3, 6 or 12 months; *This business* / *All businesses*
+  for an account that can read more than one; the month strip; the business's net
+  profit with its breakdown; *Needs attention* (the branches that fell, worst first);
+  and one card per branch — ranked by the month in focus, cost centres last, each
+  with its months as bars that also choose the month. The data sits in an
+  `analyticsStore` keyed on the business *and* the window, emptied at sign-out.
+- **One addition: the branch × month table** requirement 15 describes, on a window
+  1000px or wider — net profit per branch per month, the month in focus marked, a
+  month heading choosing it, the whole period at the end. The app turns the matrix
+  into cards because twelve rupee columns do not fit a phone; a desktop has the room.
+- **The reconciliation sentence is the month's, not the window's.** The server's
+  `reconciliation` covers the whole window, so the app prints six months' figures
+  under one month's net profit and names a total that is not the one above it. The
+  web adds up the month's own branch column (`monthReconciliation`) and shows the
+  sentence only when it balances. The app still has this.
+- **The month-end export** (requirement 17) beside it: how many entries the month
+  holds, the double-count warning in the reader's language, the spreadsheet as a
+  download and the summary through the browser's print dialog (*Save as PDF*), both
+  in the page's language. The card is a shared `ExportActions`, ready for W9's
+  day-end export. Its count is cleared when the month changes, so it never offers
+  one month's figure under another month's name.
+- Verification: `npm test` (54, with the ranking, the month's reconciliation and the
+  store's window key), the W7 scenarios in `npm run shots`, Flow W7.
+
+
+### Plan (requirement 28) ✅
+
+Built on both at once rather than ported: the owner's Plan page at `/settings/plan`
+(from Settings), the Home banner, and a plan-locked page saying which plan includes it.
+See Task 13 in section 13. Verification: `plans.test.ts`, the `plan*`, `home-trial-ending`,
+`home-grace`, `home-read-only-cashier`, `add-branch-starter` and `no-access-plan-*`
+scenarios in `npm run shots`.

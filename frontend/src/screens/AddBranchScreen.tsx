@@ -19,7 +19,8 @@ import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
-import { useBusinessId } from '@/hooks/useBusinessId';
+import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
+import { hasPlanFeature } from '@/utils/permissions';
 import type { BranchKind, BranchOperatingModel } from '@/types/branch';
 import { getCurrentCoords } from '@/utils/location';
 
@@ -29,6 +30,11 @@ export default function AddBranchScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const business = useAuthStore((s) => s.business);
   const businessId = useBusinessId();
+  // A company-operated branch is part of the Franchise plan (requirement 28):
+  // its orders are paid by accounts, which only Franchise can do. On a lower
+  // plan the question has one answer, so it is answered for the owner and the
+  // form says where the other one lives.
+  const canFoco = hasPlanFeature(useMembership(), 'focoBranches');
 
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
@@ -38,7 +44,9 @@ export default function AddBranchScreen({ navigation }: Props) {
   // Who pays for its raw material (requirement 24). Nothing is preselected:
   // it decides whether the cashier is ever asked to pay, and that is not a
   // thing to default quietly. A warehouse orders nothing, so is not asked.
-  const [operatingModel, setOperatingModel] = useState<BranchOperatingModel | null>(null);
+  const [operatingModel, setOperatingModel] = useState<BranchOperatingModel | null>(() =>
+    canFoco ? null : 'FM'
+  );
   const [city, setCity] = useState('');
   const [region, setRegion] = useState('');
   // Where a delivery goes, as opposed to where the branch is for reporting.
@@ -189,14 +197,16 @@ export default function AddBranchScreen({ navigation }: Props) {
                     <Text style={styles.sectionTitle}>{t('addBranch.model')}</Text>
                     <Text style={styles.sectionHint}>{t('addBranch.modelHint')}</Text>
                     <View style={styles.modelList}>
-                      <OptionRow
-                        testID="branch-model-FOCO"
-                        title={t('addBranch.modelFoco')}
-                        description={t('addBranch.modelFocoHint')}
-                        icon="business-outline"
-                        selected={operatingModel === 'FOCO'}
-                        onPress={() => setOperatingModel('FOCO')}
-                      />
+                      {canFoco ? (
+                        <OptionRow
+                          testID="branch-model-FOCO"
+                          title={t('addBranch.modelFoco')}
+                          description={t('addBranch.modelFocoHint')}
+                          icon="business-outline"
+                          selected={operatingModel === 'FOCO'}
+                          onPress={() => setOperatingModel('FOCO')}
+                        />
+                      ) : null}
                       <OptionRow
                         testID="branch-model-FM"
                         title={t('addBranch.modelFm')}
@@ -206,6 +216,7 @@ export default function AddBranchScreen({ navigation }: Props) {
                         onPress={() => setOperatingModel('FM')}
                       />
                     </View>
+                    {canFoco ? null : <Text style={styles.planNote}>{t('plans.focoOnFranchise')}</Text>}
                   </View>
                 ) : null}
 
@@ -426,6 +437,7 @@ const styles = StyleSheet.create({
   kindRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   modelBlock: { marginBottom: spacing.lg },
   modelList: { gap: spacing.xs },
+  planNote: { fontSize: 12.5, lineHeight: 17, color: colors.textTertiary, marginTop: spacing.sm },
   rowItem: { flex: 1 },
   submitWrap: { marginTop: spacing.lg },
   errorBanner: {

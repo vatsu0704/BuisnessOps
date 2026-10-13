@@ -52,6 +52,10 @@ export const ROUTE_CAPABILITY = {
   // the back-office desk opens this screen and is offered no way to log.
   Expenses: 'expense:view',
   AddExpense: 'expense:log',
+  // Requirement 28. The plan, its dates and what each plan includes are the
+  // owner's to see; every member still learns whether the business is
+  // read-only from their own membership.
+  Plan: 'billing:manage',
 } as const satisfies Record<string, Capability>;
 
 export type GatedRoute = keyof typeof ROUTE_CAPABILITY;

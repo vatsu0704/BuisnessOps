@@ -4,6 +4,7 @@ const prisma = require('../config/db');
 const { signToken } = require('../utils/jwt');
 const inviteService = require('./invite.service');
 const businessService = require('./business.service');
+const { subscriptionView } = require('./subscription.service');
 
 const SALT_ROUNDS = 10;
 
@@ -15,17 +16,33 @@ const SALT_ROUNDS = 10;
 // membership in the business switcher. Without it the switcher could only
 // offer a list of uuids, and naming them would cost one request per membership
 // just to render a menu.
+//
+// The business's subscription rides along too (requirement 28), so every client
+// knows each business's plan, and whether it has gone read-only, without a
+// request per membership — the app gates what it renders on role AND plan, the
+// same two questions the server asks.
 const MEMBERSHIP_SELECT = {
   id: true,
   businessId: true,
   role: true,
   status: true,
-  business: { select: { id: true, name: true } },
+  business: { select: { id: true, name: true, subscription: true } },
 };
+
+/**
+ * A membership as the client receives it: the raw subscription row replaced by
+ * where it stands (plan, state, dates). The gateway's ids and the row's own
+ * bookkeeping are the server's alone.
+ */
+function membershipView(membership) {
+  const { subscription, ...business } = membership.business;
+  return { ...membership, business: { ...business, subscription: subscriptionView(subscription) } };
+}
 
 function sanitizeUser(user) {
   const { passwordHash, ...safe } = user;
-  return safe;
+  if (!safe.memberships) return safe;
+  return { ...safe, memberships: safe.memberships.map(membershipView) };
 }
 
 // Two paths, decided by whether an OWNER/ADMIN somewhere already invited
@@ -82,7 +99,11 @@ async function signup({ email, password, name, businessName, industry, country, 
     where: { id: { in: memberships.map((m) => m.id) } },
     select: MEMBERSHIP_SELECT,
   });
-  return { token, user: { ...sanitizeUser(user), memberships: membershipViews }, business };
+  return {
+    token,
+    user: { ...sanitizeUser(user), memberships: membershipViews.map(membershipView) },
+    business,
+  };
 }
 
 async function login({ email, password }) {

@@ -21,6 +21,8 @@ import { step } from '@/theme/motion';
 import { useMembership } from '@/hooks/useBusinessId';
 import { can, hasNoActiveBusiness, switchableMemberships } from '@/utils/permissions';
 import { openLegalPage } from '@/utils/legalLinks';
+import { subscriptionStatusLabel } from '@/constants/plans';
+import { planName } from '@/permissions/explain';
 
 function initials(name?: string | null, email?: string | null): string {
   const source = name?.trim() || email || '';
@@ -56,6 +58,8 @@ export default function SettingsScreen() {
   const canManageWorkCalendar = can.manageWorkCalendar(membership);
   const canAddBusiness = can.createBusiness(membership);
   const canManagePaymentAccounts = can.managePaymentAccounts(membership);
+  const canManageBilling = can.manageBilling(membership);
+  const subscription = membership?.business.subscription;
   const noAccess = hasNoActiveBusiness(user);
   // Decided here rather than inside the switcher: AnimatedEntrance carries the
   // block's top margin, so a switcher that renders null would still leave a
@@ -149,6 +153,23 @@ export default function SettingsScreen() {
                     every request and in every log, which is where it is
                     actually useful. */}
               </View>
+            </AnimatedEntrance>
+          ) : null}
+
+          {/* Requirement 28 — the plan, beside the business it pays for. The
+              owner's alone: an admin runs the business, its bill is not theirs. */}
+          {canManageBilling && subscription ? (
+            <AnimatedEntrance delay={step(4)} style={styles.block}>
+              <InfoCard
+                testID="settings-open-plan"
+                icon="ribbon-outline"
+                title={t('plans.title')}
+                subtitle={t('plans.settingsSubtitle', {
+                  plan: planName(subscription.plan),
+                  status: subscriptionStatusLabel(subscription, t),
+                })}
+                onPress={() => navigation.navigate('Plan')}
+              />
             </AnimatedEntrance>
           ) : null}
 

@@ -14,7 +14,7 @@ import { useCashierByBranch } from '@/hooks/useTeam';
 import { refreshTeam } from '@/store/teamStore';
 import { confirm } from '@/utils/confirm';
 import { isValidEmail } from '@/utils/validation';
-import { ROLES, roleHas } from '@/permissions';
+import { ROLES, planAllowsRole, roleHas } from '@/permissions';
 import { SINGLE_BRANCH_ROLE } from '@/permissions/explain';
 import type { MembershipRole } from '@/types/user';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
@@ -28,7 +28,7 @@ import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
-import { useBusinessId } from '@/hooks/useBusinessId';
+import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'InviteMember'>;
 
@@ -112,6 +112,13 @@ export default function InviteMemberScreen({ navigation }: Props) {
    * what the confirmation below is built from.
    */
   const cashierByBranch = useCashierByBranch();
+
+  // Requirement 28: only the roles this business's plan includes. A Starter
+  // business has no warehouse desk for anyone to sit at, and the server would
+  // refuse the invite anyway. A server from before plans sends no plan, and then
+  // every role is offered, as it always was.
+  const plan = useMembership()?.business.subscription?.plan;
+  const offeredRoles = INVITABLE_ROLES.filter((r) => !plan || planAllowsRole(plan, r));
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<InvitableRole>('STAFF');
@@ -266,7 +273,7 @@ export default function InviteMemberScreen({ navigation }: Props) {
                     rather than under the group, where it only ever described
                     whichever one happened to be selected. */}
                 <View style={styles.roleList} accessibilityRole="radiogroup">
-                  {INVITABLE_ROLES.map((r) => (
+                  {offeredRoles.map((r) => (
                     <OptionRow
                       key={r}
                       testID={`invite-member-role-${r}`}
@@ -278,6 +285,9 @@ export default function InviteMemberScreen({ navigation }: Props) {
                     />
                   ))}
                 </View>
+                {offeredRoles.length < INVITABLE_ROLES.length ? (
+                  <Text style={styles.planNote}>{t('plans.moreRoles')}</Text>
+                ) : null}
               </View>
             </AnimatedEntrance>
 
@@ -391,6 +401,7 @@ const styles = StyleSheet.create({
   // the label's bottom margin above it, so this only needs the gap below.
   sectionHint: { fontSize: 12.5, color: colors.textSecondary, lineHeight: 17, marginBottom: spacing.md },
   roleList: { gap: spacing.sm },
+  planNote: { fontSize: 12.5, color: colors.textTertiary, lineHeight: 17, marginTop: spacing.sm },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   gridItem: { width: '48%' },
   emptyText: { fontSize: 13.5, color: colors.textTertiary, textAlign: 'center', paddingVertical: spacing.sm },

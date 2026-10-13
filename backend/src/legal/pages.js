@@ -148,6 +148,10 @@ records it keeps about you, ask that business first.</p>
   <li><strong>Business records:</strong> what a business enters or uploads —
   branches, products and prices, sales, expenses, supply orders, vendors, and the
   UPI IDs payments are made to.</li>
+  <li><strong>Your business's subscription:</strong> the plan the business is on,
+  how many branches it pays for and until when, and, for each payment made to us,
+  the amount, the date and the payment reference (a UPI reference or a bank
+  transfer number). We never see or store card or bank account numbers.</li>
   <li><strong>Staff and payroll records:</strong> what an employer enters about
   the people who work for it — name, phone number, role, employee code, salary,
   joining and leaving dates, attendance and payslips.</li>

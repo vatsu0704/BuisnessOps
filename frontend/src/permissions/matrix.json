@@ -45,7 +45,8 @@
     "analytics:viewBranch": "See a branch's own sales, costs and totals",
     "analytics:viewBusiness": "See every branch compared, month by month, with net profit",
     "export:dayEnd": "Export everything entered on a given day",
-    "export:monthEnd": "Export everything entered in a given month"
+    "export:monthEnd": "Export everything entered in a given month",
+    "billing:manage": "See this business's plan, what it unlocks and when it renews. The owner's alone, like starting a business: an admin runs the business they were given, and its bill is not part of that"
   },
   "roles": {
     "OWNER": "*",
@@ -191,5 +192,132 @@
       "analytics:viewBusiness"
     ],
     "STAFF": []
+  },
+  "plans": {
+    "$comment": "GENERATED MIRROR of backend/src/permissions/plans.js (requirement 28). What each subscription plan unlocks: capabilities, features no capability can express, and the roles a business on it may invite. Cheapest first. Prices are deliberately not here.",
+    "order": [
+      "STARTER",
+      "GROWTH",
+      "FRANCHISE"
+    ],
+    "capabilities": {
+      "STARTER": [
+        "business:create",
+        "branch:create",
+        "branch:update",
+        "branch:allAccess",
+        "team:view",
+        "team:invite",
+        "team:revoke",
+        "team:manageBranchAccess",
+        "staff:create",
+        "staff:update",
+        "staff:viewOthers",
+        "staff:viewAllBranches",
+        "staff:setPay",
+        "attendance:markOthers",
+        "attendance:viewRoster",
+        "attendance:punchAnywhere",
+        "payroll:view",
+        "payroll:run",
+        "workCalendar:manage",
+        "dataSource:manage",
+        "product:view",
+        "product:manage",
+        "counterOrder:create",
+        "counterOrder:edit",
+        "counterOrder:void",
+        "counterOrder:closeDay",
+        "expense:view",
+        "expense:log",
+        "analytics:viewBranch",
+        "export:dayEnd",
+        "export:monthEnd",
+        "billing:manage"
+      ],
+      "GROWTH": [
+        "business:create",
+        "branch:create",
+        "branch:update",
+        "branch:allAccess",
+        "team:view",
+        "team:invite",
+        "team:revoke",
+        "team:manageBranchAccess",
+        "staff:create",
+        "staff:update",
+        "staff:viewOthers",
+        "staff:viewAllBranches",
+        "staff:setPay",
+        "attendance:markOthers",
+        "attendance:viewRoster",
+        "attendance:punchAnywhere",
+        "payroll:view",
+        "payroll:run",
+        "workCalendar:manage",
+        "dataSource:manage",
+        "product:view",
+        "product:manage",
+        "counterOrder:create",
+        "counterOrder:edit",
+        "counterOrder:void",
+        "counterOrder:closeDay",
+        "expense:view",
+        "expense:log",
+        "analytics:viewBranch",
+        "export:dayEnd",
+        "export:monthEnd",
+        "billing:manage",
+        "supplyItem:view",
+        "supplyItem:manage",
+        "supplyOrder:view",
+        "supplyOrder:create",
+        "supplyOrder:fulfil",
+        "supplyOrder:deliver",
+        "supplyOrder:delay",
+        "supplyOrder:receive",
+        "supplyPayment:verify",
+        "paymentAccount:manage",
+        "expense:viewAllBranches",
+        "analytics:viewBusiness"
+      ],
+      "FRANCHISE": "*"
+    },
+    "features": {
+      "STARTER": [],
+      "GROWTH": [],
+      "FRANCHISE": [
+        "vendors",
+        "focoBranches"
+      ]
+    },
+    "roles": {
+      "STARTER": [
+        "ADMIN",
+        "MANAGER",
+        "CASHIER",
+        "STAFF"
+      ],
+      "GROWTH": [
+        "ADMIN",
+        "MANAGER",
+        "CASHIER",
+        "STAFF",
+        "WAREHOUSE",
+        "DELIVERY_AGENT"
+      ],
+      "FRANCHISE": [
+        "ADMIN",
+        "MANAGER",
+        "CASHIER",
+        "STAFF",
+        "WAREHOUSE",
+        "DELIVERY_AGENT",
+        "ACCOUNTANT"
+      ]
+    },
+    "trialPlan": "FRANCHISE",
+    "trialDays": 30,
+    "graceDays": 7
   }
 }

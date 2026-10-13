@@ -1,0 +1,128 @@
+/* What every Reports card shares: the card, its section label, the big figure
+   and the small print under it. */
+
+.card {
+  min-width: 0;
+  padding: var(--space-xl);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.sectionTitle {
+  font: var(--text-label);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.titleGap {
+  margin-top: var(--space-sm);
+}
+
+.pillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.caption {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+}
+
+/* Sized to hold "-₹12,34,56,789" on one line inside a 320px phone's card. */
+.hero {
+  margin-top: 2px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.figure {
+  margin-top: var(--space-sm);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.7px;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.loss {
+  color: var(--color-error);
+}
+
+.figureLabel {
+  margin-top: 1px;
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+}
+
+.flag {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--color-text-secondary);
+}
+
+.flag svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--color-warning);
+}
+
+.note {
+  margin-top: var(--space-md);
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-tertiary);
+}
+
+/* A name that may wrap, beside a pill that keeps its size. */
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.nameBlock {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.code {
+  margin-top: 1px;
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+.muted {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+@media (max-width: 600px) {
+  .card {
+    padding: var(--space-lg);
+  }
+}

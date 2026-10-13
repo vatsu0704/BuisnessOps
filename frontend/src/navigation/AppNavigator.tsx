@@ -31,6 +31,7 @@ import ExpensesScreen from '@/screens/ExpensesScreen';
 import AddExpenseScreen from '@/screens/AddExpenseScreen';
 import NotificationsScreen from '@/screens/NotificationsScreen';
 import DeleteAccountScreen from '@/screens/DeleteAccountScreen';
+import PlanScreen from '@/screens/PlanScreen';
 import { useMembership } from '@/hooks/useBusinessId';
 import TabNavigator from './TabNavigator';
 import { canOpenRoute } from './routeAccess';
@@ -77,6 +78,8 @@ export type AppStackParamList = {
   // Open to everyone for the same reason: it is your own account. Both app
   // stores require that anybody who can sign up can delete from inside the app.
   DeleteAccount: undefined;
+  // Requirement 28. The owner's view of the plan; `billing:manage`.
+  Plan: undefined;
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -124,6 +127,7 @@ const MODAL_SCREENS: { name: keyof AppStackParamList; component: ComponentType<a
   { name: 'AddExpense', component: AddExpenseScreen },
   { name: 'Notifications', component: NotificationsScreen },
   { name: 'DeleteAccount', component: DeleteAccountScreen },
+  { name: 'Plan', component: PlanScreen },
 ];
 
 /**

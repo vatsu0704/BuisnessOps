@@ -1,9 +1,21 @@
 const prisma = require('../config/db');
 const expenseService = require('./expense.service');
 const cashierAssignment = require('./cashierAssignment.service');
+const subscriptionService = require('./subscription.service');
 const { fail } = require('../errors');
+const { assertPlanFeature } = require('../billing/guards');
 
-function createBranch(
+/**
+ * Requirement 28 shapes two things here. A company-operated (FOCO) branch is
+ * part of the Franchise plan, because its orders are paid by accounts and only
+ * Franchise can settle them. And a branch that will trade counts towards the
+ * branches the plan pays for, checked under a lock on the subscription inside
+ * the same transaction as the insert, so two creates cannot both squeeze into
+ * the last paid slot. A warehouse is free and is never counted.
+ *
+ * `plan` is the caller's `req.tenant.plan`.
+ */
+async function createBranch(
   businessId,
   {
     name,
@@ -20,33 +32,41 @@ function createBranch(
     latitude,
     longitude,
     geofenceRadiusMeters,
-  }
+  },
+  { plan } = {}
 ) {
-  return prisma.branch.create({
-    data: {
-      businessId,
-      name,
-      code,
-      // Undefined falls through to the column default, BRANCH. A WAREHOUSE is
-      // a place the business staffs but does not sell from — see BranchKind.
-      kind,
-      // Undefined falls through to FM, the flow every branch had before
-      // requirement 24. A change later affects orders placed from then on —
-      // each order snapshots the model it was placed under.
-      operatingModel,
-      city,
-      region,
-      country,
-      // Where a delivery goes, as opposed to where the branch is for reporting.
-      // Optional at creation and editable afterwards, like the geofence.
-      addressLine,
-      postalCode,
-      timezone,
-      currency,
-      latitude,
-      longitude,
-      geofenceRadiusMeters,
-    },
+  if (operatingModel === 'FOCO') assertPlanFeature({ plan }, 'focoBranches');
+
+  return prisma.$transaction(async (tx) => {
+    if (subscriptionService.isBilled({ kind })) {
+      await subscriptionService.assertRoomForAnotherBranch(tx, businessId);
+    }
+    return tx.branch.create({
+      data: {
+        businessId,
+        name,
+        code,
+        // Undefined falls through to the column default, BRANCH. A WAREHOUSE is
+        // a place the business staffs but does not sell from — see BranchKind.
+        kind,
+        // Undefined falls through to FM, the flow every branch had before
+        // requirement 24. A change later affects orders placed from then on —
+        // each order snapshots the model it was placed under.
+        operatingModel,
+        city,
+        region,
+        country,
+        // Where a delivery goes, as opposed to where the branch is for reporting.
+        // Optional at creation and editable afterwards, like the geofence.
+        addressLine,
+        postalCode,
+        timezone,
+        currency,
+        latitude,
+        longitude,
+        geofenceRadiusMeters,
+      },
+    });
   });
 }
 
@@ -60,7 +80,7 @@ function createBranch(
  * leaves it alone. That distinction is why this walks the keys rather than
  * spreading the body.
  */
-async function updateBranch(businessId, branchId, patch) {
+async function updateBranch(businessId, branchId, patch, { plan } = {}) {
   const existing = await prisma.branch.findFirst({ where: { id: branchId, businessId } });
   if (!existing) {
     throw fail('BRANCH_NOT_FOUND', 404);
@@ -99,7 +119,25 @@ async function updateBranch(businessId, branchId, patch) {
     throw fail('GEOFENCE_NEEDS_COORDINATES', 400);
   }
 
-  return prisma.branch.update({ where: { id: branchId }, data });
+  // Requirement 28. Only a CHANGE is checked, so a business that moved down a
+  // plan can still edit a FOCO branch it already has — downgrading never takes
+  // away what exists, it only stops more being made.
+  if (data.operatingModel === 'FOCO' && existing.operatingModel !== 'FOCO') {
+    assertPlanFeature({ plan }, 'focoBranches');
+  }
+
+  // A branch that starts counting towards the bill — reopened, or turned from a
+  // warehouse into a shop — needs a paid slot exactly as a new one does.
+  const startsBilling =
+    subscriptionService.isBilled({ kind: data.kind ?? existing.kind, status: data.status ?? existing.status }) &&
+    !subscriptionService.isBilled(existing);
+  if (!startsBilling) {
+    return prisma.branch.update({ where: { id: branchId }, data });
+  }
+  return prisma.$transaction(async (tx) => {
+    await subscriptionService.assertRoomForAnotherBranch(tx, businessId);
+    return tx.branch.update({ where: { id: branchId }, data });
+  });
 }
 
 // accessibleBranchIds === null means the caller has full access (OWNER/ADMIN);
@@ -350,6 +388,10 @@ async function createBusinessForUser(userId, data, client = prisma) {
       joinedAt: new Date(),
     },
   });
+
+  // Requirement 28: every business starts a trial of the top plan, in the same
+  // transaction, so there is never a business without a subscription to read.
+  await subscriptionService.startTrial(business.id, client);
 
   // Requirement 10's starting categories, inside the same transaction as the
   // business itself. A business with none cannot log an expense at all, so

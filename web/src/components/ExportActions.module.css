@@ -1,0 +1,140 @@
+.card {
+  min-width: 0;
+  padding: var(--space-xl);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.title {
+  font: var(--text-label);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.scope {
+  margin-top: var(--space-xs);
+  font-size: 13.5px;
+  line-height: 19px;
+  color: var(--color-text);
+}
+
+.warning {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.warning svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.warningTitle {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.warningBody {
+  margin-top: 2px;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.actions {
+  margin-top: var(--space-sm);
+}
+
+/* Stacked rows: each format gets the full width for its name and a sentence. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-md) 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+.row + .row {
+  border-top: 1px solid var(--color-border);
+}
+
+.row:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.row[aria-busy='true'] {
+  cursor: progress;
+  opacity: 1;
+}
+
+.row:hover:not(:disabled) .rowTitle {
+  color: var(--color-primary);
+}
+
+.row:hover:not(:disabled) .chevron {
+  color: var(--color-primary);
+  transform: translateX(2px);
+}
+
+.rowIcon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.rowText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rowTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  transition: color var(--duration-quick) ease;
+}
+
+.rowHint {
+  margin-top: 1px;
+  font-size: 12.5px;
+  line-height: 17px;
+  color: var(--color-text-secondary);
+}
+
+.chevron {
+  flex: none;
+  color: var(--color-text-tertiary);
+  transition: color var(--duration-quick) ease, transform var(--duration-quick) ease;
+}
+
+.error {
+  margin-top: var(--space-sm);
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--color-error);
+}
+
+@media (max-width: 600px) {
+  .card {
+    padding: var(--space-lg);
+  }
+}

@@ -17,6 +17,14 @@ type Props = {
   modelHint: string;
   /** Add branch puts a few words under each kind; Branch settings, where it is already known, does not. */
   withCaptions?: boolean;
+  /**
+   * Requirement 28: company-operated is part of the Franchise plan. False hides
+   * the option; `planIncludesFoco` false also says where it lives. Branch
+   * settings keeps offering it for a branch that already is one — moving down a
+   * plan never takes away what exists.
+   */
+  offerFoco: boolean;
+  planIncludesFoco: boolean;
 };
 
 /**
@@ -36,6 +44,8 @@ export default function BranchKindFields({
   kindHint,
   modelHint,
   withCaptions,
+  offerFoco,
+  planIncludesFoco,
 }: Props) {
   const { t } = useTranslation();
 
@@ -71,15 +81,17 @@ export default function BranchKindFields({
           <legend className={styles.heading}>{t('addBranch.model')}</legend>
           <p className={styles.hint}>{modelHint}</p>
           <div className={styles.modelList}>
-            <OptionRow
-              name="branch-model"
-              value="FOCO"
-              title={t('addBranch.modelFoco')}
-              description={t('addBranch.modelFocoHint')}
-              icon={IoBusinessOutline}
-              selected={operatingModel === 'FOCO'}
-              onSelect={() => onModelChange('FOCO')}
-            />
+            {offerFoco ? (
+              <OptionRow
+                name="branch-model"
+                value="FOCO"
+                title={t('addBranch.modelFoco')}
+                description={t('addBranch.modelFocoHint')}
+                icon={IoBusinessOutline}
+                selected={operatingModel === 'FOCO'}
+                onSelect={() => onModelChange('FOCO')}
+              />
+            ) : null}
             <OptionRow
               name="branch-model"
               value="FM"
@@ -90,6 +102,7 @@ export default function BranchKindFields({
               onSelect={() => onModelChange('FM')}
             />
           </div>
+          {planIncludesFoco ? null : <p className={styles.planNote}>{t('plans.focoOnFranchise')}</p>}
         </fieldset>
       ) : null}
     </>

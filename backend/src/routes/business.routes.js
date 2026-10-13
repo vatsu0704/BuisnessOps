@@ -46,6 +46,11 @@ scoped.get('/branches/:branchId', requireBranchAccess, businessController.getBra
 scoped.get('/branches/:branchId/transactions', requireBranchAccess, businessController.listTransactions);
 scoped.get('/sales-summary', businessController.getSalesSummary);
 
+// Requirement 28. The owner's view of the plan. Every member already learns the
+// plan and whether the business is read-only from their membership, which is
+// what the app gates on; this is the detail behind it, and that is the owner's.
+scoped.get('/subscription', requirePermission('billing:manage'), businessController.getSubscription);
+
 scoped.post('/memberships', requirePermission('team:invite'), businessController.createMembership);
 scoped.get('/memberships', requirePermission('team:view'), businessController.listMemberships);
 scoped.get('/invites', requirePermission('team:view'), businessController.listInvites);
