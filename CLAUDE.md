@@ -523,6 +523,13 @@ user-facing string** — render it with `t('section.key')` from
   with the words as plain text beside it: sign-up's privacy link was untappable
   until it became `<policy>`. Neither `tsc` nor `lint:i18n` here can see it;
   `web/`'s `lint:i18n` checks every shared translation for it.
+- **Every element in a `<Trans components={{…}}>` carries a `key`**, though it
+  is not in a list. react-i18next 14 copies it through `React.Children.map`, and
+  React 19 marks a copy of a keyless element as still owing a key warning
+  whatever key the copy is given — so the Login heading logged "Each child in a
+  list should have a unique key … passed a child from Trans" on every render.
+  Name the key after the tag (`<Text key="brand" …/>`). Dev-only, so nothing
+  but the console shows it.
 
 **Three files are allowed to break this, and all of them are fenced.** Each one
 earns it the same way — the rule's premise stops being true, rather than being

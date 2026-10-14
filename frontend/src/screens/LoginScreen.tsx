@@ -77,9 +77,13 @@ export default function LoginScreen({ navigation }: Props) {
             <AnimatedEntrance delay={step(1)} style={styles.intro}>
               <Pill label={t('login.pill')} icon="trending-up" />
               {/* One sentence with the name tagged inside it, not a prefix plus the
-                  name: Hindi, Gujarati and Marathi put the name first. */}
+                  name: Hindi, Gujarati and Marathi put the name first. The key
+                  is not decoration — see CLAUDE.md, Translations. */}
               <Text style={styles.heading}>
-                <Trans i18nKey="login.heading" components={{ brand: <Text style={styles.headingBrand} /> }} />
+                <Trans
+                  i18nKey="login.heading"
+                  components={{ brand: <Text key="brand" style={styles.headingBrand} /> }}
+                />
               </Text>
               <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
             </AnimatedEntrance>

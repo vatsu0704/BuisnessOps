@@ -63,9 +63,10 @@ export default function LoginPage() {
             <Enter delay={step(1)} className={styles.introText}>
               <Pill label={t('login.pill')} icon={IoTrendingUp} />
               {/* One sentence with the name tagged inside it: Hindi, Gujarati and
-                  Marathi put the name first. */}
+                  Marathi put the name first. The key is not decoration — see
+                  CLAUDE.md, Translations. */}
               <h1 className={styles.heading}>
-                <Trans i18nKey="login.heading" components={{ brand: <span className={styles.headingBrand} /> }} />
+                <Trans i18nKey="login.heading" components={{ brand: <span key="brand" className={styles.headingBrand} /> }} />
               </h1>
               <p className={styles.subtitle}>{t('login.subtitle')}</p>
             </Enter>

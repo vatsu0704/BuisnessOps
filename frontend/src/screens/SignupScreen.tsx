@@ -312,13 +312,15 @@ export default function SignupScreen({ navigation }: Props) {
                   The tag is <policy>, never <link>: Trans parses its markup as
                   HTML, where <link> is a void element, so it closed at once and
                   rendered an empty link with the policy's name as plain text
-                  after it — nothing on screen was tappable. */}
+                  after it — nothing on screen was tappable. The key is not
+                  decoration — see CLAUDE.md, Translations. */}
               <Text style={styles.privacy}>
                 <Trans
                   i18nKey="signup.privacyNotice"
                   components={{
                     policy: (
                       <Text
+                        key="policy"
                         testID="signup-privacy-policy"
                         style={styles.privacyLink}
                         onPress={() => openLegalPage('privacy')}

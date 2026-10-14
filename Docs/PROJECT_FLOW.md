@@ -18,6 +18,9 @@ the mobile app's functionality to the browser, against the same API. Its
 foundation, sign-in, sign-up and Home are done, and the parity plan — thirteen
 phases, W1 to W13 — was agreed on 2026-10-13.
 
+**On hold since 2026-10-14.** Everything still open, across all three tracks, is
+one checklist in Section 11 → *Pending work*, with the order to resume in.
+
 ---
 
 ## 1. Guiding Architecture Principles
@@ -330,14 +333,107 @@ An onboarding path now exists end to end: register → add a branch → upload s
 
 One consequence worth stating: being revoked from *every* business is now a real state. `primaryBusiness` returns null rather than naming a revoked business, `activeMembership()` returns undefined rather than falling back to a revoked row, and Home and Settings both say so plainly instead of rendering a dashboard of zeros with an "add your first branch" button that would fail on tap.
 
-What's actually next:
+### Pending work — on hold since 2026-10-14
 
-1. **Phase 2 — Core Query Engine.** Still blocked on an LLM provider being wired in (Anthropic API key not yet provided). The Home screen already has the answer surface and the disabled ask bar waiting for it.
-2. **Locale-aware formatting** (Phase 3 leftover) — partly done: `formatAmount` now groups INR the Indian way (₹3,40,000) and month, weekday and date labels come from the translation files rather than a hardcoded English array. Still open: locale-aware number and date formatting driven by the business's region rather than the app language, and the Hermes `Intl` caveat in Section 6 still stands.
-3. **Live POS adapter** — blocked on either picking a different pull-capable vendor or a Petpooja partner conversation (see Section 12).
-4. **Google Play release** (Phase 7a) — the code is ready; what remains is the package rename once Firebase has the new app, the on-device edge-to-edge check, and the owner's paperwork and hosting. Password reset is the strongest candidate for the next feature before strangers use the app: without it a forgotten password is a dead account.
+Everything still open, across all three tracks, in one list. Work was paused here on
+2026-10-14 for a priority task outside this list; pick it up from *Resume here*. Each
+item names where its detail lives. **Tick an item off here in the same change that
+finishes it**, and add one when something ships deliberately incomplete.
 
-*Done since this list was last written: the business switcher, revoking access (both under 4a above), backend i18n (4b) and branch settings — see below.*
+**Resume here** (the order agreed on 2026-10-14):
+
+1. **Two mobile-app bugs the web port found** — small, and the web already has the fix:
+   - [ ] **Reports' reconciliation sentence covers the whole window, not the month in
+     focus.** `ReportsScreen.tsx` passes `report.business.reconciliation`, which is the
+     window's, so six months' figures print under one month's net profit. The web adds
+     up the month's own branch column instead — `monthReconciliation` in
+     `web/src/components/reports/ranking.ts` (W7, Section 15) — and shows the sentence
+     only when it balances.
+   - [ ] **A withdrawn product cannot be put back on sale from the app.** Products lists
+     only what is on sale, so *Put back on sale* is unreachable once a product is
+     withdrawn and left. The web's *Show withdrawn* for `product:manage` (W6,
+     `web/src/pages/ProductsPage.tsx`) is the model.
+2. [ ] **Then either W8 or password reset** — not yet chosen. W8 continues the web
+   track; password reset is the largest gap before strangers use the app.
+
+**Web app** (Section 15):
+
+- [ ] W4 — online on Render. The repository is ready; Vatsal's steps: create the
+  Blueprint, check `VITE_API_URL`, add the site to the API's `CORS_ORIGINS`.
+- [ ] W8 — team and invites, staff, attendance and punch-in, payroll and payslips.
+- [ ] W9 — expenses, the expense-gap card, the day-end export.
+- [ ] W10 — supply catalog and cart, orders and order detail, the desk, deliveries.
+- [ ] W11 — supply payments, payment accounts, vendors, UPI QR.
+- [ ] W12 — counter.
+- [ ] W13 — browser push (needs a Firebase web app and a VAPID key).
+- [ ] The web Home's four missing cards: today's punch-in, the branches to chase for
+  expenses, and the two supply-payment cards (they arrive with W8, W9 and W11).
+
+**Before anyone outside a pilot group uses it** (`DEPLOYMENT.md` → *Before you call
+it live*):
+
+- [ ] Password reset, password change and email verification — needs an email
+  channel, which is a product decision first.
+- [ ] Error tracking.
+- [ ] Database backups.
+- [ ] Rate limiting beyond the auth routes — carefully: a whole shop shares one IP.
+- [ ] Pagination for the supply lists (they stop at the 200 most recent orders).
+
+**Google Play** (Section 10, 7a; `PLAY_STORE_RELEASE.md`):
+
+- [ ] A1 — the package rename `com.biziq.app` → `com.hisabkitab.app`, once the new
+  Android app is registered in Firebase. Permanent once published.
+- [ ] The on-device edge-to-edge design pass, with gesture **and** 3-button navigation.
+- [ ] Part B, the owner's steps B1–B11: company registration, D-U-N-S, domain and
+  hosting, signing key, Firebase, Play Console account, then build, *App content*, Data
+  safety, listing, testing.
+- [ ] Set `LEGAL_NAME`, `LEGAL_ADDRESS` and `SUPPORT_EMAIL` on the server once the
+  company exists.
+- [ ] Before August 2027: Expo SDK 56 or later and with it the New Architecture
+  (reanimated 4.x), for that year's target-API rule.
+
+**Billing** (requirement 28; `REQUIREMENTS.md` → *Open decisions*):
+
+- [ ] Stage 2, online payment — waits on the company's registration, a GSTIN and a
+  gateway's KYC.
+- [ ] Validate the plan amounts with five to ten owners before anyone is charged.
+- [ ] Settle whether Google Play's payments policy lets the Android app link to the web
+  Plan page.
+
+**The product phases** (Sections 5–10):
+
+- [ ] Phase 2 — the query engine. Blocked on an LLM API key; the Home answer surface
+  and the hidden ask bar are waiting for it.
+- [ ] Phase 3 — voice; questions and answers in hi/gu/mr (both need Phase 2); number and
+  date formatting by the business's region rather than the app language — `formatAmount`
+  already groups INR the Indian way, and the Hermes `Intl` caveat in Section 6 stands.
+- [ ] Phase 4 — benchmarking against a company average, city/region grouping, a browse
+  dashboard.
+- [ ] Phase 5 — alerts and anomaly detection (the Alerts screen is a placeholder).
+- [ ] Phase 6 — staff analytics, royalty engine, expansion what-if, forecasting.
+- [ ] Phase 7 — a cross-tenant test suite over every endpoint, a load test, and a
+  compliance review (DPDP) per market.
+- [ ] A live POS adapter — blocked on a vendor with a pull API, or a Petpooja partner
+  conversation (Section 12).
+
+**Loose ends** (`TESTING_GUIDE.md` → *Known limitations* has each in full):
+
+- [ ] Editing an expense in the app — `PATCH /expenses/:id` exists, the screen has no
+  pencil.
+- [ ] The Team screen still offers to remove a manager's or delivery agent's branch
+  access, which no longer changes anything.
+- [ ] No hand-over step for the cash a delivery agent collects.
+- [ ] Salary edits keep no history.
+- [ ] Removed members cannot be hidden from the Team list, and there is no reinstate
+  button.
+- [ ] iOS push (its own Firebase app, `GoogleService-Info.plist`, an APNs key).
+- [ ] A native speaker's review of the hi/gu/mr translations.
+- [ ] Whether a counter order records how it was paid — optional and unspecified for
+  now; revisit once a real counter is in use (`REQUIREMENTS.md` → *Open decisions*).
+
+*Done since the previous version of this list: the business switcher, revoking access
+(both under 4a above), backend i18n (4b), branch settings, and everything in
+Sections 13–15 marked ✅.*
 
 **Ingestion contract, for whoever builds on it:** required CSV columns are `occurred_at, product_name, quantity, unit_price, payment_method`; optional `transaction_external_id, sku, unit, tax_amount, discount_amount`. Rows sharing a `transaction_external_id` group into one transaction. A data source is bound to exactly one branch — there is no per-row branch column — so each branch gets its own `CSV_UPLOAD` source, and a warehouse cannot have sales imported (`BRANCH_IS_WAREHOUSE`). Bad rows are skipped and reported per row, by the line number the spreadsheet shows, rather than failing the file; a file missing a required column is refused once, with `FILE_MISSING_COLUMNS` naming it.
 

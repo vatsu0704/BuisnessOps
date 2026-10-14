@@ -257,11 +257,14 @@ export default function SignupPage() {
               />
               {/* One sentence with the link tagged inside it: the Indic languages
                   put the policy's name before the verb. The tag is <policy> —
-                  Trans reads <link> as the void HTML element and empties it. */}
+                  Trans reads <link> as the void HTML element and empties it. The
+                  key is not decoration — see CLAUDE.md, Translations. */}
               <p className={styles.privacy}>
                 <Trans
                   i18nKey="signup.privacyNotice"
-                  components={{ policy: <a href={legalPageUrl('privacy')} target="_blank" rel="noopener noreferrer" /> }}
+                  components={{
+                    policy: <a key="policy" href={legalPageUrl('privacy')} target="_blank" rel="noopener noreferrer" />,
+                  }}
                 />
               </p>
               <Link to="/login" className={styles.switchLink}>
