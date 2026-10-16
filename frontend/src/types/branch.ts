@@ -38,6 +38,11 @@ export interface Branch {
    */
   addressLine: string | null;
   postalCode: string | null;
+  /**
+   * The shop's phone number, printed on its counter receipts (requirement 31).
+   * Free text: a landline with its STD code is as common as a mobile.
+   */
+  phone: string | null;
   timezone: string;
   currency: string | null;
   status: BranchStatus;

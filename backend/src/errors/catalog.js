@@ -94,6 +94,9 @@ const API_MESSAGES = {
   COUNTER_ORDER_DAY_CLOSED:
     'This day has been closed, so its orders can no longer be changed',
   COUNTER_ITEM_NOT_FOUND: 'That item is not on this order',
+  // Requirement 30: the same reference already names a different bill — not a
+  // resend of this one. The phone keeps the bill and shows it for a person.
+  COUNTER_SALE_REF_CONFLICT: 'A different bill with the same reference is already recorded',
   COUNTER_ITEM_NEEDS_PRODUCT_OR_PRICE:
     'Choose a product, or give the item a name and a price',
   PRODUCT_HAS_NO_PRICE: 'This product has no price set, so it cannot be rung up',
@@ -344,6 +347,9 @@ const FIELD_MESSAGES = {
   EXPENSE_NOTHING_TO_UPDATE: 'provide categoryId, amount, date, note or paymentMethod',
   CATEGORY_NOTHING_TO_UPDATE: 'provide name or isActive',
   DEVICE_TOKEN_REQUIRED: 'token is required',
+  // Requirement 30 — refusals of one bill in a sync, reported against that bill.
+  COUNTER_SALE_INVALID: 'This bill could not be read ({{field}}), so it was not recorded',
+  COUNTER_SYNC_TOO_MANY_SALES: 'send at most {{max}} bills at a time',
   NOTIFICATION_ENABLED_REQUIRED: 'enabled is required as true or false',
 };
 

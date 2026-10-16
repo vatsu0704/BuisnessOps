@@ -42,16 +42,23 @@ const { dateOnly, dateKeyOf, todayKeyInZone, safeZone, localDayRange } = require
  * There is deliberately no raw-material category — see the note on
  * `ExpenseCategory` in the schema, and §5 of REQUIREMENTS.md.
  */
+// `costType` is how Reports splits costs (requirement 34), classed as Vatsal
+// chose: Milk and Gas rise and fall with sales, Rent and Electricity are the same
+// every month, and the rest is day-to-day. Kept identical to the backfill in
+// migration 20261015090000_expense_cost_types.
 const SEEDED_CATEGORIES = [
-  { code: 'MILK', name: 'Milk', sortOrder: 10 },
-  { code: 'GAS', name: 'Gas', sortOrder: 20 },
-  { code: 'ELECTRICITY', name: 'Electricity', sortOrder: 30 },
-  { code: 'RENT', name: 'Rent', sortOrder: 40 },
-  { code: 'REPAIRS', name: 'Repairs', sortOrder: 50 },
-  { code: 'TRANSPORT', name: 'Transport', sortOrder: 60 },
-  { code: 'PETTY', name: 'Petty cash', sortOrder: 70 },
-  { code: 'OTHER', name: 'Other', sortOrder: 80 },
+  { code: 'MILK', name: 'Milk', sortOrder: 10, costType: 'VARIABLE' },
+  { code: 'GAS', name: 'Gas', sortOrder: 20, costType: 'VARIABLE' },
+  { code: 'ELECTRICITY', name: 'Electricity', sortOrder: 30, costType: 'FIXED' },
+  { code: 'RENT', name: 'Rent', sortOrder: 40, costType: 'FIXED' },
+  { code: 'REPAIRS', name: 'Repairs', sortOrder: 50, costType: 'DAILY' },
+  { code: 'TRANSPORT', name: 'Transport', sortOrder: 60, costType: 'DAILY' },
+  { code: 'PETTY', name: 'Petty cash', sortOrder: 70, costType: 'DAILY' },
+  { code: 'OTHER', name: 'Other', sortOrder: 80, costType: 'DAILY' },
 ];
+
+/** The three kinds of cost a category can be (requirement 34). */
+const COST_TYPES = ['VARIABLE', 'FIXED', 'DAILY'];
 
 /** A category somebody typed sorts after every seeded one. */
 const CUSTOM_SORT_ORDER = 100;
@@ -149,6 +156,18 @@ async function createCategory(businessId, { name }) {
  * one is allowed: a business with no gas bill should be able to take Gas off
  * the list.
  */
+/**
+ * Re-class a category for Reports (requirement 34). Its own call and its own
+ * capability, `expense:classify`: the people who log spending create categories,
+ * but how the owner's report sorts them is the owner's decision. A standard
+ * category may be re-classed too — a shop whose milk is a fixed monthly contract
+ * is right to call it fixed. Only the split moves; no total changes.
+ */
+async function setCategoryCostType(businessId, categoryId, costType) {
+  const category = await getCategory(businessId, categoryId);
+  return prisma.expenseCategory.update({ where: { id: category.id }, data: { costType } });
+}
+
 async function updateCategory(businessId, categoryId, { name, isActive }) {
   const category = await getCategory(businessId, categoryId);
   const data = {};
@@ -485,6 +504,8 @@ module.exports = {
   getCategory,
   createCategory,
   updateCategory,
+  setCategoryCostType,
+  COST_TYPES,
   logExpense,
   getExpense,
   updateExpense,

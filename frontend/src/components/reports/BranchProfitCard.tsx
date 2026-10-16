@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import { costMetrics } from '@/components/reports/costMetrics';
 import MetricGrid, { type Metric } from '@/components/reports/MetricGrid';
 import MonthBars from '@/components/reports/MonthBars';
 import TrendPill from '@/components/reports/TrendPill';
@@ -50,35 +51,25 @@ export default function BranchProfitCard({
   const net = Number(cell.netProfit);
   const currency = row.currency;
 
+  // Requirement 34: what came in, then the three kinds of cost and their total.
+  // A warehouse has no till, so it shows only what it spent.
+  const costs = costMetrics(cell, {
+    t,
+    currency,
+    rawMaterial: Number(cell.materialSpend),
+    rawMaterialKey: 'reports.variableIncludesMaterial',
+    wages: Number(cell.payroll),
+    wagesProvisional: cell.payrollProvisional,
+  });
   const metrics: Metric[] = row.isCostCentre
-    ? [
-        { label: t('reports.expenses'), value: formatAmount(Number(cell.expenses), currency), tone: 'cost' },
-        {
-          label: t('reports.payroll'),
-          value: formatAmount(Number(cell.payroll), currency),
-          tone: 'cost',
-          caption: cell.payrollProvisional ? t('reports.provisional') : undefined,
-        },
-      ]
+    ? costs
     : [
         {
-          label: t('reports.sales'),
+          label: t('reports.totalBusiness'),
           value: formatAmount(Number(cell.sales), currency),
           caption: t('reports.saleCount', { count: cell.saleCount }),
         },
-        { label: t('reports.expenses'), value: formatAmount(Number(cell.expenses), currency), tone: 'cost' },
-        {
-          label: t('reports.materialSpend'),
-          value: formatAmount(Number(cell.materialSpend), currency),
-          tone: 'cost',
-          caption: t('reports.materialOrderCount', { count: cell.materialOrderCount }),
-        },
-        {
-          label: t('reports.payroll'),
-          value: formatAmount(Number(cell.payroll), currency),
-          tone: 'cost',
-          caption: cell.payrollProvisional ? t('reports.provisional') : undefined,
-        },
+        ...costs,
       ];
 
   return (

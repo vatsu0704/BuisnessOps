@@ -2,6 +2,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import MetricGrid from '@/components/reports/MetricGrid';
+import { costMetrics } from '@/components/reports/costMetrics';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { formatAmount } from '@/utils/format';
 import type { CrossBusinessReport } from '@/types/analytics';
@@ -77,6 +78,7 @@ export default function CrossBusinessSection({
 
       {cross.businesses.map((business) => {
         const net = Number(business.total.netProfit);
+        const transfer = Number(business.total.internalTransfer);
         return (
           <View key={business.businessId} style={styles.card}>
             <View style={styles.header}>
@@ -94,42 +96,34 @@ export default function CrossBusinessSection({
             <Text style={[styles.net, net < 0 && styles.netLoss]}>
               {formatAmount(net, business.currency)}
             </Text>
-            <Text style={styles.netLabel}>{t('reports.netProfit')}</Text>
+            <Text style={styles.netLabel}>{t('reports.totalProfit')}</Text>
 
+            {/* The month card's figures, for the whole window (requirement 34):
+                money that went to vendors is inside Variable, and the warehouse
+                transfer is shown only when there was one, never as a cost. */}
             <MetricGrid
               metrics={[
                 {
-                  label: t('reports.customerSales'),
+                  label: t('reports.totalBusiness'),
                   value: formatAmount(Number(business.total.customerSales), business.currency),
                 },
-                {
-                  label: t('reports.expenses'),
-                  value: formatAmount(Number(business.total.expenses), business.currency),
-                  tone: 'cost',
-                },
-                {
-                  label: t('reports.payroll'),
-                  value: formatAmount(Number(business.total.payroll), business.currency),
-                  tone: 'cost',
-                  caption: business.total.payrollProvisional ? t('reports.provisional') : undefined,
-                },
-                // Requirement 25: money that left the business for a vendor.
-                // Only when there was some, so a business without vendors
-                // reads exactly as it did.
-                ...(Number(business.total.vendorSpend) !== 0
+                ...costMetrics(business.total, {
+                  t,
+                  currency: business.currency,
+                  rawMaterial: Number(business.total.vendorSpend),
+                  rawMaterialKey: 'reports.variableIncludesVendors',
+                  wages: Number(business.total.payroll),
+                  wagesProvisional: business.total.payrollProvisional,
+                }),
+                ...(transfer !== 0
                   ? [
                       {
-                        label: t('reports.vendorSpend'),
-                        value: formatAmount(Number(business.total.vendorSpend), business.currency),
-                        tone: 'cost' as const,
+                        label: t('reports.internalTransfer'),
+                        value: formatAmount(transfer, business.currency),
+                        caption: t('reports.internalTransferCaption'),
                       },
                     ]
                   : []),
-                {
-                  label: t('reports.internalTransfer'),
-                  value: formatAmount(Number(business.total.internalTransfer), business.currency),
-                  caption: t('reports.internalTransferCaption'),
-                },
               ]}
             />
           </View>

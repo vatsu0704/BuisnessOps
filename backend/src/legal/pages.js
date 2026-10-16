@@ -161,6 +161,15 @@ records it keeps about you, ask that business first.</p>
   <li><strong>Your device, for notifications:</strong> a push-notification token
   for your phone and the language it is set to, so a notification can reach you
   in your language.</li>
+  <li><strong>Counter bills taken without a connection:</strong> kept in the app's
+  private storage on that phone until they reach our servers, then stored like any
+  other sale. A branch's phone number, if the business enters one, is printed on
+  its receipts.</li>
+  <li><strong>The receipt printer:</strong> to print tokens, the app asks Android
+  for the "Nearby devices" permission and lists the printers already paired with
+  the phone. Which printer was chosen stays on the phone and is never sent to us;
+  a receipt goes only to that printer. The app does not search for devices and does
+  not use your location for this.</li>
   <li><strong>Server logs:</strong> when the app talks to our servers, we log
   the time, the address the request came from (IP address), which account and
   business made it, and whether it succeeded. These are for security and for

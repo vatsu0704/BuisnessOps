@@ -93,18 +93,24 @@ const CAPABILITIES = {
     'Pay for a company-operated (FOCO) branch’s supply orders once they are delivered — one order or a whole batch to the same payee at once',
   'supplyPayment:verify':
     'Confirm the warehouse received a franchise branch’s payment, or say it did not. Split out of supplyOrder:fulfil so accounts can confirm money without being able to run the desk',
+  'supplyPayment:viewHistory':
+    'Read the history of supply-order payments — what accounts paid for company (FOCO) branches and what franchise (FM) branches paid — month by month (requirement 35). Deliberately NOT held by the warehouse desk, which confirms payments but does not keep the books',
   'paymentAccount:manage':
-    'Set or change the UPI IDs payments go to — the warehouse’s and every vendor’s. Deliberately NOT held by the warehouse desk: whoever can change where money goes must not also be whoever ships the goods',
+    'Set or change the UPI IDs payments go to — the counter’s, the warehouse’s and every vendor’s. Deliberately NOT held by the warehouse desk: whoever can change where money goes must not also be whoever ships the goods',
 
   // --- Expenses (Task 6) ---
   'expense:view':
     "Read a branch's spending and its category breakdown. Separate from expense:log because the back-office desk reads every branch's figures and records none of them, and separate from expense:viewAllBranches because WHICH branches is a question of scope, not of whether you may look at all",
   'expense:log': "Record what a branch spent, by category",
+  'expense:classify':
+    "Decide whether an expense category is a variable, fixed or day-to-day cost in Reports (requirement 34). Not part of expense:log: whoever records spending may add a category, but how the owner's report sorts it is the owner's",
   'expense:viewAllBranches':
     "See every branch's expenses, and which ones have logged nothing today",
 
   // --- Analytics and export (Tasks 8, 9) ---
   'analytics:viewBranch': "See a branch's own sales, costs and totals",
+  'analytics:viewToday':
+    "See today's sales, bills and spending at the branches you reach — the figures at the top of Home (requirement 33). Narrower than analytics:viewBranch: no costs, wages or profit, which is why a cashier holds this one and not that",
   'analytics:viewBusiness': 'See every branch compared, month by month, with net profit',
   'export:dayEnd': "Export everything entered on a given day",
   'export:monthEnd': "Export everything entered in a given month",
@@ -217,7 +223,10 @@ const ROLE_CAPABILITIES = {
     'attendance:viewRoster',
     'product:view',
     'product:manage',
-    'analytics:viewBranch',
+    // Requirement 33: today's sales, bills and spending — and NOT
+    // analytics:viewBranch, which is the branch's costs, wages and profit. Vatsal
+    // chose that a cashier sees what the till did today, not what the shop made.
+    'analytics:viewToday',
     'export:dayEnd',
     'export:monthEnd',
   ],
@@ -259,10 +268,13 @@ const ROLE_CAPABILITIES = {
     'supplyOrder:view',
     'supplyPayment:settle',
     'supplyPayment:verify',
+    // Requirement 35: the books of what was paid, the accountant's own job.
+    'supplyPayment:viewHistory',
     'paymentAccount:manage',
     'expense:view',
     'expense:viewAllBranches',
     'analytics:viewBranch',
+    'analytics:viewToday',
     'analytics:viewBusiness',
   ],
 

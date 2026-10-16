@@ -10,6 +10,7 @@ const {
   mustBeStringArray,
   provideAtLeastOne,
   required,
+  stringMaxLength,
 } = require('./shared');
 const { fieldError } = require('../errors');
 const { ROLES, SINGLE_BRANCH_ROLE } = require('../permissions');
@@ -84,6 +85,13 @@ function validateCreateBusiness(body) {
 // place ("behind the old post office").
 const BRANCH_TEXT_FIELDS = ['city', 'region', 'country', 'addressLine', 'postalCode', 'currency'];
 
+/**
+ * The phone printed on the branch's receipts (requirement 31). Free text, like
+ * a vendor's — a landline with its STD code is as common as a mobile — but
+ * bounded, because it has to fit one line of a 58mm slip.
+ */
+const BRANCH_PHONE_MAX = 20;
+
 function validateCreateBranch(body) {
   const errors = [];
   if (!body.name || typeof body.name !== 'string') errors.push(required('name'));
@@ -134,6 +142,7 @@ function validateUpdateBranch(body) {
     'geofenceRadiusMeters',
     'weeklyOffOverride',
     'weeklyOffDays',
+    'phone',
   ];
   if (!allowed.some((field) => body[field] !== undefined)) {
     errors.push(provideAtLeastOne(allowed));
@@ -163,6 +172,10 @@ function validateUpdateBranch(body) {
   }
   if (body.weeklyOffDays !== undefined && !isWeekdayList(body.weeklyOffDays)) {
     errors.push(fieldError('WEEKLY_OFF_DAYS_INVALID', 'weeklyOffDays'));
+  }
+  if (body.phone !== undefined && body.phone !== null) {
+    if (typeof body.phone !== 'string') errors.push(mustBeString('phone'));
+    else if (body.phone.trim().length > BRANCH_PHONE_MAX) errors.push(stringMaxLength('phone', BRANCH_PHONE_MAX));
   }
   validateGeofenceFields(body, errors, { requireRadiusCoordinates: false });
   return errors;

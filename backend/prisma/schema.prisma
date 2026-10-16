@@ -143,6 +143,19 @@ model Business {
   supplyUpiUpdatedByMembershipId String?
   supplyUpiUpdatedByMembership   Membership? @relation("BusinessSupplyUpiUpdatedBy", fields: [supplyUpiUpdatedByMembershipId], references: [id], onDelete: SetNull)
 
+  // Where a CUSTOMER's money goes at the counter (requirement 32): the UPI ID
+  // every counter QR is generated from, with the bill's exact amount in it. Not
+  // the supply ID above — that is where the business is paid by its branches;
+  // this is where it is paid by the public. A branch can override it
+  // (Branch.counterUpiId), which is how a franchise (FM) shop's customers pay
+  // the franchisee rather than the company. Stamped like every payee, and
+  // written only under `paymentAccount:manage`.
+  counterUpiId                    String?
+  counterUpiName                  String?
+  counterUpiUpdatedAt             DateTime?
+  counterUpiUpdatedByMembershipId String?
+  counterUpiUpdatedByMembership   Membership? @relation("BusinessCounterUpiUpdatedBy", fields: [counterUpiUpdatedByMembershipId], references: [id], onDelete: SetNull)
+
   branches              Branch[]
   memberships           Membership[]
   dataSourceConnections DataSourceConnection[]
@@ -199,21 +212,21 @@ model Invite {
 }
 
 model Branch {
-  id         String     @id @default(uuid())
-  businessId String
-  business   Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  name       String
-  code       String
+  id             String               @id @default(uuid())
+  businessId     String
+  business       Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name           String
+  code           String
   // Defaults to BRANCH, so every location that already exists stays exactly
   // what it was and no backfill is needed.
-  kind       BranchKind @default(BRANCH)
+  kind           BranchKind           @default(BRANCH)
   // Who pays for this branch's raw material. Read when an order is PLACED and
   // snapshotted onto it (SupplyOrder.operatingModel), so changing it here
   // affects orders placed from then on and never rewrites one already in flight.
   operatingModel BranchOperatingModel @default(FM)
-  city       String?
-  region     String?
-  country    String?
+  city           String?
+  region         String?
+  country        String?
 
   // Where a delivery actually goes. city/region/country describe where the
   // branch IS, for reporting; they are not an address anybody can ride to.
@@ -225,6 +238,9 @@ model Branch {
   // and a branch whose own staff know where it is never needs one.
   addressLine String?
   postalCode  String?
+  // Printed on the branch's counter receipts (requirement 31), under the
+  // address. Free text: a landline with its STD code is as common as a mobile.
+  phone       String?
   latitude    Decimal?     @db.Decimal(9, 6)
   longitude   Decimal?     @db.Decimal(9, 6)
   timezone    String
@@ -246,6 +262,16 @@ model Branch {
   // rather than a sentinel. The override wins whole, never merged.
   weeklyOffOverride Boolean @default(false)
   weeklyOffDays     Int[]   @default([])
+
+  // This shop's own counter UPI ID, overriding Business.counterUpiId
+  // (requirement 32). Null means "use the business's". Deliberately not in
+  // updateBranch's field list: where money goes is `paymentAccount:manage`,
+  // and `branch:update` must not be a way round it.
+  counterUpiId                    String?
+  counterUpiName                  String?
+  counterUpiUpdatedAt             DateTime?
+  counterUpiUpdatedByMembershipId String?
+  counterUpiUpdatedByMembership   Membership? @relation("BranchCounterUpiUpdatedBy", fields: [counterUpiUpdatedByMembershipId], references: [id], onDelete: SetNull)
 
   branchAccess          BranchAccess[]
   dataSourceConnections DataSourceConnection[]
@@ -344,13 +370,16 @@ model Membership {
   // or verified a payment lives in SupplyOrderEvent instead — that table is the
   // audit trail, and repeating four more actor columns on the order would mean
   // two records of the same fact that can disagree.
-  supplyOrdersPlaced SupplyOrder[]      @relation("SupplyOrderPlacedBy")
-  supplyDeliveries   SupplyOrder[]      @relation("SupplyOrderDeliveryAgent")
-  supplyOrderEvents  SupplyOrderEvent[] @relation("SupplyOrderEventActor")
-  expensesRecorded   Expense[]          @relation("ExpenseRecordedBy")
+  supplyOrdersPlaced      SupplyOrder[]      @relation("SupplyOrderPlacedBy")
+  supplyDeliveries        SupplyOrder[]      @relation("SupplyOrderDeliveryAgent")
+  supplyOrderEvents       SupplyOrderEvent[] @relation("SupplyOrderEventActor")
+  expensesRecorded        Expense[]          @relation("ExpenseRecordedBy")
   // Who last changed where money goes — see Business.supplyUpiId.
-  supplyUpiUpdates   Business[]         @relation("BusinessSupplyUpiUpdatedBy")
-  vendorUpiUpdates   Vendor[]           @relation("VendorUpiUpdatedBy")
+  supplyUpiUpdates        Business[]         @relation("BusinessSupplyUpiUpdatedBy")
+  vendorUpiUpdates        Vendor[]           @relation("VendorUpiUpdatedBy")
+  // Who last changed where counter customers' money goes (requirement 32).
+  counterUpiUpdates       Business[]         @relation("BusinessCounterUpiUpdatedBy")
+  branchCounterUpiUpdates Branch[]           @relation("BranchCounterUpiUpdatedBy")
 
   @@unique([userId, businessId])
   @@index([businessId])
@@ -931,12 +960,27 @@ model CounterOrder {
   closedAt  DateTime?
   updatedAt DateTime  @updatedAt
 
+  // A paid sale recorded on the phone and synced later (requirement 30). The
+  // phone names each sale with a UUID it makes itself, so sending it twice —
+  // after a timeout, or because the answer was lost — finds the first copy
+  // instead of creating a second sale: idempotency is this unique key, not a
+  // promise from the network. Null for orders made through the old
+  // open-add-close endpoints, and Postgres lets any number of nulls share it.
+  clientRef         String?
+  // The token the phone printed, kept only when the server had to give the
+  // sale a different one because another device used that number for the same
+  // day while both were offline. The paper slip and the record still reconcile.
+  deviceTokenNumber Int?
+  // When the sale reached the server, beside openedAt (when it was made).
+  syncedAt          DateTime?
+
   items CounterOrderItem[]
 
   // Not the allocator — BranchTokenCounter is. This is the assertion that the
   // allocator is correct, the same posture Attendance takes with its
   // no-double-punch unique key.
   @@unique([branchId, tokenDate, tokenNumber])
+  @@unique([businessId, clientRef])
   @@index([businessId, branchId, tokenDate])
   @@index([businessId, branchId, status])
   @@map("counter_orders")
@@ -1260,6 +1304,15 @@ model SupplyOrderCounter {
 // cost recorded in SupplyOrder, so a category inviting someone to log it again
 // by hand would subtract it twice from net profit. Task 8 reads supply spend
 // from supply orders; expenses are everything else.
+/// How Reports classes an expense category (requirement 34).
+/// VARIABLE rises and falls with sales (milk, gas); FIXED is the same every
+/// month (rent, electricity); DAILY is the day-to-day rest (petty cash, repairs).
+enum ExpenseCostType {
+  VARIABLE
+  FIXED
+  DAILY
+}
+
 model ExpenseCategory {
   id         String   @id @default(uuid())
   businessId String
@@ -1273,6 +1326,13 @@ model ExpenseCategory {
   // and deleting it would rewrite what those rows say they were for.
   isActive  Boolean @default(true)
   sortOrder Int     @default(0)
+
+  // Which of Reports' three kinds of cost this is (requirement 34). Read when a
+  // report is built, never copied onto an expense: moving a category from DAILY
+  // to FIXED re-sorts every month's split and changes no total. Raw material
+  // (supply orders) is always VARIABLE and wages always FIXED; those are not
+  // categories and are not in here.
+  costType ExpenseCostType @default(DAILY)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

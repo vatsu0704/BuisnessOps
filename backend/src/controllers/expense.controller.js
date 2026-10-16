@@ -9,6 +9,7 @@ const {
   validateExpenseQuery,
   validateMonthQuery,
   validateComplianceQuery,
+  validateCostType,
 } = require('../validations/expense.validation');
 
 /**
@@ -74,6 +75,17 @@ async function updateCategory(req, res, next) {
       isActive: req.body.isActive,
     });
     res.json(category);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** Requirement 34 — how Reports classes a category. */
+async function setCategoryCostType(req, res, next) {
+  try {
+    const errors = validateCostType(req.body);
+    if (errors.length) return res.status(400).json(validationFailure(errors));
+    res.json(await expenseService.setCategoryCostType(req.tenant.businessId, req.params.categoryId, req.body.costType));
   } catch (err) {
     next(err);
   }
@@ -195,6 +207,7 @@ module.exports = {
   listCategories,
   createCategory,
   updateCategory,
+  setCategoryCostType,
   logExpense,
   updateExpense,
   deleteExpense,

@@ -144,7 +144,16 @@ function validateComplianceQuery(query) {
   return errors;
 }
 
+/** Requirement 34 — one of the three kinds of cost. */
+const COST_TYPES = ['VARIABLE', 'FIXED', 'DAILY'];
+
+function validateCostType(body) {
+  if (!COST_TYPES.includes(body.costType)) return [mustBeOneOf('costType', COST_TYPES)];
+  return [];
+}
+
 module.exports = {
+  validateCostType,
   validateLogExpense,
   validateUpdateExpense,
   validateCreateCategory,

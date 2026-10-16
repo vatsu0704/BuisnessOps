@@ -47,6 +47,8 @@ export interface UpdateBranchPayload {
   region?: string | null;
   addressLine?: string | null;
   postalCode?: string | null;
+  /** Printed on the branch's counter receipts (requirement 31). */
+  phone?: string | null;
   currency?: string | null;
   timezone?: string;
   latitude?: number | null;

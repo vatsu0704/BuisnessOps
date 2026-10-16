@@ -9,8 +9,9 @@ import { hasCapability } from '@/utils/permissions';
  *
  * - `appRoute` — exactly what the app needs to open the same screen, read from its
  *   own table (`frontend/src/navigation/routeCapabilities.ts`). Most pages.
- * - `capability` — for what the app reaches as a **tab** (Reports), which its
- *   route table does not list.
+ * - `capability` — for a page the app reaches only as a **tab**, which its route
+ *   table does not list. None does at present: Reports became a pushed route too
+ *   (requirement 33), so it opens on `appRoute` like the rest.
  * - `null` — everyone, as in the app: Home, Settings, Staff, own attendance.
  *
  * Whether a page *shows* in the sidebar is a different question — whose job it is
@@ -41,7 +42,7 @@ export const ROUTES = {
   editProduct: { path: '/products/:productId/edit', access: { appRoute: 'EditProduct' } },
   upload: { path: '/upload', access: { appRoute: 'Upload' } },
 
-  reports: { path: '/reports', access: { capability: 'analytics:viewBusiness' } },
+  reports: { path: '/reports', access: { appRoute: 'Reports' } },
 
   team: { path: '/team', access: { appRoute: 'Team' } },
   inviteMember: { path: '/team/invite', access: { appRoute: 'InviteMember' } },
@@ -54,6 +55,7 @@ export const ROUTES = {
 
   expenses: { path: '/expenses', access: { appRoute: 'Expenses' } },
   addExpense: { path: '/expenses/new', access: { appRoute: 'AddExpense' } },
+  expenseCategories: { path: '/expenses/categories', access: { appRoute: 'ExpenseCategories' } },
 
   supply: { path: '/supply', access: { appRoute: 'SupplyCatalog' } },
   supplyCart: { path: '/supply/cart/:supplyOrderId', access: { appRoute: 'SupplyCart' } },
@@ -70,13 +72,16 @@ export const ROUTES = {
   editVendor: { path: '/vendors/:vendorId', access: { appRoute: 'VendorForm' } },
 
   counter: { path: '/counter', access: { appRoute: 'Counter' } },
+  receiptPrinter: { path: '/counter/printer', access: { appRoute: 'ReceiptPrinter' } },
 } as const satisfies Record<string, RouteDef>;
 
 export type RouteKey = keyof typeof ROUTES;
 
 /** The capability opening this page needs, or null when it is open to everyone. */
 export function requiredCapability(key: RouteKey): Capability | null {
-  const access: Access = ROUTES[key].access;
+  // Widened on purpose: with no page using the `capability` form today, the
+  // literal table's own type would narrow that branch away.
+  const access = ROUTES[key].access as Access;
   if (!access) return null;
   return 'appRoute' in access ? ROUTE_CAPABILITY[access.appRoute] : access.capability;
 }

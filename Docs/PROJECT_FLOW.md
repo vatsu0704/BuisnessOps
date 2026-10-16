@@ -343,12 +343,10 @@ finishes it**, and add one when something ships deliberately incomplete.
 **Resume here** (the order agreed on 2026-10-14):
 
 1. **Two mobile-app bugs the web port found** — small, and the web already has the fix:
-   - [ ] **Reports' reconciliation sentence covers the whole window, not the month in
-     focus.** `ReportsScreen.tsx` passes `report.business.reconciliation`, which is the
-     window's, so six months' figures print under one month's net profit. The web adds
-     up the month's own branch column instead — `monthReconciliation` in
-     `web/src/components/reports/ranking.ts` (W7, Section 15) — and shows the sentence
-     only when it balances.
+   - [x] **Reports' reconciliation sentence covers the whole window, not the month in
+     focus.** Fixed 2026-10-15 with requirement 34: the server now sends each month's
+     own reconciliation on its business cell, and the app's NetProfitCard prints that.
+     The web's `monthReconciliation` still works and can move to `cell.reconciliation`.
    - [ ] **A withdrawn product cannot be put back on sale from the app.** Products lists
      only what is on sale, so *Put back on sale* is unreachable once a product is
      withdrawn and left. The web's *Show withdrawn* for `product:manage` (W6,
@@ -368,6 +366,13 @@ finishes it**, and add one when something ships deliberately incomplete.
 - [ ] W13 — browser push (needs a Firebase web app and a VAPID key).
 - [ ] The web Home's four missing cards: today's punch-in, the branches to chase for
   expenses, and the two supply-payment cards (they arrive with W8, W9 and W11).
+- [ ] The web Home on today's figures and the quick-action tiles (R33), as the app now
+  opens — the tiles are shared data in `constants/quickActions.ts`, and `GET /today`
+  exists.
+- [ ] The web Reports' Per-day view and the Kinds-of-cost page (R34). The page's route
+  exists as "coming to the web"; `GET /analytics/daily` and the shared types are ready.
+- [ ] The web's payment History tab (R35) — the Payments page itself is still to port
+  (W11).
 
 **Before anyone outside a pilot group uses it** (`DEPLOYMENT.md` → *Before you call
 it live*):
@@ -484,6 +489,7 @@ got to.
 | 9 | Day-end and month-end export | R17 | ✅ done |
 | 10 | Restrictions that explain themselves | R18, R19 | ✅ done |
 | 12 | FOCO and FM branches, vendors, UPI payments, the Accountant | R24, R25, R26, R27 | ✅ done |
+| 14 | Counter checkout, offline billing, receipts, counter UPI | R29, R30, R31, R32 | 🟡 built and tested; waiting on a device run with the printer |
 
 ### Task 1 — Roles and the permission matrix ✅
 
@@ -1615,6 +1621,82 @@ plan locks says which plan includes it instead of "not part of your role".
   same layout rules and checked by the web's shots of the shared content, but no device
   run has been made.
 - **Stage 2 (not started):** online payment on the web — see R28's Task 13.
+
+### Task 14 — Counter checkout, offline billing, receipts, counter UPI 🟡
+
+Requirements 29–32, raised 2026-10-14 comparing the counter with the "POS Lite" app a
+shop already uses and its Posiflow PC201 58mm Bluetooth printer. The rest of the pending
+list (Section 11) was put on hold for it.
+
+**The counter takes the money, then issues the token.** Ringing up is on the phone — a
+tap makes no request. **Charge** opens a sheet: UPI shows a QR for the exact amount (the
+customer scans it with their own phone), cash works out the change. **Payment done**
+saves the bill to the phone's files, gives it its token, prints it, and only then sends
+it. A paid bill is voided and rung up again, never edited.
+
+**It works with no connection.** One write path for every sale, online or not —
+`POST /counter-sales/sync`, idempotent by the phone's `clientRef`, one result per sale so
+a refused one never holds the queue. The phone numbers tokens from the last number the
+server told it; the server keeps the number when it is free and otherwise renumbers and
+remembers what was printed. The counter keeps its menu, branch details, payee and today's
+list in `counterStore` (file-backed, `utils/textStore.ts`), sends from
+`utils/counterSync.ts` after each sale, on resume and on a back-off, and the app opens
+offline from the last confirmed session. Refused bills wait in a "needs attention" card;
+nothing is dropped on the phone's own initiative.
+
+**The token prints itself.** `frontend/modules/receipt-printer` — the app's first local
+Expo module, four Kotlin calls over a Bluetooth SPP socket — and the receipt built in
+shared TypeScript (`escpos.ts`, `receipt.ts`). English on paper, because the printer's
+font has no Indic letters: the fourth fenced prose exception, with `lint:receipt-prose`.
+Settings → Receipt printer chooses the paired printer, the paper, auto-print, and prints a
+test slip.
+
+**Where counter customers pay** is the business's counter UPI ID or a shop's own, set on
+Payment QR codes under `paymentAccount:manage` — which moved down to Starter, because a
+single shop takes UPI too. Branch settings gained a phone number for the receipt.
+
+- **Done:** the printer module (compiles; `./gradlew :receipt-printer:compileDebugKotlin`),
+  the migration `20261014150000_counter_checkout_offline`, the sync endpoint and the
+  counter context, counter UPI, the app's offline counter, the printer screen, the
+  Payment QR codes counter section, the branch phone (app and web).
+- **Verification so far:** backend `npm test` (453, with `counter-sale-sync.test.js`: IST
+  day bucketing, duplicates and a concurrent resend, renumbering, the old path never
+  reusing a number, clock clamping, a closed day refusing only its sale, reach,
+  warehouse, another business, voids, the counter context and payee, counter UPI
+  permissions, read-only); frontend `lint`, `lint:i18n`, `lint:errors`,
+  `lint:permissions`, `lint:receipt-prose`, `lint:patched-deps`, `npx expo config`; web
+  `lint`, `lint:shared`, `lint:i18n`, `npm test` (87, with `counterQueue.test.ts` and
+  `receipt.test.ts`).
+- **Waiting on a device (Vatsal):** a native rebuild for the printer module and
+  `expo-crypto`, then TESTING_GUIDE flows 17d, 17ab, 17ac and 17ad — the test slip on the
+  PC201 (which cut command it answers), airplane-mode billing and reconnect, two phones
+  offline on one branch, and the counter and charge sheet at 320dp in Gujarati with both
+  navigation modes.
+- **Payment history (R35) — done:** `supplyPayment:viewHistory` (accountant, owner,
+  admin, manager; not the desk; Growth plan), `GET /supply-payments/history`, and the
+  History tab on Payments (month, FOCO/FM, totals, each order's payments with who,
+  when and the reference). `supply-payments.test.js` +5.
+- **Home (R33) — done:** `GET /today` (`today.service.js`) under the new
+  `analytics:viewToday`, which replaced `analytics:viewBranch` on the cashier; Home leads
+  with Today / Quick actions / Recent bills, the door cards became tiles
+  (`constants/quickActions.ts`, shared), `todayStore` replaced `salesStore`, and Reports
+  is also a pushed route so a Starter owner can reach it. `today.test.js` (5); web
+  `quickActions.test.ts` proves every visible tile opens, for every role on every plan.
+  The web Home is unchanged — its parity item is in Section 11.
+- **Reports by day and by month, with kinds of cost (R34) — done:** every expense
+  category is VARIABLE / FIXED / DAILY (migration `20261015090000_expense_cost_types`,
+  seeded as chosen, re-classed under the new `expense:classify`); every monthly cell
+  carries `variableExpenses`, `fixedExpenses`, `dailyExpenses`, `totalCost`, and each
+  business month its own `reconciliation`; `GET /analytics/daily?month` lays a month out
+  day by day with fixed costs spread over its days. The app's Reports has Per day / Per
+  month, the cards show Total business → the three costs → Total cost → Total profit —
+  the month card, every branch, and every business under All businesses (whose
+  `combined` row carries the split too) — and Kinds of cost (from Settings and Reports)
+  sets each category. The web's report cards show the same split; its Per-day view and
+  Kinds-of-cost page are in Section 11. `analytics.test.js` +7 (the split at both
+  levels, the identity, re-classing, the day spread adding back to the month, 00:30 IST
+  on the 1st), and the cross-business test checks the combined split adds up.
+- **All five asks of 2026-10-14 are built.** What remains is the device run above.
 
 ---
 

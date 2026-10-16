@@ -40,6 +40,13 @@ type Props = {
   testID?: string;
 };
 
+/** What each kind of payee looks like at the top of the card. */
+const PAYEE_ICONS: Record<UpiPayee['kind'], keyof typeof Ionicons.glyphMap> = {
+  WAREHOUSE: 'cube-outline',
+  VENDOR: 'storefront-outline',
+  COUNTER: 'storefront-outline',
+};
+
 /** Bigger than this and the code is merely large; a phone camera reads 240dp from arm's length. */
 const QR_MAX = 240;
 /** Smaller than this and a cheap camera starts to struggle with a 41×41 code. */
@@ -119,7 +126,7 @@ export default function UpiPayCard({
     <View testID={testID} style={styles.card}>
       <View style={styles.header}>
         <View style={styles.iconTile}>
-          <Ionicons name={payee.kind === 'VENDOR' ? 'storefront-outline' : 'cube-outline'} size={18} color={colors.primary} />
+          <Ionicons name={PAYEE_ICONS[payee.kind]} size={18} color={colors.primary} />
         </View>
         <View style={styles.headerText}>
           <Text style={styles.title}>{t('upiPay.payTo', { name: payee.name })}</Text>
@@ -143,18 +150,25 @@ export default function UpiPayCard({
               accessibilityLabel={t('upiPay.qrLabel', { amount: amountLabel, name: payee.name })}
             />
           </View>
-          <Text style={styles.hint}>{t('upiPay.scanHint')}</Text>
-
-          <PressableScale
-            testID={testID ? `${testID}-open-app` : undefined}
-            style={styles.secondary}
-            scaleTo={0.98}
-            onPress={() => void handleOpenApp()}
-          >
-            <Ionicons name="open-outline" size={16} color={colors.primary} />
-            <Text style={styles.secondaryText}>{t('upiPay.openApp')}</Text>
-          </PressableScale>
-          {noApp ? <Text style={styles.warn}>{t('upiPay.noApp')}</Text> : null}
+          {/* At the counter the CUSTOMER pays, from their own phone, by scanning
+              this one — so there is no "pay with the UPI app on this phone". */}
+          {payee.kind === 'COUNTER' ? (
+            <Text style={styles.hint}>{t('upiPay.scanHintCounter')}</Text>
+          ) : (
+            <>
+              <Text style={styles.hint}>{t('upiPay.scanHint')}</Text>
+              <PressableScale
+                testID={testID ? `${testID}-open-app` : undefined}
+                style={styles.secondary}
+                scaleTo={0.98}
+                onPress={() => void handleOpenApp()}
+              >
+                <Ionicons name="open-outline" size={16} color={colors.primary} />
+                <Text style={styles.secondaryText}>{t('upiPay.openApp')}</Text>
+              </PressableScale>
+              {noApp ? <Text style={styles.warn}>{t('upiPay.noApp')}</Text> : null}
+            </>
+          )}
         </>
       ) : (
         <View style={styles.notSet}>

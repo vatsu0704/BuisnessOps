@@ -60,9 +60,18 @@ const STARTER = [
   'counterOrder:closeDay',
   'expense:view',
   'expense:log',
+  // Requirement 34. The cost split is part of every plan's Reports.
+  'expense:classify',
   'analytics:viewBranch',
+  'analytics:viewToday',
   'export:dayEnd',
   'export:monthEnd',
+  // Where money goes (requirement 32). A single shop on Starter takes its
+  // customers' UPI payments at the counter too, and the counter's QR is built
+  // from a UPI ID somebody has to be able to set. It was Growth-only while the
+  // only payees were the warehouse and vendors; the PaymentAccounts screen still
+  // shows those sections only to a plan that has supply orders.
+  'paymentAccount:manage',
   // Every plan can see its own bill, or a lapsed Starter owner could not find
   // out why the app had gone read-only.
   'billing:manage',
@@ -73,10 +82,10 @@ const STARTER = [
  * catalog, ordering, the desk, delivery, confirming a branch's payment reached
  * the warehouse — and the owner's view across every branch.
  *
- * `paymentAccount:manage` is here, not on Franchise, because a franchise (FM)
- * branch pays the warehouse by UPI (requirement 26) and somebody has to be able
- * to set the warehouse's UPI ID. Vendors' UPI IDs are reached only through the
- * vendor routes, which the `vendors` feature below keeps on Franchise.
+ * Setting the warehouse's UPI ID (requirement 26) needs `paymentAccount:manage`,
+ * which Starter already holds for the counter's (requirement 32). Vendors' UPI
+ * IDs are reached only through the vendor routes, which the `vendors` feature
+ * below keeps on Franchise.
  *
  * `supplyOrder:receive` is here too. Receiving is how a vendor order ends; if it
  * were Franchise-only, a business that made vendor orders during its trial and
@@ -94,7 +103,9 @@ const GROWTH = [
   'supplyOrder:delay',
   'supplyOrder:receive',
   'supplyPayment:verify',
-  'paymentAccount:manage',
+  // Requirement 35. Where branches pay the warehouse, the owner reads what was
+  // paid; FOCO payments, which only Franchise has, show up here too when there.
+  'supplyPayment:viewHistory',
   'expense:viewAllBranches',
   'analytics:viewBusiness',
 ];

@@ -295,7 +295,14 @@ scoped.post('/staff', requirePermission('staff:create'), staffController.createS
   window of real time it occupied — `localDayRange(key, timeZone)` in
   `utils/datetime.js`. Never reach for `occurredAt::date`: it compares **UTC**
   days, which files every sale before 05:30 IST against the day before, and a
-  function over a column cannot use the index behind it.
+  function over a column cannot use the index behind it. **When a report must
+  bucket instants into days** (requirement 34's per-day view), filter by the plain
+  `localMonthRange` and bucket with `("occurredAt" AT TIME ZONE 'UTC') AT TIME ZONE
+  <zone>` — two conversions, because the column is `TIMESTAMP(3)` *without* a zone
+  holding UTC, and one conversion alone reads the UTC value as local time and
+  shifts it the wrong way. Bind the range ends as naive UTC text cast to
+  `::timestamp`, so the comparison never depends on the database session's zone
+  (`instantMetricsByBranchDay` in `analytics.service.js`).
 - **Money a branch pays its own warehouse is an internal transfer, and the two
   levels of a report treat it differently on purpose.** It is subtracted from the
   branch — real money out of that shop — and **not** from the business, because it
@@ -434,7 +441,7 @@ native through an Expo config plugin (see *Native Android builds*).
 
 **Shared server data lives in a store, not in each screen's `useState`.** If more
 than one component reads it, it belongs in a zustand store under `src/store/`
-(`authStore`, `branchStore`, `salesStore`, `teamStore`), and the hook over it keeps
+(`authStore`, `branchStore`, `todayStore`, `teamStore`, `counterStore`), and the hook over it keeps
 the shape its call sites already use. **Move it to a store when the second reader
 appears, not after the stale copy is noticed** — `teamStore` exists because
 requirement 18 gave the member list a second reader (the invite screen needs to know
@@ -448,7 +455,7 @@ branch card kept showing a stale list until the app was killed and reopened.
   the hook's selector checks it. Without that, switching business flashes the
   previous tenant's rows for a frame.
 - **Whatever mutates the data refreshes it** — `refreshBranches()`,
-  `refreshSalesSummary()` — before navigating away, because the mutating screen
+  `refreshToday()` — before navigating away, because the mutating screen
   unmounts and leaves no effect to re-run.
 - **In-flight requests are deduped, and the pending promise is kept out of the
   store**, or every subscriber re-renders twice for a value none of them read.
@@ -531,7 +538,7 @@ user-facing string** — render it with `t('section.key')` from
   Name the key after the tag (`<Text key="brand" …/>`). Dev-only, so nothing
   but the console shows it.
 
-**Three files are allowed to break this, and all of them are fenced.** Each one
+**Four files are allowed to break this, and all of them are fenced.** Each one
 earns it the same way — the rule's premise stops being true, rather than being
 quietly violated:
 
@@ -544,8 +551,17 @@ quietly violated:
 - `documents/export.labels.js` — the day-end and month-end spreadsheet and its
   printable summary (R17). An `.xlsx` cell cannot hold a translation key and
   neither can a printed page, and this too is fetched with `?lang=`.
+- `frontend/src/constants/receiptLabels.ts` — the counter's printed token slip
+  (R31), and the only one of the four in the app. A 58mm receipt printer's
+  built-in font is ASCII with no Indic glyphs, so there is no moment at which the
+  printer could draw the reader's language; a translated label would print as
+  question marks. Drawing the slip as an image was offered and declined (slower
+  per token). Product names the printer cannot draw fall back to the product's
+  code, then to "Item 3" — never question marks.
 
-`npm run lint:notification-prose` fails if anything but `notifications/push.js`
+`npm run lint:receipt-prose` fails if anything but `utils/receipt.ts` imports the
+receipt labels (in `frontend/src` or `web/src`), or if a label is not printable
+ASCII. `npm run lint:notification-prose` fails if anything but `notifications/push.js`
 requires the notification label file, and `npm run lint:backend-i18n` compares all
 four languages in **all three** dictionaries, checks no translation drops a
 placeholder the English uses, and checks every code the backend can send has an
@@ -555,7 +571,7 @@ device render it — the export's double-count warning travels in its JSON as
 it as a sentence. `?lang=` is what makes a *document* the exception; it does not
 license prose in an ordinary API response.
 
-**The privacy policy and the account-deletion page are not a fourth exception**,
+**The privacy policy and the account-deletion page are not another exception**,
 though they are prose from the backend (`backend/src/legal/pages.js`, served at
 `/privacy` and `/delete-account`). They are public web pages, not API responses:
 the app store's reviewers and anyone following the store listing's link read them
@@ -656,6 +672,24 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
   there.** `withReleaseSigning` used to `replace` quietly, so a React Native template
   change would have produced a "release" signed with the debug key — a build that
   succeeds and that Play refuses. It now stops prebuild and says which piece moved.
+- **Native code the app owns lives in `frontend/modules/`, as a local Expo module**
+  — the one sanctioned exception to "only config plugins". `modules/receipt-printer`
+  (R31) is four Kotlin calls over a Bluetooth SPP socket: list the paired
+  printers, connect, write bytes, disconnect. What the bytes *say* is built in
+  TypeScript (`utils/escpos.ts`, `utils/receipt.ts`), where it is tested and
+  shared, so the Kotlin never changes when the receipt does. Autolinking finds it
+  through its `expo-module.config.json` (no `package.json` needed), it survives
+  prebuild because it is not inside `android/`, and its `AndroidManifest.xml`
+  declares exactly the permissions it uses — `BLUETOOTH_CONNECT`, and `BLUETOOTH`
+  capped at API 30 — and **no `BLUETOOTH_SCAN` or location**: the printer is paired
+  in Android's own settings and the app only reads the bonded list. It runs on
+  `Dispatchers.IO`, never Expo's shared module queue, because a Bluetooth connect
+  can block for seconds and that queue also carries the file writes that save a
+  sale. The JS side loads it with `requireOptionalNativeModule`, so an APK built
+  before it existed (and the web, and iOS) still bills — printing is what is
+  missing there, and the printer screen says so. Adding it, or changing its
+  Kotlin, needs a native rebuild; compile-check it without one with
+  `cd android && ./gradlew :receipt-printer:compileDebugKotlin`.
 - **Expo SDK 54, React Native 0.81, and the old architecture** (`newArchEnabled:
   false`). SDK 54 is the last SDK that allows the old one, and the upgrade was made
   for Google Play's target-API rule (API 36), not for the New Architecture — so
@@ -810,6 +844,54 @@ or an anchor download rather than a share sheet. Both — and `utils/saveTemplat
 — import `expo-file-system/legacy`: SDK 54 made a new File/Directory API the
 package's default, and the legacy entry point is the API they were written
 against. Moving them is its own task, not a find-and-replace.
+
+## The counter works offline
+
+Requirements 29–31. The counter is the one part of the app that has to keep
+working with no connection, because a shop does not stop serving when its Wi-Fi
+does. The rules that make that safe, each of which is easy to break by tidying:
+
+- **One write path.** Every paid sale — online or offline — goes to
+  `POST /counter-sales/sync` (`counterSale.service.js`). An online sale is an
+  offline sale whose queue emptied at once. Do not add a "fast path" that posts
+  a sale directly when the phone seems online; that is a second code path to keep
+  honest, and "seems online" is a guess.
+- **Idempotent by `clientRef`.** The phone names each sale with a UUID
+  (`expo-crypto`), and `@@unique([businessId, clientRef])` makes a resend find
+  the first copy. The sync is state-based — "this sale exists and is CLOSED/VOID"
+  — not a log of operations, so a void is the same sale sent again.
+- **Saved before printed.** `counterStore.completeSale` awaits the write to disk
+  before the token is printed or shown. A token in a customer's hand must never
+  belong to a sale the phone could still lose.
+- **Never dropped on the phone's own initiative.** A refused sale stays, with its
+  reason, until a person sends it again or confirms removing it. `logout()` resets
+  the store in memory and leaves its files; the next person to sign in to that
+  business sends them. `pruneQueue` drops only sales the server has, from a day
+  that is over.
+- **A paid sale is never refused for catalog drift**, and records the price the
+  phone charged. It is refused only for what this person may not record at all,
+  and per sale, so one bad sale never holds the queue.
+- **The server owns the day.** `tokenDate` is the branch-local date of the paid
+  instant, computed on the server; the phone only needs it to number tokens, and
+  gets the branch's UTC offset and the server's clock from `counter-day` rather
+  than trusting Hermes's `Intl` or its own clock.
+- **Tokens are chosen under the counter row's lock.** Postgres aborts a
+  transaction on a unique violation, so the free-number check happens inside the
+  lock `allocateToken` also takes, never by catching P2002 and retrying.
+- **The phone's files are `utils/textStore.ts`**: JSON in the app's private
+  document directory, written to a temporary file and moved over the old one, and
+  serialised per key. Not SecureStore (secrets only, ~2KB a value) and not
+  AsyncStorage (a native dependency for what `expo-file-system` already does).
+  Use it for anything else that must survive offline; keep it out of the shared
+  files the web reads, which will use the browser's storage instead.
+- **The app opens offline.** `authStore.bootstrap` restores the last session the
+  server confirmed (`session-cache`) when the server cannot be reached, for the
+  same token only. The cost is written down in TESTING_GUIDE's known limitations:
+  an account disabled while its phone is offline keeps billing there until the
+  phone next reaches the server.
+- **The pure half is shared.** `utils/counterQueue.ts`, `counterReceipt.ts`,
+  `receipt.ts` and `escpos.ts` import nothing but each other and the types, and
+  are tested in the web's Vitest — the web counter (W12) reuses them.
 
 ## Dependency overrides
 

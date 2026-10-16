@@ -20,12 +20,19 @@ import type { PaymentMethod } from './counter';
  * is shown exactly as it was typed, because somebody's own words are not ours
  * to translate.
  */
+/**
+ * How Reports classes a category (requirement 34): rises and falls with sales,
+ * the same every month, or day-to-day.
+ */
+export type ExpenseCostType = 'VARIABLE' | 'FIXED' | 'DAILY';
+
 export interface ExpenseCategory {
   id: string;
   code: ExpenseCategoryCode | null;
   name: string;
   isActive: boolean;
   sortOrder: number;
+  costType: ExpenseCostType;
 }
 
 /**

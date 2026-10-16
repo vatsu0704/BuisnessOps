@@ -15,6 +15,16 @@ const { isRealMonthKey } = require('../utils/datetime');
 /** 'YYYY-MM', the same form SalarySlip.monthYear already uses. */
 const mustBeMonth = (field) => fieldError('FIELD_MUST_BE_MONTH', field);
 
+/** Requirement 34's per-day view: one month, optionally one branch. */
+function validateDailyQuery(query) {
+  const errors = [];
+  if (!query.month || !isRealMonthKey(query.month)) errors.push(mustBeMonth('month'));
+  if (query.branchId !== undefined && (typeof query.branchId !== 'string' || !query.branchId)) {
+    errors.push(fieldError('FIELD_MUST_BE_STRING', 'branchId'));
+  }
+  return errors;
+}
+
 function validateBranchMonthlyQuery(query) {
   const errors = [];
 
@@ -37,4 +47,5 @@ function validateCrossBusinessQuery(query) {
   return errors;
 }
 
-module.exports = { validateBranchMonthlyQuery, validateCrossBusinessQuery };
+module.exports = {
+  validateDailyQuery, validateBranchMonthlyQuery, validateCrossBusinessQuery };

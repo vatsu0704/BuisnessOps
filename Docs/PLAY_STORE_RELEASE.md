@@ -368,6 +368,15 @@ starts collecting something new.
 | Device or other IDs | Yes | App functionality | The push notification token |
 | Photos, audio, contacts, messages, health, browsing history, crash logs, analytics | No | | |
 
+**The receipt printer (R31) collects nothing.** The app asks for Android's
+"Nearby devices" permission (`BLUETOOTH_CONNECT`) only to list the printers already
+paired in the phone's Bluetooth settings and to send a token slip to the one the
+cashier chose. The chosen printer's name and address stay on the phone (they are
+never sent to the server), and the slip goes only to the printer. There is no
+Bluetooth scanning and no location use for it, so the Nearby-devices permission
+needs no Data safety row; if Play's form asks why the permission exists, the answer
+is "printing receipts on a paired Bluetooth printer".
+
 - **Is data shared with third parties?** No. Firebase (for push) and the hosting
   company process data on your behalf. Google's form does not count that as
   sharing.

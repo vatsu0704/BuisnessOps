@@ -112,6 +112,13 @@ the first.
 step and no fulfilment — it counts items, issues a token and shows a total price. A
 **cashier** does this, as well as a manager.
 
+**Re-scoped 2026-10-14 by [R29](#r29--the-counter-takes-the-money-then-issues-the-token)
+and [R30](#r30--billing-works-without-the-internet):** the counter now takes the payment
+(UPI QR or cash) before issuing the token, the order is rung up on the phone and recorded
+once paid, it works offline, and a paid bill is voided and rung up again rather than
+edited. The projection, the token per branch per day and the day close below are
+unchanged.
+
 | | |
 | --- | --- |
 | **Who** | `CASHIER`, `MANAGER`, `ADMIN`, `OWNER` (`counterOrder:create`) |
@@ -522,7 +529,9 @@ nothing.
 > the evening — and for the whole month too.
 
 **Confirmed:** "billing" is R1's counter, working against the live server. The new work
-is the export.
+is the export. **Re-scoped 2026-10-14 by
+[R30](#r30--billing-works-without-the-internet):** billing now works offline and syncs.
+The export is unchanged.
 
 | | |
 | --- | --- |
@@ -1092,6 +1101,284 @@ at ₹15,000, which is the other reason a large account pays yearly by invoice.
 - `set-plan.js` puts a business on a paid plan, recording who, how much and the payment
   reference, and refuses a branch count below what is trading.
 
+### R29 — The counter takes the money, then issues the token
+
+> I need to make billing smooth, easy to reach and user friendly … When we hand over the
+> order, a QR code should be generated with the full amount and the owner's business
+> name → the customer pays → the cashier confirms → the cashier taps "Payment Done", and
+> then the token is generated.
+
+Raised 2026-10-14 by Vatsal, comparing the counter with the "POS Lite" app a shop uses
+today. It re-scopes R1: the counter now has a payment step.
+
+**Confirmed:**
+- **The customer pays by UPI QR or by cash**, and the cashier picks which. The QR carries
+  the bill's exact amount and the business's name (or the shop's, see R32). The payment
+  method is saved on the order — which closes the open decision on whether a counter
+  order records how it was paid.
+- **The token is issued at "Payment done"**, not when the order is started. That is what
+  R1's acceptance criterion always said ("closing the order issues a token"); the first
+  build issued it on opening.
+- **Ringing up is on the phone.** Tapping a product makes no request; the whole paid sale
+  is recorded at once (R30). Every tap used to be a round trip, which is what made the
+  counter slow on a weak connection.
+- **A paid bill is not edited.** It is voided — asking first — and rung up again, because
+  the printed slip in the customer's hand must keep matching the record. This re-scopes
+  R1's "once an order is taken they can also edit it" for bills taken this way.
+- **The price recorded is the price the phone charged.** The first build took a line's
+  price from the catalog ("a price the client can name is a price the client can invent").
+  A paid sale records what was actually charged instead: the money was taken at that
+  price, and the cashier already holds `product:manage` and could add a priced one-off
+  item anyway.
+- **The counter shows today's bills, sales and expenses** — the last only to somebody who
+  may read expenses (`expense:view`).
+
+| | |
+| --- | --- |
+| **Who** | `CASHIER`, `MANAGER`, `ADMIN`, `OWNER` (`counterOrder:create`) |
+| **Entities** | `CounterOrder.clientRef`, `deviceTokenNumber`, `syncedAt` |
+| **Task** | [Task 14](#task-14--counter-checkout-offline-billing-and-receipts) |
+
+**Acceptance criteria**
+
+- Tapping a product adds it to the bill at once, with no wait on the network.
+- "Charge" offers UPI — a QR with the exact amount and the payee's name — and cash, with
+  the amount and the change.
+- "Payment done" issues a token unique per branch per day, in the branch's timezone, and
+  the bill is saved on the phone before anything is printed.
+- Voiding a bill asks first and removes it from the day's sales.
+- The counter shows today's bills, sales and — to whoever may read them — expenses.
+
+### R30 — Billing works without the internet
+
+> To make billing fast and smooth, it should work without internet: the data is stored on
+> the phone (or in the browser), and whenever the internet comes back it is synced to the
+> database — so without internet the cashier can still do the entry.
+
+Re-scopes R17 ("billing online, against the live server") and removes "offline billing"
+from *Not in scope*.
+
+**Confirmed:**
+- **The Android app now; the web counter later** (W12), reusing the shared pure code —
+  the sale queue's rules, the receipt layout and the printer encoder.
+- **One write path.** Every sale, online or offline, is sent to
+  `POST /counter-sales/sync`. An online sale is an offline sale whose queue emptied at
+  once, so there is no second path to keep honest.
+- **Sending a sale twice records it once.** The phone names each sale with a UUID
+  (`clientRef`), unique per business.
+- **The phone numbers tokens itself**, continuing from the last number the server told it,
+  because the customer needs a number the moment they pay. Two phones offline at one
+  branch on one day can print the same number; the second to sync is given the next free
+  number, and the one it printed is kept (`deviceTokenNumber`) so the slip still matches a
+  record.
+- **A sale belongs to the branch's day at the moment it was paid**, worked out by the
+  server. A sale the phone dates in the future is filed under the server's now.
+- **A refused sale is never lost.** A sale for a day somebody closed, or for a branch the
+  cashier can no longer reach, stays on the phone, marked as needing attention, until a
+  person deals with it. While the business's plan is read-only, sync is refused like every
+  other write (it is not added to `READ_ONLY_EXEMPT`), and the bills wait on the phone
+  until the plan is renewed.
+- **The app opens offline.** Starting the app with no connection opens it with the last
+  known session, rather than the sign-in screen.
+- **Only billing is offline.** Logging an expense and every other screen still need the
+  server.
+
+| | |
+| --- | --- |
+| **Who** | `counterOrder:create` |
+| **Entities** | `CounterOrder.clientRef` (`@@unique([businessId, clientRef])`), `deviceTokenNumber`, `syncedAt` |
+| **Task** | [Task 14](#task-14--counter-checkout-offline-billing-and-receipts) |
+
+**Acceptance criteria**
+
+- With the phone in airplane mode the cashier bills, takes cash or UPI, and prints tokens.
+- Reconnecting sends every bill; each appears once in the day's sales, on the right day.
+- A bill sent twice is recorded once.
+- Killing the app with bills unsent, or signing out, loses none of them.
+- Two phones billing the same branch offline both sync; the later one's clashing token is
+  renumbered and shows the number it printed.
+- A bill the server refuses is kept and shown with the reason.
+
+### R31 — The token prints itself
+
+> Printer added (a Posiflow PC201 58mm Bluetooth thermal printer) … attach our open
+> counter to this printer, so when the cashier taps "Payment Done" the printer gives the
+> token automatically.
+
+**Confirmed:**
+- **A Bluetooth receipt printer, paired once in Android's own settings.** The app lists
+  the paired printers and prints to the one chosen; it never searches for devices, so it
+  needs Android's "Nearby devices" permission and no location.
+- **A text receipt in English.** A 58mm printer's built-in font has no Indic glyphs, so the
+  slip's labels are English and a product name the printer cannot draw prints as the
+  product's code, or as "Item 3". Drawing the slip as an image (so Gujarati would print)
+  was offered and declined: it is slower per token.
+- **What the slip says:** the business's name, the branch, its address and phone (a new
+  branch field), the token number in large type, the date and time, each item with its
+  quantity, rate and amount, the total, and how it was paid. No GSTIN or FSSAI number.
+- **Printing never decides whether a sale happened.** The bill is saved first; a print
+  that fails leaves the bill and a "Print again". A reprint is marked COPY.
+- **The printer is the phone's setting**, not the business's: which printer, 58 or 80mm
+  paper, and whether tokens print by themselves. Android only.
+
+| | |
+| --- | --- |
+| **Who** | `counterOrder:create` |
+| **Entities** | `Branch.phone`; the printer settings live on the phone |
+| **Task** | [Task 14](#task-14--counter-checkout-offline-billing-and-receipts) |
+
+**Acceptance criteria**
+
+- Settings → Receipt printer lists the paired printers, prints a test slip, and previews a
+  token.
+- "Payment done" prints the token at once when auto-print is on.
+- With the printer off, the bill is still saved and can be printed again later.
+
+### R32 — Where counter customers pay
+
+**Confirmed:**
+- **One counter UPI ID for the business, and an optional one per shop.** A franchise (FM)
+  shop belongs to its franchisee, so its customers pay the franchisee. The QR names the
+  business (or the shop's own payee name).
+- **Separate from the warehouse's UPI ID** (R26): that is where the business is paid by its
+  branches; this is where it is paid by the public.
+- **Set under `paymentAccount:manage`**, like every payee, and stamped with who changed it
+  and when. Never through branch settings (`branch:update`). `paymentAccount:manage` moves
+  down to the Starter plan, because a single shop takes UPI at its counter too; the
+  warehouse and vendor sections of the screen still need supply orders.
+- **No UPI ID set means cash only**, and the counter says why.
+
+| | |
+| --- | --- |
+| **Who** | Set by `paymentAccount:manage` (owner, admin, manager, accountant); read by `counterOrder:create` |
+| **Entities** | `Business.counterUpi*`, `Branch.counterUpi*` |
+| **Task** | [Task 14](#task-14--counter-checkout-offline-billing-and-receipts) |
+
+**Acceptance criteria**
+
+- The owner sets the business's counter UPI ID, and a shop's own; clearing a shop's puts
+  it back on the business's.
+- A cashier's counter shows the right payee's QR, offline too.
+- A cashier, the desk and branch settings cannot change where money goes.
+
+### R33 — Home opens on today, with quick actions
+
+> Please make a [quick action] type card, so the user can use it easily — like the
+> screenshot [a POS app opening on Today's bills, Today's expenses, Today's sales, a
+> Quick Actions grid with Billing highlighted, and Recent transactions].
+
+**Confirmed:**
+- **Today's sales, bills and spending lead Home**, across the branches the person
+  reaches, each on its own day — `GET /businesses/:id/today`. Spending only for
+  somebody who may read expenses; the day's latest bills only for somebody who bills.
+- **A quick-action grid** replaces the full-width cards that only opened another
+  screen. The till (**Billing**) is drawn large across the top with today's takings
+  on it; the rest are tiles whose column count comes from the screen. Which tiles a
+  person gets is the same capability-and-job rule as Home's sections and the tab bar,
+  and a tile only shows when its screen will open. Cards that carry a figure or a list
+  — punch-in, payments due, branches to chase — stay cards.
+- **A cashier sees today, not profit.** A new capability, `analytics:viewToday`, gives
+  the figures above; the cashier no longer holds `analytics:viewBranch` (the branch's
+  costs, wages and profit), so there is no Reports tile for them.
+- **Reports is reachable on every plan.** It was only a tab, gated on the
+  business-wide view (Growth and up); it is now also a pushed screen behind the Reports
+  tile, gated on `analytics:viewBranch`, so a single-shop owner can open it.
+- **Re-scopes R4**, whose acceptance said the product list is the first thing after
+  login. The catalog stays on Home, below today and the quick actions.
+
+| | |
+| --- | --- |
+| **Who** | Everyone; each section and tile by capability |
+| **Entities** | none — reads `Transaction`, `Expense`, `CounterOrder` |
+| **Task** | [Task 14](#task-14--counter-checkout-offline-billing-and-receipts) (continued) |
+
+**Acceptance criteria**
+
+- Home shows today's sales, bills and (if allowed) expenses that match the counter
+  and the expense log, and the latest bills with a way to the counter.
+- Every tile a role sees opens; the cashier sees Billing but not Reports; the owner
+  sees Raw material but not Order supplies.
+- The grid fits a 320dp phone in Gujarati, two across, labels whole.
+
+### R34 — Reports by day and by month, in three kinds of cost
+
+> We need to show the data properly: use our report module and show it condition-wise —
+> daily-wise and monthly-wise expenses and revenue. Analyse the current implementation
+> and rename or add/remove numbers. Below are the numbers we need to show too: Variable
+> expenses, Fixed expenses, Daily expenses, Total business, Total cost, Total profit.
+> Filter: per day, per month.
+
+**Confirmed (2026-10-14):**
+- **Every expense category is Variable, Fixed or Daily.** Variable = raw material
+  (supply orders) + Milk + Gas; Fixed = wages (payroll) + Rent + Electricity; Daily =
+  Petty cash, Repairs, Transport, Other. A category somebody types starts as Daily.
+  The owner can re-class any category (Settings → Kinds of cost); only the split moves,
+  never a total. Raw material is always variable and wages always fixed.
+- **The figures, renamed:** Total business (customer sales), Variable / Fixed / Daily
+  expenses, Total cost (their sum), Total profit (Total business − Total cost — the same
+  net profit as before, now shown as how it is made). "Net profit" reads "Total profit"
+  everywhere.
+- **At the business level**, variable counts what went to vendors, not the transfer to
+  the business's own warehouse — that money never left the business (R13). Σ branch
+  variable − internal transfer = business variable, the same identity profit keeps.
+- **Per day spreads fixed costs.** Rent and wages are divided evenly over the month's
+  days (to the paise, the remainder on the last day), marked "shared over the month",
+  so a day's profit is fair and the days add back up to the month exactly.
+- **Each month carries its own reconciliation**, which fixes the app printing the whole
+  window's sentence under one month.
+- **Re-classing is `expense:classify`** — owner, admin, manager; not the cashier, who
+  adds categories but does not decide how the owner's report sorts them.
+
+| | |
+| --- | --- |
+| **Who** | Reports' readers (`analytics:viewBranch`); classing is `expense:classify` |
+| **Entities** | `ExpenseCategory.costType` (`ExpenseCostType`) |
+| **Task** | [Task 14](#task-14--counter-checkout-offline-billing-and-receipts) (continued) |
+
+**Acceptance criteria**
+
+- Per month shows Total business, the three costs, Total cost and Total profit for the
+  business and every branch; the three costs add up to Total cost, and Total business −
+  Total cost is Total profit, by hand.
+- Per day lists the month's days with business, cost and profit; the days add up to the
+  month; rent and wages appear as a share on every day.
+- Re-classing Gas from variable to fixed moves its amount between the two lines and
+  changes nothing else.
+
+### R35 — Payment history for FOCO and FM branches
+
+> FOCO/FM model payment history should be displayed to the accountant and the owner
+> both.
+
+Raised 2026-10-14. A FOCO order leaves the Payments screen the moment accounts pays
+for it, and an FM order the moment its payment is confirmed; nothing listed either
+again.
+
+**Confirmed:**
+- **A History tab on Payments**, month by month, with All / FOCO / FM. Each order
+  says who it was for, how much, how it stands now (paid, sent and waiting, not
+  received) and its payments in order — who paid or confirmed, when, and the
+  reference typed with it. Totals for the month: paid by accounts, paid by franchise
+  branches, and what is still waiting to be confirmed.
+- **Only payments.** An order appears when money moved on it that month — settled,
+  sent, confirmed, refused, collected or paid to a vendor — not because it was placed.
+- **A new capability, `supplyPayment:viewHistory`**: the accountant explicitly, the
+  owner, admin and manager by the matrix; **not** the warehouse desk, which confirms
+  payments but does not keep the books. On the Growth plan, where franchise branches
+  pay the warehouse; FOCO orders appear only on a plan that has them.
+
+| | |
+| --- | --- |
+| **Who** | `supplyPayment:viewHistory` — accountant, owner, admin, manager |
+| **Task** | [Task 14](#task-14--counter-checkout-offline-billing-and-receipts) (continued) |
+
+**Acceptance criteria**
+
+- The accountant and the owner open Payments → History and see this month's paid
+  orders, newest payment first; the desk and a cashier are refused.
+- FOCO / FM narrows the list and the totals; the month arrows move through months.
+- An order placed but not paid is not listed.
+
 ---
 
 ## 4. Tasks
@@ -1422,6 +1709,36 @@ exception and the new lint scripts.
 - **S3 — AI metering**, once Phase 2 exists: a monthly question allowance per branch on
   each plan, and top-up packs.
 
+### Task 14 — Counter checkout, offline billing and receipts
+*Requirements: R29, R30, R31, R32.*
+
+1. **Printer first**, because it decides the rest: `frontend/modules/receipt-printer`, a
+   local Expo module (Kotlin, Bluetooth SPP), `utils/escpos.ts` and `utils/receipt.ts`
+   (pure, shared, tested in the web's Vitest), the Receipt printer screen, and
+   `lint:receipt-prose`. Needs a native rebuild and a test print on the real printer.
+2. Migration `20261014150000_counter_checkout_offline`: `CounterOrder.clientRef` /
+   `deviceTokenNumber` / `syncedAt`, `Branch.phone`, and `counterUpi*` on `Business` and
+   `Branch`.
+3. `POST /counter-sales/sync` (`counterSale.service.js`): per-sale results, idempotent by
+   `clientRef`, the token chosen under the counter row's lock, the day from the paid
+   instant in the branch's zone. `counter-day` becomes the counter's cacheable context —
+   last token, UTC offset, server time, payee, receipt header, today's expenses.
+4. Counter UPI: `PATCH /payment-account/counter`, `PATCH /branches/:id/payment-account/counter`;
+   `paymentAccount:manage` moves to Starter.
+5. The app's counter: cart on the phone, the charge sheet (UPI / cash), the queue in the
+   app's own files, the sync runner, the offline session, the attention list, auto-print.
+6. Tests: `counter-sale-sync.test.js`; web Vitest for the queue and the receipt bytes.
+7. R33: `analytics:viewToday` (and `analytics:viewBranch` taken from the cashier),
+   `GET /today`, `todayStore` in place of the all-time `salesStore`, the shared
+   `constants/quickActions.ts`, Home's Today / Quick actions / Recent bills sections,
+   and `Reports` as a pushed route on `analytics:viewBranch`.
+8. R34: `ExpenseCategory.costType`, `expense:classify` and its route, the split on every
+   monthly cell with a per-month reconciliation, `GET /analytics/daily`, and the app's
+   Per day / Per month Reports and Kinds of cost screen.
+9. R35: `supplyPayment:viewHistory`, `GET /supply-payments/history?month&model&branchId`
+   (orders with a money-moving PAYMENT event in the month, with those events and their
+   actors; totals from their own aggregate), and the History tab on Payments.
+
 ---
 
 ## 5. Open decisions
@@ -1484,10 +1801,9 @@ inflated profit — for any business that generates payslips and never finalises
 is the wrong answer in the flattering direction. So both count, and a month whose payroll
 is unsettled is marked provisional on the card instead.
 
-**Does a counter order record how it was paid?** R1 says no payment step, so the default
-is "unspecified". But cash-vs-digital mix is a named Phase 5 metric, and it costs one
-optional tap to capture. Current plan: optional, defaults to unspecified. Worth
-revisiting once a real counter is in use.
+**Does a counter order record how it was paid?** **Decided 2026-10-14 (R29): yes.** The
+counter now takes the payment, so the cashier's choice — UPI or cash — is the record.
+Orders from before R29, and from the old open-and-close calls, stay `UNSPECIFIED`.
 
 **What do the plans cost?** (R28.) The structure — per trading branch, three tiers,
 warehouses free, users unlimited, a 30-day trial — is decided. The rupee amounts in R28
@@ -1516,4 +1832,9 @@ Deliberate exclusions, recorded so they are not mistaken for oversights:
 - **SMS, of any kind.** Firebase push instead (R2).
 - **Scheduled jobs.** Nothing in these requirements needs a clock; see R10.
 - **The AI query engine.** Hidden, not built (R7). `PROJECT_FLOW.md` Phase 2 stands.
-- **Offline billing.** Billing requires the server (R17).
+- **Indic text on printed receipts** (R31). The printer's own font is ASCII; drawing the
+  slip as an image would allow it and was declined as slower per token.
+- **Offline expense logging, and every other screen offline** (R30). Only billing works
+  without a connection.
+- **Printing from iOS or the web** (R31). The receipt printer is reached from the Android
+  app; the web counter (W12) will print through the browser.

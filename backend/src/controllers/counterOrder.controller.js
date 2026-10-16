@@ -1,6 +1,8 @@
 const counterOrderService = require('../services/counterOrder.service');
+const counterSaleService = require('../services/counterSale.service');
 const { fail, validationFailure } = require('../errors');
 const { canReachBranch, scopeOf } = require('../middleware/staffScope');
+const { tenantCan } = require('../permissions');
 const {
   validateOpenOrder,
   validateAddItem,
@@ -8,6 +10,8 @@ const {
   validateCloseOrder,
   validateDayQuery,
   validateCloseDay,
+  validateSyncBatch,
+  validateSale,
 } = require('../validations/counterOrder.validation');
 
 /**
@@ -72,6 +76,9 @@ async function getDaySummary(req, res, next) {
 
     const summary = await counterOrderService.getDaySummary(req.tenant.businessId, req.params.branchId, {
       date: req.query.date,
+      // The counter shows the day's spending beside its sales, but only to
+      // somebody who may read expenses — a second decision, made here.
+      includeExpenses: tenantCan(req.tenant, 'expense:view'),
     });
     res.json(summary);
   } catch (err) {
@@ -172,6 +179,58 @@ async function voidOrder(req, res, next) {
   }
 }
 
+/**
+ * Paid sales from the phone, online or after a stretch offline (requirement 30).
+ *
+ * Always 200 with one result per sale, in order: a sale that is refused is
+ * refused on its own, with the code saying why, so a queue never jams behind
+ * one bad entry. Only a malformed batch — or a failure that is nobody's sale's
+ * fault — is an error, and the phone simply sends the batch again.
+ */
+async function syncSales(req, res, next) {
+  try {
+    const errors = validateSyncBatch(req.body);
+    if (errors.length) return res.status(400).json(validationFailure(errors));
+
+    const valid = [];
+    const invalid = new Map();
+    req.body.sales.forEach((sale, index) => {
+      const problem = validateSale(sale);
+      if (problem) invalid.set(index, problem);
+      else valid.push(sale);
+    });
+
+    const { serverNow, results } = await counterSaleService.syncSales(req.tenant.businessId, {
+      scope: scopeOf(req),
+      tenant: req.tenant,
+      membershipId: req.tenant.membershipId,
+      sales: valid,
+    });
+
+    // Put the sales refused for their shape back where they were in the batch.
+    const merged = [];
+    let nextValid = 0;
+    req.body.sales.forEach((sale, index) => {
+      const problem = invalid.get(index);
+      if (problem) {
+        merged.push({
+          clientRef: sale && typeof sale.clientRef === 'string' ? sale.clientRef : null,
+          outcome: 'REJECTED',
+          code: problem.code,
+          params: { field: problem.field, ...problem.params },
+        });
+      } else {
+        merged.push(results[nextValid]);
+        nextValid += 1;
+      }
+    });
+
+    res.json({ serverNow, results: merged });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function closeDay(req, res, next) {
   try {
     const errors = validateCloseDay(req.body);
@@ -201,6 +260,7 @@ async function reopenDay(req, res, next) {
 }
 
 module.exports = {
+  syncSales,
   openOrder,
   listOrders,
   getDaySummary,

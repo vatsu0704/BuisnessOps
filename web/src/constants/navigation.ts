@@ -74,7 +74,7 @@ export const NAV_GROUPS: NavGroup[] = [
         route: 'reports',
         icon: IoBarChartOutline,
         labelKey: 'tabs.reports',
-        gates: [{ capability: 'analytics:viewBusiness' }],
+        gates: [{ capability: 'analytics:viewBranch' }],
       },
       {
         key: 'upload',

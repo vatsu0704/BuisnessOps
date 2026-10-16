@@ -28,8 +28,11 @@ export interface UpiPayee {
   name: string;
   /** null when accounts has not set one up yet, which means there is no QR. */
   upiId: string | null;
-  /** Whether this is the warehouse or a vendor — the screens word them differently. */
-  kind: 'WAREHOUSE' | 'VENDOR';
+  /**
+   * Whether this is the warehouse, a vendor, or the counter a customer is paying
+   * at (requirement 29) — the screens word them differently.
+   */
+  kind: 'WAREHOUSE' | 'VENDOR' | 'COUNTER';
 }
 
 /**

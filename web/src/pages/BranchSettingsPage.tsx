@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { IoMailOutline, IoNavigateCircleOutline, IoRefresh, IoStorefrontOutline, IoTimeOutline } from 'react-icons/io5';
+import {
+  IoCallOutline,
+  IoMailOutline,
+  IoNavigateCircleOutline,
+  IoRefresh,
+  IoStorefrontOutline,
+  IoTimeOutline,
+} from 'react-icons/io5';
 import { updateBranch, type UpdateBranchPayload } from '@/api/business';
 import { extractErrorMessage } from '@/api/client';
 import BranchKindFields from '@/components/branches/BranchKindFields';
@@ -33,6 +40,7 @@ type Draft = {
   timezone: string;
   addressLine: string;
   postalCode: string;
+  phone: string;
   geofence: GeofenceDraft;
 };
 
@@ -43,6 +51,7 @@ function draftFrom(branch: Branch): Draft {
     timezone: branch.timezone,
     addressLine: branch.addressLine ?? '',
     postalCode: branch.postalCode ?? '',
+    phone: branch.phone ?? '',
     geofence: geofenceFromBranch(branch),
   };
 }
@@ -133,6 +142,7 @@ export default function BranchSettingsPage() {
         // Emptied means cleared: an address somebody deleted has to actually go.
         addressLine: draft.addressLine.trim() || null,
         postalCode: draft.postalCode.trim() || null,
+        phone: draft.phone.trim() || null,
         // null clears — that is how "forget this location" and "turn off geofencing" are said.
         latitude: check.hasCoordinates ? Number(draft.geofence.latitude) : null,
         longitude: check.hasCoordinates ? Number(draft.geofence.longitude) : null,
@@ -200,6 +210,17 @@ export default function BranchSettingsPage() {
             autoComplete="postal-code"
             value={draft.postalCode}
             onChange={(e) => set({ postalCode: e.target.value })}
+          />
+          {/* Requirement 31: printed under the address on the counter's tokens. */}
+          <FormInput
+            label={t('branchSettings.phone')}
+            description={t('branchSettings.phoneHint')}
+            icon={IoCallOutline}
+            inputMode="tel"
+            autoComplete="tel"
+            maxLength={20}
+            value={draft.phone}
+            onChange={(e) => set({ phone: e.target.value })}
             className={fieldStyles.last}
           />
         </Card>

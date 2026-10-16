@@ -1,0 +1,14 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Exactly what talking to an already-paired printer needs, and nothing more.
+
+      The printer is paired once in Android's own Bluetooth settings, so the app
+      only ever reads the bonded list and opens a socket to one of them. That is
+      BLUETOOTH_CONNECT on Android 12+ and the old BLUETOOTH permission before it.
+      No BLUETOOTH_SCAN and no location: the app never searches for devices, and
+      asking for location to print a token would be a permission nobody can
+      explain on the Play Store's Data safety form.
+    -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+</manifest>

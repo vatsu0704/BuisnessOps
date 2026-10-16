@@ -2,10 +2,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import MetricGrid from '@/components/reports/MetricGrid';
+import { costMetrics } from '@/components/reports/costMetrics';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { formatAmount } from '@/utils/format';
 import { monthKeyLabel } from '@/utils/date';
-import type { BusinessMonthCell, Reconciliation } from '@/types/analytics';
+import type { BusinessMonthCell } from '@/types/analytics';
 
 /**
  * The business's net profit for the month in focus — requirement 13.
@@ -31,15 +32,17 @@ import type { BusinessMonthCell, Reconciliation } from '@/types/analytics';
  */
 export default function NetProfitCard({
   cell,
-  reconciliation,
   currency,
   mixedCurrency,
 }: {
   cell: BusinessMonthCell;
-  reconciliation: Reconciliation;
   currency: string;
   mixedCurrency: boolean;
 }) {
+  // The month's own reconciliation (requirement 34 fixed this): the window's
+  // used to be printed under one month's figure, naming a total that was not
+  // the one above it.
+  const reconciliation = cell.reconciliation;
   const { t } = useTranslation();
 
   const net = Number(cell.netProfit);
@@ -50,7 +53,7 @@ export default function NetProfitCard({
     <View style={styles.card}>
       <Text style={styles.caption}>{monthKeyLabel(cell.month, t)}</Text>
 
-      <Text style={styles.label}>{t('reports.netProfit')}</Text>
+      <Text style={styles.label}>{t('reports.totalProfit')}</Text>
       <Text style={[styles.hero, net < 0 && styles.heroLoss]}>{formatAmount(net, currency)}</Text>
 
       {cell.payrollProvisional ? (
@@ -69,24 +72,26 @@ export default function NetProfitCard({
 
       <MetricGrid
         metrics={[
-          { label: t('reports.customerSales'), value: formatAmount(Number(cell.customerSales), currency) },
-          { label: t('reports.expenses'), value: formatAmount(Number(cell.expenses), currency), tone: 'cost' },
-          { label: t('reports.payroll'), value: formatAmount(Number(cell.payroll), currency), tone: 'cost' },
-          ...(vendorSpend !== 0
+          { label: t('reports.totalBusiness'), value: formatAmount(Number(cell.customerSales), currency) },
+          ...costMetrics(cell, {
+            t,
+            currency,
+            rawMaterial: vendorSpend,
+            rawMaterialKey: 'reports.variableIncludesVendors',
+            wages: Number(cell.payroll),
+            wagesProvisional: cell.payrollProvisional,
+          }),
+          // Only when there is a transfer to explain: a business with no
+          // warehouse has nothing moving between its own locations.
+          ...(transfer !== 0
             ? [
                 {
-                  label: t('reports.vendorSpend'),
-                  value: formatAmount(vendorSpend, currency),
-                  tone: 'cost' as const,
-                  caption: t('reports.vendorSpendCaption'),
+                  label: t('reports.internalTransfer'),
+                  value: formatAmount(transfer, currency),
+                  caption: t('reports.internalTransferCaption'),
                 },
               ]
             : []),
-          {
-            label: t('reports.internalTransfer'),
-            value: formatAmount(transfer, currency),
-            caption: t('reports.internalTransferCaption'),
-          },
         ]}
       />
 

@@ -16,6 +16,7 @@
     "preandroid": "node scripts/adb-reverse.js",
     "lint:backend-i18n": "node scripts/check-backend-i18n-parity.js",
     "lint:notification-prose": "node scripts/check-notification-prose.js",
+    "lint:receipt-prose": "node scripts/check-receipt-prose.js",
     "lint:patched-deps": "node scripts/check-patched-deps.js",
     "postinstall": "patch-package --error-on-fail",
     "build:play": "node scripts/build-play-release.js"
@@ -29,6 +30,7 @@
     "@react-navigation/native-stack": "^7.20.0",
     "axios": "^1.7.7",
     "expo": "~54.0.37",
+    "expo-crypto": "~15.0.9",
     "expo-dev-client": "~6.0.21",
     "expo-device": "~8.0.10",
     "expo-document-picker": "~14.0.8",

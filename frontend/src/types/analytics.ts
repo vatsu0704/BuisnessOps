@@ -35,7 +35,20 @@ export type BranchMonthCell = {
    * rather than presenting a profit that is too flattering to be true.
    */
   payrollProvisional: boolean;
-  /** `sales − expenses − materialSpend − payroll`. */
+  /** The expense categories classed variable, fixed and daily (requirement 34). */
+  expenseVariable: string;
+  expenseFixed: string;
+  expenseDaily: string;
+  /**
+   * Requirement 34's three kinds of cost. Variable is the variable categories plus
+   * raw material; fixed is the fixed categories plus wages; daily is the rest.
+   * They add up to `totalCost`, and `netProfit` is sales less that.
+   */
+  variableExpenses: string;
+  fixedExpenses: string;
+  dailyExpenses: string;
+  totalCost: string;
+  /** `sales − expenses − materialSpend − payroll`, which is `sales − totalCost`. */
   netProfit: string;
 };
 
@@ -48,6 +61,19 @@ export type BranchMonthTotals = {
   materialOrderCount: number;
   vendorSpend: string;
   payroll: string;
+  /** The expense categories classed variable, fixed and daily (requirement 34). */
+  expenseVariable: string;
+  expenseFixed: string;
+  expenseDaily: string;
+  /**
+   * Requirement 34's three kinds of cost. Variable is the variable categories plus
+   * raw material; fixed is the fixed categories plus wages; daily is the rest.
+   * They add up to `totalCost`, and `netProfit` is sales less that.
+   */
+  variableExpenses: string;
+  fixedExpenses: string;
+  dailyExpenses: string;
+  totalCost: string;
   netProfit: string;
 };
 
@@ -89,11 +115,26 @@ export type BusinessMonthCell = {
   vendorSpend: string;
   /** Money that moved between this business's own locations — its warehouse. */
   internalTransfer: string;
+  /** The expense categories classed variable, fixed and daily (requirement 34). */
+  expenseVariable: string;
+  expenseFixed: string;
+  expenseDaily: string;
+  /**
+   * Requirement 34's three kinds of cost. Variable is the variable categories plus
+   * what went to vendors (not the warehouse transfer); fixed is the fixed categories plus wages; daily is the rest.
+   * They add up to `totalCost`, and `netProfit` is sales less that.
+   */
+  variableExpenses: string;
+  fixedExpenses: string;
+  dailyExpenses: string;
+  totalCost: string;
   netProfit: string;
   payrollProvisional: boolean;
+  /** This month's own reconciliation — the sentence to print under this month. */
+  reconciliation: Reconciliation;
 };
 
-export type BusinessTotals = Omit<BusinessMonthCell, 'month'>;
+export type BusinessTotals = Omit<BusinessMonthCell, 'month' | 'reconciliation'>;
 
 /**
  * Why the branch column and the business total differ.
@@ -156,4 +197,65 @@ export type CrossBusinessReport = {
   comparable: boolean;
   combined: Omit<BusinessTotals, 'payrollProvisional'> | null;
   businesses: CrossBusinessRow[];
+};
+
+// --- Day by day (requirement 34) -------------------------------------------
+
+export type BranchDayCell = {
+  /** 'YYYY-MM-DD', the branch's own day. */
+  day: string;
+  sales: string;
+  saleCount: number;
+  expenses: string;
+  expenseCount: number;
+  expenseVariable: string;
+  expenseDaily: string;
+  materialSpend: string;
+  vendorSpend: string;
+  variableExpenses: string;
+  /** The month's fixed costs spread evenly over its days — not what was paid that day. */
+  fixedExpenses: string;
+  dailyExpenses: string;
+  totalCost: string;
+  netProfit: string;
+};
+
+export type BranchDailyRow = {
+  branchId: string;
+  branchName: string;
+  branchCode: string;
+  kind: BranchKind;
+  status: BranchStatus;
+  currency: string;
+  isCostCentre: boolean;
+  /** The month's fixed categories and wages — what was spread over the days. */
+  fixedMonth: string;
+  payrollProvisional: boolean;
+  days: BranchDayCell[];
+};
+
+export type BusinessDayCell = {
+  day: string;
+  customerSales: string;
+  saleCount: number;
+  expenseVariable: string;
+  vendorSpend: string;
+  internalTransfer: string;
+  variableExpenses: string;
+  fixedExpenses: string;
+  dailyExpenses: string;
+  totalCost: string;
+  netProfit: string;
+  reconciliation: Reconciliation;
+};
+
+export type DailyReport = {
+  /** 'YYYY-MM'. */
+  month: string;
+  days: string[];
+  currency: string;
+  mixedCurrency: boolean;
+  branches: BranchDailyRow[];
+  /** Null for a caller without `analytics:viewBusiness`. */
+  business: { days: BusinessDayCell[]; payrollProvisional: boolean } | null;
 };

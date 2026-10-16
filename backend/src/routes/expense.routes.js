@@ -23,6 +23,13 @@ scoped.patch(
   requirePermission('expense:log'),
   expenseController.updateCategory
 );
+// Requirement 34 — how Reports splits costs. Not `expense:log`: a cashier adds a
+// category, but sorting the owner's report is the owner's call.
+scoped.patch(
+  '/expense-categories/:categoryId/cost-type',
+  requirePermission('expense:classify'),
+  expenseController.setCategoryCostType
+);
 
 // --- One branch's spending -------------------------------------------------
 // `requireBranchAccess` gates these on the :branchId param; the capability says

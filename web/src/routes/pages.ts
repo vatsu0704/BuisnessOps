@@ -6,6 +6,7 @@ import {
   IoBicycleOutline,
   IoBusinessOutline,
   IoCalculatorOutline,
+  IoPrintOutline,
   IoCalendarOutline,
   IoCardOutline,
   IoCartOutline,
@@ -116,6 +117,7 @@ export const PAGES: Record<RouteKey, PageDef> = {
 
   expenses: { titleKey: 'expenses.title', icon: IoWalletOutline },
   addExpense: { titleKey: 'expenses.addTitle', icon: IoWalletOutline },
+  expenseCategories: { titleKey: 'costTypes.title', icon: IoWalletOutline },
 
   supply: { titleKey: 'supply.catalogTitle', icon: IoCubeOutline },
   supplyCart: { titleKey: 'supply.cartTitle', icon: IoCartOutline },
@@ -132,4 +134,5 @@ export const PAGES: Record<RouteKey, PageDef> = {
   editVendor: { titleKey: 'vendors.edit', icon: IoStorefrontOutline },
 
   counter: { titleKey: 'counter.title', icon: IoCalculatorOutline },
+  receiptPrinter: { titleKey: 'printer.title', icon: IoPrintOutline },
 };

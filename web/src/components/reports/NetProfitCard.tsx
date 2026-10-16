@@ -5,6 +5,7 @@ import { cx } from '@/utils/cx';
 import { monthKeyLabel } from '@/utils/date';
 import { formatAmount } from '@/utils/format';
 import MetricGrid, { type Metric } from './MetricGrid';
+import { costMetrics } from './costMetrics';
 import styles from './ReportCard.module.css';
 
 /**
@@ -34,32 +35,33 @@ export default function NetProfitCard({
   const transfer = Number(cell.internalTransfer);
   const vendorSpend = Number(cell.vendorSpend);
 
+  // Requirement 34: what came in, then the three kinds of cost and their total.
   const metrics: Metric[] = [
-    { label: t('reports.customerSales'), value: formatAmount(Number(cell.customerSales), currency) },
-    { label: t('reports.expenses'), value: formatAmount(Number(cell.expenses), currency), tone: 'cost' },
-    { label: t('reports.payroll'), value: formatAmount(Number(cell.payroll), currency), tone: 'cost' },
-    ...(vendorSpend !== 0
+    { label: t('reports.totalBusiness'), value: formatAmount(Number(cell.customerSales), currency) },
+    ...costMetrics(cell, {
+      t,
+      currency,
+      rawMaterial: vendorSpend,
+      rawMaterialKey: 'reports.variableIncludesVendors',
+      wages: Number(cell.payroll),
+      wagesProvisional: cell.payrollProvisional,
+    }),
+    ...(transfer !== 0
       ? [
           {
-            label: t('reports.vendorSpend'),
-            value: formatAmount(vendorSpend, currency),
-            tone: 'cost' as const,
-            caption: t('reports.vendorSpendCaption'),
+            label: t('reports.internalTransfer'),
+            value: formatAmount(transfer, currency),
+            caption: t('reports.internalTransferCaption'),
           },
         ]
       : []),
-    {
-      label: t('reports.internalTransfer'),
-      value: formatAmount(transfer, currency),
-      caption: t('reports.internalTransferCaption'),
-    },
   ];
 
   return (
     <section className={styles.card} aria-labelledby="net-profit-label">
       <p className={styles.caption}>{monthKeyLabel(cell.month, t)}</p>
       <h2 id="net-profit-label" className={cx(styles.sectionTitle, styles.titleGap)}>
-        {t('reports.netProfit')}
+        {t('reports.totalProfit')}
       </h2>
       <p className={cx(styles.hero, net < 0 && styles.loss)}>{formatAmount(net, currency)}</p>
 

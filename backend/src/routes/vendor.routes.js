@@ -43,6 +43,18 @@ scoped.patch(
 );
 scoped.get('/payment-account', requirePermission('paymentAccount:manage'), vendorController.getPaymentAccount);
 scoped.patch('/payment-account', requirePermission('paymentAccount:manage'), vendorController.setPaymentAccount);
+// Requirement 32 — where counter customers pay: the business's ID, and a shop's
+// own. The same capability as every other payee, and never `branch:update`.
+scoped.patch(
+  '/payment-account/counter',
+  requirePermission('paymentAccount:manage'),
+  vendorController.setCounterAccount
+);
+scoped.patch(
+  '/branches/:branchId/payment-account/counter',
+  requirePermission('paymentAccount:manage'),
+  vendorController.setBranchCounterAccount
+);
 
 router.use('/:businessId', scoped);
 

@@ -19,7 +19,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import { colors, gradient, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { useMembership } from '@/hooks/useBusinessId';
-import { can, hasNoActiveBusiness, switchableMemberships } from '@/utils/permissions';
+import { can, hasCapability, hasNoActiveBusiness, switchableMemberships } from '@/utils/permissions';
 import { openLegalPage } from '@/utils/legalLinks';
 import { subscriptionStatusLabel } from '@/constants/plans';
 import { planName } from '@/permissions/explain';
@@ -58,6 +58,8 @@ export default function SettingsScreen() {
   const canManageWorkCalendar = can.manageWorkCalendar(membership);
   const canAddBusiness = can.createBusiness(membership);
   const canManagePaymentAccounts = can.managePaymentAccounts(membership);
+  const canUseCounter = can.useCounter(membership);
+  const canClassifyExpenses = hasCapability(membership, 'expense:classify');
   const canManageBilling = can.manageBilling(membership);
   const subscription = membership?.business.subscription;
   const noAccess = hasNoActiveBusiness(user);
@@ -221,6 +223,33 @@ export default function SettingsScreen() {
                 title={t('paymentAccounts.title')}
                 subtitle={t('paymentAccounts.settingsSubtitle')}
                 onPress={() => navigation.navigate('PaymentAccounts')}
+              />
+            </AnimatedEntrance>
+          ) : null}
+
+          {/* Requirement 34 — how Reports groups expenses. Set up once, here. */}
+          {canClassifyExpenses ? (
+            <AnimatedEntrance delay={step(7)} style={styles.block}>
+              <InfoCard
+                testID="settings-open-cost-types"
+                icon="options-outline"
+                title={t('costTypes.title')}
+                subtitle={t('costTypes.settingsSubtitle')}
+                onPress={() => navigation.navigate('ExpenseCategories')}
+              />
+            </AnimatedEntrance>
+          ) : null}
+
+          {/* Requirement 31. The printer belongs to this phone, so it is set up
+              here once, beside the other set-up-once screens. */}
+          {canUseCounter ? (
+            <AnimatedEntrance delay={step(7)} style={styles.block}>
+              <InfoCard
+                testID="settings-open-receipt-printer"
+                icon="print-outline"
+                title={t('printer.title')}
+                subtitle={t('printer.settingsSubtitle')}
+                onPress={() => navigation.navigate('ReceiptPrinter')}
               />
             </AnimatedEntrance>
           ) : null}

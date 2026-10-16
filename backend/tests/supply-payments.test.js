@@ -736,4 +736,73 @@ describe('Paying for supply orders (Task 12)', () => {
       for (const res of await Promise.all(checks)) expect(res.statusCode).toBe(403);
     });
   });
+
+  // --- Payment history (requirement 35) -----------------------------------------
+
+  describe('payment history', () => {
+    const thisMonth = new Date(Date.now() + 330 * 60 * 1000).toISOString().slice(0, 7);
+    const history = (token, query = '') =>
+      request(app).get(url(`/supply-payments/history?month=${thisMonth}${query}`)).set(auth(token));
+
+    it('lists every order money moved on this month, with who paid and who confirmed', async () => {
+      const res = await history(people.accountant.token);
+      expect(res.statusCode).toBe(200);
+      expect(res.body.month).toBe(thisMonth);
+      expect(res.body.orders.length).toBeGreaterThan(0);
+      for (const order of res.body.orders) {
+        expect(order.events.length).toBeGreaterThan(0);
+        for (const event of order.events) {
+          expect([
+            'PAYMENT_SETTLED',
+            'PAYMENT_CLAIMED',
+            'PAYMENT_VERIFIED',
+            'PAYMENT_FAILED',
+            'PAYMENT_COLLECTED',
+            'PAYMENT_COLLECTED_UPI',
+            'PAYMENT_PAID_VENDOR',
+            'PAYMENT_PAID_VENDOR_CASH',
+          ]).toContain(event.reasonCode);
+        }
+      }
+      const settled = res.body.orders.find((order) => order.events.some((e) => e.reasonCode === 'PAYMENT_SETTLED'));
+      expect(settled.operatingModel).toBe('FOCO');
+      expect(settled.events.find((e) => e.reasonCode === 'PAYMENT_SETTLED').actorMembership.user.name).toBe('Pay accountant');
+      expect(res.body.totals.length).toBeGreaterThan(0);
+    });
+
+    it('leaves out orders nobody has paid for yet', async () => {
+      const res = await history(people.accountant.token);
+      const listed = new Set(res.body.orders.map((order) => order.id));
+      const unpaid = await prisma.supplyOrder.findMany({
+        where: { businessId, paymentStatus: 'PENDING', paymentMode: 'ACCOUNTS' },
+        select: { id: true },
+      });
+      expect(unpaid.length).toBeGreaterThan(0);
+      for (const order of unpaid) expect(listed.has(order.id)).toBe(false);
+    });
+
+    it('filters to company or franchise branches', async () => {
+      const foco = await history(people.accountant.token, '&model=FOCO');
+      const fm = await history(people.accountant.token, '&model=FM');
+      expect(foco.body.orders.every((order) => order.operatingModel === 'FOCO')).toBe(true);
+      expect(fm.body.orders.every((order) => order.operatingModel === 'FM')).toBe(true);
+      expect(foco.body.orders.length + fm.body.orders.length).toBeGreaterThan(0);
+    });
+
+    it('is the owner’s and the accountant’s, not the desk’s or a cashier’s', async () => {
+      expect((await history(ownerToken)).statusCode).toBe(200);
+      const desk = await history(people.desk.token);
+      expect(desk.statusCode).toBe(403);
+      expect(desk.body.params.capability).toBe('supplyPayment:viewHistory');
+      expect((await history(people.fmCashier.token)).statusCode).toBe(403);
+    });
+
+    it('needs a real month', async () => {
+      const res = await request(app)
+        .get(url('/supply-payments/history?month=2026-13'))
+        .set(auth(people.accountant.token));
+      expect(res.statusCode).toBe(400);
+      expect(res.body.details[0].code).toBe('FIELD_MUST_BE_MONTH');
+    });
+  });
 });

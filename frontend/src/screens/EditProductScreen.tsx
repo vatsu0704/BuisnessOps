@@ -22,6 +22,7 @@ import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { confirm } from '@/utils/confirm';
 import { haptics } from '@/utils/haptics';
+import { isReceiptPrintable } from '@/utils/escpos';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EditProduct'>;
 
@@ -228,6 +229,14 @@ export default function EditProductScreen({ navigation, route }: Props) {
                     value={name}
                     onChangeText={setName}
                   />
+                  {/* Requirement 31 — see the same note on AddProductScreen. */}
+                  {name.trim() && !isReceiptPrintable(name) ? (
+                    <Text style={styles.hint}>
+                      {product?.sku
+                        ? t('addProduct.receiptNameSku', { sku: product.sku })
+                        : t('addProduct.receiptNameNoSku')}
+                    </Text>
+                  ) : null}
                   <FormInput
                     testID="edit-product-unit"
                     label={t('addProduct.unit')}

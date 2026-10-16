@@ -24,6 +24,10 @@ import SupplyItemFormScreen from '@/screens/SupplyItemFormScreen';
 import WarehouseDeskScreen from '@/screens/WarehouseDeskScreen';
 import SupplyPaymentsScreen from '@/screens/SupplyPaymentsScreen';
 import PaymentAccountsScreen from '@/screens/PaymentAccountsScreen';
+import ReceiptPrinterScreen from '@/screens/ReceiptPrinterScreen';
+import ReportsScreen from '@/screens/ReportsScreen';
+import ExpenseCategoriesScreen from '@/screens/ExpenseCategoriesScreen';
+import { useCounterSync } from '@/hooks/useCounterSync';
 import VendorsScreen from '@/screens/VendorsScreen';
 import VendorFormScreen from '@/screens/VendorFormScreen';
 import DeliveryQueueScreen from '@/screens/DeliveryQueueScreen';
@@ -55,6 +59,7 @@ export type AppStackParamList = {
   AddProduct: { branchId?: string } | undefined;
   EditProduct: { productId: string };
   Counter: undefined;
+  ReceiptPrinter: undefined;
   // Supply orders (requirements 3, 5, 5.1, 9, 11, 12).
   SupplyCatalog: undefined;
   SupplyCart: { supplyOrderId: string };
@@ -64,7 +69,8 @@ export type AppStackParamList = {
   SupplyDesk: undefined;
   SupplyDeliveries: undefined;
   // Paying for supply orders, and where payments go (requirements 25–27).
-  SupplyPayments: undefined;
+  // `tab` opens a particular list — the Home tile opens straight on History.
+  SupplyPayments: { tab?: 'pay' | 'confirm' | 'history' } | undefined;
   PaymentAccounts: undefined;
   Vendors: undefined;
   VendorForm: { vendorId?: string } | undefined;
@@ -80,6 +86,11 @@ export type AppStackParamList = {
   DeleteAccount: undefined;
   // Requirement 28. The owner's view of the plan; `billing:manage`.
   Plan: undefined;
+  // Also a tab for whoever reads every branch. Pushed from Home's Reports tile
+  // for an owner on a plan without the business-wide view (requirement 33).
+  Reports: undefined;
+  // Requirement 34 — how Reports groups expense categories into kinds of cost.
+  ExpenseCategories: undefined;
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -109,6 +120,7 @@ const MODAL_SCREENS: { name: keyof AppStackParamList; component: ComponentType<a
   // Also a tab for a cashier. Registered here as well so an owner or manager,
   // who trades the tab slot for Reports, can still reach the till from Home.
   { name: 'Counter', component: CounterScreen },
+  { name: 'ReceiptPrinter', component: ReceiptPrinterScreen },
   // Same story as Counter: each of these is a tab for the role whose daily
   // work it is, and a pushed screen for everyone who reaches it from Home.
   { name: 'SupplyCatalog', component: SupplyCatalogScreen },
@@ -128,6 +140,8 @@ const MODAL_SCREENS: { name: keyof AppStackParamList; component: ComponentType<a
   { name: 'Notifications', component: NotificationsScreen },
   { name: 'DeleteAccount', component: DeleteAccountScreen },
   { name: 'Plan', component: PlanScreen },
+  { name: 'Reports', component: ReportsScreen },
+  { name: 'ExpenseCategories', component: ExpenseCategoriesScreen },
 ];
 
 /**
@@ -147,6 +161,9 @@ export default function AppNavigator() {
   // App.tsx because it needs a navigator in scope, and because this component
   // is mounted for exactly as long as somebody is signed in.
   usePushRegistration();
+  // Sends the counter's unsent bills whenever there is a connection — wherever
+  // in the app the cashier happens to be (requirement 30).
+  useCounterSync();
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

@@ -9,7 +9,13 @@ import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { useVendors } from '@/hooks/useVendors';
 import { extractErrorMessage } from '@/api/client';
-import { getPaymentAccount, setPaymentAccount, setVendorUpi } from '@/api/supply';
+import {
+  getPaymentAccount,
+  setBranchCounterAccount,
+  setCounterAccount,
+  setPaymentAccount,
+  setVendorUpi,
+} from '@/api/supply';
 import { refreshVendors } from '@/store/vendorStore';
 import type { PaymentAccount } from '@/types/supply';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
@@ -20,13 +26,20 @@ import UpiAccountEditor from '@/components/payments/UpiAccountEditor';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { useScreenEdges } from '@/hooks/useScreenEdges';
+import { useMembership } from '@/hooks/useBusinessId';
+import { can } from '@/utils/permissions';
 
 /**
- * Payment QR codes — where branches' money goes (requirement 26).
+ * Payment QR codes — where money goes (requirements 26 and 32).
  *
- * One UPI ID for the warehouse, and one for each vendor. Every payment QR in the
- * app is generated from these, with the order's exact amount in it, so this is
- * the only place a QR is "set up" — there is no image to upload.
+ * Where counter customers pay — the business's UPI ID and each shop's own — then
+ * one UPI ID for the warehouse, and one for each vendor. Every payment QR in the
+ * app is generated from these, with the exact amount in it, so this is the only
+ * place a QR is "set up" — there is no image to upload.
+ *
+ * The counter's section is for every plan: a single shop takes UPI at its
+ * counter too. The warehouse and vendor sections only appear on a plan with
+ * supply orders, because without one there is nobody to pay them.
  *
  * Behind `paymentAccount:manage`: accounts and the owner. The warehouse desk
  * adds and names vendors but cannot reach this screen, because whoever can
@@ -41,10 +54,14 @@ export default function PaymentAccountsScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const businessId = useBusinessId();
+  const membership = useMembership();
+  const showWarehouse = can.verifySupplyPayments(membership);
+  const showVendors = can.viewSupplyItems(membership);
   const { vendors, isLoading: vendorsLoading, error: vendorsError, refresh } = useVendors();
 
   const [account, setAccount] = useState<PaymentAccount | null>(null);
   const [openVendorId, setOpenVendorId] = useState<string | null>(null);
+  const [openBranchId, setOpenBranchId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,6 +88,16 @@ export default function PaymentAccountsScreen() {
   async function saveWarehouse(upiId: string | null, upiName: string | null) {
     if (!businessId) return;
     setAccount(await setPaymentAccount(businessId, { upiId, upiName }));
+  }
+
+  async function saveCounter(upiId: string | null, upiName: string | null) {
+    if (!businessId) return;
+    setAccount(await setCounterAccount(businessId, { upiId, upiName }));
+  }
+
+  async function saveBranchCounter(branchId: string, upiId: string | null, upiName: string | null) {
+    if (!businessId) return;
+    setAccount(await setBranchCounterAccount(businessId, branchId, { upiId, upiName }));
   }
 
   async function saveVendor(vendorId: string, upiId: string | null, upiName: string | null) {
@@ -127,6 +154,88 @@ export default function PaymentAccountsScreen() {
             </AnimatedEntrance>
 
             <AnimatedEntrance delay={step(1)} style={styles.block}>
+              <Text style={styles.sectionTitle}>{t('paymentAccounts.counterSection')}</Text>
+              <Text style={styles.sectionHint}>{t('paymentAccounts.counterHint')}</Text>
+              {account ? (
+                <UpiAccountEditor
+                  testID="payment-accounts-counter"
+                  payeeLabel={t('paymentAccounts.counterPayee')}
+                  fallbackName={account.businessName}
+                  upiId={account.counter.upiId}
+                  upiName={account.counter.upiName}
+                  updatedAt={account.counter.upiUpdatedAt}
+                  updatedByName={account.counter.upiUpdatedByMembership?.user?.name ?? null}
+                  removeBody={t('paymentAccounts.counterRemoveBody')}
+                  onSave={saveCounter}
+                />
+              ) : null}
+
+              {account && account.counterBranches.length > 0 ? (
+                <>
+                  <Text style={[styles.sectionHint, styles.subHint]}>{t('paymentAccounts.counterBranchesHint')}</Text>
+                  <View style={styles.list}>
+                    {account.counterBranches.map((branch) => {
+                      const isOpen = openBranchId === branch.branchId;
+                      return (
+                        <View key={branch.branchId}>
+                          <PressableScale
+                            testID={`payment-accounts-counter-branch-${branch.code}`}
+                            style={[styles.vendorRow, isOpen && styles.vendorRowOpen]}
+                            scaleTo={0.99}
+                            accessibilityRole="button"
+                            accessibilityState={{ expanded: isOpen }}
+                            onPress={() => setOpenBranchId(isOpen ? null : branch.branchId)}
+                          >
+                            <View style={styles.vendorText}>
+                              <Text style={styles.vendorName}>{branch.name}</Text>
+                              <Text style={styles.vendorMeta} numberOfLines={1}>
+                                {branch.upiId ?? t('paymentAccounts.usesBusinessUpi')}
+                              </Text>
+                              <View style={styles.pills}>
+                                <Pill
+                                  label={t(branch.operatingModel === 'FOCO' ? 'addBranch.modelFoco' : 'addBranch.modelFm')}
+                                  tone="muted"
+                                />
+                                {branch.upiId ? (
+                                  <Pill
+                                    label={t('paymentAccounts.ownUpi')}
+                                    tone="success"
+                                    icon="checkmark-circle-outline"
+                                  />
+                                ) : null}
+                              </View>
+                            </View>
+                            <Ionicons
+                              name={isOpen ? 'chevron-up' : 'chevron-down'}
+                              size={18}
+                              color={colors.textTertiary}
+                            />
+                          </PressableScale>
+                          {isOpen ? (
+                            <View style={styles.editor}>
+                              <UpiAccountEditor
+                                testID={`payment-accounts-counter-editor-${branch.code}`}
+                                payeeLabel={branch.name}
+                                fallbackName={account.businessName}
+                                upiId={branch.upiId}
+                                upiName={branch.upiName}
+                                updatedAt={branch.upiUpdatedAt}
+                                updatedByName={branch.upiUpdatedByMembership?.user?.name ?? null}
+                                removeBody={t('paymentAccounts.counterBranchRemoveBody')}
+                                onSave={(upiId, upiName) => saveBranchCounter(branch.branchId, upiId, upiName)}
+                              />
+                            </View>
+                          ) : null}
+                        </View>
+                      );
+                    })}
+                  </View>
+                </>
+              ) : null}
+            </AnimatedEntrance>
+
+            {showWarehouse ? (
+            <AnimatedEntrance delay={step(2)} style={styles.block}>
               <Text style={styles.sectionTitle}>{t('paymentAccounts.warehouseSection')}</Text>
               <Text style={styles.sectionHint}>{t('paymentAccounts.warehouseHint')}</Text>
               {account ? (
@@ -142,8 +251,10 @@ export default function PaymentAccountsScreen() {
                 />
               ) : null}
             </AnimatedEntrance>
+            ) : null}
 
-            <AnimatedEntrance delay={step(2)} style={styles.block}>
+            {showVendors ? (
+            <AnimatedEntrance delay={step(3)} style={styles.block}>
               <Text style={styles.sectionTitle}>{t('paymentAccounts.vendorsSection')}</Text>
               <Text style={styles.sectionHint}>{t('paymentAccounts.vendorsHint')}</Text>
               {!vendorsLoading && vendors.length === 0 ? (
@@ -201,6 +312,7 @@ export default function PaymentAccountsScreen() {
                 })}
               </View>
             </AnimatedEntrance>
+            ) : null}
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -252,6 +364,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   sectionHint: { fontSize: 12.5, color: colors.textTertiary, lineHeight: 17, marginTop: 4, marginBottom: spacing.sm },
+  subHint: { marginTop: spacing.md },
   list: { gap: spacing.sm },
   withdrawn: { opacity: 0.6 },
   vendorRow: {

@@ -22,7 +22,10 @@ import type { Business } from '@/types/business';
 import { useBranchStore } from '@/store/branchStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { currentPushToken, unregisterFromPush } from '@/utils/push';
-import { useSalesStore } from '@/store/salesStore';
+import { useTodayStore } from '@/store/todayStore';
+import { useCounterStore } from '@/store/counterStore';
+import { stopCounterSync } from '@/utils/counterSync';
+import { readJson, removeText, writeJson } from '@/utils/textStore';
 
 // Both keys keep the product's old name on purpose: renaming a stored key signs
 // every user out. A machine reads them; no person ever does.
@@ -41,6 +44,30 @@ const BUSINESS_KEY = 'biziq_business_id';
  * falls back to any ACTIVE membership in that case, and the resolved value is
  * written back so the stale one does not keep being re-checked.
  */
+/**
+ * The last session the server confirmed, kept in the app's own files so the
+ * app can open with no connection (requirement 30): a cashier who starts the
+ * phone in a shop whose internet is down must land on the counter, not on a
+ * sign-in screen that cannot sign anybody in.
+ *
+ * Not in SecureStore, which is for secrets and holds about 2KB a value — a
+ * user with several memberships is more. The token itself stays in SecureStore;
+ * this copy only says who that token was, and is used only when the token in
+ * SecureStore is the same one. It is deleted on sign-out.
+ *
+ * The cost, accepted: an account disabled while the phone is offline keeps
+ * billing on that phone until it next reaches the server, and is signed out
+ * then. Its bills are kept for whoever signs in next.
+ */
+const SESSION_CACHE_KEY = 'session-cache';
+
+type SessionCache = {
+  token: string;
+  user: User;
+  business: Business | null;
+  activeBusinessId: string | null;
+};
+
 async function resolveActiveBusinessId(user: User | null): Promise<string | null> {
   const stored = await secureStorage.getItem(BUSINESS_KEY);
   const resolved = activeMembership(user, stored)?.businessId ?? null;
@@ -67,6 +94,11 @@ interface AuthState {
   user: User | null;
   business: Business | null;
   error: string | null;
+  /**
+   * True when the app opened from the cached session because the server could
+   * not be reached. Cleared by the next session the server confirms.
+   */
+  isOfflineSession: boolean;
   bootstrap: () => Promise<void>;
   login: (payload: LoginPayload) => Promise<void>;
   signup: (payload: SignupPayload) => Promise<void>;
@@ -101,6 +133,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   user: null,
   business: null,
   error: null,
+  isOfflineSession: false,
 
   bootstrap: async () => {
     const token = await secureStorage.getItem(TOKEN_KEY);
@@ -132,6 +165,23 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       // reason that their server was cold.
       if (!isTransportFailure(err)) {
         await secureStorage.deleteItem(TOKEN_KEY);
+        await removeText(SESSION_CACHE_KEY);
+      } else {
+        // Requirement 30: no server is not the same as no session. Open with the
+        // last one the server confirmed for this same token, and let the
+        // foreground refresh replace it once the connection is back.
+        const cached = await readJson<SessionCache>(SESSION_CACHE_KEY);
+        if (cached && cached.token === token && cached.user) {
+          set({
+            token,
+            user: cached.user,
+            business: cached.business,
+            activeBusinessId: activeMembership(cached.user, cached.activeBusinessId)?.businessId ?? null,
+            isOfflineSession: true,
+            isBootstrapping: false,
+          });
+          return;
+        }
       }
       setAuthToken(null);
       set({ token: null, user: null, business: null, activeBusinessId: null, isBootstrapping: false });
@@ -192,8 +242,13 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // too. `loadedFor` already stops one account's data being shown to another,
     // but leaving it in memory after a logout is not something to rely on.
     useBranchStore.getState().reset();
-    useSalesStore.getState().reset();
+    useTodayStore.getState().reset();
     useNotificationStore.getState().reset();
+    // In memory only: the counter's files keep any bills not yet sent, and they
+    // go the next time somebody signs in to this business on this phone.
+    useCounterStore.getState().reset();
+    stopCounterSync();
+    await removeText(SESSION_CACHE_KEY);
     // Stop this handset receiving pushes for the account signing out. Awaited
     // but never allowed to throw: somebody pressing Log out has to end up
     // logged out whatever the network is doing.
@@ -284,7 +339,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         activeBusinessId && activeBusinessId !== current
           ? await getBusiness(activeBusinessId).catch(() => get().business)
           : get().business;
-      set({ user, business, activeBusinessId });
+      set({ user, business, activeBusinessId, isOfflineSession: false });
     } catch {
       // Offline or a blip — keep what we have.
     }
@@ -314,4 +369,29 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 setSessionEndedHandler(() => {
   if (!useAuthStore.getState().token) return;
   void useAuthStore.getState().logout();
+});
+
+/**
+ * Keep the offline copy of the session (see SESSION_CACHE_KEY) in step with
+ * every session the server confirms — bootstrap, login, sign-up, a business
+ * switch, a refresh — from one place rather than from each of them. A session
+ * restored from the cache is not written back: nothing new was learned.
+ */
+useAuthStore.subscribe((state, previous) => {
+  if (!state.token || !state.user || state.isOfflineSession) return;
+  if (
+    state.token === previous.token &&
+    state.user === previous.user &&
+    state.business === previous.business &&
+    state.activeBusinessId === previous.activeBusinessId
+  ) {
+    return;
+  }
+  const cache: SessionCache = {
+    token: state.token,
+    user: state.user,
+    business: state.business,
+    activeBusinessId: state.activeBusinessId,
+  };
+  void writeJson(SESSION_CACHE_KEY, cache).catch(() => undefined);
 });

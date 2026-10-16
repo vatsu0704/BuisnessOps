@@ -12,7 +12,7 @@ import type { AppStackParamList } from '@/navigation/AppNavigator';
 import type { AppTabParamList } from '@/navigation/TabNavigator';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
-import { useSalesSummary } from '@/hooks/useSalesSummary';
+import { useToday } from '@/hooks/useToday';
 import { useMembership } from '@/hooks/useBusinessId';
 import { useSupplyPayments } from '@/hooks/useSupplyPayments';
 import { formatAmount } from '@/utils/format';
@@ -33,7 +33,11 @@ import Wordmark from '@/components/Wordmark';
 import ExpenseGapsCard from '@/components/expense/ExpenseGapsCard';
 import BranchCatalogSection from '@/components/home/BranchCatalogSection';
 import BranchesSection from '@/components/home/BranchesSection';
-import SalesTilesSection from '@/components/home/SalesTilesSection';
+import QuickActionsSection from '@/components/home/QuickActionsSection';
+import RecentBillsSection from '@/components/home/RecentBillsSection';
+import TodaySection from '@/components/home/TodaySection';
+import { QUICK_ACTIONS, isQuickActionVisible } from '@/constants/quickActions';
+import type { Membership } from '@/types/user';
 import PlanBanner from '@/components/home/PlanBanner';
 import { colors, gradient, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
@@ -76,26 +80,29 @@ const SECTIONS: {
    * role added later lands on the right side of it by itself.
    */
   hideWhen?: { holds: Capability; unless?: Capability };
+  /** For a section whose presence depends on more than one capability. */
+  visible?: (membership: Membership | undefined) => boolean;
   Component: ComponentType;
 }[] = [
   // Punching in is a daily action and belongs one tap from opening the app.
   // TodayPunchCard renders nothing for someone with no staff record, so it
   // needs no capability of its own.
   { key: 'punch', capability: null, Component: PunchSection },
-  // How the business is doing, then where it is doing it, then the way in to
-  // today's work. The numbers lead because they are what Home is *read* for —
-  // everything below is a place to go, and a list of destinations answers no
-  // question on its own.
-  { key: 'sales', capability: 'analytics:viewBranch', Component: SalesTilesSection },
-  { key: 'branches', capability: 'branch:update', Component: BranchesSection },
-  // The till (requirement 1). A cashier has it as a tab as well; an owner or
-  // manager trades that tab slot for Reports, so for them this is the way in.
-  { key: 'counter', capability: 'counterOrder:create', Component: CounterSection },
+  // Requirement 33. Today's sales, bills and spending lead, because they are
+  // what Home is *read* for between customers — then the places to go, as a
+  // grid of tiles, then the day's latest bills.
+  { key: 'today', capability: 'analytics:viewToday', Component: TodaySection },
+  {
+    key: 'quickActions',
+    capability: null,
+    visible: (membership) =>
+      QUICK_ACTIONS.some((action) => isQuickActionVisible(action, (capability) => hasCapability(membership, capability))),
+    Component: QuickActionsSection,
+  },
+  { key: 'recentBills', capability: 'counterOrder:create', Component: RecentBillsSection },
   // Requirement 10. The chase list sits directly under the numbers because it
-  // is the one card on Home that asks somebody to do something today, and the
-  // branch's own expense card follows it.
+  // is the one card on Home that asks somebody to do something today.
   { key: 'expenseGaps', capability: 'expense:viewAllBranches', Component: ExpenseGapsSection },
-  { key: 'expenses', capability: 'expense:log', Component: ExpensesSection },
   // Requirement 27 — what accounts has to pay for. The accountant also has a
   // Payments tab; for the owner, who holds the same capability, this is the
   // way in, and for both it says the figure without opening the screen.
@@ -109,39 +116,9 @@ const SECTIONS: {
     hideWhen: { holds: 'supplyPayment:settle' },
     Component: PaymentsToConfirmSection,
   },
-  // Requirement 4 — the catalog every branch sells from.
+  { key: 'branches', capability: 'branch:update', Component: BranchesSection },
+  // Requirement 4 — the catalog every branch sells from, a preview of it.
   { key: 'catalog', capability: 'product:view', Component: BranchCatalogSection },
-  // Requirement 3. The warehouse desk has this as a tab; an admin reaches it
-  // from here, which is the only place they ever need it.
-  { key: 'desk', capability: 'supplyOrder:fulfil', Component: DeskSection },
-  // Requirement 12, same story for the delivery agent's run — and only for
-  // them. Whoever runs the desk is not who carries the run, which is the same
-  // discriminator the agent picker uses to decide who may be assigned one.
-  {
-    key: 'deliveries',
-    capability: 'supplyOrder:deliver',
-    hideWhen: { holds: 'supplyOrder:fulfil' },
-    Component: DeliveriesSection,
-  },
-  // Requirement 5 — ordering raw material. A branch orders; an admin does not,
-  // so they trade this card for the catalog one below. Same `unless` that lets
-  // a cashier give up the Products tab while an admin keeps it.
-  {
-    key: 'supply',
-    capability: 'supplyOrder:create',
-    hideWhen: { holds: 'analytics:viewBusiness' },
-    Component: SupplySection,
-  },
-  // What the warehouse stocks and what it charges. This is the only way into
-  // the raw-material catalog for anyone who does not order from it — which,
-  // until now, included the warehouse desk itself: it holds `supplyItem:manage`
-  // and had no route to the screen that uses it.
-  { key: 'supplyCatalog', capability: 'supplyItem:manage', Component: SupplyCatalogSection },
-  // Requirement 11 — tracking what was ordered. Stays for everyone who can see
-  // orders at all, including an admin: reading where a branch's order has got
-  // to is oversight, not the branch's daily job.
-  { key: 'supplyOrders', capability: 'supplyOrder:view', Component: SupplyOrdersSection },
-  { key: 'upload', capability: 'dataSource:manage', Component: UploadSection },
 ];
 
 function PunchSection() {
@@ -149,89 +126,11 @@ function PunchSection() {
   return <TodayPunchCard onOpenHistory={() => navigation.navigate('Attendance')} />;
 }
 
-function CounterSection() {
-  const { t } = useTranslation();
-  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  return (
-    <InfoCard
-      testID="home-open-counter"
-      icon="calculator-outline"
-      title={t('home.counterTitle')}
-      subtitle={t('home.counterSubtitle')}
-      onPress={() => navigation.navigate('Counter')}
-    />
-  );
-}
 
-function SupplySection() {
-  const { t } = useTranslation();
-  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  return (
-    <InfoCard
-      testID="home-open-supply"
-      icon="cube-outline"
-      title={t('home.supplyTitle')}
-      subtitle={t('home.supplySubtitle')}
-      onPress={() => navigation.navigate('SupplyCatalog')}
-    />
-  );
-}
 
-function SupplyCatalogSection() {
-  const { t } = useTranslation();
-  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  return (
-    <InfoCard
-      testID="home-open-supply-catalog"
-      icon="pricetags-outline"
-      title={t('home.supplyCatalogTitle')}
-      subtitle={t('home.supplyCatalogSubtitle')}
-      onPress={() => navigation.navigate('SupplyCatalog')}
-    />
-  );
-}
 
-function SupplyOrdersSection() {
-  const { t } = useTranslation();
-  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  return (
-    <InfoCard
-      testID="home-open-supply-orders"
-      icon="receipt-outline"
-      title={t('home.supplyTrackTitle')}
-      subtitle={t('home.supplyTrackSubtitle')}
-      onPress={() => navigation.navigate('SupplyOrders')}
-    />
-  );
-}
 
-function DeskSection() {
-  const { t } = useTranslation();
-  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  return (
-    <InfoCard
-      testID="home-open-desk"
-      icon="file-tray-full-outline"
-      title={t('home.deskTitle')}
-      subtitle={t('home.deskSubtitle')}
-      onPress={() => navigation.navigate('SupplyDesk')}
-    />
-  );
-}
 
-function DeliveriesSection() {
-  const { t } = useTranslation();
-  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  return (
-    <InfoCard
-      testID="home-open-deliveries"
-      icon="bicycle-outline"
-      title={t('home.deliveriesTitle')}
-      subtitle={t('home.deliveriesSubtitle')}
-      onPress={() => navigation.navigate('SupplyDeliveries')}
-    />
-  );
-}
 
 function PaymentsSection() {
   const { t } = useTranslation();
@@ -288,19 +187,6 @@ function PaymentsToConfirmSection() {
   );
 }
 
-function ExpensesSection() {
-  const { t } = useTranslation();
-  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  return (
-    <InfoCard
-      testID="home-open-expenses"
-      icon="wallet-outline"
-      title={t('home.expensesTitle')}
-      subtitle={t('home.expensesSubtitle')}
-      onPress={() => navigation.navigate('Expenses')}
-    />
-  );
-}
 
 /**
  * Not an InfoCard: the back office's question is "who do I ring?", and the
@@ -310,19 +196,6 @@ function ExpenseGapsSection() {
   return <ExpenseGapsCard />;
 }
 
-function UploadSection() {
-  const { t } = useTranslation();
-  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  return (
-    <InfoCard
-      testID="home-open-upload"
-      icon="cloud-upload-outline"
-      title={t('home.dataTitle')}
-      subtitle={t('home.dataSubtitle')}
-      onPress={() => navigation.navigate('Upload')}
-    />
-  );
-}
 
 export default function HomeScreen({ navigation }: Props) {
   const { t } = useTranslation();
@@ -330,7 +203,7 @@ export default function HomeScreen({ navigation }: Props) {
   const business = useAuthStore((s) => s.business);
   const membership = useMembership();
   const { isLoading, error, refresh, stats } = useBranches();
-  const sales = useSalesSummary();
+  const today = useToday();
   const rootNavigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
   // A branch created, or sales data uploaded, in a modal must show up the
@@ -338,8 +211,8 @@ export default function HomeScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       void refresh();
-      void sales.refresh();
-    }, [refresh, sales.refresh])
+      void today.refresh();
+    }, [refresh, today.refresh])
   );
 
   const firstName = user?.name?.trim().split(/\s+/)[0] ?? user?.email ?? '';
@@ -350,6 +223,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   const sections = SECTIONS.filter((section) => {
     if (section.capability && !hasCapability(membership, section.capability)) return false;
+    if (section.visible && !section.visible(membership)) return false;
     if (!section.hideWhen) return true;
     const hidden =
       hasCapability(membership, section.hideWhen.holds) &&
@@ -360,7 +234,7 @@ export default function HomeScreen({ navigation }: Props) {
   // A role whose surfaces are not built yet — WAREHOUSE and DELIVERY_AGENT
   // until Task 5 — would otherwise land on a blank screen and reasonably
   // conclude the app is broken. Saying so is better than showing nothing.
-  const hasOnlyUniversalSections = sections.every((section) => section.capability === null);
+  const hasOnlyUniversalSections = sections.every((section) => section.capability === null && !section.visible);
 
   /**
    * Requirements 18 and 19 — a branch-scoped member with no branch.
@@ -411,10 +285,10 @@ export default function HomeScreen({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
-              refreshing={isLoading || sales.isLoading}
+              refreshing={isLoading || today.isLoading}
               onRefresh={() => {
                 void refresh();
-                void sales.refresh();
+                void today.refresh();
               }}
               tintColor={colors.primary}
             />
@@ -443,11 +317,11 @@ export default function HomeScreen({ navigation }: Props) {
               or has gone read-only. */}
           <PlanBanner membership={membership} onOpenPlan={() => rootNavigation.navigate('Plan')} />
 
-          {error || sales.error ? (
+          {error || today.error ? (
             <AnimatedEntrance delay={step(1)} style={styles.block}>
               <View style={styles.errorBanner}>
                 <Ionicons name="alert-circle" size={16} color={colors.error} />
-                <Text style={styles.errorText}>{error || sales.error}</Text>
+                <Text style={styles.errorText}>{error || today.error}</Text>
               </View>
             </AnimatedEntrance>
           ) : null}

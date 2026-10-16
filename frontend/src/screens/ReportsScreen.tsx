@@ -3,7 +3,10 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, useNavigationState } from '@react-navigation/native';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import PressableScale from '@/components/PressableScale';
+import { useScreenEdges } from '@/hooks/useScreenEdges';
 import ScreenBackground from '@/components/ScreenBackground';
 import SegmentedOption from '@/components/SegmentedOption';
 import ExportActions from '@/components/ExportActions';
@@ -12,6 +15,7 @@ import BranchProfitCard from '@/components/reports/BranchProfitCard';
 import CrossBusinessSection from '@/components/reports/CrossBusinessSection';
 import MonthStrip from '@/components/reports/MonthStrip';
 import NetProfitCard from '@/components/reports/NetProfitCard';
+import DailyReportSection from '@/components/reports/DailyReportSection';
 import {
   RANGE_OPTIONS,
   useBranchAnalytics,
@@ -24,7 +28,7 @@ import {
   shareMonthEndWorkbook,
 } from '@/api/exports';
 import { monthKeyLabel } from '@/utils/date';
-import { useBusinessId } from '@/hooks/useBusinessId';
+import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
 import { useAuthStore } from '@/store/authStore';
 import { hasCapability } from '@/utils/permissions';
 import { colors, spacing } from '@/theme';
@@ -67,6 +71,13 @@ import type { BranchMonthlyRow } from '@/types/analytics';
  */
 export default function ReportsScreen() {
   const { t } = useTranslation();
+  const edges = useScreenEdges();
+  const navigation = useNavigation();
+  // A tab for whoever reads every branch; pushed from Home's Reports tile for an
+  // owner on a single-shop plan, who has no Reports tab. Only the pushed copy has
+  // somewhere to go back to.
+  const isPushed = useNavigationState((state) => state.type === 'stack');
+  const membership = useMembership();
 
   const { report, isLoading, error, monthsBack, setMonthsBack, refresh, range } =
     useBranchAnalytics();
@@ -75,6 +86,8 @@ export default function ReportsScreen() {
   // window, which is the one somebody opening Reports came to see.
   const [focusMonth, setFocusMonth] = useState<string | null>(null);
   const [scope, setScope] = useState<'business' | 'all'>('business');
+  // Requirement 34: the same figures a day at a time, or a month at a time.
+  const [view, setView] = useState<'day' | 'month'>('month');
 
   // How many businesses this account could read a roll-up for. The scope toggle
   // appears only when there is something to compare — one business has no
@@ -117,7 +130,7 @@ export default function ReportsScreen() {
   return (
     <View style={styles.container}>
       <ScreenBackground />
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={edges}>
         <ScrollView
           contentContainerStyle={styles.content}
           refreshControl={
@@ -131,11 +144,56 @@ export default function ReportsScreen() {
             />
           }
         >
-          <AnimatedEntrance delay={step(0)}>
-            <Text style={styles.title}>{t('reports.title')}</Text>
-            <Text style={styles.subtitle}>{t('reports.subtitle')}</Text>
+          <AnimatedEntrance delay={step(0)} style={styles.headRow}>
+            <View style={styles.headText}>
+              <Text style={styles.title}>{t('reports.title')}</Text>
+              <Text style={styles.subtitle}>{t('reports.subtitle')}</Text>
+            </View>
+            {isPushed ? (
+              <PressableScale testID="reports-close" style={styles.close} onPress={() => navigation.goBack()}>
+                <Ionicons name="close" size={20} color={colors.text} />
+              </PressableScale>
+            ) : null}
           </AnimatedEntrance>
 
+          <AnimatedEntrance delay={step(1)} style={styles.block}>
+            <View style={styles.row}>
+              <SegmentedOption
+                testID="reports-view-day"
+                title={t('reports.perDay')}
+                icon="today-outline"
+                selected={view === 'day'}
+                onPress={() => setView('day')}
+              />
+              <SegmentedOption
+                testID="reports-view-month"
+                title={t('reports.perMonth')}
+                icon="calendar-outline"
+                selected={view === 'month'}
+                onPress={() => setView('month')}
+              />
+            </View>
+          </AnimatedEntrance>
+
+          {/* Requirement 34: what "variable", "fixed" and "daily" are made of, one
+              tap away from the figures that use them. */}
+          {hasCapability(membership, 'expense:view') ? (
+            <PressableScale
+              testID="reports-cost-types"
+              style={styles.link}
+              onPress={() => (navigation.navigate as (route: string) => void)('ExpenseCategories')}
+            >
+              <Ionicons name="options-outline" size={15} color={colors.primary} />
+              <Text style={styles.linkText}>{t('reports.howCostsAreGrouped')}</Text>
+            </PressableScale>
+          ) : null}
+
+          {view === 'day' ? (
+            <AnimatedEntrance delay={step(2)} style={styles.block}>
+              <DailyReportSection />
+            </AnimatedEntrance>
+          ) : (
+          <>
           <AnimatedEntrance delay={step(1)} style={styles.block}>
             <View style={styles.row}>
               {RANGE_OPTIONS.map((option) => (
@@ -199,7 +257,6 @@ export default function ReportsScreen() {
                 <AnimatedEntrance delay={step(4)} style={styles.block}>
                   <NetProfitCard
                     cell={businessCell}
-                    reconciliation={report.business!.reconciliation}
                     currency={report.currency}
                     mixedCurrency={report.mixedCurrency}
                   />
@@ -243,6 +300,8 @@ export default function ReportsScreen() {
               ))}
             </>
           )}
+          </>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -252,6 +311,20 @@ export default function ReportsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   safe: { flex: 1 },
+  headRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  link: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start', marginTop: spacing.sm },
+  linkText: { fontSize: 13, fontWeight: '700', color: colors.primary },
+  headText: { flex: 1, minWidth: 0 },
+  close: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   title: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
   subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },

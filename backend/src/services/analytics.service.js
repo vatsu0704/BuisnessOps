@@ -6,6 +6,8 @@ const { accessState } = require('../billing/access');
 const {
   dateOnly,
   dateKeyOf,
+  daysInMonth,
+  isRealMonthKey,
   safeZone,
   localMonthRange,
   eachMonthBetween,
@@ -165,31 +167,58 @@ function resolveWindow({ from, to }, timeZone) {
  * `Expense`), so no timezone work is needed here at all — only sales do.
  */
 async function expensesByBranchMonth(businessId, branchIds, months) {
-  const rows = await prisma.expense.groupBy({
-    by: ['branchId', 'expenseDate'],
-    where: {
-      businessId,
-      branchId: { in: branchIds },
-      expenseDate: {
-        gte: dateOnly(`${months[0]}-01`),
-        lt: dateOnly(`${nextMonthKey(months[months.length - 1])}-01`),
-      },
-    },
-    _sum: { amount: true },
-    _count: true,
-  });
-
+  const rows = await expenseRows(businessId, branchIds, `${months[0]}-01`, `${nextMonthKey(months[months.length - 1])}-01`);
   const totals = new Map();
   for (const row of rows) {
-    const key = `${row.branchId}|${monthOf(dateKeyOf(row.expenseDate))}`;
-    const existing = totals.get(key) ?? { amount: zero(), count: 0 };
-    totals.set(key, {
-      amount: existing.amount.plus(toDecimal(row._sum.amount)),
-      count: existing.count + row._count,
-    });
+    const key = `${row.branchId}|${monthOf(row.dayKey)}`;
+    totals.set(key, addExpense(totals.get(key), row));
   }
   return totals;
 }
+
+/**
+ * The business's expenses between two dates, a row per branch, day and category,
+ * each carrying its category's cost type (requirement 34). The type is read from
+ * the category now, never stored on the expense, so re-classing a category
+ * re-sorts every month's split and changes no total.
+ */
+async function expenseRows(businessId, branchIds, fromKey, toKeyExclusive) {
+  const [rows, categories] = await Promise.all([
+    prisma.expense.groupBy({
+      by: ['branchId', 'expenseDate', 'categoryId'],
+      where: {
+        businessId,
+        branchId: { in: branchIds },
+        expenseDate: { gte: dateOnly(fromKey), lt: dateOnly(toKeyExclusive) },
+      },
+      _sum: { amount: true },
+      _count: true,
+    }),
+    prisma.expenseCategory.findMany({ where: { businessId }, select: { id: true, costType: true } }),
+  ]);
+  const typeOf = new Map(categories.map((category) => [category.id, category.costType]));
+  return rows.map((row) => ({
+    branchId: row.branchId,
+    dayKey: dateKeyOf(row.expenseDate),
+    costType: typeOf.get(row.categoryId) ?? 'DAILY',
+    amount: toDecimal(row._sum.amount),
+    count: row._count,
+  }));
+}
+
+/** Fold one expense row into a running total split by cost type. */
+function addExpense(existing, row) {
+  const total = existing ?? { amount: zero(), count: 0, variable: zero(), fixed: zero(), daily: zero() };
+  return {
+    amount: total.amount.plus(row.amount),
+    count: total.count + row.count,
+    variable: row.costType === 'VARIABLE' ? total.variable.plus(row.amount) : total.variable,
+    fixed: row.costType === 'FIXED' ? total.fixed.plus(row.amount) : total.fixed,
+    daily: row.costType === 'DAILY' ? total.daily.plus(row.amount) : total.daily,
+  };
+}
+
+const NO_EXPENSE = () => ({ amount: zero(), count: 0, variable: zero(), fixed: zero(), daily: zero() });
 
 function nextMonthKey(key) {
   const [year, month] = key.split('-').map(Number);
@@ -359,31 +388,59 @@ function trendOf(cells) {
 
 // --- Assembly --------------------------------------------------------------
 
+/** The money fields a branch cell carries, all summed the same way. */
+const BRANCH_MONEY = [
+  'sales',
+  'expenses',
+  'expenseVariable',
+  'expenseFixed',
+  'expenseDaily',
+  'materialSpend',
+  'vendorSpend',
+  'payroll',
+  'variableExpenses',
+  'fixedExpenses',
+  'dailyExpenses',
+  'totalCost',
+  'netProfit',
+];
+
 function emptyTotals() {
   return {
-    sales: zero(),
+    ...Object.fromEntries(BRANCH_MONEY.map((field) => [field, zero()])),
     saleCount: 0,
-    expenses: zero(),
     expenseCount: 0,
-    materialSpend: zero(),
     materialOrderCount: 0,
-    vendorSpend: zero(),
-    payroll: zero(),
-    netProfit: zero(),
   };
 }
 
 function addInto(totals, cell) {
-  totals.sales = totals.sales.plus(cell.sales);
+  for (const field of BRANCH_MONEY) totals[field] = totals[field].plus(cell[field]);
   totals.saleCount += cell.saleCount;
-  totals.expenses = totals.expenses.plus(cell.expenses);
   totals.expenseCount += cell.expenseCount;
-  totals.materialSpend = totals.materialSpend.plus(cell.materialSpend);
   totals.materialOrderCount += cell.materialOrderCount;
-  totals.vendorSpend = totals.vendorSpend.plus(cell.vendorSpend);
-  totals.payroll = totals.payroll.plus(cell.payroll);
-  totals.netProfit = totals.netProfit.plus(cell.netProfit);
   return totals;
+}
+
+/**
+ * Requirement 34's three kinds of cost, at a branch.
+ *
+ * - **Variable** rises and falls with sales: the variable expense categories and
+ *   every rupee of raw material the branch ordered (warehouse or vendor alike —
+ *   to the branch, both are money out).
+ * - **Fixed** is the same month after month: the fixed categories and wages.
+ * - **Daily** is the day-to-day rest.
+ *
+ * The three add up to the branch's total cost, and net profit is what it always
+ * was — sales less that cost — so nothing about the arithmetic moved, only how
+ * the cost is shown.
+ */
+function splitCosts(cell, { materialSpend, payroll }) {
+  cell.variableExpenses = cell.expenseVariable.plus(materialSpend);
+  cell.fixedExpenses = cell.expenseFixed.plus(payroll);
+  cell.dailyExpenses = cell.expenseDaily;
+  cell.totalCost = cell.variableExpenses.plus(cell.fixedExpenses).plus(cell.dailyExpenses);
+  return cell;
 }
 
 /**
@@ -447,7 +504,7 @@ async function getBranchMonthly(
 
     const cells = months.map((month) => {
       const key = `${branch.id}|${month}`;
-      const expense = expenses.get(key) ?? { amount: zero(), count: 0 };
+      const expense = expenses.get(key) ?? NO_EXPENSE();
       const pay = payroll.get(key) ?? { amount: zero(), slipCount: 0, draftCount: 0 };
       const sale = instant.sales.get(key) ?? { amount: zero(), count: 0 };
       const material = instant.material.get(key) ?? { amount: zero(), count: 0 };
@@ -458,6 +515,9 @@ async function getBranchMonthly(
         saleCount: sale.count,
         expenses: expense.amount,
         expenseCount: expense.count,
+        expenseVariable: expense.variable,
+        expenseFixed: expense.fixed,
+        expenseDaily: expense.daily,
         materialSpend: material.amount,
         materialOrderCount: material.count,
         // Already inside `materialSpend` — reported beside it, never subtracted
@@ -477,6 +537,7 @@ async function getBranchMonthly(
         netProfit: zero(),
       };
 
+      splitCosts(cell, { materialSpend: cell.materialSpend, payroll: cell.payroll });
       cell.netProfit = cell.sales.minus(cell.expenses).minus(cell.materialSpend).minus(cell.payroll);
       return cell;
     });
@@ -523,22 +584,51 @@ async function getBranchMonthly(
  * needs rows to iterate, and a zero-row call would produce a `total` with no
  * months behind it.
  */
-function emptyBusinessRollUp(months) {
-  const emptyCell = () => ({
-    customerSales: zero(),
-    expenses: zero(),
-    payroll: zero(),
-    vendorSpend: zero(),
-    internalTransfer: zero(),
-    netProfit: zero(),
-    payrollProvisional: false,
-  });
+/** The money fields a business cell carries. */
+const BUSINESS_MONEY = [
+  'customerSales',
+  'expenses',
+  'expenseVariable',
+  'expenseFixed',
+  'expenseDaily',
+  'payroll',
+  'vendorSpend',
+  'internalTransfer',
+  'variableExpenses',
+  'fixedExpenses',
+  'dailyExpenses',
+  'totalCost',
+  'netProfit',
+];
 
+function emptyBusinessCell() {
+  return { ...Object.fromEntries(BUSINESS_MONEY.map((field) => [field, zero()])), payrollProvisional: false };
+}
+
+function emptyReconciliation() {
+  return { branchNetProfitSum: zero(), internalTransfer: zero(), netProfit: zero(), balances: true };
+}
+
+function emptyBusinessRollUp(months) {
   return {
-    months: months.map((month) => ({ month, ...emptyCell() })),
-    total: emptyCell(),
-    reconciliation: { branchNetProfitSum: zero(), internalTransfer: zero(), netProfit: zero(), balances: true },
+    months: months.map((month) => ({ month, ...emptyBusinessCell(), reconciliation: emptyReconciliation() })),
+    total: emptyBusinessCell(),
+    reconciliation: emptyReconciliation(),
   };
+}
+
+/**
+ * The business's own split (requirement 34). Variable is the variable expense
+ * categories plus what went to VENDORS — not the warehouse transfer, which never
+ * left the business (see the header). So Σ branch variable − internal transfer is
+ * the business's variable cost, the same identity the net profit keeps.
+ */
+function businessCosts(cell) {
+  cell.variableExpenses = cell.expenseVariable.plus(cell.vendorSpend);
+  cell.fixedExpenses = cell.expenseFixed.plus(cell.payroll);
+  cell.dailyExpenses = cell.expenseDaily;
+  cell.totalCost = cell.variableExpenses.plus(cell.fixedExpenses).plus(cell.dailyExpenses);
+  return cell;
 }
 
 /**
@@ -556,51 +646,41 @@ function emptyBusinessRollUp(months) {
  */
 function businessRollUp(rows, months) {
   const cells = months.map((month, index) => {
-    const cell = {
-      month,
-      customerSales: zero(),
-      expenses: zero(),
-      payroll: zero(),
-      vendorSpend: zero(),
-      internalTransfer: zero(),
-      netProfit: zero(),
-      payrollProvisional: false,
-    };
+    const cell = { month, ...emptyBusinessCell() };
+    let branchNetProfitSum = zero();
 
     for (const row of rows) {
       const monthCell = row.months[index];
       cell.customerSales = cell.customerSales.plus(monthCell.sales);
       cell.expenses = cell.expenses.plus(monthCell.expenses);
+      cell.expenseVariable = cell.expenseVariable.plus(monthCell.expenseVariable);
+      cell.expenseFixed = cell.expenseFixed.plus(monthCell.expenseFixed);
+      cell.expenseDaily = cell.expenseDaily.plus(monthCell.expenseDaily);
       cell.payroll = cell.payroll.plus(monthCell.payroll);
       cell.vendorSpend = cell.vendorSpend.plus(monthCell.vendorSpend);
       cell.internalTransfer = cell.internalTransfer.plus(monthCell.materialSpend.minus(monthCell.vendorSpend));
+      branchNetProfitSum = branchNetProfitSum.plus(monthCell.netProfit);
       if (monthCell.payrollProvisional) cell.payrollProvisional = true;
     }
 
+    businessCosts(cell);
     cell.netProfit = cell.customerSales.minus(cell.expenses).minus(cell.payroll).minus(cell.vendorSpend);
+    // The month's own reconciliation, so a screen showing one month can print the
+    // sentence for that month — not the window's, under one month's figure.
+    cell.reconciliation = {
+      branchNetProfitSum,
+      internalTransfer: cell.internalTransfer,
+      netProfit: cell.netProfit,
+      balances: branchNetProfitSum.plus(cell.internalTransfer).equals(cell.netProfit),
+    };
     return cell;
   });
 
-  const total = cells.reduce(
-    (totals, cell) => ({
-      customerSales: totals.customerSales.plus(cell.customerSales),
-      expenses: totals.expenses.plus(cell.expenses),
-      payroll: totals.payroll.plus(cell.payroll),
-      vendorSpend: totals.vendorSpend.plus(cell.vendorSpend),
-      internalTransfer: totals.internalTransfer.plus(cell.internalTransfer),
-      netProfit: totals.netProfit.plus(cell.netProfit),
-      payrollProvisional: totals.payrollProvisional || cell.payrollProvisional,
-    }),
-    {
-      customerSales: zero(),
-      expenses: zero(),
-      payroll: zero(),
-      vendorSpend: zero(),
-      internalTransfer: zero(),
-      netProfit: zero(),
-      payrollProvisional: false,
-    }
-  );
+  const total = cells.reduce((totals, cell) => {
+    for (const field of BUSINESS_MONEY) totals[field] = totals[field].plus(cell[field]);
+    totals.payrollProvisional = totals.payrollProvisional || cell.payrollProvisional;
+    return totals;
+  }, emptyBusinessCell());
 
   const branchNetProfitSum = rows.reduce((sum, row) => sum.plus(row.total.netProfit), zero());
 
@@ -617,6 +697,244 @@ function businessRollUp(rows, months) {
       netProfit: total.netProfit,
       balances: branchNetProfitSum.plus(total.internalTransfer).equals(total.netProfit),
     },
+  };
+}
+
+// --- Day by day (requirement 34) ---------------------------------------------
+
+/**
+ * Sales and raw material per branch per LOCAL day, for one month.
+ *
+ * Both columns are instants (`TIMESTAMP(3)` holding UTC), so a branch's day has
+ * to be worked out from its time zone. The rule in CLAUDE.md — never
+ * `occurredAt::date` — is about two things, and this keeps both:
+ *
+ * - The WHERE is a plain range over the branch's own month (`localMonthRange`),
+ *   so the `(businessId, branchId, occurredAt)` index does the filtering.
+ * - The bucketing is an explicit conversion into the branch's zone, never a cast
+ *   of the UTC value: `AT TIME ZONE 'UTC'` first says the stored value IS UTC,
+ *   then `AT TIME ZONE <zone>` gives the wall clock there. One conversion alone
+ *   would read the UTC value as if it were Kolkata time and shift it the wrong way.
+ *
+ * Enum comparisons are written as literals, because a bound text parameter would
+ * need a cast against an enum column.
+ */
+async function instantMetricsByBranchDay(businessId, branches, month) {
+  const byZone = new Map();
+  for (const branch of branches) {
+    const zone = safeZone(branch.timezone);
+    if (!byZone.has(zone)) byZone.set(zone, []);
+    byZone.get(zone).push(branch.id);
+  }
+
+  const sales = new Map();
+  const material = new Map();
+  const vendorMaterial = new Map();
+
+  for (const [zone, ids] of byZone) {
+    const range = localMonthRange(month, zone);
+    // The columns are TIMESTAMP without a zone, holding UTC. Bound as naive UTC
+    // text and cast, the comparison cannot depend on the database session's zone.
+    const start = range.start.toISOString().replace('Z', '');
+    const end = range.end.toISOString().replace('Z', '');
+    const [saleRows, materialRows] = await Promise.all([
+      prisma.$queryRaw`
+        SELECT "branchId",
+               to_char(("occurredAt" AT TIME ZONE 'UTC') AT TIME ZONE ${zone}, 'YYYY-MM-DD') AS day,
+               SUM("totalAmount") AS amount,
+               COUNT(*)::int AS count
+        FROM transactions
+        WHERE "businessId" = ${businessId}
+          AND "branchId" IN (${Prisma.join(ids)})
+          AND status = 'COMPLETED'
+          AND "occurredAt" >= ${start}::timestamp AND "occurredAt" < ${end}::timestamp
+        GROUP BY 1, 2`,
+      prisma.$queryRaw`
+        SELECT "branchId",
+               to_char(("placedAt" AT TIME ZONE 'UTC') AT TIME ZONE ${zone}, 'YYYY-MM-DD') AS day,
+               SUM("totalAmount") AS amount,
+               COUNT(*)::int AS count,
+               SUM(CASE WHEN "vendorId" IS NOT NULL THEN "totalAmount" ELSE 0 END) AS vendor
+        FROM supply_orders
+        WHERE "businessId" = ${businessId}
+          AND "branchId" IN (${Prisma.join(ids)})
+          AND status::text IN (${Prisma.join(SPENDING_SUPPLY_STATUSES)})
+          AND "placedAt" >= ${start}::timestamp AND "placedAt" < ${end}::timestamp
+        GROUP BY 1, 2`,
+    ]);
+    for (const row of saleRows) {
+      sales.set(`${row.branchId}|${row.day}`, { amount: toDecimal(row.amount), count: Number(row.count) });
+    }
+    for (const row of materialRows) {
+      const key = `${row.branchId}|${row.day}`;
+      material.set(key, { amount: toDecimal(row.amount), count: Number(row.count) });
+      vendorMaterial.set(key, toDecimal(row.vendor));
+    }
+  }
+  return { sales, material, vendorMaterial };
+}
+
+/**
+ * A monthly cost spread evenly over the month's days, to the paise, with the
+ * remainder on the last day so the days add back up to the month exactly.
+ */
+function spreadOverDays(total, days) {
+  const share = total.times(100).dividedBy(days).floor().dividedBy(100);
+  const last = total.minus(share.times(days - 1));
+  return { share, last };
+}
+
+/**
+ * One month, day by day, per branch and for the business — requirement 34's
+ * "Per day" view.
+ *
+ * Variable and daily costs fall on the day they happened. **Fixed costs — the
+ * fixed expense categories and wages — are spread evenly over the month's days**,
+ * as Vatsal chose (2026-10-14): rent paid on the 1st and wages for the whole
+ * month would otherwise make the 1st a disaster and every other day a triumph.
+ * Each day says so (`fixedShared`), and the month's days add up to the monthly
+ * figures exactly.
+ *
+ * The business level keeps the monthly identity day by day: Σ branch net profit
+ * + the day's internal transfer = the business's net profit that day.
+ */
+async function getBranchDaily(
+  businessId,
+  { month, branchId = null, accessibleBranchIds = null, includeBusiness = false } = {}
+) {
+  if (!isRealMonthKey(month)) throw fail('EXPORT_MONTH_INVALID', 400);
+  const business = await prisma.business.findUnique({ where: { id: businessId } });
+  if (!business) throw fail('BUSINESS_NOT_FOUND', 404);
+
+  const where = { businessId };
+  if (accessibleBranchIds !== null) where.id = { in: accessibleBranchIds };
+  if (branchId) {
+    if (accessibleBranchIds !== null && !accessibleBranchIds.includes(branchId)) {
+      throw fail('BRANCH_ACCESS_DENIED', 403);
+    }
+    where.id = branchId;
+  }
+  const branches = await prisma.branch.findMany({ where, orderBy: [{ kind: 'asc' }, { name: 'asc' }] });
+
+  const [year, monthNumber] = month.split('-').map(Number);
+  const dayCount = daysInMonth(monthNumber, year);
+  const days = Array.from({ length: dayCount }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`);
+
+  if (branches.length === 0) {
+    return { month, days, currency: business.defaultCurrency, mixedCurrency: false, branches: [], business: null };
+  }
+
+  const branchIds = branches.map((branch) => branch.id);
+  const [rows, payroll, staffCounts, instant] = await Promise.all([
+    expenseRows(businessId, branchIds, `${month}-01`, `${nextMonthKey(month)}-01`),
+    payrollByBranchMonth(businessId, branchIds, [month]),
+    staffCountByBranch(businessId, branchIds),
+    instantMetricsByBranchDay(businessId, branches, month),
+  ]);
+
+  const expenses = new Map();
+  const fixedCategoriesByBranch = new Map();
+  for (const row of rows) {
+    const key = `${row.branchId}|${row.dayKey}`;
+    expenses.set(key, addExpense(expenses.get(key), row));
+    if (row.costType === 'FIXED') {
+      fixedCategoriesByBranch.set(row.branchId, (fixedCategoriesByBranch.get(row.branchId) ?? zero()).plus(row.amount));
+    }
+  }
+
+  const branchRows = branches.map((branch) => {
+    const pay = payroll.get(`${branch.id}|${month}`) ?? { amount: zero(), slipCount: 0, draftCount: 0 };
+    const fixedMonth = (fixedCategoriesByBranch.get(branch.id) ?? zero()).plus(pay.amount);
+    const { share, last } = spreadOverDays(fixedMonth, dayCount);
+    const staffCount = staffCounts.get(branch.id) ?? 0;
+
+    const cells = days.map((day, index) => {
+      const key = `${branch.id}|${day}`;
+      const expense = expenses.get(key) ?? NO_EXPENSE();
+      const sale = instant.sales.get(key) ?? { amount: zero(), count: 0 };
+      const material = instant.material.get(key) ?? { amount: zero(), count: 0 };
+      const fixedShare = index === dayCount - 1 ? last : share;
+      const cell = {
+        day,
+        sales: sale.amount,
+        saleCount: sale.count,
+        expenses: expense.amount,
+        expenseCount: expense.count,
+        expenseVariable: expense.variable,
+        expenseDaily: expense.daily,
+        materialSpend: material.amount,
+        vendorSpend: instant.vendorMaterial.get(key) ?? zero(),
+        variableExpenses: expense.variable.plus(material.amount),
+        fixedExpenses: fixedShare,
+        dailyExpenses: expense.daily,
+      };
+      cell.totalCost = cell.variableExpenses.plus(cell.fixedExpenses).plus(cell.dailyExpenses);
+      cell.netProfit = cell.sales.minus(cell.totalCost);
+      return cell;
+    });
+
+    return {
+      branchId: branch.id,
+      branchName: branch.name,
+      branchCode: branch.code,
+      kind: branch.kind,
+      status: branch.status,
+      currency: branch.currency ?? business.defaultCurrency,
+      isCostCentre: branch.kind === 'WAREHOUSE',
+      // What was spread: the month's fixed categories and wages.
+      fixedMonth,
+      payrollProvisional: pay.draftCount > 0 || (pay.slipCount === 0 && staffCount > 0),
+      days: cells,
+    };
+  });
+
+  const currencies = new Set(branchRows.map((row) => row.currency));
+
+  let businessDays = null;
+  if (includeBusiness) {
+    businessDays = days.map((day, index) => {
+      const cell = {
+        day,
+        customerSales: zero(),
+        saleCount: 0,
+        expenseVariable: zero(),
+        dailyExpenses: zero(),
+        fixedExpenses: zero(),
+        vendorSpend: zero(),
+        internalTransfer: zero(),
+      };
+      let branchNetProfitSum = zero();
+      for (const row of branchRows) {
+        const branchCell = row.days[index];
+        cell.customerSales = cell.customerSales.plus(branchCell.sales);
+        cell.saleCount += branchCell.saleCount;
+        cell.expenseVariable = cell.expenseVariable.plus(branchCell.expenseVariable);
+        cell.dailyExpenses = cell.dailyExpenses.plus(branchCell.dailyExpenses);
+        cell.fixedExpenses = cell.fixedExpenses.plus(branchCell.fixedExpenses);
+        cell.vendorSpend = cell.vendorSpend.plus(branchCell.vendorSpend);
+        cell.internalTransfer = cell.internalTransfer.plus(branchCell.materialSpend.minus(branchCell.vendorSpend));
+        branchNetProfitSum = branchNetProfitSum.plus(branchCell.netProfit);
+      }
+      cell.variableExpenses = cell.expenseVariable.plus(cell.vendorSpend);
+      cell.totalCost = cell.variableExpenses.plus(cell.fixedExpenses).plus(cell.dailyExpenses);
+      cell.netProfit = cell.customerSales.minus(cell.totalCost);
+      cell.reconciliation = {
+        branchNetProfitSum,
+        internalTransfer: cell.internalTransfer,
+        netProfit: cell.netProfit,
+        balances: branchNetProfitSum.plus(cell.internalTransfer).equals(cell.netProfit),
+      };
+      return cell;
+    });
+  }
+
+  return {
+    month,
+    days,
+    currency: business.defaultCurrency,
+    mixedCurrency: currencies.size > 1,
+    branches: branchRows,
+    business: businessDays ? { days: businessDays, payrollProvisional: branchRows.some((row) => row.payrollProvisional) } : null,
   };
 }
 
@@ -734,24 +1052,14 @@ async function getCrossBusiness(userId, { from, to } = {}) {
     // False when the businesses do not share a currency, which is when the
     // combined figure below is withheld.
     comparable,
+    // Every money field a business total has, the cost split included, so the
+    // combined row reads the same as each business's own.
     combined: comparable && businesses.length
-      ? businesses.reduce(
-          (totals, business) => ({
-            customerSales: totals.customerSales.plus(business.total.customerSales),
-            expenses: totals.expenses.plus(business.total.expenses),
-            payroll: totals.payroll.plus(business.total.payroll),
-            vendorSpend: totals.vendorSpend.plus(business.total.vendorSpend),
-            internalTransfer: totals.internalTransfer.plus(business.total.internalTransfer),
-            netProfit: totals.netProfit.plus(business.total.netProfit),
-          }),
-          {
-            customerSales: zero(),
-            expenses: zero(),
-            payroll: zero(),
-            vendorSpend: zero(),
-            internalTransfer: zero(),
-            netProfit: zero(),
-          }
+      ? Object.fromEntries(
+          BUSINESS_MONEY.map((field) => [
+            field,
+            businesses.reduce((sum, business) => sum.plus(business.total[field]), zero()),
+          ])
         )
       : null,
     businesses,
@@ -764,5 +1072,6 @@ module.exports = {
   FLAT_THRESHOLD_PERCENT,
   SPENDING_SUPPLY_STATUSES,
   getBranchMonthly,
+  getBranchDaily,
   getCrossBusiness,
 };

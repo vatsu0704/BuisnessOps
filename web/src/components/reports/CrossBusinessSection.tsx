@@ -6,6 +6,7 @@ import type { CrossBusinessReport } from '@/types/analytics';
 import { cx } from '@/utils/cx';
 import { formatAmount } from '@/utils/format';
 import MetricGrid from './MetricGrid';
+import { costMetrics } from './costMetrics';
 import styles from './ReportCard.module.css';
 import layout from './CrossBusinessSection.module.css';
 
@@ -64,7 +65,7 @@ export default function CrossBusinessSection({
       <div className={layout.grid}>
         {cross.businesses.map((business) => {
           const net = Number(business.total.netProfit);
-          const vendorSpend = Number(business.total.vendorSpend);
+          const transfer = Number(business.total.internalTransfer);
           return (
             <article key={business.businessId} className={styles.card} aria-label={business.businessName}>
               <h3 className={styles.name}>{business.businessName}</h3>
@@ -72,39 +73,32 @@ export default function CrossBusinessSection({
                 {t('reports.branchBreakdown', { trading: business.tradingBranchCount, total: business.branchCount })}
               </p>
               <p className={cx(styles.figure, net < 0 && styles.loss)}>{formatAmount(net, business.currency)}</p>
-              <p className={styles.figureLabel}>{t('reports.netProfit')}</p>
+              <p className={styles.figureLabel}>{t('reports.totalProfit')}</p>
+              {/* The month card's figures for the whole window (requirement 34): vendors
+                  inside Variable, the warehouse transfer only when there was one. */}
               <MetricGrid
                 metrics={[
                   {
-                    label: t('reports.customerSales'),
+                    label: t('reports.totalBusiness'),
                     value: formatAmount(Number(business.total.customerSales), business.currency),
                   },
-                  {
-                    label: t('reports.expenses'),
-                    value: formatAmount(Number(business.total.expenses), business.currency),
-                    tone: 'cost',
-                  },
-                  {
-                    label: t('reports.payroll'),
-                    value: formatAmount(Number(business.total.payroll), business.currency),
-                    tone: 'cost',
-                    caption: business.total.payrollProvisional ? t('reports.provisional') : undefined,
-                  },
-                  // Requirement 25: money that left the business for a vendor, only when there was some.
-                  ...(vendorSpend !== 0
+                  ...costMetrics(business.total, {
+                    t,
+                    currency: business.currency,
+                    rawMaterial: Number(business.total.vendorSpend),
+                    rawMaterialKey: 'reports.variableIncludesVendors',
+                    wages: Number(business.total.payroll),
+                    wagesProvisional: business.total.payrollProvisional,
+                  }),
+                  ...(transfer !== 0
                     ? [
                         {
-                          label: t('reports.vendorSpend'),
-                          value: formatAmount(vendorSpend, business.currency),
-                          tone: 'cost' as const,
+                          label: t('reports.internalTransfer'),
+                          value: formatAmount(transfer, business.currency),
+                          caption: t('reports.internalTransferCaption'),
                         },
                       ]
                     : []),
-                  {
-                    label: t('reports.internalTransfer'),
-                    value: formatAmount(Number(business.total.internalTransfer), business.currency),
-                    caption: t('reports.internalTransferCaption'),
-                  },
                 ]}
               />
             </article>

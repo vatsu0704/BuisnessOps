@@ -38,7 +38,14 @@ scoped.delete(
   counterOrderController.reopenDay
 );
 
+// --- Paid sales from the phone (requirements 29, 30) -------------------------
+// The way the app records a sale now: rung up on the phone, paid, then sent here
+// — straight away, or when the connection comes back. Idempotent per sale.
+scoped.post('/counter-sales/sync', requirePermission('counterOrder:create'), counterOrderController.syncSales);
+
 // --- One order -------------------------------------------------------------
+// The open-add-close calls below are what app builds before requirement 29
+// used; they are kept working, and nothing new uses them.
 scoped.post('/counter-orders', requirePermission('counterOrder:create'), counterOrderController.openOrder);
 scoped.get(
   '/counter-orders/:counterOrderId',

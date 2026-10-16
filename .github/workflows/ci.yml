@@ -130,6 +130,12 @@ jobs:
       - name: Check the notification prose boundary
         run: npm run lint:notification-prose
 
+      # The app's own prose exception: the printed receipt's English labels,
+      # because a receipt printer's font cannot draw an Indic script. Only
+      # utils/receipt.ts may use them, and every one must be printable ASCII.
+      - name: Check the receipt prose boundary
+        run: npm run lint:receipt-prose
+
   web:
     runs-on: ubuntu-latest
     defaults:

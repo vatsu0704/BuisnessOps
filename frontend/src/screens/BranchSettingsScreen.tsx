@@ -50,6 +50,7 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
   const [timezone, setTimezone] = useState('');
   const [addressLine, setAddressLine] = useState('');
   const [postalCode, setPostalCode] = useState('');
+  const [phone, setPhone] = useState('');
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [radius, setRadius] = useState('');
@@ -75,6 +76,7 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
         setTimezone(found.timezone);
         setAddressLine(found.addressLine ?? '');
         setPostalCode(found.postalCode ?? '');
+        setPhone(found.phone ?? '');
         setLatitude(found.latitude ?? '');
         setLongitude(found.longitude ?? '');
         setRadius(found.geofenceRadiusMeters === null ? '' : String(found.geofenceRadiusMeters));
@@ -140,6 +142,7 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
         // an address someone deleted has to actually go.
         addressLine: addressLine.trim() || null,
         postalCode: postalCode.trim() || null,
+        phone: phone.trim() || null,
         // null is meaningful to the backend — it clears the value — which is
         // how "turn off geofencing" and "forget this location" are expressed.
         latitude: hasCoordinates ? Number(latitude) : null,
@@ -297,6 +300,18 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
                       value={postalCode}
                       onChangeText={setPostalCode}
                     />
+                    {/* Requirement 31: printed under the address on every token
+                        the counter prints. */}
+                    <FormInput
+                      testID="branch-settings-phone"
+                      label={t('branchSettings.phone')}
+                      icon="call-outline"
+                      keyboardType="phone-pad"
+                      maxLength={20}
+                      value={phone}
+                      onChangeText={setPhone}
+                    />
+                    <Text style={styles.hint}>{t('branchSettings.phoneHint')}</Text>
                   </View>
                 </AnimatedEntrance>
 

@@ -4,7 +4,7 @@ const prisma = require('../config/db');
 const { fail } = require('../errors');
 const { roleHas } = require('../permissions');
 const triggers = require('../notifications/triggers');
-const { todayInZone } = require('../utils/datetime');
+const { localMonthRange, safeZone, todayInZone } = require('../utils/datetime');
 const supplyItemService = require('./supplyItem.service');
 
 /**
@@ -1423,6 +1423,98 @@ async function listPaymentsDue(businessId, scope) {
 }
 
 /**
+ * The PAYMENT events that mean money moved, or was said not to have arrived —
+ * as opposed to the ones written at placement (`PAYMENT_BY_ACCOUNTS`,
+ * `PAYMENT_ON_DELIVERY`), which only record who WILL pay. A history built on
+ * every PAYMENT event would list orders nobody has paid for yet.
+ */
+const MONEY_EVENT_CODES = [
+  'PAYMENT_SETTLED',
+  'PAYMENT_CLAIMED',
+  'PAYMENT_VERIFIED',
+  'PAYMENT_FAILED',
+  'PAYMENT_COLLECTED',
+  'PAYMENT_COLLECTED_UPI',
+  'PAYMENT_PAID_VENDOR',
+  'PAYMENT_PAID_VENDOR_CASH',
+];
+
+/**
+ * Payment history — requirement 35.
+ *
+ * Every supply order on which money moved during a month: what accounts paid for
+ * a company-operated (FOCO) branch, and what a franchise (FM) branch paid the
+ * warehouse or a vendor — each with its payment events, so the screen can say who
+ * paid, who confirmed, when, and the reference. Once a payment is settled or
+ * confirmed it leaves the Payments lists above; this is where it is found again.
+ *
+ * A month bounds it (a list that can only grow needs a ceiling), and within the
+ * month the newest MAX_ORDERS are returned with `truncated` set past that. The
+ * totals come from their own aggregate over the same filter, so they are right
+ * even when the list is cut.
+ */
+async function listPaymentHistory(businessId, scope, { month, branchId, model }) {
+  const business = await prisma.business.findUnique({ where: { id: businessId }, select: { timezone: true } });
+  const { start, end } = localMonthRange(month, safeZone(business?.timezone));
+  const where = {
+    businessId,
+    ...branchFilter(scope),
+    ...(branchId ? { branchId } : {}),
+    ...(model ? { operatingModel: model } : {}),
+    events: {
+      some: { type: 'PAYMENT', reasonCode: { in: MONEY_EVENT_CODES }, createdAt: { gte: start, lt: end } },
+    },
+  };
+
+  const [orders, totals] = await Promise.all([
+    prisma.supplyOrder.findMany({
+      where,
+      include: {
+        ...PAYMENT_LIST_INCLUDE,
+        events: {
+          where: { type: 'PAYMENT', reasonCode: { in: MONEY_EVENT_CODES } },
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            reasonCode: true,
+            note: true,
+            createdAt: true,
+            actorMembership: { select: { id: true, role: true, user: { select: { id: true, name: true } } } },
+          },
+        },
+      },
+      orderBy: { placedAt: 'desc' },
+      take: MAX_ORDERS + 1,
+    }),
+    prisma.supplyOrder.groupBy({
+      by: ['operatingModel', 'paymentStatus'],
+      where,
+      _count: { _all: true },
+      _sum: { totalAmount: true },
+    }),
+  ]);
+
+  const kept = orders.slice(0, MAX_ORDERS);
+  // Most recent payment first: what somebody looking back at a month asks first.
+  const lastPaid = (order) => order.events[order.events.length - 1]?.createdAt?.getTime() ?? 0;
+  kept.sort((a, b) => lastPaid(b) - lastPaid(a));
+
+  return {
+    month,
+    from: start,
+    to: end,
+    truncated: orders.length > MAX_ORDERS,
+    orders: kept,
+    totals: totals.map((row) => ({
+      operatingModel: row.operatingModel,
+      paymentStatus: row.paymentStatus,
+      orderCount: row._count._all,
+      totalAmount: row._sum.totalAmount ?? toDecimal(0),
+    })),
+  };
+}
+
+/**
  * Payments sent to the warehouse that nobody has confirmed yet — the other
  * half of the accountant's Payments screen, and the desk's to-do list too.
  *
@@ -1551,6 +1643,8 @@ module.exports = {
   listDeliveryOrders,
   listPaymentsDue,
   listPaymentsToConfirm,
+  listPaymentHistory,
+  MONEY_EVENT_CODES,
   settlePayments,
   TRANSITIONS,
   VENDOR_TRANSITIONS,

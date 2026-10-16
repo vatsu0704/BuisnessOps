@@ -147,7 +147,8 @@
       "SUPPLY_ORDER_CASH_NEEDS_AGENT": "Cash for the warehouse goes to the delivery agent when the order arrives — pay by UPI here instead",
       "SUPPLY_PAYMENT_NOT_DUE": "Order {{orderNumber}} is not one accounts has to pay",
       "SUPPLY_PAYMENT_NOT_DELIVERED": "Order {{orderNumber}} has not been delivered yet — pay for it once it arrives",
-      "SUPPLY_PAYMENT_MIXED_PAYEES": "One payment can only go to one payee — choose orders from the warehouse or from one vendor"
+      "SUPPLY_PAYMENT_MIXED_PAYEES": "One payment can only go to one payee — choose orders from the warehouse or from one vendor",
+      "COUNTER_SALE_REF_CONFLICT": "A different bill with the same reference is already recorded, so this one was kept on the phone."
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} is required",
@@ -203,7 +204,9 @@
       "CASHIER_NEEDS_ONE_BRANCH": "A cashier works at exactly one branch, so choose one.",
       "UPI_ID_INVALID": "{{field}} must be a UPI ID like name@bank, as printed under a UPI QR code",
       "PAYMENT_NOT_CONFIRMED": "pay first, then confirm the payment is done",
-      "ORDER_IDS_RANGE": "{{field}} must list between 1 and {{max}} different orders"
+      "ORDER_IDS_RANGE": "{{field}} must list between 1 and {{max}} different orders",
+      "COUNTER_SALE_INVALID": "This bill could not be read ({{field}}), so it was not recorded.",
+      "COUNTER_SYNC_TOO_MANY_SALES": "Send at most {{max}} bills at a time."
     },
     "field": {
       "name": "Name",
@@ -422,7 +425,29 @@
     "paymentsToConfirmTitle": "Payments to confirm",
     "paymentsToConfirmCount": "{{count}} payment sent to the warehouse — check it arrived",
     "paymentsToConfirmCount_plural": "{{count}} payments sent to the warehouse — check they arrived",
-    "paymentsToConfirmNone": "Nothing waiting to be confirmed"
+    "paymentsToConfirmNone": "Nothing waiting to be confirmed",
+    "todaySales": "Today's sales",
+    "todayBills": "Bills",
+    "todayExpenses": "Today's expenses",
+    "todayMixedCurrency": "Your branches use different currencies, so these totals mix them.",
+    "recentBills": "Recent bills",
+    "seeAll": "See all"
+  },
+  "quickActions": {
+    "title": "Quick actions",
+    "billing": "Billing",
+    "billingToday": "Today {{amount}} · {{count}} bill",
+    "billingToday_plural": "Today {{amount}} · {{count}} bills",
+    "items": "Items",
+    "expenses": "Expenses",
+    "reports": "Reports",
+    "supply": "Order supplies",
+    "rawMaterial": "Raw material",
+    "orders": "Supply orders",
+    "desk": "Order desk",
+    "deliveries": "Deliveries",
+    "paymentHistory": "Payment history",
+    "upload": "Upload sales"
   },
   "phase": {
     "examplesLabel": "What you'll be able to ask"
@@ -435,15 +460,15 @@
     "example1": "Top and bottom performing branches by any metric",
     "example2": "Company-average benchmarking per branch",
     "example3": "City and region grouping for franchise networks",
-    "subtitle": "Every branch, month by month, with net profit",
+    "subtitle": "Every branch, month by month, with total profit",
     "rangeMonths": "{{count}} month",
     "rangeMonths_plural": "{{count}} months",
     "scopeThisBusiness": "This business",
     "scopeAllBusinesses": "All businesses",
-    "netProfit": "Net profit",
-    "netProfitForMonth": "Net profit this month",
-    "customerSales": "Customer sales",
-    "sales": "Sales",
+    "netProfit": "Total profit",
+    "netProfitForMonth": "Total profit this month",
+    "customerSales": "Total business",
+    "sales": "Total business",
     "expenses": "Expenses",
     "payroll": "Wages",
     "materialSpend": "Raw material",
@@ -474,7 +499,47 @@
     "noBusinesses": "No business here has figures you can read yet.",
     "noBranches": "Add a branch and its figures will appear here.",
     "vendorSpend": "Paid to vendors",
-    "vendorSpendCaption": "left the business"
+    "vendorSpendCaption": "left the business",
+    "totalProfit": "Total profit",
+    "totalBusiness": "Total business",
+    "variableExpenses": "Variable expenses",
+    "fixedExpenses": "Fixed expenses",
+    "dailyExpenses": "Daily expenses",
+    "totalCost": "Total cost",
+    "variableIncludesMaterial": "incl. raw material {{amount}}",
+    "variableIncludesVendors": "incl. vendors {{amount}}",
+    "fixedIncludesWages": "incl. wages {{amount}}",
+    "fixedIncludesWagesProvisional": "incl. wages {{amount}}, not settled",
+    "fixedShared": "shared over the month",
+    "perDay": "Per day",
+    "perMonth": "Per month",
+    "allBranches": "All branches",
+    "dayBusiness": "Business",
+    "dayCost": "Cost",
+    "dayProfit": "Profit",
+    "dayNothingYet": "Nothing to show for this month yet.",
+    "fixedSpreadNote": "Fixed costs — rent, electricity and wages — are shared evenly over the month's days, so each day shows a fair profit. The month adds up to its real figures.",
+    "howCostsAreGrouped": "How costs are grouped"
+  },
+  "costTypes": {
+    "title": "Kinds of cost",
+    "subtitle": "How Reports groups what was spent",
+    "settingsSubtitle": "Choose which expenses are variable, fixed or daily",
+    "type": {
+      "VARIABLE": "Variable",
+      "FIXED": "Fixed",
+      "DAILY": "Daily"
+    },
+    "hint": {
+      "VARIABLE": "goes up and down with sales, like milk and gas",
+      "FIXED": "the same every month, like rent and electricity",
+      "DAILY": "day-to-day spending, like petty cash and repairs"
+    },
+    "alwaysSection": "Always",
+    "rawMaterial": "Raw material (supply orders)",
+    "wages": "Wages (payroll)",
+    "categoriesSection": "Expense categories",
+    "readOnly": "Only the owner, an admin or a manager can change these."
   },
   "alerts": {
     "title": "Alerts",
@@ -588,7 +653,9 @@
     "scopeBranchHint": "Only the branch you choose sells it. No other branch sees it at all.",
     "branchSection": "Which branch",
     "submit": "Add product",
-    "submitting": "Adding…"
+    "submitting": "Adding…",
+    "receiptNameSku": "The receipt printer prints English letters only, so this product prints on tokens as its code, {{sku}}.",
+    "receiptNameNoSku": "The receipt printer prints English letters only, so on a token this product prints as \"Item 1\". Give it a code (SKU) to print that instead."
   },
   "editProduct": {
     "title": "Edit product",
@@ -614,21 +681,67 @@
   "counter": {
     "title": "Counter",
     "dayClosed": "Day closed",
-    "dayTotal": "Today's takings",
-    "dayOrders": "Tokens",
-    "dayOpen": "Still open",
     "tapToAdd": "Tap to add",
     "noProducts": "No products priced for this branch yet",
-    "todayTokens": "Today's tokens",
     "itemCount": "{{count}} item",
     "itemCount_plural": "{{count}} items",
-    "longPressHint": "Tap a token to edit it. Press and hold to void it.",
-    "newOrder": "New order",
-    "handOver": "Hand over",
-    "trayEmpty": "Tap a product above to start adding",
     "voidTitle": "Void token {{token}}?",
     "voidBody": "It stops counting towards the day, and the number is not used again.",
-    "void": "Void"
+    "void": "Void",
+    "todaySales": "Today's sales",
+    "todayBills": "Bills",
+    "todayExpenses": "Today's expenses",
+    "logExpense": "Log an expense",
+    "noMenuYet": "No menu is saved on this phone yet. Connect to the internet once to load it.",
+    "todayBillsSection": "Today's bills",
+    "billsHint": "Tap a bill to print it again or void it.",
+    "cartEmpty": "Tap a product to start a bill",
+    "clearCart": "Clear",
+    "billTotal": "Total",
+    "charge": "Charge {{amount}}",
+    "chargeTitle": "Take the payment",
+    "upiNotSet": "No UPI ID is set up for this counter, so only cash can be taken. The owner can add one under Payment QR codes.",
+    "cashGiven": "Customer gave",
+    "cashExact": "Exact amount",
+    "cashChange": "Change to give back",
+    "paymentDone": "Payment done",
+    "tokenLabel": "Token",
+    "doneBody": "The bill is saved on this phone. Hand the token to the customer.",
+    "nextBill": "Next bill",
+    "printing": "Printing the token…",
+    "printed": "Token printed",
+    "printAgain": "Print again",
+    "printToken": "Print token",
+    "noPrinter": "No receipt printer is set up on this phone.",
+    "setUpPrinter": "Set up the printer",
+    "billTitle": "Token {{token}}",
+    "needsAttention": "Needs attention",
+    "notSent": "Not sent yet",
+    "printedAs": "Printed as {{token}}",
+    "voidBill": "Void this bill",
+    "attentionTitle": "{{count}} bill needs attention",
+    "attentionTitle_plural": "{{count}} bills need attention",
+    "attentionBody": "The server refused these bills. They stay on this phone until somebody deals with them.",
+    "reopenDay": "Reopen that day",
+    "sendAgain": "Send again",
+    "removeFromPhone": "Remove from this phone",
+    "removeTitle": "Remove token {{token}} from this phone?",
+    "removeBody": "It was never recorded, so it will not count in the day's sales. Only do this if the bill was a mistake.",
+    "remove": "Remove",
+    "readOnly": "The plan has ended, so no new bills can be taken. Bills already taken stay on this phone until it is renewed.",
+    "dayClosedNoBills": "Today has been closed, so no new bills can be taken.",
+    "sync": {
+      "pending": "{{count}} bill waiting to be sent",
+      "pending_plural": "{{count}} bills waiting to be sent",
+      "syncing": "Sending {{count}} bill…",
+      "syncing_plural": "Sending {{count}} bills…",
+      "offline": "Offline — {{count}} bill saved on this phone, sent when the connection is back",
+      "offline_plural": "Offline — {{count}} bills saved on this phone, sent when the connection is back",
+      "blocked": "{{count}} bill kept on this phone — the server is not taking new bills right now",
+      "blocked_plural": "{{count}} bills kept on this phone — the server is not taking new bills right now",
+      "attention": "{{count}} bill needs attention",
+      "attention_plural": "{{count}} bills need attention"
+    }
   },
   "counterStatus": {
     "OPEN": "Open",
@@ -643,6 +756,43 @@
     "OTHER": "Other",
     "MIXED": "Mixed",
     "UNSPECIFIED": "Not said"
+  },
+  "printer": {
+    "title": "Receipt printer",
+    "subtitle": "The Bluetooth printer that prints each token",
+    "settingsSubtitle": "Choose the printer, the paper, and whether tokens print by themselves",
+    "unsupported": "Printing works in the Android app. On this device the counter still bills — tokens just aren't printed.",
+    "needsNewBuild": "This copy of the app was built before printing was added. Install the latest build to print tokens; billing works either way.",
+    "pairedSection": "Paired printers",
+    "pairHint": "Pair the printer once in your phone's Bluetooth settings (the PIN is usually 0000 or 1234), then choose it here.",
+    "openBluetoothSettings": "Open Bluetooth settings",
+    "noneTitle": "No paired printers yet",
+    "noneBody": "Switch the printer on, pair it in Bluetooth settings, then pull down to refresh.",
+    "paperSection": "Paper",
+    "paperHint": "The width of the paper roll in the printer.",
+    "paper58": "58 mm",
+    "paper80": "80 mm",
+    "columns": "{{count}} character a line",
+    "columns_plural": "{{count}} characters a line",
+    "autoPrint": "Print the token automatically",
+    "autoPrintHint": "Prints the moment you tap Payment done. You can always print it again from the bill.",
+    "testPrint": "Print a test slip",
+    "testPrinted": "Test slip sent. Check that every column fits on one line and the paper is cut.",
+    "chooseFirst": "Choose a printer above first.",
+    "previewSection": "What a token looks like",
+    "previewHint": "The printer's letters are English only. A product named in another script prints as its code, or as \"Item 1\" when it has none.",
+    "sampleItemOne": "Tea",
+    "sampleItemTwo": "Samosa",
+    "errors": {
+      "UNSUPPORTED": "This device can't print tokens.",
+      "NO_BLUETOOTH": "This phone has no Bluetooth.",
+      "BLUETOOTH_OFF": "Bluetooth is off. Turn it on and try again.",
+      "PERMISSION_DENIED": "{{appName}} needs the Nearby devices permission to reach the printer. Allow it in the phone's app settings.",
+      "PRINTER_UNREACHABLE": "Couldn't reach the printer. Check that it's switched on, charged and close by.",
+      "NOT_CONNECTED": "The printer disconnected. Try again.",
+      "WRITE_FAILED": "The printer stopped responding. Check the paper and try again.",
+      "NO_PRINTER": "No printer chosen yet. Choose one in Settings → Receipt printer."
+    }
   },
   "expenses": {
     "title": "Expenses",
@@ -1088,7 +1238,9 @@
     "addressHint": "What a delivery agent needs in order to find this branch.",
     "postalCode": "PIN code",
     "kindHint": "A warehouse is staffed and punched into like anywhere else. It simply has no counter and orders no raw material.",
-    "modelHint": "A change applies to orders placed from now on. Orders already placed keep how they were to be paid."
+    "modelHint": "A change applies to orders placed from now on. Orders already placed keep how they were to be paid.",
+    "phone": "Phone number",
+    "phoneHint": "Printed under the address on the counter's tokens."
   },
   "businessSwitcher": {
     "title": "Business",
@@ -1368,7 +1520,10 @@
       "supplyOrderReceive": "mark a vendor’s goods as received",
       "supplyPaymentSettle": "pay for company branches’ supply orders",
       "supplyPaymentVerify": "confirm a branch’s payment arrived",
-      "paymentAccountManage": "change where payments go"
+      "paymentAccountManage": "change where payments go",
+      "supplyPaymentViewHistory": "read the history of supply-order payments",
+      "analyticsViewToday": "see today's sales, bills and spending",
+      "expenseClassify": "decide which kind of cost an expense category is"
     }
   },
   "plans": {
@@ -1427,7 +1582,7 @@
       "branchFigures": "Each branch's sales and costs",
       "warehouse": "A warehouse and supply orders",
       "delivery": "Delivery agents",
-      "netProfit": "Net profit across every branch",
+      "netProfit": "Total profit across every branch",
       "foco": "Company-operated (FOCO) branches",
       "vendors": "Third-party vendors",
       "accountant": "The Accountant role"
@@ -1441,7 +1596,7 @@
   },
   "paymentAccounts": {
     "title": "Payment QR codes",
-    "subtitle": "Where branches’ payments go",
+    "subtitle": "Where payments go",
     "settingsSubtitle": "The UPI IDs every payment QR is made from",
     "explainer": "Every QR in the app is made from a UPI ID here, with the order’s exact amount in it — there is no image to upload. The UPI ID is printed under any UPI QR code.",
     "warehouseSection": "Warehouse",
@@ -1463,7 +1618,15 @@
     "saved": "Saved",
     "remove": "Remove UPI ID",
     "removeTitle": "Remove the UPI ID for {{payee}}?",
-    "removeBody": "Branches will not be able to pay them by QR until a new one is set. Paying on delivery still works."
+    "removeBody": "Branches will not be able to pay them by QR until a new one is set. Paying on delivery still works.",
+    "counterSection": "Counter",
+    "counterHint": "Where customers pay at the counter. Every shop's counter QR uses this, unless the shop has its own below.",
+    "counterPayee": "the counter",
+    "counterRemoveBody": "Counters will take cash only until a new one is set — unless a shop has its own UPI ID.",
+    "counterBranchesHint": "A shop can collect into its own UPI ID instead — a franchise shop paying its franchisee, say.",
+    "usesBusinessUpi": "Uses the business's UPI ID",
+    "ownUpi": "Own UPI ID",
+    "counterBranchRemoveBody": "This shop's counter goes back to the business's UPI ID."
   },
   "payments": {
     "title": "Payments",
@@ -1501,7 +1664,21 @@
     "confirmReceivedTitle": "Did the money arrive?",
     "confirmReceivedBody": "Confirm {{amount}} from {{branch}} for order #{{number}} is in the account.",
     "sentBeforeOrdering": "Paid before ordering",
-    "sentOnDelivery": "Paid on delivery"
+    "sentOnDelivery": "Paid on delivery",
+    "tabHistory": "History",
+    "historySubtitle": "What was paid, month by month",
+    "historyAll": "All",
+    "historyFocoCaption": "Company",
+    "historyFmCaption": "Franchise",
+    "historyPaidByAccounts": "Paid by accounts",
+    "historyPaidByBranches": "Paid by franchise branches",
+    "historyOrders": "{{count}} order",
+    "historyOrders_plural": "{{count}} orders",
+    "historyWaiting": "{{count}} payment ({{amount}}) is still waiting to be confirmed by whoever received it.",
+    "historyWaiting_plural": "{{count}} payments ({{amount}}) are still waiting to be confirmed by whoever received them.",
+    "historyEmpty": "No supply-order payments in {{month}}.",
+    "historyTruncated": "Only the most recent orders are listed. The totals above cover the whole month.",
+    "reference": "Reference: {{reference}}"
   },
   "supplyPaymentMode": {
     "ONLINE": "paid before ordering",
@@ -1518,7 +1695,8 @@
     "notRupees": "UPI payments are in rupees only.",
     "done": "Payment done",
     "doneMarked": "Marked as paid",
-    "undo": "Not yet"
+    "undo": "Not yet",
+    "scanHintCounter": "Ask the customer to scan this with their UPI app."
   },
   "vendors": {
     "title": "Vendors",

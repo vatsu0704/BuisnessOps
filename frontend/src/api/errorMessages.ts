@@ -134,3 +134,16 @@ export function translateApiError(body: ApiErrorBody | undefined): string | null
   if (body.code) return translate(`errors.api.${body.code}`, renderParams(body.params));
   return null;
 }
+
+/**
+ * Why the server refused one counter sale in a sync (requirement 30). The code
+ * is either an API code (a closed day, a branch out of reach) or a validation
+ * code naming the field, so both catalogues are tried. Falls back to the code
+ * itself rather than to nothing — a person has to act on this.
+ */
+export function translateSaleRejection(code: string, params: Record<string, unknown> = {}): string {
+  const asApi = translateApiError({ code, params });
+  if (asApi) return asApi;
+  const field = typeof params.field === 'string' ? params.field : null;
+  return translateDetail({ code, field, params }) ?? code;
+}

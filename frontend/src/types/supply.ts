@@ -96,12 +96,33 @@ export interface Vendor {
 }
 
 /** Where a payment for WAREHOUSE stock goes — one per business. */
+type UpiUpdatedBy = { id: string; user: { id: string; name: string | null } | null } | null;
+
 export interface PaymentAccount {
   businessName: string;
+  /** The warehouse's UPI ID — where branches pay for stock (requirement 26). */
   upiId: string | null;
   upiName: string | null;
   upiUpdatedAt: string | null;
-  upiUpdatedByMembership: { id: string; user: { id: string; name: string | null } | null } | null;
+  upiUpdatedByMembership: UpiUpdatedBy;
+  /** Where counter customers pay (requirement 32): the business's ID… */
+  counter: {
+    upiId: string | null;
+    upiName: string | null;
+    upiUpdatedAt: string | null;
+    upiUpdatedByMembership: UpiUpdatedBy;
+  };
+  /** …and each shop's own, which overrides it when set. */
+  counterBranches: {
+    branchId: string;
+    name: string;
+    code: string;
+    operatingModel: 'FOCO' | 'FM';
+    upiId: string | null;
+    upiName: string | null;
+    upiUpdatedAt: string | null;
+    upiUpdatedByMembership: UpiUpdatedBy;
+  }[];
 }
 
 /** The catalog row — a backend `InventoryItem`. Business-wide, not per branch. */
@@ -275,6 +296,35 @@ export interface SupplyOrder {
  * weight and which none of those rows display.
  */
 export type SupplyPaymentOrder = Omit<SupplyOrder, 'events'>;
+
+/** A payment on an order, as the history shows it: what happened, who, when (requirement 35). */
+export interface PaymentHistoryEvent {
+  id: string;
+  reasonCode: string;
+  /** The reference typed with the payment — a UTR, say — when there was one. */
+  note: string | null;
+  createdAt: string;
+  actorMembership: { id: string; role: string; user: { id: string; name: string | null } | null } | null;
+}
+
+export type PaymentHistoryOrder = SupplyPaymentOrder & { events: PaymentHistoryEvent[] };
+
+/** One month of supply-order payments, FOCO and FM (requirement 35). */
+export interface PaymentHistory {
+  month: string;
+  from: string;
+  to: string;
+  /** More orders had payments this month than one list holds; the oldest were left off. */
+  truncated: boolean;
+  orders: PaymentHistoryOrder[];
+  /** Over the whole month, whatever `truncated` cut. */
+  totals: {
+    operatingModel: BranchOperatingModel;
+    paymentStatus: SupplyPaymentStatus;
+    orderCount: number;
+    totalAmount: string;
+  }[];
+}
 
 /** What placing a cart returns: the first order, and every order the cart became. */
 export interface PlacedSupplyOrder extends SupplyOrder {

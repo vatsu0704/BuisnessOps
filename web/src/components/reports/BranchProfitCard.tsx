@@ -5,6 +5,7 @@ import type { BranchMonthlyRow } from '@/types/analytics';
 import { cx } from '@/utils/cx';
 import { formatAmount } from '@/utils/format';
 import MetricGrid, { type Metric } from './MetricGrid';
+import { costMetrics } from './costMetrics';
 import MonthBars from './MonthBars';
 import TrendPill from './TrendPill';
 import styles from './ReportCard.module.css';
@@ -34,33 +35,24 @@ export default function BranchProfitCard({
 
   const net = Number(cell.netProfit);
   const currency = row.currency;
-  const payroll: Metric = {
-    label: t('reports.payroll'),
-    value: formatAmount(Number(cell.payroll), currency),
-    tone: 'cost',
-    caption: cell.payrollProvisional ? t('reports.provisional') : undefined,
-  };
-  const expenses: Metric = {
-    label: t('reports.expenses'),
-    value: formatAmount(Number(cell.expenses), currency),
-    tone: 'cost',
-  };
+  // Requirement 34. A warehouse has no till, so it shows only what it spent.
+  const costs = costMetrics(cell, {
+    t,
+    currency,
+    rawMaterial: Number(cell.materialSpend),
+    rawMaterialKey: 'reports.variableIncludesMaterial',
+    wages: Number(cell.payroll),
+    wagesProvisional: cell.payrollProvisional,
+  });
   const metrics: Metric[] = row.isCostCentre
-    ? [expenses, payroll]
+    ? costs
     : [
         {
-          label: t('reports.sales'),
+          label: t('reports.totalBusiness'),
           value: formatAmount(Number(cell.sales), currency),
           caption: t('reports.saleCount', { count: cell.saleCount }),
         },
-        expenses,
-        {
-          label: t('reports.materialSpend'),
-          value: formatAmount(Number(cell.materialSpend), currency),
-          tone: 'cost',
-          caption: t('reports.materialOrderCount', { count: cell.materialOrderCount }),
-        },
-        payroll,
+        ...costs,
       ];
 
   return (

@@ -74,7 +74,7 @@
     "range": "Period",
     "scope": "Which businesses",
     "month": "Month",
-    "tableTitle": "Net profit, branch by month",
+    "tableTitle": "Total profit, branch by month",
     "branchColumn": "Branch",
     "totalColumn": "Whole period"
   },

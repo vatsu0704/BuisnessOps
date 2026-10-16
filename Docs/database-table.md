@@ -685,7 +685,7 @@ One customer's order at a counter. **Not** a sales fact table — see the projec
 | productId | String, nullable | null for a one-off with no catalog entry |
 | productNameSnapshot | String | snapshotted at ring-up. Renaming or repricing a product next week must not rewrite what this receipt said |
 | quantity | Decimal(12,3) | |
-| unitPrice / lineTotal | Decimal(12,2) | the price comes from the catalog, resolved for this branch — a price the client can name is a price the client can invent |
+| unitPrice / lineTotal | Decimal(12,2) | through the old open-add-close calls, the price comes from the catalog, resolved for this branch. A paid sale synced from the phone (R29) records the price the phone charged — the money was taken at it. `lineTotal` is always computed on the server |
 
 ### `BranchTokenCounter`
 The allocator. Composite PK `(branchId, tokenDate)`, incremented by one atomic statement:
@@ -1273,3 +1273,61 @@ cannot both take the last paid slot.
 
 The `Subscription` row says what is true now; this table says how it got that way. Nothing
 updates or deletes these rows.
+
+---
+
+## 23. Counter checkout, offline billing and the counter's UPI ID — built (Branch Operations Task 14)
+
+Requirements 29–32. Migration `20261014150000_counter_checkout_offline`. Additive: every
+column is nullable, so every existing row means what it meant before.
+
+### `CounterOrder` — extended
+
+| Column | Type | Notes |
+|---|---|---|
+| clientRef | String? | The UUID the phone gives a paid sale (R30). **`@@unique([businessId, clientRef])` is the idempotency**: a sale sent twice is found, not recorded twice. Null for orders from the old open-add-close calls; Postgres lets the nulls share the key |
+| deviceTokenNumber | Int? | The token the phone printed, kept **only** when the server had to renumber the sale because another device used that number for the same branch and day while both were offline |
+| syncedAt | DateTime? | When a phone-made sale reached the server. `openedAt` and `closedAt` are both the moment it was paid |
+
+A synced sale is created whole — `CLOSED` (or `VOID`), its items, its payment method
+(`CASH` or `UPI`) — and projected in the same transaction, like every counter order.
+`tokenDate` is the branch-local date of the paid instant, computed by the server.
+
+**Choosing the token.** Inside the sale's transaction the branch's `BranchTokenCounter`
+row for the day is touched by an upsert that does not increment — which takes its row
+lock, the same lock `allocateToken` takes — and then the phone's number is kept if no
+order has it, with `lastNumber` raised to it; otherwise `lastNumber + 1` is taken. The
+counter therefore always sits at or above every number in use, which is what makes
+"next after the counter" free, for both paths. A unique violation cannot be caught and
+retried inside a Postgres transaction, so this is check-under-lock, not try-and-catch.
+
+### `Branch` — extended
+
+| Column | Type | Notes |
+|---|---|---|
+| phone | String? | Printed on the branch's receipts (R31). Free text, at most 20 characters. Set in branch settings (`branch:update`) |
+| counterUpiId / counterUpiName | String? | The shop's own counter UPI ID (R32), overriding the business's — a franchise shop collecting into the franchisee's account. Null = use the business's |
+| counterUpiUpdatedAt / counterUpiUpdatedByMembershipId | DateTime? / String? | Who last changed it. FK → Membership, SetNull. **Not** in `updateBranch`'s field list: where money goes is `paymentAccount:manage` |
+
+### `Business` — extended
+
+| Column | Type | Notes |
+|---|---|---|
+| counterUpiId / counterUpiName | String? | Where counter customers pay (R32). Separate from `supplyUpiId`, which is where the business is paid by its own branches |
+| counterUpiUpdatedAt / counterUpiUpdatedByMembershipId | DateTime? / String? | Stamped like every payee. FK → Membership, SetNull |
+
+The counter's payee is resolved on the server — the branch's ID, else the business's,
+else none (cash only) — and sent to the phone in the `counter-day` context, which it
+caches.
+
+### `ExpenseCategory.costType` (requirement 34)
+
+Migration `20261015090000_expense_cost_types`.
+
+| Column | Type | Notes |
+|---|---|---|
+| costType | Enum `ExpenseCostType` (`VARIABLE`, `FIXED`, `DAILY`), default `DAILY` | How Reports splits a branch's spending. Backfilled for every business's seeded categories — Milk and Gas `VARIABLE`, Rent and Electricity `FIXED`, the rest `DAILY` — and seeded the same way for a new one. Changed only under `expense:classify` |
+
+**Read at report time, never copied onto an expense**, so re-classing a category re-sorts
+every month's split and changes no total. Raw material (supply orders) is always variable
+and wages always fixed in the reports; neither is a category.

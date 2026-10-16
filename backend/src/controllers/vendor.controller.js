@@ -1,5 +1,6 @@
 const vendorService = require('../services/vendor.service');
-const { validationFailure } = require('../errors');
+const { fail, validationFailure } = require('../errors');
+const { canReachBranch, scopeOf } = require('../middleware/staffScope');
 const {
   validateCreateVendor,
   validateUpdateVendor,
@@ -98,7 +99,44 @@ async function setPaymentAccount(req, res, next) {
   }
 }
 
+/** Requirement 32 — the business's counter UPI ID. */
+async function setCounterAccount(req, res, next) {
+  try {
+    const errors = validateSetUpi(req.body);
+    if (errors.length) return res.status(400).json(validationFailure(errors));
+
+    const account = await vendorService.setCounterAccount(req.tenant.businessId, {
+      upiId: req.body.upiId,
+      upiName: req.body.upiName,
+      membershipId: req.tenant.membershipId,
+    });
+    res.json(account);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** Requirement 32 — one shop's own counter UPI ID, or null to use the business's. */
+async function setBranchCounterAccount(req, res, next) {
+  try {
+    const errors = validateSetUpi(req.body);
+    if (errors.length) return res.status(400).json(validationFailure(errors));
+    if (!canReachBranch(scopeOf(req), req.params.branchId)) throw fail('BRANCH_ACCESS_DENIED', 403);
+
+    const account = await vendorService.setBranchCounterAccount(req.tenant.businessId, req.params.branchId, {
+      upiId: req.body.upiId,
+      upiName: req.body.upiName,
+      membershipId: req.tenant.membershipId,
+    });
+    res.json(account);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
+  setCounterAccount,
+  setBranchCounterAccount,
   listVendors,
   createVendor,
   updateVendor,

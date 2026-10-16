@@ -7,7 +7,7 @@ import type { BranchProduct } from '@/types/product';
 /**
  * One branch's catalog: what it sells and what it charges.
  *
- * Follows the same shape as useBranches and useSalesSummary — plain state plus
+ * Follows the same shape as useBranches — plain state plus
  * a `refresh` the caller drives from a focus effect — rather than introducing a
  * query library for one screen.
  *

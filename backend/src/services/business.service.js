@@ -104,10 +104,15 @@ async function updateBranch(businessId, branchId, patch, { plan } = {}) {
     'geofenceRadiusMeters',
     'weeklyOffOverride',
     'weeklyOffDays',
+    // Printed on the branch's receipts (requirement 31). Deliberately NOT the
+    // branch's counterUpi* columns: where money goes is paymentAccount:manage,
+    // and branch:update must not be a way round it.
+    'phone',
   ];
   for (const field of fields) {
     if (patch[field] !== undefined) data[field] = patch[field];
   }
+  if (typeof data.phone === 'string') data.phone = data.phone.trim() || null;
 
   // A radius without coordinates would silently never enforce, since
   // assertWithinGeofence needs all three. Reject it against the merged result

@@ -149,15 +149,54 @@ async function getPaymentAccount(businessId) {
       supplyUpiName: true,
       supplyUpiUpdatedAt: true,
       supplyUpiUpdatedByMembership: UPI_UPDATED_BY,
+      counterUpiId: true,
+      counterUpiName: true,
+      counterUpiUpdatedAt: true,
+      counterUpiUpdatedByMembership: UPI_UPDATED_BY,
     },
   });
   if (!business) throw fail('BUSINESS_NOT_FOUND', 404);
+
+  // Every shop that has a counter, with its own override if it has one. A
+  // warehouse has no till, so it is never asked where customers pay it.
+  const branches = await prisma.branch.findMany({
+    where: { businessId, kind: 'BRANCH', status: { not: 'CLOSED' } },
+    orderBy: { name: 'asc' },
+    select: {
+      id: true,
+      name: true,
+      code: true,
+      operatingModel: true,
+      counterUpiId: true,
+      counterUpiName: true,
+      counterUpiUpdatedAt: true,
+      counterUpiUpdatedByMembership: UPI_UPDATED_BY,
+    },
+  });
+
   return {
     businessName: business.name,
     upiId: business.supplyUpiId,
     upiName: business.supplyUpiName,
     upiUpdatedAt: business.supplyUpiUpdatedAt,
     upiUpdatedByMembership: business.supplyUpiUpdatedByMembership,
+    // Requirement 32 — where counter customers pay, and each shop's override.
+    counter: {
+      upiId: business.counterUpiId,
+      upiName: business.counterUpiName,
+      upiUpdatedAt: business.counterUpiUpdatedAt,
+      upiUpdatedByMembership: business.counterUpiUpdatedByMembership,
+    },
+    counterBranches: branches.map((branch) => ({
+      branchId: branch.id,
+      name: branch.name,
+      code: branch.code,
+      operatingModel: branch.operatingModel,
+      upiId: branch.counterUpiId,
+      upiName: branch.counterUpiName,
+      upiUpdatedAt: branch.counterUpiUpdatedAt,
+      upiUpdatedByMembership: branch.counterUpiUpdatedByMembership,
+    })),
   };
 }
 
@@ -169,6 +208,47 @@ async function setPaymentAccount(businessId, { upiId, upiName, membershipId }) {
       supplyUpiName: upiId ? upiName?.trim() || null : null,
       supplyUpiUpdatedAt: new Date(),
       supplyUpiUpdatedByMembershipId: membershipId ?? null,
+    },
+  });
+  return getPaymentAccount(businessId);
+}
+
+// --- Where counter customers pay (requirement 32) ---------------------------
+
+/**
+ * The business's counter UPI ID — what every shop's QR pays unless the shop has
+ * its own. Separate from the supply ID above: that is where the business is paid
+ * by its branches, this is where it is paid by the public.
+ */
+async function setCounterAccount(businessId, { upiId, upiName, membershipId }) {
+  await prisma.business.update({
+    where: { id: businessId },
+    data: {
+      counterUpiId: upiId ? normaliseUpiId(upiId) : null,
+      counterUpiName: upiId ? upiName?.trim() || null : null,
+      counterUpiUpdatedAt: new Date(),
+      counterUpiUpdatedByMembershipId: membershipId ?? null,
+    },
+  });
+  return getPaymentAccount(businessId);
+}
+
+/**
+ * One shop's own counter UPI ID. A franchise (FM) shop is the franchisee's, so
+ * its customers pay the franchisee; null puts the shop back on the business's.
+ */
+async function setBranchCounterAccount(businessId, branchId, { upiId, upiName, membershipId }) {
+  const branch = await prisma.branch.findFirst({ where: { id: branchId, businessId }, select: { id: true, kind: true } });
+  if (!branch) throw fail('BRANCH_NOT_FOUND_IN_BUSINESS', 404);
+  if (branch.kind === 'WAREHOUSE') throw fail('BRANCH_IS_WAREHOUSE', 400);
+
+  await prisma.branch.update({
+    where: { id: branch.id },
+    data: {
+      counterUpiId: upiId ? normaliseUpiId(upiId) : null,
+      counterUpiName: upiId ? upiName?.trim() || null : null,
+      counterUpiUpdatedAt: new Date(),
+      counterUpiUpdatedByMembershipId: membershipId ?? null,
     },
   });
   return getPaymentAccount(businessId);
@@ -191,4 +271,6 @@ module.exports = {
   setUpi,
   getPaymentAccount,
   setPaymentAccount,
+  setCounterAccount,
+  setBranchCounterAccount,
 };

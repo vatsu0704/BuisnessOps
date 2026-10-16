@@ -21,16 +21,27 @@ const router = express.Router();
 const scoped = express.Router({ mergeParams: true });
 scoped.use(requireAuth, resolveTenant);
 
-// `analytics:viewBranch`, not `viewBusiness`. A CASHIER holds the first and is
-// scoped by `req.branchAccess` to their own branch, so one endpoint answers
-// "how is my branch doing?" and "how is every branch doing?" without a second
-// one existing. The controller decides separately whether to attach the
+// `analytics:viewBranch`, not `viewBusiness`. Scoped by `req.branchAccess`, so
+// one endpoint answers "how is my branch doing?" and "how is every branch
+// doing?" without a second one existing. (A cashier no longer holds it —
+// requirement 33 gave them `analytics:viewToday` instead.) The controller decides separately whether to attach the
 // business roll-up, which is what `analytics:viewBusiness` actually gates.
 scoped.get(
   '/analytics/branch-monthly',
   requirePermission('analytics:viewBranch'),
   analyticsController.getBranchMonthly
 );
+
+// Requirement 34 — the same figures day by day for one month, on the same guard.
+scoped.get(
+  '/analytics/daily',
+  requirePermission('analytics:viewBranch'),
+  analyticsController.getBranchDaily
+);
+
+// Requirement 33 — today's figures for Home. Its own, narrower capability: a
+// cashier sees what the till did today without being handed costs or profit.
+scoped.get('/today', requirePermission('analytics:viewToday'), analyticsController.getToday);
 
 router.use('/:businessId', scoped);
 

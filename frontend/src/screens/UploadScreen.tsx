@@ -7,7 +7,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { ensureBranchDataSource, uploadFile, type PickedFile, type UploadResult } from '@/api/dataSource';
-import { refreshSalesSummary } from '@/store/salesStore';
+import { refreshToday } from '@/store/todayStore';
 import { extractErrorMessage, isTimeout } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
@@ -104,7 +104,7 @@ export default function UploadScreen({ navigation }: Props) {
       const dataSource = await ensureBranchDataSource(businessId, branch.id, branch.name);
       const uploaded = await uploadFile(businessId, dataSource.id, picked);
       // The import just booked sales — move the figure Home shows with it.
-      void refreshSalesSummary();
+      void refreshToday();
       setResult(uploaded);
       if (uploaded.recordsFailed > 0) haptics.error();
       else haptics.success();

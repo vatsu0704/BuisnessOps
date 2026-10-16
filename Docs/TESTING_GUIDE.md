@@ -8,7 +8,7 @@ This covers the app as it exists today: Phases 0–1 (auth, branches, CSV
 ingestion), Team & permissions (inviting, revoking, and switching between
 businesses), and Attendance, Payroll & Salary Slips. Every message the server
 sends is translated too, which Flow 18 checks. Reports is now the real branch ×
-month grid with net profit (Flow 17r), and compares every business one account
+month grid with total profit (Flow 17r), and compares every business one account
 holds (Flow 17s); the day and the month export to a spreadsheet and a printable
 summary (Flow 17t). A branch has one cashier and a cashier has one branch, swapped
 with a confirmation that names who is displaced, and every refusal now says what the
@@ -832,10 +832,13 @@ from Flow 15a.
 
 1. Log in as the **cashier**.
    - ✅ **Expected:** tabs **Home · Products · Staff · Settings**. No Reports.
-   - ✅ **Expected:** Home leads with their branch's numbers, then the counter,
-     then **Today's expenses**, then the catalog for their branch. No **Your
-     branches** card — they do not edit branches, and no **Branches to chase**
-     card — their own branch is the only one they can see.
+   - ✅ **Expected:** Home leads with **Today's sales · Bills · Today's
+     expenses** for their branch, then **Quick actions** — **Billing** across the
+     top with today's takings on it, then Items, Expenses, Order supplies and
+     Supply orders — then **Recent bills**, then the catalog for their branch.
+     No **Reports** tile: a cashier sees what the till did today, not the
+     branch's costs or profit (requirement 33). No **Your branches** card and no
+     **Branches to chase** card.
    - ✅ **Expected:** in Products they can add a product for *their* branch, and
      the whole-business option is not offered at all — not offered-and-refused.
 2. Log in as the **warehouse** user or the **delivery agent**.
@@ -843,16 +846,20 @@ from Flow 15a.
    - ✅ **Expected:** the warehouse user gets **Branches to chase** on Home
      (requirement 10) and the delivery agent does not. Chasing branches for
      their daily expenses is the back office's job, and carrying orders is not.
+   - ✅ **Expected:** quick actions to match — the desk gets Expenses, Raw
+     material, Supply orders and Order desk; the agent gets Supply orders and
+     Deliveries. Neither gets Billing or Payment history.
 3. Log in as an **owner or manager**.
-   - ✅ **Expected:** all five tabs, and Home runs sales tiles → branch list →
-     counter → catalog, with the upload card at the foot.
-   - ✅ **Expected:** Home does **not** offer "Order raw material" or "Your
-     deliveries". An owner holds every capability in the app, but a branch
+   - ✅ **Expected:** all five tabs, and Home runs today's figures (every
+     branch) → quick actions → recent bills → the payments card → the branch
+     list → the catalog.
+   - ✅ **Expected:** the quick actions do **not** include "Order supplies" or
+     "Deliveries". An owner holds every capability in the app, but a branch
      orders and an agent delivers — neither is the owner's job. What they get
-     instead is **Raw material catalog**, which is where prices are set.
-   - ✅ **Expected:** the cashier still has "Order raw material", and the
-     delivery agent still has "Your deliveries". Same capabilities, different
-     jobs.
+     instead is **Raw material**, which is where prices are set, plus Reports,
+     Order desk, Payment history and Upload sales.
+   - ✅ **Expected:** the cashier still has "Order supplies", and the delivery
+     agent still has "Deliveries". Same capabilities, different jobs.
 4. With an account in two businesses (Flow 17a), switch business in Settings
    where your role differs between the two.
    - ✅ **Expected:** the tab bar changes to match the role in the business you
@@ -864,59 +871,178 @@ from Flow 15a.
 
 ---
 
-## Flow 17d — The counter: tokens, the running total, and editing
+## Flow 17d — The counter: ring up, take the money, get the token
 
-Requirement 1. Log in as the **cashier** (Flow 15a) — they get a **Counter**
-tab. An owner or manager reaches the same screen from Home instead, since the
-tab bar only has room for five; opened that way it carries an **✕** in the
-corner, which the cashier's tab does not (there would be nothing to close).
+Requirements 1 and 29. Log in as the **cashier** (Flow 15a) — they get a
+**Counter** tab. An owner or manager reaches the same screen from Home instead,
+since the tab bar only has room for five; opened that way it carries an **✕** in
+the corner, which the cashier's tab does not (there would be nothing to close).
 
-Needs at least one product with a price at that branch (Flow 17b).
+Needs at least one product with a price at that branch (Flow 17b). For the UPI
+half, set the counter's UPI ID first (Flow 17ad); without one the counter takes
+cash only and says why.
 
 1. Open **Counter**.
-   - ✅ **Expected:** today's takings, the token count and how many are still
-     open across the top; a grid of products below; a bar at the bottom.
+   - ✅ **Expected:** across the top, **Today's sales**, **Bills** and — for
+     somebody who may read expenses, which includes the cashier — **Today's
+     expenses**, with **Log an expense** under them. A grid of products below;
+     the bill tray at the bottom says "Tap a product to start a bill".
    - ✅ **Expected:** every product tile is wide enough to read — a name over at
      most two lines and the price beneath it. Three across on a normal phone,
      two on a small one, more on a tablet. Nothing reading as a vertical column
      of single letters.
-2. Tap a product with nothing open.
-   - ✅ **Expected:** a token is issued **immediately** and the item goes on it.
-     The bottom bar shows the token number and the total. You should not have
-     had to press "New order" first.
-   - ✅ **Expected:** that product's tile turns blue and shows **1**.
-3. Tap two more products, and use the + / − next to a line.
-   - ✅ **Expected:** the total changes with every tap, and each tile's badge
-     counts up with it. Pressing − down to zero takes the line off entirely and
-     clears that tile's badge.
-   - ✅ **Expected:** put a dozen different items on one token — the bottom bar
-     stops growing and scrolls instead, so the product grid stays reachable.
-4. Press **Hand over**.
-   - ✅ **Expected:** the token moves to *Today's tokens* marked "Handed over",
-     and the bottom bar goes back to "New order".
-5. Tap that handed-over token in the list, then add another item to it.
-   - ✅ **Expected:** it works. Closing an order hands it over; it does **not**
-     freeze it. This is the "they can edit it" half of requirement 1.
-6. Ring up a few more tokens.
-   - ✅ **Expected:** the numbers go up by one each time and never repeat.
-7. Go to **Home** (or Reports later) and look at the sales figure.
-   - ✅ **Expected:** it has gone up by exactly what you rang up. Counter sales
-     and uploaded CSV sales land in the same place.
-8. Press and hold a token → **Void**.
-   - ✅ **Expected:** it is marked Voided, the day's takings drop by its amount,
-     and that token number is never handed out again. The row stays in the list
-     but greys out with its amount struck through — a void is information, not
-     a deletion.
-9. Switch to your other branch at the top.
-   - ✅ **Expected:** its tokens number independently — a quiet branch is still
-     on low numbers while a busy one is high.
-   - ✅ **Expected:** with three branches, the odd one sits across its own row
-     rather than leaving a half-width gap beside it.
-10. Switch the app to Gujarati or Hindi (Settings → language) and come back.
-    - ✅ **Expected:** the three tiles across the top still line their numbers up
-      with each other even where a label needs two lines, and no product tile
-      has collapsed. Indic labels run longer than the English ones, so this is
-      where a layout that only just fits stops fitting.
+2. Tap a product, then two more, and use the + / − beside a line.
+   - ✅ **Expected:** each tap is **instant** — nothing waits on the network. The
+     tile turns blue and counts up; the tray shows the lines, the item count and
+     the total, with **Charge ₹…** on its own row under the total.
+   - ✅ **Expected:** − on a line of one shows a bin and takes the line off.
+     **Clear** empties the bill. A dozen different items make the lines scroll
+     inside the tray, so the product grid stays reachable.
+   - ✅ **Expected:** no token number yet — a token belongs to a paid bill.
+3. Press **Charge ₹…**. The payment sheet opens on **UPI**.
+   - ✅ **Expected:** the amount, large; a QR for exactly that amount, naming the
+     business (or the shop, Flow 17ad); "Ask the customer to scan this with their
+     UPI app". **No** "Pay with UPI app" button — at the counter it is the
+     customer's phone that pays.
+   - ✅ **Expected:** scanning it with a real UPI app shows the business's name
+     and the exact amount, with a note like `SYA #42` (the branch code and the
+     token this bill will get).
+4. Press **Payment done**.
+   - ✅ **Expected:** a large green tick and **Token 42** (the next number), "The
+     bill is saved on this phone". With a printer set up and **Print the token
+     automatically** on (Flow 17ac), it prints and says **Token printed**.
+   - ✅ **Expected:** **Next bill** closes the sheet; the bill is in **Today's
+     bills** with its token, total, item count, time and a **UPI** pill, and the
+     figures at the top have gone up by exactly its amount.
+5. Ring up another bill, **Charge**, switch to **Cash**, and tap **₹100**.
+   - ✅ **Expected:** **Change to give back** shows ₹100 minus the bill. **Exact
+     amount** shows no change. **Payment done** issues the next token with a
+     **Cash** pill.
+6. Ring up a few more.
+   - ✅ **Expected:** token numbers go up by one each time and never repeat.
+7. Go to **Home** (or Reports) and look at the sales figure.
+   - ✅ **Expected:** it has gone up by exactly what you took. Counter sales and
+     uploaded CSV sales land in the same place.
+8. Tap a bill in **Today's bills**.
+   - ✅ **Expected:** a sheet with its lines, total, payment pill, **Print
+     again** (with a printer set up) and **Void this bill**. There is no way to
+     edit it — a paid bill is voided and rung up again, so the customer's slip
+     always matches the record.
+9. **Void this bill**.
+   - ✅ **Expected:** it asks first. Confirming marks it Voided, the day's sales
+     drop by its amount, and the row stays in the list greyed out with the amount
+     struck through. The token number is never used again.
+10. Switch to your other branch at the top.
+    - ✅ **Expected:** its tokens number independently, and the bill being rung
+      up is cleared rather than carried across.
+11. Switch the app to Gujarati (Settings → language) and come back, on a small
+    phone (or 320dp).
+    - ✅ **Expected:** the three tiles still line up even where a label wraps; the
+      tray's total and **Charge** button stack rather than squeeze; the payment
+      sheet's UPI / Cash choice, the cash chips (which wrap) and **Payment done**
+      all fit; nothing is cut off. Check it with gesture navigation **and**
+      3-button navigation — the sheet's last button must sit above the bar.
+
+---
+
+## Flow 17ab — Billing with no internet
+
+Requirement 30. On the cashier's phone, with the counter opened online at least
+once (that is when it saves the menu and the branch's details).
+
+1. Turn on **airplane mode**. Ring up a bill, **Charge**, **Cash**, **Payment
+   done**.
+   - ✅ **Expected:** it works exactly as online — token, print and all. A line
+     under the header says **Offline — 1 bill saved on this phone, sent when the
+     connection is back**, and the bill shows a small cloud icon.
+   - ✅ **Expected:** **UPI** still shows the QR — it is built on the phone. (The
+     customer's own phone needs a connection to pay it; that is theirs.)
+2. Take two more bills. Then **force-close the app** and open it again, still in
+   airplane mode.
+   - ✅ **Expected:** the app opens on the counter, **not** the sign-in screen,
+     with all three bills and the menu still there.
+3. Turn airplane mode off.
+   - ✅ **Expected:** within a few seconds (at most a minute) the line under the
+     header disappears, the cloud icons go, and the bills appear in Reports and on
+     the owner's Home. Each one counted **once**.
+4. Two phones at one branch: sign in as the cashier on one and the owner on the
+   other, both in airplane mode, and take one bill on each. Both print the same
+   token number. Reconnect both.
+   - ✅ **Expected:** both bills are recorded. The one that synced second is
+     renumbered — its row shows the new number, and its bill sheet says
+     **Printed as 7** — so the slip in the customer's hand still matches.
+5. Take a bill offline, sign out, sign back in (online).
+   - ✅ **Expected:** the bill is still there and is sent. Signing out never
+     throws away bills that were not sent.
+6. Close a day that has a bill on a phone that has not synced yet (close it from
+   another device, Flow 17e), then reconnect that phone.
+   - ✅ **Expected:** a red **1 bill needs attention** card with the reason —
+     "This day has been closed…" — and **Reopen that day** (for someone who may),
+     **Send again** and **Remove from this phone** (which asks first). The bill is
+     never dropped on its own.
+7. Let the business's plan run out (Flow 17aa) with bills unsent.
+   - ✅ **Expected:** the counter says no new bills can be taken; the bills
+     already taken stay on the phone ("…kept on this phone — the server is not
+     taking new bills") and go once the plan is renewed.
+
+---
+
+## Flow 17ac — The receipt printer
+
+Requirement 31. A Bluetooth thermal receipt printer (58mm or 80mm), and the
+**Android** app built after the printer module was added — an older APK says
+"This copy of the app was built before printing was added".
+
+1. Switch the printer on and pair it in the **phone's** Bluetooth settings (PIN
+   usually 0000 or 1234).
+2. **Settings → Receipt printer** (or the printer icon on the counter).
+   - ✅ **Expected:** Android asks for **Nearby devices** once. The paired printer
+     is listed; choose it.
+   - ✅ **Expected:** **Paper** 58 mm / 80 mm, **Print the token automatically**,
+     **Print a test slip**, and a preview of a token at the bottom that fits the
+     screen at both widths, even on a 320dp phone.
+3. **Print a test slip.**
+   - ✅ **Expected:** a slip with a ruler that fits **exactly one line**, three
+     sizes of text, and the paper **cut** below the last line.
+4. Take a bill (Flow 17d).
+   - ✅ **Expected:** the token prints by itself within a couple of seconds: the
+     business name large, the branch, its address and phone (Flow 17ad), **TOKEN**
+     and the number very large, the date and time in 12-hour form, each item with
+     its quantity, rate and amount, the total, **Paid: UPI** or **Paid: Cash**, and
+     "Thank you! Visit again". A long product name wraps instead of being cut.
+5. Tap the bill → **Print again**.
+   - ✅ **Expected:** the same slip, marked **\*\*\* COPY \*\*\***.
+6. Switch the printer off and take a bill.
+   - ✅ **Expected:** the bill is saved and the token shown; the sheet says it
+     could not reach the printer and offers **Print again**. Printing never
+     decides whether a sale happened.
+7. Name a product in Gujarati and give it a code (SKU); name another in Gujarati
+   with no code. Ring both up.
+   - ✅ **Expected:** the first prints as its code, the second as "Item 2" — never
+     a row of question marks. The edit screen for a product like that says so.
+
+---
+
+## Flow 17ad — Where counter customers pay, and the shop's phone
+
+Requirements 31 and 32. As the **owner**.
+
+1. **Settings → Payment QR codes.**
+   - ✅ **Expected:** a **Counter** section first: the business's counter UPI ID,
+     then every shop listed under it as "Uses the business's UPI ID". On the
+     Starter plan the Warehouse and Vendors sections are not there at all.
+2. Set the counter UPI ID (e.g. `yourname@okaxis`) and save.
+   - ✅ **Expected:** the test QR shows the business's name. The cashier's counter
+     now offers UPI (Flow 17d).
+3. Open one shop and give it its own UPI ID — a franchise shop's, say.
+   - ✅ **Expected:** that shop's counter QR pays the shop's ID and name; the others
+     still pay the business's. **Remove UPI ID** on the shop asks first and puts it
+     back on the business's.
+4. As the cashier, open **Settings**.
+   - ✅ **Expected:** no Payment QR codes — where money goes is not the cashier's to
+     change.
+5. **Settings → branch → Branch settings**, fill in **Phone number** and save.
+   - ✅ **Expected:** the next token printed carries it under the address.
 
 ---
 
@@ -929,9 +1055,11 @@ shown.
    - ✅ **Expected:** refused, telling you how many are still open.
 2. Hand over or void everything, then close the day.
    - ✅ **Expected:** it closes, and a **Day closed** badge appears.
-3. Try to edit any of that day's tokens, or start a new one.
-   - ✅ **Expected:** both refused, saying the day has been closed. **New order**
-     is visibly greyed out rather than failing only once you press it.
+3. Try to take a new bill, or void one of that day's.
+   - ✅ **Expected:** both refused, saying the day has been closed. The counter's
+     tray says so above a greyed-out **Charge** rather than failing only once you
+     press it. A bill taken offline for that day is held in "needs attention"
+     (Flow 17ab).
 4. Reopen the day.
    - ✅ **Expected:** editing works again. Closing by mistake has to be
      recoverable, or the guard becomes a trap.
@@ -1517,7 +1645,7 @@ Requirement 8's last line.
 
 ---
 
-## Flow 17r — Reports: every branch, month by month, with net profit
+## Flow 17r — Reports: every branch, month by month, with total profit
 
 Requirements 13 and 15. **Sign in as the owner, admin or manager** — the Reports
 tab is theirs. A cashier does not get the tab; the endpoint behind it would scope
@@ -1534,25 +1662,27 @@ up what those created; with none of them there is nothing to read.
    - ✅ **Expected:** a horizontal strip of month chips ("Sep 2026"), the most
      recent selected, scrolled to the right-hand end. Swipe it — it scrolls, and
      no chip is clipped.
-2. Look at the **Net profit** card at the top.
-   - ✅ **Expected:** one large figure, red if it is negative, and under it four
-     boxes **two to a row**: Customer sales, Expenses, Wages, Moved internally.
-     Four across one row would give each about 76dp and break every label — if
-     you see that, it is a bug.
+2. Look at the **Total profit** card at the top (Per month is selected).
+   - ✅ **Expected:** one large figure, red if it is negative, and under it boxes
+     **two to a row**: Total business, Variable expenses ("incl. vendors ₹…" when
+     there were any), Fixed expenses ("incl. wages ₹…"), Daily expenses, Total cost,
+     and Moved internally only when something was. Four across one row would give
+     each about 76dp and break every label — if you see that, it is a bug.
    - ✅ **Expected:** if wages have not been finalised for the month, a line
      saying so. Profit computed from unrun payroll is too flattering, and the
      card says as much rather than looking confident.
 3. **Check the arithmetic by hand.** This is requirement 13's actual acceptance
    criterion, so it is worth doing once properly.
-   - Customer sales − Expenses − Wages should equal the Net profit shown.
-   - ✅ **Expected:** it does, exactly. Note that **"Moved internally" is not
-     subtracted** here.
+   - Variable + Fixed + Daily should equal Total cost, and Total business − Total
+     cost should equal the Total profit shown.
+   - ✅ **Expected:** both do, exactly. Note that **"Moved internally" is not
+     subtracted** here, and is not inside Variable either.
 4. Read the sentence at the bottom of the card, if there is one.
    - ✅ **Expected:** it appears only when a branch has bought material from your
      own warehouse, and it reads like "Your branches together made −₹42,000. Add
      back the ₹30,000 they paid your own warehouse for material — money that never
      left the business — and the total is −₹12,000."
-   - Now add up the **net profit of every branch card below**, then add the
+   - Now add up the **Total profit of every branch card below**, then add the
      internal transfer. ✅ **Expected:** you get the business total on this card,
      to the rupee. That difference is deliberate and this sentence is why: the
      money left the shop and did not leave the business.
@@ -1563,8 +1693,9 @@ up what those created; with none of them there is nothing to read.
      that flags everything is a section nobody reads.
 6. Scroll to the **branch cards**.
    - ✅ **Expected:** one card per branch, **best first**, with any warehouse
-     last. Each shows the branch name, a trend pill, the month's net profit, four
-     figures two-to-a-row, and a row of small bars.
+     last. Each shows the branch name, a trend pill, the month's Total profit, then
+     Total business, Variable, Fixed, Daily and Total cost two-to-a-row, and a row
+     of small bars.
    - ✅ **Expected:** the bars grow **upward in green for a profit and downward
      in red for a loss**, from a line in the middle. A loss drawn as a short
      upward bar would read as a small profit.
@@ -1574,9 +1705,9 @@ up what those created; with none of them there is nothing to read.
      grid you just asked for. The cards re-sort, because the ranking is for the
      month in focus.
 8. Find your **warehouse** card.
-   - ✅ **Expected:** a grey **"Cost centre"** pill, **no sales figure and no raw
-     material figure at all** — just Expenses and Wages — and a net profit that is
-     simply minus what it spent. A warehouse has no till, so a "₹0 of sales" row
+   - ✅ **Expected:** a grey **"Cost centre"** pill, **no Total business figure and
+     no raw-material caption at all** — just Variable, Fixed, Daily and Total cost —
+     and a Total profit that is simply minus its Total cost. A warehouse has no till, so a "₹0 of sales" row
      would be reporting the model rather than the business.
 9. Switch the range to **12 months**, then back to **3**.
    - ✅ **Expected:** the month strip grows and shrinks, re-scrolls to the most
@@ -1609,7 +1740,10 @@ manager — Flow 17 creates the second one.
 2. Tap **All businesses**.
    - ✅ **Expected:** the month strip and the branch cards disappear. In their
      place: a combined total across every business, then one card per business
-     with its own net profit, sales, expenses, wages and internal transfer.
+     with its own Total profit and the month card's breakdown for the whole range —
+     Total business, Variable (vendors inside it), Fixed (wages inside it), Daily,
+     Total cost, and Moved internally only when its branches paid its own warehouse.
+     Total business − Total cost is the Total profit on every card.
    - ✅ **Expected:** **no branch rows anywhere.** Requirement 13 asks for
      "amount only"; the branches of whichever business turns out to need
      attention are one business-switch away.
@@ -2039,6 +2173,93 @@ server is configured with). With the business on Starter, open `/reports` direct
 
 ---
 
+## Flow 17af — Home: today, quick actions and recent bills
+
+Requirement 33.
+
+1. As the cashier, take two bills (Flow 17d) and log an expense, then go Home.
+   - ✅ **Expected:** **Today's sales**, **Bills** and **Today's expenses** match
+     what you just did. The **Billing** tile says "Today ₹… · 2 bills".
+   - ✅ **Expected:** **Recent bills** lists them, newest first, with token, items,
+     time, amount and how it was paid; **See all** opens the counter.
+2. Turn on airplane mode and take a bill, then go Home.
+   - ✅ **Expected:** a line under **Recent bills** says one bill is waiting to be
+     sent. Reconnect: it goes, and the figures catch up on the next visit.
+3. Tap each quick action.
+   - ✅ **Expected:** every tile opens its screen — none leads to a refusal.
+     **Billing** switches to the cashier's Counter tab; for an owner it opens the
+     counter over Home.
+4. As an owner on the **Starter** plan (Flow 17aa), tap **Reports**.
+   - ✅ **Expected:** Reports opens with a close button, showing the branch figures
+     (there is no Reports tab on Starter, so this tile is the way in).
+5. On a 320dp phone, and on a tablet, in Gujarati.
+   - ✅ **Expected:** two tiles across on the small phone, three on a normal one,
+     four on a tablet; every label wraps whole words rather than being cut or
+     shrunk; the three figures line up; the Billing tile's caption wraps under its
+     label.
+
+---
+
+## Flow 17ag — Reports by day, and kinds of cost
+
+Requirement 34. Owner, with a month of sales, expenses in several categories, a supply
+order and a payslip (as for Flow 17r).
+
+1. **Reports → Per day.**
+   - ✅ **Expected:** this month with **‹ ›**; for an owner of several branches, wrapping
+     chips **All branches** and one per branch. A card with the month's Total profit,
+     Total business and the three costs, and the note that rent, electricity and wages
+     are shared over the month's days. Then one row per day so far, newest first, each
+     with Business, Cost and Profit (green, or red for a loss).
+2. Tap a day.
+   - ✅ **Expected:** it opens to Variable, Fixed ("shared over the month"), Daily and
+     Total cost for that day. A day with no sales still carries its share of fixed cost,
+     so it shows a small loss — that is the point of spreading it.
+3. Add up the days' profit for a finished month.
+   - ✅ **Expected:** it equals that month's Total profit under **Per month**, to the rupee.
+4. **How costs are grouped** (under the Per day / Per month choice), or Settings → **Kinds
+   of cost**.
+   - ✅ **Expected:** what Variable, Fixed and Daily mean; raw material always Variable and
+     wages always Fixed; each category with a Variable / Fixed / Daily choice. Milk and
+     Gas start Variable, Rent and Electricity Fixed, the rest Daily.
+5. Move **Gas** to Fixed, then look at Per month again.
+   - ✅ **Expected:** the gas amount moves from Variable to Fixed; Total cost and Total
+     profit do not change. Move it back.
+6. As the cashier, open Settings.
+   - ✅ **Expected:** no Kinds of cost, and no Reports tile on Home — today's figures only.
+7. At 320dp in Gujarati: the Per day / Per month choice, the branch chips (they wrap), a
+   day row's three figures (they wrap rather than squeeze), and each category's three
+   choices under its name.
+
+---
+
+## Flow 17ae — Payment history
+
+Requirement 35. Needs some paid supply orders (Flows 17x, 17y).
+
+1. As the **accountant**, open **Payments → History**.
+   - ✅ **Expected:** this month, with **‹ ›** to move between months; **All / FOCO /
+     FM**; **Paid by accounts** and **Paid by franchise branches** with their order
+     counts; and the orders, newest payment first.
+   - ✅ **Expected:** each order shows its number and branch, whom it paid, the
+     amount, FOCO or FM, its payment status, and every payment on it — "Paid by
+     accounts · Pay accountant · 14 Oct 2026 03:10 PM", with the reference beneath
+     when one was typed. Tapping it opens the order.
+2. Choose **FOCO**, then **FM**.
+   - ✅ **Expected:** the list and the totals narrow to that kind of branch. An FM
+     payment sent but not yet confirmed shows "still waiting to be confirmed".
+3. Place a FOCO order and do not pay it.
+   - ✅ **Expected:** it is not in History — only orders money moved on are.
+4. As the **owner**, open the Payments card on Home → **History**.
+   - ✅ **Expected:** the same history. As the **warehouse desk**, there is no
+     History tab; asking the server directly is refused with "Only Owner, Admin,
+     Manager or Accountant can read the history of supply-order payments".
+5. At 320dp in Gujarati.
+   - ✅ **Expected:** the three tabs and the three filters each fit their row; the
+     two total tiles line up; event lines wrap rather than run off.
+
+---
+
 ## Flow 20 — The privacy policy
 
 Both app stores require a privacy policy that is reachable from inside the app,
@@ -2333,17 +2554,18 @@ months of figures — the seed data (`Docs/TEST_DATA_SEED.md`) is made for this.
 
 1. **Reports** in the sidebar.
    - ✅ **Expected:** *6 months* chosen, the month strip ending on this month, the
-     business's net profit with its breakdown, *Needs attention*, the export card, and
+     business's Total profit with its breakdown, *Needs attention*, the export card, and
      one card per branch, best first with the warehouse last as a *Cost centre*.
 2. On a window 1000px or wider, look below the summary.
-   - ✅ **Expected:** *Net profit, branch by month* — a row per branch, a column per
+   - ✅ **Expected:** *Total profit, branch by month* — a row per branch, a column per
      month, this month marked, and the whole period at the end. Narrow the window: the
      table goes and the cards stay.
 3. Click an earlier month — in the strip, a table heading, or a bar on any card.
-   - ✅ **Expected:** every card, the net profit and the export count move to that
+   - ✅ **Expected:** every card, the Total profit and the export count move to that
      month. When the branches paid your own warehouse that month, the sentence under
-     the net profit adds the month's branch figures and the transfer up to **the net
-     profit shown above it**. (On the phone it names the six months' totals instead.)
+     the Total profit adds the month's branch figures and the transfer up to **the
+     Total profit shown above it** — on the phone too, since each month now carries
+     its own reconciliation.
 4. Choose *12 months*, then *3 months*.
    - ✅ **Expected:** the strip, the cards and the table follow; nothing from the
      previous range shows for a moment.
@@ -2354,7 +2576,8 @@ months of figures — the seed data (`Docs/TEST_DATA_SEED.md`) is made for this.
    - ✅ **Expected:** the browser's print dialog with the month's summary; *Save as
      PDF* saves it. A month with nothing entered says so and offers neither.
 7. With an account in two businesses, choose **All businesses**.
-   - ✅ **Expected:** the combined net profit across both, then one card each.
+   - ✅ **Expected:** the combined Total profit across both, then one card each with
+     the same breakdown as the month card.
      Businesses in different currencies show no combined figure, and say why.
 8. Sign in as a manager, then a cashier.
    - ✅ **Expected:** the manager sees Reports; the cashier has no Reports in the
@@ -2363,6 +2586,32 @@ months of figures — the seed data (`Docs/TEST_DATA_SEED.md`) is made for this.
 ---
 
 ## Known limitations (not bugs — don't file these)
+
+- **Two phones billing one branch offline can print the same token number.** The
+  one that syncs second is renumbered and shows "Printed as 7" — the record and the
+  slip still match — but the customer standing there was called by a number
+  somebody else also has. One counter, one phone avoids it (requirement 18).
+- **An account disabled while its phone is offline keeps billing on that phone**
+  until the phone next reaches the server, and is signed out then. Its bills are
+  kept, and are sent by whoever signs in next — and recorded as theirs.
+- **Bills are recorded as the person whose session sends them**, which is the
+  person who took them except in that hand-over case.
+- **Uninstalling the app, or Android's "Clear storage", throws away bills that
+  were not sent.** They live in the app's own storage until the server has them.
+- **Only billing works offline.** Logging an expense, Reports, Home's other cards
+  and every other screen still need the server.
+- **The printed token is English, and a product name in an Indic script prints as
+  its code** (or "Item 2"). The printer's own font has no Indic letters; drawing
+  the slip as an image was offered and declined as slower per token.
+- **Printing is Android only**, through a printer paired in the phone's
+  Bluetooth settings. The web counter (W12) is not built yet.
+- **A paid bill cannot be edited** — it is voided and rung up again. Orders taken
+  with an app from before the payment step stay editable as they were.
+- **The web app's Home still shows the business's all-time sales and a list of
+  shortcuts**, not today's figures and the quick-action tiles the Android app now
+  opens on. The tiles are shared data (`constants/quickActions.ts`), ready for the
+  web to render.
+
 
 - **A plan can only be changed by hand** (R28, stage 1). There is no way to pay inside the
   app or on the web yet: the owner pays by UPI or bank transfer and the operator runs

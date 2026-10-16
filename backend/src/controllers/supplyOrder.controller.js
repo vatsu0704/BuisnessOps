@@ -17,6 +17,7 @@ const {
   validateCancel,
   validateVerifyPayment,
   validateListQuery,
+  validateHistoryQuery,
 } = require('../validations/supply.validation');
 
 /**
@@ -400,6 +401,26 @@ async function listPaymentsToConfirm(req, res, next) {
   }
 }
 
+/** Requirement 35 — what was paid, month by month. */
+async function listPaymentHistory(req, res, next) {
+  try {
+    const errors = validateHistoryQuery(req.query);
+    if (errors.length) return res.status(400).json(validationFailure(errors));
+    if (req.query.branchId && !canReachBranch(scopeOf(req), req.query.branchId)) {
+      throw fail('BRANCH_ACCESS_DENIED', 403);
+    }
+    res.json(
+      await supplyOrderService.listPaymentHistory(req.tenant.businessId, listScope(req), {
+        month: req.query.month,
+        branchId: req.query.branchId,
+        model: req.query.model,
+      })
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
 /**
  * Pay for a batch of FOCO orders at once. Branch reach is enforced inside the
  * service's query rather than order by order here — an order the caller cannot
@@ -463,6 +484,7 @@ module.exports = {
   recordPayment,
   listPaymentsDue,
   listPaymentsToConfirm,
+  listPaymentHistory,
   settlePayments,
   postDelay,
 };

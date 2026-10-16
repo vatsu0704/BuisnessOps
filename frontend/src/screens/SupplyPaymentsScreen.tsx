@@ -2,11 +2,11 @@ import { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useFocusEffect, useNavigation, useNavigationState } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useNavigationState, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
-import { useBusinessId } from '@/hooks/useBusinessId';
+import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
 import { useSupplyPayments } from '@/hooks/useSupplyPayments';
 import { extractErrorMessage } from '@/api/client';
 import { settleSupplyPayments, verifySupplyPayment } from '@/api/supply';
@@ -18,6 +18,8 @@ import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
 import SegmentedOption from '@/components/SegmentedOption';
 import UpiPayCard from '@/components/payments/UpiPayCard';
+import PaymentHistory from '@/components/payments/PaymentHistory';
+import { hasCapability } from '@/utils/permissions';
 import { SupplyStatusPill } from '@/components/supply/SupplyPills';
 import { confirm } from '@/utils/confirm';
 import { formatDate, toISODate } from '@/utils/date';
@@ -28,7 +30,7 @@ import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { useScreenEdges } from '@/hooks/useScreenEdges';
 
-type Tab = 'pay' | 'confirm';
+type Tab = 'pay' | 'confirm' | 'history';
 
 /** The orders one payment can cover: everything owed to one payee. */
 type PayeeSection = {
@@ -78,8 +80,16 @@ export default function SupplyPaymentsScreen() {
 
   const { canSettle, canVerify, due, toConfirm, ready, readyTotal, isLoading, error, refresh } =
     useSupplyPayments();
+  // Requirement 35 — what has been paid. Its own capability: the desk confirms
+  // payments but does not keep the books.
+  const canViewHistory = hasCapability(useMembership(), 'supplyPayment:viewHistory');
+  const route = useRoute<RouteProp<AppStackParamList, 'SupplyPayments'>>();
 
-  const [tab, setTab] = useState<Tab>(canSettle ? 'pay' : 'confirm');
+  const allowed: Record<Tab, boolean> = { pay: canSettle, confirm: canVerify, history: canViewHistory };
+  const askedFor = route.params?.tab;
+  const [tab, setTab] = useState<Tab>(
+    askedFor && allowed[askedFor] ? askedFor : canSettle ? 'pay' : canVerify ? 'confirm' : 'history'
+  );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isPaying, setIsPaying] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -272,7 +282,8 @@ export default function SupplyPaymentsScreen() {
     );
   }
 
-  const showTabs = canSettle && canVerify;
+  const tabCount = [canSettle, canVerify, canViewHistory].filter(Boolean).length;
+  const showTabs = tabCount > 1;
 
   return (
     <View style={styles.container}>
@@ -282,7 +293,11 @@ export default function SupplyPaymentsScreen() {
           <View style={styles.headerText}>
             <Text style={styles.title}>{t('payments.title')}</Text>
             <Text style={styles.subtitle}>
-              {tab === 'pay' ? t('payments.paySubtitle') : t('payments.confirmSubtitle')}
+              {tab === 'pay'
+                ? t('payments.paySubtitle')
+                : tab === 'confirm'
+                  ? t('payments.confirmSubtitle')
+                  : t('payments.historySubtitle')}
             </Text>
           </View>
           {isPushed ? (
@@ -294,27 +309,43 @@ export default function SupplyPaymentsScreen() {
 
         {showTabs ? (
           <View style={styles.tabs}>
-            {/* Two choices side by side — what SegmentedOption is for. */}
-            <SegmentedOption
-              testID="payments-tab-pay"
-              title={t('payments.tabPay')}
-              caption={t('payments.readyCount', { count: ready.length })}
-              icon="wallet-outline"
-              selected={tab === 'pay'}
-              onPress={() => setTab('pay')}
-            />
-            <SegmentedOption
-              testID="payments-tab-confirm"
-              title={t('payments.tabConfirm')}
-              caption={t('payments.waitingCount', { count: toConfirm.length })}
-              icon="shield-checkmark-outline"
-              selected={tab === 'confirm'}
-              onPress={() => setTab('confirm')}
-            />
+            {/* At most three choices side by side — SegmentedOption's limit, so
+                adding a fourth tab here means changing the control, not this. */}
+            {canSettle ? (
+              <SegmentedOption
+                testID="payments-tab-pay"
+                title={t('payments.tabPay')}
+                caption={t('payments.readyCount', { count: ready.length })}
+                icon="wallet-outline"
+                selected={tab === 'pay'}
+                onPress={() => setTab('pay')}
+              />
+            ) : null}
+            {canVerify ? (
+              <SegmentedOption
+                testID="payments-tab-confirm"
+                title={t('payments.tabConfirm')}
+                caption={t('payments.waitingCount', { count: toConfirm.length })}
+                icon="shield-checkmark-outline"
+                selected={tab === 'confirm'}
+                onPress={() => setTab('confirm')}
+              />
+            ) : null}
+            {canViewHistory ? (
+              <SegmentedOption
+                testID="payments-tab-history"
+                title={t('payments.tabHistory')}
+                icon="time-outline"
+                selected={tab === 'history'}
+                onPress={() => setTab('history')}
+              />
+            ) : null}
           </View>
         ) : null}
 
-        {tab === 'pay' ? (
+        {tab === 'history' ? (
+          <PaymentHistory />
+        ) : tab === 'pay' ? (
           <SectionList
             testID="payments-due"
             sections={sections}

@@ -10,7 +10,7 @@ import type { BranchMonthlyReport, CrossBusinessReport } from '@/types/analytics
  * of them are: the screen is decomposed into a summary card, an attention list
  * and a branch list, the cross-business view reads the same window, and a tab
  * screen never unmounts — so a private copy per component is a copy that goes
- * stale and stays stale. See `salesStore`'s header for the bug this shape exists
+ * stale and stays stale. See `branchStore`'s header for the bug this shape exists
  * to prevent.
  *
  * ## Keyed on the window, not just the business
@@ -27,7 +27,7 @@ import type { BranchMonthlyReport, CrossBusinessReport } from '@/types/analytics
  * screen that was reading correctly a moment ago should not empty itself because
  * one request timed out.
  *
- * ## Why there is no `refreshAnalytics()` beside `refreshSalesSummary()`
+ * ## Why there is no `refreshAnalytics()` beside `refreshToday()`
  *
  * The convention is that whatever mutates data refreshes it, *because the
  * mutating screen unmounts and leaves no effect to re-run*. That premise does not

@@ -445,22 +445,13 @@ describe('Branch analytics and net profit', () => {
   });
 
   describe('who may read what', () => {
-    // The same endpoint, scoped by the branch access the role already has. A
-    // cashier holds analytics:viewBranch and not analytics:viewBusiness, so they
-    // see their branch and are not handed the business's net profit alongside it.
-    it('gives a cashier their own branch and no business roll-up', async () => {
+    // Requirement 33: a cashier sees today's takings (analytics:viewToday) and not
+    // the branch's costs, wages and profit, which is what this grid is.
+    it('refuses a cashier the grid — costs and profit are not theirs', async () => {
       const res = await grid(cashierToken, `?from=${MONTH}&to=${MONTH}`);
-      expect(res.statusCode).toBe(200);
-
-      expect(res.body.branches).toHaveLength(1);
-      expect(res.body.branches[0].branchId).toBe(shopAId);
-      expect(res.body.business).toBeNull();
-    });
-
-    it('refuses a branch the caller cannot reach', async () => {
-      const res = await grid(cashierToken, `?from=${MONTH}&to=${MONTH}&branchId=${shopBId}`);
       expect(res.statusCode).toBe(403);
-      expect(res.body.code).toBe('BRANCH_ACCESS_DENIED');
+      expect(res.body.code).toBe('PERMISSION_DENIED');
+      expect(res.body.params.capability).toBe('analytics:viewBranch');
     });
 
     it('refuses a role with no analytics capability at all', async () => {
@@ -557,7 +548,17 @@ describe('Branch analytics and net profit', () => {
       const own = await grid(ownerToken, `?from=${MONTH}&to=${MONTH}`);
       expect(Number(mine.total.netProfit)).toBe(Number(own.body.business.total.netProfit));
       expect(Number(mine.total.customerSales)).toBe(Number(own.body.business.total.customerSales));
+      expect(Number(mine.total.totalCost)).toBe(Number(own.body.business.total.totalCost));
       expect(mine.reconciliation.balances).toBe(true);
+
+      // Requirement 34: the combined row carries the same split as each business,
+      // and adds up the same way.
+      const { combined } = res.body;
+      const across = (field) => res.body.businesses.reduce((total, business) => total + Number(business.total[field]), 0);
+      for (const field of ['variableExpenses', 'fixedExpenses', 'dailyExpenses', 'totalCost', 'netProfit']) {
+        expect(Number(combined[field])).toBe(across(field));
+      }
+      expect(Number(combined.customerSales) - Number(combined.totalCost)).toBe(Number(combined.netProfit));
       expect(mine.branchCount).toBe(3);
       expect(mine.tradingBranchCount).toBe(2);
       // No per-branch rows: "amount only, like standard values".
@@ -591,6 +592,134 @@ describe('Branch analytics and net profit', () => {
       expect(res.statusCode).toBe(200);
 
       expect(res.body.businesses.every((business) => business.businessId !== businessId)).toBe(true);
+    });
+  });
+
+  // --- Requirement 34: three kinds of cost, and the month day by day ------------
+
+  describe('cost types and days (requirement 34)', () => {
+    const daily = (token, query) => request(app).get(url(`/analytics/daily${query}`)).set(auth(token));
+    const sum = (cells, field) => cells.reduce((total, cell) => total + Number(cell[field]), 0);
+
+    it('seeds the categories as chosen, and a typed one as day-to-day', async () => {
+      const categories = await request(app).get(url('/expense-categories')).set(auth(ownerToken));
+      const typeOf = (code) => categories.body.find((category) => category.code === code).costType;
+      expect([typeOf('MILK'), typeOf('GAS')]).toEqual(['VARIABLE', 'VARIABLE']);
+      expect([typeOf('RENT'), typeOf('ELECTRICITY')]).toEqual(['FIXED', 'FIXED']);
+      expect([typeOf('PETTY'), typeOf('REPAIRS'), typeOf('TRANSPORT'), typeOf('OTHER')]).toEqual([
+        'DAILY',
+        'DAILY',
+        'DAILY',
+        'DAILY',
+      ]);
+      const custom = await request(app)
+        .post(url('/expense-categories'))
+        .set(auth(ownerToken))
+        .send({ name: `Cleaning ${RUN_ID}` });
+      expect(custom.body.costType).toBe('DAILY');
+    });
+
+    it('splits a branch’s cost into variable, fixed and daily that add up to its total', async () => {
+      const res = await grid(ownerToken, `?from=${MONTH}&to=${MONTH}`);
+      const shop = cellIn(res.body, shopAId, MONTH);
+      // Gas 12,000 is variable, with 30,000 of raw material; wages 45,000 are fixed.
+      expect(Number(shop.variableExpenses)).toBe(42000);
+      expect(Number(shop.fixedExpenses)).toBe(45000);
+      expect(Number(shop.dailyExpenses)).toBe(0);
+      expect(Number(shop.totalCost)).toBe(87000);
+      expect(Number(shop.netProfit)).toBe(Number(shop.sales) - Number(shop.totalCost));
+
+      const warehouse = cellIn(res.body, warehouseId, MONTH);
+      expect(Number(warehouse.variableExpenses)).toBe(35000);
+      expect(Number(warehouse.fixedExpenses)).toBe(20000);
+      expect(Number(warehouse.totalCost)).toBe(55000);
+    });
+
+    it('keeps the business split honest: the warehouse transfer is not a business cost', async () => {
+      const res = await grid(ownerToken, `?from=${MONTH}&to=${MONTH}`);
+      const cell = res.body.business.months[0];
+      expect(Number(cell.variableExpenses)).toBe(47000);
+      expect(Number(cell.fixedExpenses)).toBe(65000);
+      expect(Number(cell.totalCost)).toBe(112000);
+      expect(Number(cell.netProfit)).toBe(Number(cell.customerSales) - Number(cell.totalCost));
+
+      const branchVariable = res.body.branches.reduce(
+        (total, row) => total + Number(row.months[0].variableExpenses),
+        0
+      );
+      expect(branchVariable - Number(cell.internalTransfer)).toBe(Number(cell.variableExpenses));
+      // The month's own reconciliation, not the window's.
+      expect(cell.reconciliation.balances).toBe(true);
+      expect(Number(cell.reconciliation.netProfit)).toBe(Number(cell.netProfit));
+    });
+
+    it('moves only the split when a category is re-classed, and only for the owner side', async () => {
+      const categories = await request(app).get(url('/expense-categories')).set(auth(ownerToken));
+      const gas = categories.body.find((category) => category.code === 'GAS');
+
+      const refused = await request(app)
+        .patch(url(`/expense-categories/${gas.id}/cost-type`))
+        .set(auth(cashierToken))
+        .send({ costType: 'FIXED' });
+      expect(refused.statusCode).toBe(403);
+      expect(refused.body.params.capability).toBe('expense:classify');
+
+      const changed = await request(app)
+        .patch(url(`/expense-categories/${gas.id}/cost-type`))
+        .set(auth(ownerToken))
+        .send({ costType: 'FIXED' });
+      expect(changed.statusCode).toBe(200);
+
+      const res = await grid(ownerToken, `?from=${MONTH}&to=${MONTH}`);
+      const shop = cellIn(res.body, shopAId, MONTH);
+      expect(Number(shop.variableExpenses)).toBe(30000);
+      expect(Number(shop.fixedExpenses)).toBe(57000);
+      expect(Number(shop.totalCost)).toBe(87000);
+
+      await request(app)
+        .patch(url(`/expense-categories/${gas.id}/cost-type`))
+        .set(auth(ownerToken))
+        .send({ costType: 'VARIABLE' });
+    });
+
+    it('lays the month out day by day, spreading fixed costs so the days add back to the month', async () => {
+      const res = await daily(ownerToken, `?month=${MONTH}`);
+      expect(res.statusCode).toBe(200);
+      const shop = res.body.branches.find((row) => row.branchId === shopAId);
+      expect(shop.days).toHaveLength(res.body.days.length);
+      expect(Number(shop.fixedMonth)).toBe(45000);
+      expect(sum(shop.days, 'fixedExpenses')).toBeCloseTo(45000, 2);
+      expect(sum(shop.days, 'sales')).toBe(100000);
+      expect(sum(shop.days, 'netProfit')).toBeCloseTo(13000, 2);
+
+      // The gas was logged on the 15th; that day carries it as variable.
+      const fifteenth = shop.days.find((cell) => cell.day === `${MONTH}-15`);
+      expect(Number(fifteenth.expenseVariable)).toBe(12000);
+
+      for (const cell of res.body.business.days) expect(cell.reconciliation.balances).toBe(true);
+    });
+
+    it('files a sale at 00:30 on the 1st in Kolkata on the 1st, not the day before', async () => {
+      const { start } = localMonthRange(MONTH, ZONE);
+      const firstDay = async () =>
+        (await daily(ownerToken, `?month=${MONTH}&branchId=${shopBId}`)).body.branches[0].days[0];
+      const before = await firstDay();
+      // 19:00 UTC on the last day of the previous month — the 1st in Kolkata.
+      const sold = await sale(shopBId, 777, new Date(start.getTime() + 30 * 60 * 1000));
+      try {
+        const after = await firstDay();
+        expect(after.day).toBe(`${MONTH}-01`);
+        expect(Number(after.sales) - Number(before.sales)).toBe(777);
+      } finally {
+        await prisma.transaction.delete({ where: { id: sold.id } });
+      }
+    });
+
+    it('is not the cashier’s, and needs a real month', async () => {
+      expect((await daily(cashierToken, `?month=${MONTH}`)).statusCode).toBe(403);
+      const bad = await daily(ownerToken, '?month=2026-13');
+      expect(bad.statusCode).toBe(400);
+      expect(bad.body.details[0].code).toBe('FIELD_MUST_BE_MONTH');
     });
   });
 });

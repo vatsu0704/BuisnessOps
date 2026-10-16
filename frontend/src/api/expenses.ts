@@ -3,6 +3,7 @@ import type { PaymentMethod } from '@/types/counter';
 import type {
   Expense,
   ExpenseCategory,
+  ExpenseCostType,
   ExpenseCompliance,
   ExpenseDaySummary,
   ExpenseMonthSummary,
@@ -50,6 +51,19 @@ export async function updateExpenseCategory(
  * `date` omitted means the BRANCH's today, decided on the server from its own
  * timezone — not the device's, which may be somewhere else entirely.
  */
+/** Requirement 34 — how Reports classes a category. `expense:classify`. */
+export async function setExpenseCategoryCostType(
+  businessId: string,
+  categoryId: string,
+  costType: ExpenseCostType
+): Promise<ExpenseCategory> {
+  const { data } = await apiClient.patch<ExpenseCategory>(
+    `${base(businessId)}/expense-categories/${categoryId}/cost-type`,
+    { costType }
+  );
+  return data;
+}
+
 export async function logExpense(
   businessId: string,
   payload: {

@@ -23,6 +23,8 @@ type Props = {
   updatedAt: string | null;
   updatedByName: string | null;
   onSave: (upiId: string | null, upiName: string | null) => Promise<void>;
+  /** What taking it off means for this payee, said in the confirmation. */
+  removeBody?: string;
   testID?: string;
 };
 
@@ -53,6 +55,7 @@ export default function UpiAccountEditor({
   updatedByName,
   onSave,
   testID,
+  removeBody,
 }: Props) {
   const { t } = useTranslation();
   const [draftId, setDraftId] = useState(upiId ?? '');
@@ -93,7 +96,7 @@ export default function UpiAccountEditor({
   async function askThenRemove() {
     const ok = await confirm({
       title: t('paymentAccounts.removeTitle', { payee: payeeLabel }),
-      body: t('paymentAccounts.removeBody'),
+      body: removeBody ?? t('paymentAccounts.removeBody'),
       confirmLabel: t('paymentAccounts.remove'),
       cancelLabel: t('common.cancel'),
     });

@@ -3,6 +3,7 @@ import type {
   ChoosablePaymentMode,
   DeliveryAgent,
   PaymentAccount,
+  PaymentHistory,
   PlacedSupplyOrder,
   SettleResult,
   SupplyCollectedVia,
@@ -419,5 +420,36 @@ export async function setPaymentAccount(
   payload: { upiId: string | null; upiName?: string | null }
 ): Promise<PaymentAccount> {
   const { data } = await apiClient.patch<PaymentAccount>(`${base(businessId)}/payment-account`, payload);
+  return data;
+}
+
+/** Requirement 32 — where the business's counter customers pay. */
+export async function setCounterAccount(
+  businessId: string,
+  payload: { upiId: string | null; upiName?: string | null }
+): Promise<PaymentAccount> {
+  const { data } = await apiClient.patch<PaymentAccount>(`${base(businessId)}/payment-account/counter`, payload);
+  return data;
+}
+
+/** Requirement 32 — one shop's own counter UPI ID; null puts it back on the business's. */
+export async function setBranchCounterAccount(
+  businessId: string,
+  branchId: string,
+  payload: { upiId: string | null; upiName?: string | null }
+): Promise<PaymentAccount> {
+  const { data } = await apiClient.patch<PaymentAccount>(
+    `${base(businessId)}/branches/${branchId}/payment-account/counter`,
+    payload
+  );
+  return data;
+}
+
+/** Requirement 35 — what was paid in a month, optionally for one kind of branch. */
+export async function listPaymentHistory(
+  businessId: string,
+  params: { month: string; model?: 'FOCO' | 'FM'; branchId?: string }
+): Promise<PaymentHistory> {
+  const { data } = await apiClient.get<PaymentHistory>(`${base(businessId)}/supply-payments/history`, { params });
   return data;
 }

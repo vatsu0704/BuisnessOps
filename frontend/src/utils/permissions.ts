@@ -169,4 +169,14 @@ export const can = {
   verifySupplyPayments: (m: Membership | undefined) => hasCapability(m, 'supplyPayment:verify'),
   /** Change where payments go. Accounts and the owner; deliberately not the desk. */
   managePaymentAccounts: (m: Membership | undefined) => hasCapability(m, 'paymentAccount:manage'),
+
+  // --- The counter (requirements 1, 29–31) ---
+  /** Bill at the counter — and so set up the receipt printer it prints to. */
+  useCounter: (m: Membership | undefined) => hasCapability(m, 'counterOrder:create'),
+  /** Void a bill already taken. */
+  voidCounterOrders: (m: Membership | undefined) => hasCapability(m, 'counterOrder:void'),
+  /** Close a day's counter, or reopen one — the fix for a bill refused because its day was closed. */
+  closeCounterDay: (m: Membership | undefined) => hasCapability(m, 'counterOrder:closeDay'),
+  /** Record what the branch spent (requirement 10). */
+  logExpenses: (m: Membership | undefined) => hasCapability(m, 'expense:log'),
 };

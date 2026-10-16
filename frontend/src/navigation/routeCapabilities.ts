@@ -30,6 +30,9 @@ export const ROUTE_CAPABILITY = {
   AddProduct: 'product:manage',
   EditProduct: 'product:manage',
   Counter: 'counterOrder:create',
+  // The receipt printer is the counter's. Its settings live on this phone, but
+  // only somebody who bills has a printer to set up.
+  ReceiptPrinter: 'counterOrder:create',
   // Supply orders. The capability each one needs is the capability the
   // backend guards its endpoints with, so a route that opens is a route
   // whose requests succeed: SupplyOrderDetail asks only to VIEW, because the
@@ -56,6 +59,13 @@ export const ROUTE_CAPABILITY = {
   // owner's to see; every member still learns whether the business is
   // read-only from their own membership.
   Plan: 'billing:manage',
+  // Requirement 33. A branch's own costs and profit — not the business-wide view,
+  // which the Reports TAB still needs; the grid behind both is scoped to the
+  // branches the person reaches. A cashier holds neither.
+  Reports: 'analytics:viewBranch',
+  // Requirement 34. Reading how costs are grouped is reading expenses; changing
+  // a category's kind is `expense:classify`, checked inside the screen.
+  ExpenseCategories: 'expense:view',
 } as const satisfies Record<string, Capability>;
 
 export type GatedRoute = keyof typeof ROUTE_CAPABILITY;

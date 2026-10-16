@@ -1,5 +1,6 @@
 import { apiClient } from '@/api/client';
-import type { CounterDaySummary, CounterOrder, PaymentMethod } from '@/types/counter';
+import type { CounterDaySummary, CounterOrder, CounterSyncResponse, PaymentMethod } from '@/types/counter';
+import type { toSyncPayload } from '@/utils/counterQueue';
 
 const base = (businessId: string) => `/businesses/${businessId}`;
 
@@ -129,5 +130,18 @@ export async function reopenCounterDay(businessId: string, branchId: string, dat
   const { data } = await apiClient.delete(`${base(businessId)}/branches/${branchId}/counter-day/close`, {
     params: { date },
   });
+  return data;
+}
+
+/**
+ * Send paid sales made on the phone (requirement 30): the way the counter records
+ * every sale now, online or after a stretch offline. One result per sale, in
+ * order; a sale already recorded comes back DUPLICATE, so sending again is safe.
+ */
+export async function syncCounterSales(
+  businessId: string,
+  sales: ReturnType<typeof toSyncPayload>[]
+): Promise<CounterSyncResponse> {
+  const { data } = await apiClient.post<CounterSyncResponse>(`${base(businessId)}/counter-sales/sync`, { sales });
   return data;
 }

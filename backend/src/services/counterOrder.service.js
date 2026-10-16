@@ -1,7 +1,7 @@
 const { Prisma } = require('@prisma/client');
 const prisma = require('../config/db');
 const { fail } = require('../errors');
-const { dateOnly, todayKeyInZone, safeZone } = require('../utils/datetime');
+const { dateKeyOf, dateOnly, offsetMinutesAt, todayKeyInZone, safeZone } = require('../utils/datetime');
 const { writeTransaction, counterExternalId } = require('./salesProjection.service');
 const { withEffectivePricing } = require('./product.service');
 
@@ -11,8 +11,11 @@ const { withEffectivePricing } = require('./product.service');
  * "As orders come in the cashier adds them, issues a token, and the money keeps
  * counting. Once an order is taken they can also edit it."
  *
- * Deliberately NOT a purchase flow: no cart, no payment step, no fulfilment.
- * It counts items, issues a token and totals the money.
+ * The app no longer uses the open-add-close calls below: requirement 29 moved
+ * the order onto the phone, where it is rung up with no network and recorded
+ * here in one piece once it is paid — see `counterSale.service.js`. They stay,
+ * unchanged, for app builds from before that, and the projection, the day close
+ * and the summary are shared by both paths.
  *
  * ## The two rules everything here follows
  *
@@ -330,6 +333,14 @@ async function voidOrder(businessId, counterOrderId) {
   });
 }
 
+/**
+ * The most a day's list returns. A busy shop issues a couple of hundred tokens a
+ * day, and this list is fetched every time the counter comes into focus, each
+ * order with its lines; the day's totals come from `getDaySummary`, which counts
+ * every order whatever this cuts off.
+ */
+const MAX_DAY_ORDERS = 200;
+
 /** Today's orders at a branch, newest token first. */
 async function listOrders(businessId, branchId, { date, status } = {}) {
   const branch = await branchOf(businessId, branchId);
@@ -339,6 +350,7 @@ async function listOrders(businessId, branchId, { date, status } = {}) {
     where: { businessId, branchId, tokenDate, ...(status ? { status } : {}) },
     include: ORDER_INCLUDE,
     orderBy: { tokenNumber: 'desc' },
+    take: MAX_DAY_ORDERS,
   });
 }
 
@@ -352,38 +364,111 @@ async function getOrder(businessId, counterOrderId) {
 }
 
 /**
- * The day's running totals — "the money keeps counting" from requirement 1.
+ * Who a customer pays at this branch's counter (requirement 32): the branch's
+ * own UPI ID when it has one — a franchise shop collecting into its own
+ * account — otherwise the business's. Null when neither is set, and the counter
+ * then offers cash only and says why.
  *
- * Voided orders are excluded from the money but counted separately, because
- * "we voided eleven tokens today" is information a manager wants and a silent
- * omission is not.
+ * Resolved here, once, so the phone never has to know the rule; it caches the
+ * answer with the rest of the day's context and works offline from that.
  */
-async function getDaySummary(businessId, branchId, { date } = {}) {
+function counterPayeeOf(branch, business) {
+  if (branch.counterUpiId) {
+    return { upiId: branch.counterUpiId, name: branch.counterUpiName || business.name };
+  }
+  if (business.counterUpiId) {
+    return { upiId: business.counterUpiId, name: business.counterUpiName || business.name };
+  }
+  return null;
+}
+
+/**
+ * The day at a branch's counter, and everything the phone needs to keep billing
+ * through a lost connection — requirements 1, 29 and 30.
+ *
+ * "The money keeps counting": the totals, from aggregates rather than by
+ * loading every order and its lines. Voided orders are excluded from the money
+ * but counted separately, because "we voided eleven tokens today" is
+ * information a manager wants and a silent omission is not.
+ *
+ * And the counter's context, which the phone caches:
+ * - `lastTokenNumber`, so offline tokens continue from the right number;
+ * - `utcOffsetMinutes` and `serverNow`, so the phone can tell which day it is
+ *   at the branch (and how wrong its own clock is) with no time-zone database;
+ * - `payee`, who the counter's UPI QR pays;
+ * - `receiptHeader`, the name, address and phone printed on every token;
+ * - `expenses`, the day's spending — only when the caller may read it.
+ */
+async function getDaySummary(businessId, branchId, { date, includeExpenses = false } = {}) {
   const branch = await branchOf(businessId, branchId);
+  const business = await prisma.business.findUnique({ where: { id: businessId } });
   const tokenDate = date ? dateOnly(date) : branchToday(branch);
+  const day = { businessId, branchId, tokenDate };
 
-  const orders = await prisma.counterOrder.findMany({
-    where: { businessId, branchId, tokenDate },
-    include: ORDER_INCLUDE,
-  });
+  const [byStatus, byMethod, itemCount, counter, closed, spent] = await Promise.all([
+    prisma.counterOrder.groupBy({
+      by: ['status'],
+      where: day,
+      _count: { _all: true },
+      _sum: { totalAmount: true },
+    }),
+    prisma.counterOrder.groupBy({
+      by: ['paymentMethod'],
+      where: { ...day, status: { not: 'VOID' } },
+      _count: { _all: true },
+      _sum: { totalAmount: true },
+    }),
+    prisma.counterOrderItem.count({ where: { counterOrder: { ...day, status: { not: 'VOID' } } } }),
+    prisma.branchTokenCounter.findUnique({ where: { branchId_tokenDate: { branchId, tokenDate } } }),
+    prisma.dayClose.findUnique({ where: { branchId_date: { branchId, date: tokenDate } } }),
+    includeExpenses
+      ? prisma.expense.aggregate({
+          where: { businessId, branchId, expenseDate: tokenDate },
+          _sum: { amount: true },
+          _count: { _all: true },
+        })
+      : null,
+  ]);
 
-  const counted = orders.filter((order) => order.status !== 'VOID');
-  const total = counted.reduce((sum, order) => sum.plus(toDecimal(order.totalAmount)), new Prisma.Decimal(0));
-  const itemCount = counted.reduce((sum, order) => sum + order.items.length, 0);
-
-  const closed = await prisma.dayClose.findUnique({ where: { branchId_date: { branchId, date: tokenDate } } });
+  const countOf = (status) => byStatus.find((row) => row.status === status)?._count._all ?? 0;
+  const total = byStatus
+    .filter((row) => row.status !== 'VOID')
+    .reduce((sum, row) => sum.plus(toDecimal(row._sum.totalAmount ?? 0)), new Prisma.Decimal(0));
+  const now = new Date();
 
   return {
     branchId,
     date: tokenDate,
-    currency: branch.currency || (await prisma.business.findUnique({ where: { id: businessId } })).defaultCurrency,
-    orderCount: counted.length,
-    openCount: counted.filter((order) => order.status === 'OPEN').length,
-    voidCount: orders.length - counted.length,
+    currency: branch.currency || business.defaultCurrency,
+    orderCount: countOf('OPEN') + countOf('CLOSED'),
+    openCount: countOf('OPEN'),
+    voidCount: countOf('VOID'),
     itemCount,
     totalAmount: total,
+    byPaymentMethod: byMethod.map((row) => ({
+      paymentMethod: row.paymentMethod,
+      orderCount: row._count._all,
+      totalAmount: row._sum.totalAmount ?? new Prisma.Decimal(0),
+    })),
     isClosed: !!closed,
     closedAt: closed?.closedAt ?? null,
+    lastTokenNumber: counter?.lastNumber ?? 0,
+    todayKey: dateKeyOf(branchToday(branch)),
+    // Whole minutes: the wall clock is read to the second, so an instant with
+    // milliseconds would otherwise come back as 329.997 rather than 330.
+    utcOffsetMinutes: Math.round(offsetMinutesAt(now, safeZone(branch.timezone))),
+    serverNow: now,
+    payee: counterPayeeOf(branch, business),
+    receiptHeader: {
+      businessName: business.name,
+      branchName: branch.name,
+      branchCode: branch.code,
+      addressLine: branch.addressLine,
+      phone: branch.phone,
+    },
+    expenses: spent
+      ? { totalAmount: spent._sum.amount ?? new Prisma.Decimal(0), count: spent._count._all }
+      : null,
   };
 }
 
@@ -434,6 +519,12 @@ async function reopenDay(businessId, branchId, { date } = {}) {
 }
 
 module.exports = {
+  ORDER_INCLUDE,
+  assertDayOpen,
+  branchOf,
+  reproject,
+  toDecimal,
+  counterPayeeOf,
   openOrder,
   addItem,
   updateItem,

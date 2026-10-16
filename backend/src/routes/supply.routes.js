@@ -179,6 +179,14 @@ scoped.get(
   requirePermission('supplyPayment:verify'),
   supplyOrderController.listPaymentsToConfirm
 );
+// Requirement 35 — and what has been paid, which leaves both lists above the
+// moment it is settled or confirmed. Its own capability: the desk confirms
+// payments but does not keep the books.
+scoped.get(
+  '/supply-payments/history',
+  requirePermission('supplyPayment:viewHistory'),
+  supplyOrderController.listPaymentHistory
+);
 
 router.use('/:businessId', scoped);
 

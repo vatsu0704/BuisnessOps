@@ -20,6 +20,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
+import { isReceiptPrintable } from '@/utils/escpos';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'AddProduct'>;
 
@@ -126,6 +127,14 @@ export default function AddProductScreen({ navigation, route }: Props) {
                   value={name}
                   onChangeText={setName}
                 />
+                {/* Requirement 31: the receipt printer's font is English only, so
+                    say now — while the code can still be filled in — what a name
+                    it cannot draw will print as. */}
+                {name.trim() && !isReceiptPrintable(name) ? (
+                  <Text style={styles.receiptHint}>
+                    {sku.trim() ? t('addProduct.receiptNameSku', { sku: sku.trim() }) : t('addProduct.receiptNameNoSku')}
+                  </Text>
+                ) : null}
                 <FormInput
                   testID="add-product-unit"
                   label={t('addProduct.unit')}
@@ -254,6 +263,7 @@ export default function AddProductScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
+  receiptHint: { fontSize: 12.5, color: colors.textTertiary, lineHeight: 17, marginTop: -spacing.xs, marginBottom: spacing.sm },
   container: { flex: 1, backgroundColor: colors.background },
   safe: { flex: 1 },
   flex: { flex: 1 },

@@ -276,6 +276,7 @@ module.exports = {
   isValidTimeZone,
   safeZone,
   localDateKey,
+  offsetMinutesAt,
   dateOnly,
   dateKeyOf,
   localDayRange,

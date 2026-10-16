@@ -7,6 +7,7 @@ const {
   stringMaxLength,
 } = require('./shared');
 const { fieldError } = require('../errors');
+const { isRealMonthKey } = require('../utils/datetime');
 
 /**
  * Supply orders and the raw-material catalog — requirements 3, 5, 5.1, 9, 11, 12.
@@ -315,6 +316,24 @@ function validateVerifyPayment(body) {
   return errors;
 }
 
+/**
+ * Requirement 35 — one month of payment history, optionally one branch and one
+ * kind of branch.
+ */
+const OPERATING_MODELS = ['FOCO', 'FM'];
+
+function validateHistoryQuery(query) {
+  const errors = [];
+  if (!query.month || !isRealMonthKey(query.month)) errors.push(fieldError('FIELD_MUST_BE_MONTH', 'month'));
+  if (query.branchId !== undefined && (typeof query.branchId !== 'string' || !query.branchId)) {
+    errors.push(mustBeString('branchId'));
+  }
+  if (query.model !== undefined && !OPERATING_MODELS.includes(query.model)) {
+    errors.push(mustBeOneOf('model', OPERATING_MODELS));
+  }
+  return errors;
+}
+
 function validateListQuery(query) {
   const errors = [];
   if (query.status !== undefined && !ORDER_STATUSES.includes(query.status)) {
@@ -341,6 +360,7 @@ module.exports = {
   validateCancel,
   validateVerifyPayment,
   validateListQuery,
+  validateHistoryQuery,
   DELAY_REASONS,
   PAYMENT_MODES,
   ORDER_STATUSES,
