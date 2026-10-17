@@ -1,6 +1,6 @@
 import { apiClient } from './client';
 import type { Branch, BranchKind, BranchOperatingModel } from '@/types/branch';
-import type { Business, SalesSummaryByCurrency } from '@/types/business';
+import type { Business } from '@/types/business';
 import type { SubscriptionSummary } from '@/types/user';
 
 /** The full record for one business the caller belongs to. */
@@ -65,13 +65,6 @@ export async function createBranch(businessId: string, payload: CreateBranchPayl
 export async function updateBranch(businessId: string, branchId: string, payload: UpdateBranchPayload): Promise<Branch> {
   const { data } = await apiClient.patch<Branch>(`/businesses/${businessId}/branches/${branchId}`, payload);
   return data;
-}
-
-export async function getSalesSummary(businessId: string): Promise<SalesSummaryByCurrency[]> {
-  const { data } = await apiClient.get<{ byCurrency: SalesSummaryByCurrency[] }>(
-    `/businesses/${businessId}/sales-summary`
-  );
-  return data.byCurrency;
 }
 
 export interface CreateBusinessPayload {

@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import MetricGrid from '@/components/reports/MetricGrid';
-import { costMetrics } from '@/components/reports/costMetrics';
+import { costMetrics } from '@/utils/costMetrics';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { formatAmount } from '@/utils/format';
 import { monthKeyLabel } from '@/utils/date';
@@ -95,7 +95,9 @@ export default function NetProfitCard({
         ]}
       />
 
-      {transfer !== 0 ? (
+      {/* Only when it balances: a reader who cannot see every branch would be
+          shown a sum that is not the total above it. */}
+      {transfer !== 0 && reconciliation.balances ? (
         <View style={styles.note}>
           <Text style={styles.noteText}>
             {t('reports.reconciliationNote', {

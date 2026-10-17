@@ -1,0 +1,9 @@
+/* Square, as large as the card allows between a size a phone camera reads from
+   arm's length and one that does not crowd the card. */
+.qr {
+  display: block;
+  width: min(100%, 240px);
+  min-width: 168px;
+  aspect-ratio: 1;
+  height: auto;
+}

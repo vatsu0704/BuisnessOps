@@ -4,6 +4,7 @@ import { QUICK_ACTIONS, isQuickActionVisible, quickActionLabelKey } from '@share
 import { ROUTE_CAPABILITY } from '@shared/navigation/routeCapabilities';
 import type { Plan } from '@shared/permissions';
 import { ROLES } from '@/permissions';
+import { canOpenRoute, pathForAppRoute, routeForAppRoute } from '@/routes/paths';
 import { membershipAs } from '@/test/fixtures';
 import { hasCapability } from '@/utils/permissions';
 
@@ -45,6 +46,27 @@ describe('quick actions', () => {
         }
       }
     }
+  });
+
+  it('takes every tile a role sees to a web page that role can open', () => {
+    for (const plan of PLANS) {
+      for (const role of ROLES) {
+        const membership = onPlan(role, plan);
+        const has = (capability: Parameters<typeof hasCapability>[1]) => hasCapability(membership, capability);
+        for (const action of QUICK_ACTIONS) {
+          if (!isQuickActionVisible(action, has)) continue;
+          const page = routeForAppRoute(action.route);
+          expect(page, `${action.key} has a web page`).not.toBeNull();
+          expect(canOpenRoute(membership, page!), `${role} on ${plan} opens ${action.key}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("carries a tile's params into the address", () => {
+    expect(pathForAppRoute('SupplyPayments', { tab: 'history' })).toBe('/payments?tab=history');
+    expect(pathForAppRoute('Counter')).toBe('/counter');
+    expect(pathForAppRoute('SupplyCatalog')).toBe('/supply');
   });
 
   it('gives the till to whoever bills, and reports to nobody who only bills', () => {

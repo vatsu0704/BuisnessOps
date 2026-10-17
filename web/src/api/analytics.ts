@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { BranchMonthlyReport, CrossBusinessReport } from '@/types/analytics';
+import type { BranchMonthlyReport, CrossBusinessReport, DailyReport } from '@/types/analytics';
 
 /**
  * Requirements 13 and 15. `from` and `to` are 'YYYY-MM' and both optional: with
@@ -23,5 +23,17 @@ export async function getBranchMonthly(
  */
 export async function getCrossBusiness(params: { from?: string; to?: string } = {}): Promise<CrossBusinessReport> {
   const { data } = await apiClient.get<CrossBusinessReport>('/analytics/cross-business', { params });
+  return data;
+}
+
+/**
+ * Requirement 34's Per day: one month ('YYYY-MM') laid out day by day, each
+ * branch on its own calendar, with the month's fixed costs spread over its days.
+ */
+export async function getBranchDaily(
+  businessId: string,
+  params: { month: string; branchId?: string }
+): Promise<DailyReport> {
+  const { data } = await apiClient.get<DailyReport>(`/businesses/${businessId}/analytics/daily`, { params });
   return data;
 }

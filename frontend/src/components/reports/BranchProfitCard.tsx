@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { costMetrics } from '@/components/reports/costMetrics';
+import { costMetrics } from '@/utils/costMetrics';
 import MetricGrid, { type Metric } from '@/components/reports/MetricGrid';
 import MonthBars from '@/components/reports/MonthBars';
 import TrendPill from '@/components/reports/TrendPill';

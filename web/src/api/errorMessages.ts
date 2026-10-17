@@ -82,3 +82,16 @@ export function translateApiError(body: ApiErrorBody | undefined): string | null
   if (body.code) return translate(`errors.api.${body.code}`, renderParams(body.params));
   return null;
 }
+
+/**
+ * Why the server refused one counter sale (requirement 30) — a code with its
+ * params from the sync's results, in the reader's language. The app's
+ * `translateSaleRejection`: an API error code first, a field rule second, and
+ * the bare code when this build has no wording for it.
+ */
+export function translateSaleRejection(code: string, params: Record<string, unknown> = {}): string {
+  const asApi = translateApiError({ code, params });
+  if (asApi) return asApi;
+  const field = typeof params.field === 'string' ? params.field : null;
+  return translateDetail({ code, field, params }) ?? code;
+}

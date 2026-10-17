@@ -4,17 +4,20 @@ import type { Branch } from '@/types/branch';
 import { cx } from '@/utils/cx';
 import styles from './BranchPicker.module.css';
 
-type Props = {
+/** What a tile needs — a full branch, or the counter's own copy kept for an offline start. */
+type PickableBranch = Pick<Branch, 'id' | 'name' | 'code'>;
+
+type Props<B extends PickableBranch> = {
   /** The radio group's name — unique per page. */
   name: string;
   /** The question, shown above the tiles as a section label. */
   legend: string;
   hideLegend?: boolean;
-  branches: Branch[];
+  branches: B[];
   value: string | null;
   onChange: (branchId: string) => void;
   /** The line under each name; the branch code unless said otherwise. */
-  caption?: (branch: Branch) => string | undefined;
+  caption?: (branch: B) => string | undefined;
 };
 
 /**
@@ -26,7 +29,7 @@ type Props = {
  * option is not a choice. Upload shows it anyway, already chosen, because where
  * imported sales land is worth seeing before they land there.
  */
-export default function BranchPicker({
+export default function BranchPicker<B extends PickableBranch>({
   name,
   legend,
   hideLegend,
@@ -34,7 +37,7 @@ export default function BranchPicker({
   value,
   onChange,
   caption = (branch) => branch.code,
-}: Props) {
+}: Props<B>) {
   return (
     <fieldset className={styles.fieldset}>
       <legend className={cx(styles.legend, hideLegend && 'visually-hidden')}>{legend}</legend>

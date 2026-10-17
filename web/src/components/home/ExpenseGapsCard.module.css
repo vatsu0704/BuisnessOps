@@ -1,0 +1,113 @@
+.card {
+  padding: var(--space-lg);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.iconCalm {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.headText {
+  min-width: 0;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.subtitle {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
+
+.error {
+  margin-top: var(--space-sm);
+  font-size: 13px;
+  color: var(--color-error);
+}
+
+.list {
+  margin: var(--space-sm) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  margin: 0 calc(-1 * var(--space-sm));
+  border-radius: var(--radius-md);
+  transition: background-color var(--duration-quick) ease;
+}
+
+.row:hover {
+  background: var(--color-background);
+}
+
+.rowIcon {
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+/* The name shrinks and wraps; what it logged keeps its own width. */
+.branchName {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.nothing,
+.logged {
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.nothing {
+  color: var(--color-warning);
+}
+
+.logged {
+  color: var(--color-text-secondary);
+}
+
+.more {
+  margin-top: var(--space-xs);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+}

@@ -1,10 +1,11 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { ComponentPropsWithRef } from 'react';
 import type { IconType } from 'react-icons';
 import { cx } from '@/utils/cx';
 import Spinner from './Spinner';
 import styles from './PrimaryButton.module.css';
 
-type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'title'> & {
+// With the ref: React 19 passes it as a prop, and the spread below puts it on the button.
+type Props = Omit<ComponentPropsWithRef<'button'>, 'children' | 'title'> & {
   title: string;
   loading?: boolean;
   icon?: IconType;

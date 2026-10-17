@@ -1,0 +1,15 @@
+/* The "add one" chip reads as an action, not as one more choice: dashed, in the brand colour. */
+.add {
+  border-style: dashed;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.add:hover {
+  background: var(--color-primary-light);
+}
+
+.add:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}

@@ -79,3 +79,8 @@ export function passesAnyGate(m: Membership | undefined, gates: Gate[] | null): 
   if (!gates || gates.length === 0) return true;
   return gates.some((gate) => passesGate(m, gate));
 }
+
+/** Has this business's plan run out, so nothing new can be saved? (Requirement 28.) */
+export function isReadOnly(m: Membership | undefined): boolean {
+  return m?.business?.subscription?.state === 'READ_ONLY';
+}

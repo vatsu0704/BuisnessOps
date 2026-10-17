@@ -1,0 +1,191 @@
+/* Sized by the column the report sits in: below 900px the days are rows that
+   open; wider, one table holds the same figures. */
+.wrap {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-xxl);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dayRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.dayRowOpen {
+  border-color: var(--color-primary);
+}
+
+.dayButton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+
+.dayHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  color: var(--color-text-tertiary);
+}
+
+.dayLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.figure {
+  display: flex;
+  flex: 1 0 88px;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.figureLabel {
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+.figureValue {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.cost {
+  color: var(--color-text-secondary);
+}
+
+.good {
+  color: var(--color-success);
+}
+
+.loss {
+  color: var(--color-error);
+}
+
+.empty {
+  padding: var(--space-lg) 0;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  text-align: center;
+}
+
+.tableCard {
+  display: none;
+}
+
+@container (min-width: 900px) {
+  .rows {
+    display: none;
+  }
+
+  .tableCard {
+    display: block;
+  }
+}
+
+/* A month of rupee columns can outgrow even a wide card; the table scrolls
+   inside it, with the day pinned so a row stays readable. */
+.scroller {
+  margin: var(--space-md) calc(var(--space-xl) * -1) 0;
+  padding: 0 var(--space-xl);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table thead th {
+  font: var(--text-label);
+  color: var(--color-text-secondary);
+  vertical-align: bottom;
+  white-space: normal;
+}
+
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover th,
+.table tbody tr:hover td {
+  background: var(--color-background);
+}
+
+.table .dayHeadCell,
+.table .dayCell {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--color-surface);
+  text-align: left;
+}
+
+.table .dayCell {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.headNote {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+}
+
+.profit {
+  font-weight: 800;
+}

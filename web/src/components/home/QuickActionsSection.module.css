@@ -1,0 +1,146 @@
+.wrap {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.title {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+/* The till: the one large tile, because billing is what most people opening
+   Home came to do. The label and its caption wrap; the arrow never moves. */
+.primary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-height: 72px;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-lg);
+  background: var(--gradient-brand);
+  box-shadow: var(--shadow-md);
+  color: var(--color-white);
+  transition: transform var(--duration-quick) var(--ease-snappy), box-shadow var(--duration-base) ease;
+}
+
+.primary:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.primary:active {
+  transform: scale(0.98);
+}
+
+.primaryIcon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.primaryText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.primaryLabel {
+  font-size: 17px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.primaryCaption {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.88);
+  overflow-wrap: anywhere;
+}
+
+.primaryArrow {
+  flex: none;
+  transition: transform var(--duration-quick) ease;
+}
+
+.primary:hover .primaryArrow {
+  transform: translateX(2px);
+}
+
+/* As many tiles across as the column holds at a readable width — two in a
+   320px window, three beside the main column, more when quick actions are all a
+   role has. Never a fixed percentage. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@container (min-width: 720px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  }
+}
+
+.grid li {
+  display: flex;
+}
+
+.tile {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 96px;
+  padding: var(--space-md) var(--space-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  transition: transform var(--duration-quick) var(--ease-snappy), border-color var(--duration-base) ease,
+    box-shadow var(--duration-base) ease;
+}
+
+.tile:hover {
+  border-color: #d4d4f6;
+  box-shadow: var(--shadow-md);
+}
+
+.tile:active {
+  transform: scale(0.96);
+}
+
+.iconCircle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.tileLabel {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}

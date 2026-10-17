@@ -1,13 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
+import type { ReportMetric } from '@/types/analytics';
 import { colors, radius, spacing } from '@/theme';
 
-export type Metric = {
-  label: string;
-  value: string;
-  /** A second line under the figure — "3 orders", "provisional". */
-  caption?: string;
-  tone?: 'default' | 'cost' | 'good';
-};
+export type Metric = ReportMetric;
 
 /**
  * The figures behind a net-profit number, two to a row.

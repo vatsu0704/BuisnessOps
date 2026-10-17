@@ -31,11 +31,30 @@
   animation: spin 900ms linear infinite;
 }
 
-/* The range and the scope sit side by side and wrap under each other when they do not fit. */
+/* The view, the range and the scope sit side by side and wrap under each other
+   when they do not fit; the link to how costs are grouped goes last. */
 .controls {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-sm) var(--space-xl);
+}
+
+.costLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px var(--space-sm);
+  margin-left: calc(var(--space-sm) * -1);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.costLink:hover {
+  background: var(--color-primary-light);
 }
 
 .loading {

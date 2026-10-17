@@ -1,0 +1,124 @@
+.card {
+  padding: var(--space-lg);
+  border: 1px solid #f3c4c4;
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-error);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-error);
+}
+
+.body {
+  margin-top: var(--space-xs);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.list {
+  margin: var(--space-sm) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) 0;
+}
+
+.row + .row {
+  border-top: 1px solid var(--color-border);
+}
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.token {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 6px;
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-error);
+}
+
+.rowText {
+  min-width: 0;
+}
+
+.amount {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.reason {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text);
+}
+
+/* Each action the width of its own label, wrapping under the others. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 6px var(--space-md);
+  border: 1.5px solid var(--color-primary);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.action:hover:not(:disabled) {
+  background: var(--color-primary-light);
+}
+
+.action:disabled {
+  cursor: progress;
+  opacity: 0.55;
+}
+
+.danger {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.danger:hover:not(:disabled) {
+  background: var(--color-error-bg);
+}

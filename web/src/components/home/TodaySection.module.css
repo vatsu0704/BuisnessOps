@@ -1,0 +1,42 @@
+/*
+ * Sized by the column it sits in, not the window: beside the sidebar and the
+ * quick actions a wide window can still leave Home's column narrow.
+ *
+ * Narrow, with three tiles, today's sales take the whole first row — it is the number Home is read
+ * for, and the one that grows longest (₹1,23,45,678) — and the others share the
+ * row under it. All across once each tile can hold a rupee figure unsqueezed.
+ */
+.wrap {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.row > :first-child:nth-last-child(3) {
+  grid-column: 1 / -1;
+}
+
+@container (min-width: 480px) {
+  .row {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-template-columns: none;
+  }
+
+  .row > :first-child:nth-last-child(3) {
+    grid-column: auto;
+  }
+}
+
+.note {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text-tertiary);
+}

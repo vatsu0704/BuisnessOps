@@ -16,12 +16,41 @@ import type { LoginPayload, SignupPayload } from '@/api/auth';
 import { createBusiness as createBusinessRequest, getBusiness, type CreateBusinessPayload } from '@/api/business';
 import { useAnalyticsStore } from '@/store/analyticsStore';
 import { useBranchStore } from '@/store/branchStore';
+import { useCounterStore } from '@/store/counterStore';
 import { useNotificationStore } from '@/store/notificationStore';
-import { useSalesStore } from '@/store/salesStore';
+import { useTodayStore } from '@/store/todayStore';
 import type { Business } from '@/types/business';
 import type { User } from '@/types/user';
+import { stopCounterSync } from '@/utils/counterSync';
+import { disconnectPrinter } from '@/utils/printer';
 import { activeMembership } from '@/utils/permissions';
 import { storage, STORAGE_KEYS } from '@/utils/storage';
+
+/**
+ * The last session the server confirmed, kept so the counter opens with no
+ * connection (requirement 30) — the app's `session-cache`. Restored only for the
+ * same token, and only when the server could not be reached at all: any answer
+ * from it is believed over this copy.
+ *
+ * The cost is the app's: an account disabled while this browser is offline keeps
+ * billing here until the browser next reaches the server.
+ */
+type SessionCache = {
+  token: string;
+  user: User;
+  business: Business | null;
+  activeBusinessId: string | null;
+};
+
+function readSessionCache(): SessionCache | null {
+  const raw = storage.get(STORAGE_KEYS.sessionCache);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as SessionCache;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Reconcile the remembered business against the memberships this session has.
@@ -43,6 +72,8 @@ interface AuthState {
   activeBusinessId: string | null;
   /** True only for the one-time check on load. Separate from isSubmitting so a sign-in never unmounts its form. */
   isBootstrapping: boolean;
+  /** Opened from the kept session because the server could not be reached (requirement 30). */
+  isOfflineSession: boolean;
   isSubmitting: boolean;
   token: string | null;
   user: User | null;
@@ -70,6 +101,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
   isBootstrapping: true,
+  isOfflineSession: false,
   isSubmitting: false,
   isSwitchingBusiness: false,
   activeBusinessId: null,
@@ -101,7 +133,25 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       // Only a reply from the API proves the token is bad. A request that never
       // got one says nothing about it, and deleting it there signs people out
       // because their server was cold.
-      if (!isTransportFailure(err)) storage.remove(STORAGE_KEYS.token);
+      if (!isTransportFailure(err)) {
+        storage.remove(STORAGE_KEYS.token);
+        storage.remove(STORAGE_KEYS.sessionCache);
+      } else {
+        // No server is not the same as no session: open with the last one the
+        // server confirmed for this same token, and let the next refresh replace it.
+        const cached = readSessionCache();
+        if (cached && cached.token === token && cached.user) {
+          set({
+            token,
+            user: cached.user,
+            business: cached.business,
+            activeBusinessId: activeMembership(cached.user, cached.activeBusinessId)?.businessId ?? null,
+            isOfflineSession: true,
+            isBootstrapping: false,
+          });
+          return;
+        }
+      }
       setAuthToken(null);
       set({ token: null, user: null, business: null, activeBusinessId: null, isBootstrapping: false });
     }
@@ -158,12 +208,18 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     setAuthToken(null);
     // The shared caches outlive this store's state, so they are emptied too.
     useBranchStore.getState().reset();
-    useSalesStore.getState().reset();
+    useTodayStore.getState().reset();
     useNotificationStore.getState().reset();
     // Cross-business totals belong to the account, not a business — the next
     // person to sign in on this browser must not see them for a frame.
     useAnalyticsStore.getState().reset();
-    set({ token: null, user: null, business: null, activeBusinessId: null, error: null });
+    // In memory only: the counter's stored record keeps any bills not yet sent,
+    // and they go the next time somebody signs in to this business here.
+    useCounterStore.getState().reset();
+    stopCounterSync();
+    void disconnectPrinter();
+    storage.remove(STORAGE_KEYS.sessionCache);
+    set({ token: null, user: null, business: null, activeBusinessId: null, error: null, isOfflineSession: false });
   },
 
   /**
@@ -235,7 +291,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         activeBusinessId && activeBusinessId !== current
           ? await getBusiness(activeBusinessId).catch(() => get().business)
           : get().business;
-      set({ user, business, activeBusinessId });
+      set({ user, business, activeBusinessId, isOfflineSession: false });
     } catch {
       // Offline or a blip — keep what we have.
     }
@@ -253,4 +309,29 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 setSessionEndedHandler(() => {
   if (!useAuthStore.getState().token) return;
   useAuthStore.getState().logout();
+});
+
+/**
+ * Keep the offline copy of the session in step with every session the server
+ * confirms — load, sign-in, sign-up, a business switch, a refresh — from one
+ * place. A session restored from the copy is not written back: nothing new was
+ * learned.
+ */
+useAuthStore.subscribe((state, previous) => {
+  if (!state.token || !state.user || state.isOfflineSession) return;
+  if (
+    state.token === previous.token &&
+    state.user === previous.user &&
+    state.business === previous.business &&
+    state.activeBusinessId === previous.activeBusinessId
+  ) {
+    return;
+  }
+  const cache: SessionCache = {
+    token: state.token,
+    user: state.user,
+    business: state.business,
+    activeBusinessId: state.activeBusinessId,
+  };
+  storage.set(STORAGE_KEYS.sessionCache, JSON.stringify(cache));
 });

@@ -25,7 +25,6 @@
     "change": "Change language"
   },
   "home": {
-    "shortcuts": "Shortcuts",
     "refresh": "Refresh"
   },
   "comingSoon": {
@@ -76,10 +75,57 @@
     "month": "Month",
     "tableTitle": "Total profit, branch by month",
     "branchColumn": "Branch",
-    "totalColumn": "Whole period"
+    "totalColumn": "Whole period",
+    "view": "Report",
+    "dayColumn": "Day",
+    "dayTableTitle": "Day by day"
   },
   "plan": {
     "contact": "To change the plan or pay for more branches, write to",
     "contactUnset": "To change the plan or pay for more branches, contact {{appName}}."
+  },
+  "month": {
+    "previous": "Previous month",
+    "next": "Next month"
+  },
+  "counter": {
+    "doneBody": "The bill is saved in this browser. Hand the token to the customer.",
+    "noMenuYet": "No menu is saved in this browser yet. Connect to the internet once to load it.",
+    "attentionBody": "The server refused these bills. They stay in this browser until somebody deals with them.",
+    "removeFromBrowser": "Remove from this browser",
+    "removeTitle": "Remove token {{token}} from this browser?",
+    "readOnly": "The plan has ended, so no new bills can be taken. Bills already taken stay in this browser until it is renewed.",
+    "noPrinter": "No receipt printer is set up in this browser.",
+    "storageUnavailable": "This browser is not keeping data — a private window, or site data blocked — so no bill can be taken here. Open the counter in a normal window.",
+    "saveFailed": "The bill could not be saved in this browser, so no token was given. Try again.",
+    "printDialog": "Sent to the print dialog",
+    "added": "{{name}} added, {{count}} on the bill",
+    "less": "One less {{name}}",
+    "more": "One more {{name}}",
+    "chargeShortcut": "Ctrl + Enter",
+    "sync": {
+      "offline": "Offline — {{count}} bill saved in this browser, sent when the connection is back",
+      "offline_plural": "Offline — {{count}} bills saved in this browser, sent when the connection is back",
+      "blocked": "{{count}} bill kept in this browser — the server is not taking new bills right now",
+      "blocked_plural": "{{count}} bills kept in this browser — the server is not taking new bills right now"
+    }
+  },
+  "printer": {
+    "subtitle": "How this browser prints each token",
+    "methodSection": "How tokens print",
+    "methodBluetooth": "Straight to the Bluetooth printer",
+    "methodBluetoothHint": "Chrome or Edge sends each token to the printer paired with this computer or phone, and it prints by itself.",
+    "methodDialog": "Through the print dialog",
+    "methodDialogHint": "Any browser, any printer this computer has. The print dialog opens for each token.",
+    "unsupportedSerial": "This browser cannot reach a Bluetooth printer. Use Chrome or Edge, or print through the print dialog.",
+    "insecureSerial": "Bluetooth printing works only on {{appName}}'s secure (https) address.",
+    "pairHint": "Pair the printer once in this computer's or phone's Bluetooth settings (the PIN is usually 0000 or 1234), then choose it here.",
+    "choose": "Choose the printer",
+    "chooseAgain": "Choose a different printer",
+    "chosen": "A Bluetooth printer is chosen in this browser",
+    "notChosen": "No printer chosen yet",
+    "forget": "Forget this printer",
+    "kioskTip": "To print without the dialog each time, make the receipt printer this computer's default and start Chrome with --kiosk-printing.",
+    "testDialog": "The sample token is in the print dialog. Check the slip fits the paper."
   }
 }

@@ -137,6 +137,18 @@ export type BusinessMonthCell = {
 export type BusinessTotals = Omit<BusinessMonthCell, 'month' | 'reconciliation'>;
 
 /**
+ * One figure on a report card — what both apps' `MetricGrid` draws, and what the
+ * shared `utils/costMetrics.ts` builds.
+ */
+export type ReportMetric = {
+  label: string;
+  value: string;
+  /** A second line under the figure — "3 orders", "provisional". */
+  caption?: string;
+  tone?: 'default' | 'cost' | 'good';
+};
+
+/**
  * Why the branch column and the business total differ.
  *
  * A shop paying its own warehouse is real money out of that shop and no money

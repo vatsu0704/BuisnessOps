@@ -5,7 +5,7 @@ import type { BranchMonthlyRow } from '@/types/analytics';
 import { cx } from '@/utils/cx';
 import { formatAmount } from '@/utils/format';
 import MetricGrid, { type Metric } from './MetricGrid';
-import { costMetrics } from './costMetrics';
+import { costMetrics } from '@shared/utils/costMetrics';
 import MonthBars from './MonthBars';
 import TrendPill from './TrendPill';
 import styles from './ReportCard.module.css';

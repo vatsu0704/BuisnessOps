@@ -25,7 +25,7 @@ import StatTile from '@/components/ui/StatTile';
 import { useBranches } from '@/hooks/useBranches';
 import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
 import { canOpenRoute, pathTo } from '@/routes/paths';
-import { refreshSalesSummary } from '@/store/salesStore';
+import { refreshToday } from '@/store/todayStore';
 import { step } from '@/theme/motion';
 import { saveBlob } from '@/utils/downloadApiFile';
 import styles from './UploadPage.module.css';
@@ -97,8 +97,8 @@ export default function UploadPage() {
     try {
       const dataSource = await ensureBranchDataSource(businessId, branch.id, branch.name);
       const uploaded = await uploadFile(businessId, dataSource.id, file);
-      // The import just booked sales — move the figure Home shows with it.
-      void refreshSalesSummary();
+      // The import just booked sales — move today's figures on Home with it.
+      void refreshToday();
       setResult(uploaded);
     } catch (err) {
       // The server may still be writing rows when the page stops waiting, so

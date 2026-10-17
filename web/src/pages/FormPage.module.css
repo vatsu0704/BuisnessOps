@@ -29,3 +29,17 @@
   text-align: center;
   color: var(--color-text-secondary);
 }
+
+/* The sentence above a dialog's one field. */
+.dialogBody {
+  margin-bottom: var(--space-md);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+/* A choice of chips above the next field: room enough that the chips do not
+   read as part of the label under them. */
+.fieldGroup {
+  margin-bottom: var(--space-lg);
+}

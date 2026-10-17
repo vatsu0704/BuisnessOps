@@ -6,7 +6,7 @@ import type { CrossBusinessReport } from '@/types/analytics';
 import { cx } from '@/utils/cx';
 import { formatAmount } from '@/utils/format';
 import MetricGrid from './MetricGrid';
-import { costMetrics } from './costMetrics';
+import { costMetrics } from '@shared/utils/costMetrics';
 import styles from './ReportCard.module.css';
 import layout from './CrossBusinessSection.module.css';
 

@@ -7,7 +7,9 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { getExpenseCompliance } from '@/api/expenses';
 import { extractErrorMessage } from '@/api/client';
+import { useBranches } from '@/hooks/useBranches';
 import { useBusinessId } from '@/hooks/useBusinessId';
+import { useAuthStore } from '@/store/authStore';
 import { formatAmount } from '@/utils/format';
 import PressableScale from '@/components/PressableScale';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
@@ -35,6 +37,10 @@ export default function ExpenseGapsCard() {
   const { t } = useTranslation();
   const businessId = useBusinessId();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const { branches } = useBranches();
+  const defaultCurrency = useAuthStore((s) => s.business?.defaultCurrency ?? 'INR');
+  // Each branch in its own currency, as every other figure in the app is.
+  const currencyOf = (branchId: string) => branches.find((b) => b.id === branchId)?.currency ?? defaultCurrency;
 
   const [compliance, setCompliance] = useState<ExpenseCompliance | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -129,7 +135,7 @@ export default function ExpenseGapsCard() {
                 {row.branchName}
               </Text>
               <Text style={styles.logged}>
-                {t('expenses.gapsLogged', { amount: formatAmount(Number(row.totalSpent), 'INR') })}
+                {t('expenses.gapsLogged', { amount: formatAmount(Number(row.totalSpent), currencyOf(row.branchId)) })}
               </Text>
               <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
             </PressableScale>

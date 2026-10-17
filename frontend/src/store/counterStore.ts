@@ -14,7 +14,14 @@ import {
   type CounterQueue,
   type NewSale,
 } from '@/utils/counterQueue';
-import type { CounterDaySummary, CounterOrder, CounterSaleSyncResult, LocalSale } from '@/types/counter';
+import type {
+  CounterBranch,
+  CounterDaySummary,
+  CounterOrder,
+  CounterSaleSyncResult,
+  CounterSyncState,
+  LocalSale,
+} from '@/types/counter';
 import type { BranchProduct } from '@/types/product';
 
 /**
@@ -37,8 +44,8 @@ import type { BranchProduct } from '@/types/product';
  *   still has its products, its QR and its numbers.
  */
 
-/** The trading branches the counter can bill at, remembered for an offline start. */
-export type CounterBranch = { id: string; name: string; code: string };
+// Declared with the shared types, so the web's counter reads the same shapes.
+export type { CounterBranch, CounterSyncState };
 
 type Persisted = {
   version: 1;
@@ -50,8 +57,6 @@ type Persisted = {
   /** How far the phone's clock is behind the server's, in ms (server − phone). */
   skewMs: number;
 };
-
-export type CounterSyncState = 'idle' | 'syncing' | 'offline' | 'blocked';
 
 type CounterStore = Persisted & {
   loadedFor: string | null;

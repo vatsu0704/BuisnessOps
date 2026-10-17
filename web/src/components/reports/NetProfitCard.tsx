@@ -5,7 +5,7 @@ import { cx } from '@/utils/cx';
 import { monthKeyLabel } from '@/utils/date';
 import { formatAmount } from '@/utils/format';
 import MetricGrid, { type Metric } from './MetricGrid';
-import { costMetrics } from './costMetrics';
+import { costMetrics } from '@shared/utils/costMetrics';
 import styles from './ReportCard.module.css';
 
 /**
@@ -14,19 +14,17 @@ import styles from './ReportCard.module.css';
  * The branch cards below do not add up to this figure, and should not: money a
  * shop pays its own warehouse is real money out of that shop and none out of the
  * business. So the sentence at the foot states the arithmetic in full, for the
- * person who adds the column up — for this month (`monthReconciliation`), and only
- * when there is a transfer to explain. Raw material from a vendor did leave the
- * business, so it has its own line.
+ * person who adds the column up — this month's own, as the server sends it on the
+ * cell (requirement 34), and only when there is a transfer to explain and the
+ * figures balance. Raw material from a vendor did leave the business, so it is
+ * inside Variable.
  */
 export default function NetProfitCard({
   cell,
-  reconciliation,
   currency,
   mixedCurrency,
 }: {
   cell: BusinessMonthCell;
-  /** This month's, or null when there is nothing to explain. */
-  reconciliation: { branchNetProfitSum: number; internalTransfer: number; netProfit: number } | null;
   currency: string;
   mixedCurrency: boolean;
 }) {
@@ -34,6 +32,7 @@ export default function NetProfitCard({
   const net = Number(cell.netProfit);
   const transfer = Number(cell.internalTransfer);
   const vendorSpend = Number(cell.vendorSpend);
+  const reconciliation = cell.reconciliation;
 
   // Requirement 34: what came in, then the three kinds of cost and their total.
   const metrics: Metric[] = [
@@ -80,12 +79,12 @@ export default function NetProfitCard({
 
       <MetricGrid metrics={metrics} />
 
-      {reconciliation && !mixedCurrency ? (
+      {transfer !== 0 && reconciliation.balances && !mixedCurrency ? (
         <p className={styles.note}>
           {t('reports.reconciliationNote', {
-            branchSum: formatAmount(reconciliation.branchNetProfitSum, currency),
-            transfer: formatAmount(reconciliation.internalTransfer, currency),
-            total: formatAmount(reconciliation.netProfit, currency),
+            branchSum: formatAmount(Number(reconciliation.branchNetProfitSum), currency),
+            transfer: formatAmount(Number(reconciliation.internalTransfer), currency),
+            total: formatAmount(Number(reconciliation.netProfit), currency),
           })}
         </p>
       ) : null}

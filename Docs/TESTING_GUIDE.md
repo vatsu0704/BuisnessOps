@@ -18,10 +18,13 @@ until Phase 2's query engine exists. Alerts (Phase 5) has no tab at all; the Sta
 slot. For the app stores, the privacy policy is reachable from Settings and sign-up
 (Flow 20) and anybody can delete their own account (Flow 21); the app runs on Expo
 SDK 54 and draws edge-to-edge on Android (Flow 0, Flow 10). A separate **web
-app** in `web/` has sign-in, sign-up, Home (Flow W1), Settings with the business
-switcher (Flow W2), the notification bell and centre (Flow W3), branches and the work
-calendar (Flow W5), products and sales upload (Flow W6), and Reports with the
-month-end export (Flow W7) so far; its other pages say they are coming to the web.
+app** in `web/` has sign-in, sign-up, Home with today's figures and the quick actions
+(Flow W1), Settings with the business switcher (Flow W2), the notification bell and
+centre (Flow W3), branches and the work calendar (Flow W5), products and sales upload
+(Flow W6), Reports by day and by month with the kinds of cost and the month-end
+export (Flow W7), expenses with the day-end export (Flow W9), and the counter —
+offline, with its receipt printer (Flow W12) — so far; its other pages say they are
+coming to the web.
 
 ---
 
@@ -2359,22 +2362,34 @@ account from Flow 1, or the seed data's logins.
    - ✅ **Expected:** Home. A sidebar on the left lists only what your role can
      open, grouped *Overview / Branch / Supply / People*, with **Settings** at the
      foot; the top bar names the business and your role. Home greets you by first
-     name, shows the business and its branch count, the sales, orders and branches
-     tiles, your branches, the first branch's products, and a **Shortcuts** column.
-     The sales figure uses Indian grouping (₹3,48,250).
+     name, shows the business and its branch count, then the app's Home in the app's
+     order: **Today's sales**, **Bills** and **Today's expenses** across your
+     branches, **Quick actions** — the large blue **Billing** tile with today's
+     takings and bill count, then a tile per thing your role does (Items, Expenses,
+     Reports, Raw material, Orders, Desk, Payment history, Upload…) — **Recent
+     bills**, your branches and the first branch's products. On a window 1100px or
+     wider the quick actions sit in a column on the right. Figures use Indian
+     grouping (₹18,450).
 5. Click any sidebar entry other than Home — **Counter**, say.
    - ✅ **Expected:** a card titled with that page's name and a **Coming to the
      web** badge, saying the page works in the mobile app and is on its way here,
      with **Back to Home**. That is correct for now, not a broken page.
-6. Sign in as a cashier or a delivery agent (a second browser profile helps).
-   - ✅ **Expected:** the sidebar and Home's cards match what that role has in the
-     app — a delivery agent sees Supply orders, Deliveries and Staff, and no sales
-     tiles. Type `/desk` into the address bar as a cashier: **Not part of your
-     role**, not the desk.
+6. Sign in as a cashier, an accountant and a delivery agent (a second browser
+   profile helps).
+   - ✅ **Expected:** the sidebar and Home match what that role has in the app.
+     The **cashier** sees today's three figures for their own shop, the Billing tile,
+     Items and Expenses, and the shop's recent bills — **no Reports** tile and no
+     profit anywhere. The **accountant** sees today's figures and a **Payment
+     history** tile, no Billing tile and no recent bills. The **delivery agent** sees
+     Orders and Deliveries tiles and no figures. Type `/desk` into the address bar
+     as a cashier: **Not part of your role**, not the desk. Every tile opens its page
+     (most still *Coming to the web*), never *Not part of your role*.
 7. Narrow the window to phone width.
    - ✅ **Expected:** the sidebar folds away behind a menu button; it opens over a
      dimmed page and closes with ✕, Escape, a click outside, or following a link.
-     The sales figure takes the first row of tiles, orders and branches the second.
+     Today's sales take the first row of figures, bills and expenses the second; the
+     quick actions follow straight after, two tiles across at 320px, their labels
+     wrapping in Gujarati rather than being cut.
 8. With Home open, ring up a sale or add a branch from the phone, then switch
    back to the browser tab.
    - ✅ **Expected:** the figures and the branch list catch up on their own — the
@@ -2582,6 +2597,152 @@ months of figures — the seed data (`Docs/TEST_DATA_SEED.md`) is made for this.
 8. Sign in as a manager, then a cashier.
    - ✅ **Expected:** the manager sees Reports; the cashier has no Reports in the
      sidebar and `/reports` says *Not part of your role*.
+9. Back as the owner, choose **Per day** at the top of Reports.
+   - ✅ **Expected:** this month, with ‹ › to step back a month (› stops at this
+     month), chips for *All branches* and each branch, the month's Total profit with
+     Total business, Variable, Fixed, Daily and Total cost, and a line saying fixed
+     costs are shared over the month's days. Below it the days that have happened,
+     newest first — on a window narrower than about 900px as rows showing Business,
+     Cost and Profit that open to the split on a click; wider, as one *Day by day*
+     table with every column, Fixed marked *shared over the month*. Range and
+     *All businesses* are not offered in this view.
+10. Pick one branch, then step back to last month.
+    - ✅ **Expected:** the figures are that branch's; last month lists every day,
+      and its days add up to the month card above them. **↻** fetches the month
+      again.
+11. Click **How costs are grouped** (beside the view chips).
+    - ✅ **Expected:** *Kinds of cost*: what Variable, Fixed and Daily mean, the two
+      rows that are always one kind (raw material variable, wages fixed), and every
+      expense category with Variable / Fixed / Daily chips. Settings has the same
+      page as **Kinds of cost**.
+12. Move *Gas* from Variable to Daily, go back to Reports.
+    - ✅ **Expected:** the chip moves at once and stays after a reload; in Reports
+      the gas spending has moved from Variable to Daily and Total cost and Total
+      profit have not changed. Move it back.
+13. Sign in as the accountant and open Kinds of cost from Reports.
+    - ✅ **Expected:** the same page with each category's kind as text and a line
+      saying only an owner, admin or manager can change it — no chips.
+
+## Flow W9 — The web app: expenses, logging one, and the branches to ring
+
+The web's version of Flow 17n and the day half of Flow 17t. Sign in as the owner;
+the seed data has a month of expenses.
+
+1. **Expenses** in the sidebar.
+   - ✅ **Expected:** a tile per branch — the warehouse too, since it has bills of its
+     own — with the first chosen and its name in the address (`?branch=`). *Today*:
+     **Spent** and **Sold**, the **Difference** under them (red when spending is
+     more), a chip per category with its amount, and **Log an expense**. *Entries*:
+     each with its note, the time and who logged it, and a red bin. *This month*,
+     beside them on a wide window: ‹ › (› stops at this month), the month's total
+     and count, the category chips, and the day-by-day list; then the day-end
+     **Export** card.
+2. Choose another branch, then step back a month.
+   - ✅ **Expected:** every figure is that branch's, and the month card shows that
+     month; nothing from the branch before flashes up. Reload: the same branch.
+3. **Log an expense**.
+   - ✅ **Expected:** *Which branch?* with the branch you came from chosen, the
+     category chips with a dashed **+ Add a category** at the end, How much, Which
+     day (today; a later day cannot be picked), a note, and *Paid with* Cash / UPI /
+     Not said, Cash chosen. **Save expense** stays grey until a category and an
+     amount above 0 are given; typing `0` says the amount must be more than zero.
+4. **+ Add a category**, type `Vegetables`, **Add category**.
+   - ✅ **Expected:** the dialog closes and *Vegetables* is in the chips, chosen.
+     Escape or **Cancel** closes it without adding anything.
+5. Enter `300`, **Save expense**.
+   - ✅ **Expected:** back on Expenses for that branch with the entry under *Entries*,
+     *Spent* up by ₹300 and Home's **Today's expenses** with it.
+6. Click the entry's red bin.
+   - ✅ **Expected:** *Remove this expense?* naming the amount and the category.
+     **Remove** takes it off the day; **Cancel** leaves it.
+7. **Export → Spreadsheet**, then **Printable summary**.
+   - ✅ **Expected:** today's day-end workbook for that branch downloads; the summary
+     opens the print dialog. Both in the page's language.
+8. Open **Home**.
+   - ✅ **Expected:** under the recent bills, *Branches with nothing logged*: a phone
+     icon, how many branches have logged nothing today, and each of them — each
+     opens its own Expenses. Once every branch has logged, the card turns green and
+     lists what each spent today, in that branch's currency.
+9. Sign in as the accountant, then as a cashier.
+   - ✅ **Expected:** the accountant reads every figure, and has the *Branches with
+     nothing logged* card, but no **Log an expense**, no bins and no export. The cashier logs for their own shop only — no branch
+     question on *Log an expense* — and has no *Branches with nothing logged* card.
+
+## Flow W12 — The web counter: billing, offline, and the receipt printer
+
+The web's version of Flows 17ab–17ad. Use **Chrome or Edge** for the printer steps.
+For the offline steps the site must be on `https` or `localhost` — `npm run dev`
+does not register the offline worker, so use a production build: `cd web`,
+`npm run build`, `npx vite preview` (port 4173), and open `http://localhost:4173`.
+Sign in as an owner (or a cashier), the backend running, the migrations applied.
+
+1. **Counter** in the sidebar (or the Billing tile on Home).
+   - ✅ **Expected:** a tile per shop (the address gets `?branch=`), *Today's sales*,
+     *Bills* and — for whoever may read them — *Today's expenses*, **Log an expense**,
+     the menu as tiles with prices, today's bills, and on the right (below about
+     900px of page, pinned to the foot of the screen) *Tap a product to start a bill*.
+2. Click three tiles, one twice.
+   - ✅ **Expected:** the bill lists them with − / + (the bin at one), the total on
+     its own row and **Charge ₹…** across the width under it. A tile on the bill shows
+     how many. Tab to a tile and press Enter: it adds one. **Ctrl + Enter** opens
+     the payment.
+3. **Charge**, at a shop with a counter UPI ID.
+   - ✅ **Expected:** *Take the payment*, the amount, **UPI** chosen, and a QR card
+     *Pay <business>* with the UPI ID, the amount and the QR. Scan it with a phone's
+     UPI app: it opens with the exact amount and the shop's code and next token in
+     the note. Choose **Cash**: *Customer gave* with *Exact amount* and the next
+     notes above the total, and the change once one is picked.
+4. **Payment done**.
+   - ✅ **Expected:** the token in large type — one more than the last of the day —
+     *The bill is saved in this browser*, what happened to the printout, and **Next
+     bill**, which has the focus. The bill is at the top of today's list, and Home's
+     figures include it.
+5. At a shop with no counter UPI ID (Payment QR codes in the app).
+   - ✅ **Expected:** no UPI choice; a line says only cash can be taken and where the
+     owner adds a UPI ID.
+6. Open a bill from the list.
+   - ✅ **Expected:** its lines and total, how it was paid, **Print again** (once a
+     printer is set up) and **Void this bill**, which asks first. A voided bill stays
+     in the list, struck through.
+7. **Receipt printer** (top right of the counter, or Settings → Receipt printer).
+   Pair the PC201 first in the computer's (or phone's) Bluetooth settings.
+   - ✅ **Expected:** *How tokens print* — **Straight to the Bluetooth printer**, and
+     **Through the print dialog**. Choose Bluetooth, then **Choose the printer**:
+     Chrome's own chooser lists the paired printer; pick it. *A Bluetooth printer is
+     chosen in this browser*. Pick the paper (58 mm, 32 characters) and **Print a
+     test slip**: the ruler fits one line and the paper is cut. The preview on the
+     right is the token as it prints, Gujarati product names as *Item 1*.
+8. Back on the counter, take a bill with auto-print on.
+   - ✅ **Expected:** the token prints by itself as **Payment done** is pressed, and
+     the step says *Token printed*. Switch the printer off and take another: the bill
+     is still saved, the step says the printer could not be reached, and **Print
+     again** works once it is back on.
+9. In Firefox (or Chrome with *Through the print dialog*), take a bill.
+   - ✅ **Expected:** the print dialog opens with a slip as wide as the roll, and the
+     step says *Sent to the print dialog*. Bluetooth is greyed out in Firefox with the
+     reason.
+10. DevTools → Network → **Offline**. Take two bills.
+    - ✅ **Expected:** tokens and printing work as before; the pill says *Offline — 2
+      bills saved in this browser…*, and each bill shows a cloud icon. Turn the
+      network back on: within seconds the pill goes and the bills lose their icons.
+      Each appears once in the day's sales.
+11. Close Chrome entirely with the Wi-Fi off, open it, go to the site's `/counter`.
+    - ✅ **Expected:** the counter opens — signed in, with its menu, today's figures
+      and the bills not yet sent — and bills can be taken. Wi-Fi on: they are sent.
+12. Open the counter in two tabs and take a bill in each, one after the other.
+    - ✅ **Expected:** consecutive tokens, never the same one twice; each tab's list
+      shows both bills.
+13. Close the day in the app, then take a bill here offline and reconnect.
+    - ✅ **Expected:** *1 bill needs attention* with the reason, **Reopen that day**
+      (for an owner or manager), **Send again**, and **Remove from this browser**,
+      which asks first.
+14. As a cashier whose business's plan has run out (Flow 17aa's last steps).
+    - ✅ **Expected:** the bill panel says the plan has ended and **Charge** is greyed
+      out; bills already in this browser stay until it is renewed.
+15. Narrow the window to 320px in Gujarati.
+    - ✅ **Expected:** two menu tiles across, the bill pinned at the foot with its total
+      above a full-width Charge, nothing cut or scrolling sideways; the charge dialog's
+      QR still fits.
 
 ---
 
@@ -2597,20 +2758,24 @@ months of figures — the seed data (`Docs/TEST_DATA_SEED.md`) is made for this.
 - **Bills are recorded as the person whose session sends them**, which is the
   person who took them except in that hand-over case.
 - **Uninstalling the app, or Android's "Clear storage", throws away bills that
-  were not sent.** They live in the app's own storage until the server has them.
+  were not sent.** They live in the app's own storage until the server has them. On
+  the web the same goes for clearing the site's data, or billing in a private
+  window — which the counter refuses where the browser keeps nothing at all.
+- **The web counter must have been opened online once in that browser** before it
+  can open offline: that is when the app and the menu are kept on the computer.
 - **Only billing works offline.** Logging an expense, Reports, Home's other cards
   and every other screen still need the server.
 - **The printed token is English, and a product name in an Indic script prints as
   its code** (or "Item 2"). The printer's own font has no Indic letters; drawing
   the slip as an image was offered and declined as slower per token.
-- **Printing is Android only**, through a printer paired in the phone's
-  Bluetooth settings. The web counter (W12) is not built yet.
+- **Printing straight to the printer needs the Android app, or Chrome or Edge** on
+  an `https` address; Safari and Firefox print through the print dialog, which opens
+  for every token (a USB printer set as the default, with Chrome started with
+  `--kiosk-printing`, skips it). **A Bluetooth printer serves one device at a
+  time**, so a phone and a computer sharing one wait for each other's connection to
+  close, about two minutes after the last token.
 - **A paid bill cannot be edited** — it is voided and rung up again. Orders taken
   with an app from before the payment step stay editable as they were.
-- **The web app's Home still shows the business's all-time sales and a list of
-  shortcuts**, not today's figures and the quick-action tiles the Android app now
-  opens on. The tiles are shared data (`constants/quickActions.ts`), ready for the
-  web to render.
 
 
 - **A plan can only be changed by hand** (R28, stage 1). There is no way to pay inside the
@@ -2623,10 +2788,11 @@ months of figures — the seed data (`Docs/TEST_DATA_SEED.md`) is made for this.
 - **The 25-logins-per-branch fair use is stated, not enforced.**
 
 - **The web app has sign-in, sign-up, Home, Settings, notifications, branches, the
-  work calendar, products, sales upload and Reports so far.** Every other page it lists
-  shows *Coming to the web* until it is ported; use the mobile app for that work.
-  Its Home also lacks four of the app's cards — today's punch-in, the branches to
-  chase for expenses, and the two supply-payment cards.
+  work calendar, products, sales upload, Reports (by day and by month), Kinds of
+  cost, Expenses and the counter so far.** Every other page it lists shows *Coming to
+  the web* until it is ported; use the mobile app for that work. Its Home also lacks
+  three of the app's cards — today's punch-in and the two supply-payment cards — and
+  the counter's UPI ID is still set up from the app (Payment QR codes, W11).
 - **The web does not pop notifications up.** They arrive in the bell, which asks the
   server every minute while its tab is in view and at once when the tab comes back.
   Browser push is the last phase of the web plan (W13) and needs a Firebase web app

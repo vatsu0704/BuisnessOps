@@ -1,25 +1,15 @@
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { IconType } from 'react-icons';
-import {
-  IoBicycleOutline,
-  IoCalculatorOutline,
-  IoCloudUploadOutline,
-  IoConstructOutline,
-  IoCubeOutline,
-  IoFileTrayFullOutline,
-  IoGitBranchOutline,
-  IoPricetagsOutline,
-  IoReceiptOutline,
-  IoRefresh,
-  IoStorefrontOutline,
-  IoWalletOutline,
-} from 'react-icons/io5';
+import { IoConstructOutline, IoGitBranchOutline, IoRefresh, IoStorefrontOutline } from 'react-icons/io5';
+import { QUICK_ACTIONS, isQuickActionVisible } from '@shared/constants/quickActions';
 import NoBusinessAccessNotice from '@/components/NoBusinessAccessNotice';
 import BranchCatalogSection from '@/components/home/BranchCatalogSection';
 import BranchesSection from '@/components/home/BranchesSection';
-import SalesTilesSection from '@/components/home/SalesTilesSection';
+import ExpenseGapsCard from '@/components/home/ExpenseGapsCard';
 import PlanBanner from '@/components/home/PlanBanner';
+import QuickActionsSection from '@/components/home/QuickActionsSection';
+import RecentBillsSection from '@/components/home/RecentBillsSection';
+import TodaySection from '@/components/home/TodaySection';
 import Enter from '@/components/ui/Enter';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import InfoCard from '@/components/ui/InfoCard';
@@ -28,7 +18,7 @@ import { useBranches } from '@/hooks/useBranches';
 import { useMembership } from '@/hooks/useBusinessId';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
-import { useSalesSummary } from '@/hooks/useSalesSummary';
+import { useToday } from '@/hooks/useToday';
 import { pathTo } from '@/routes/paths';
 import { useAuthStore } from '@/store/authStore';
 import { step } from '@/theme/motion';
@@ -37,56 +27,28 @@ import { hasCapability, hasNoActiveBusiness, passesGate, type Gate } from '@/uti
 import styles from './HomePage.module.css';
 
 /**
- * What Home shows and who sees each part — the app's Home section table, split
- * into the numbers and lists people *read* (the main column) and the doors to
- * their daily work (shortcuts).
- *
- * Gates are the app's, unchanged: a capability, narrowed with `hideWhen` where
+ * What Home shows and who sees each part — the app's Home section table, in its
+ * order, with the same gates: a capability, narrowed with `hideWhen` where
  * holding it does not make it that person's job.
  *
- * Not yet on the web, and so not listed: today's punch card, the branches to
- * chase for expenses, and the two supply-payment cards. Each comes with the page
- * it belongs to.
+ * `side` puts a section in the right-hand column on a wide window; narrower,
+ * every section is one column in the app's order, so the quick actions come
+ * straight after today's figures, as on the phone.
+ *
+ * Not yet on the web, and so not listed: today's punch card and the two
+ * supply-payment cards. Each comes with the page it belongs to.
  */
-const MAIN_SECTIONS: (Gate & { key: string; Component: ComponentType })[] = [
-  { key: 'sales', capability: 'analytics:viewBranch', Component: SalesTilesSection },
+type Section = Gate & { key: string; Component: ComponentType; side?: boolean };
+
+const SECTIONS: Section[] = [
+  { key: 'today', capability: 'analytics:viewToday', Component: TodaySection },
+  // Ungated: each tile carries its own gate, and the section is dropped when none passes.
+  { key: 'quickActions', capability: null, Component: QuickActionsSection, side: true },
+  { key: 'recentBills', capability: 'counterOrder:create', Component: RecentBillsSection },
+  // The back office's list of branches to ring (requirement 10).
+  { key: 'expenseGaps', capability: 'expense:viewAllBranches', Component: ExpenseGapsCard },
   { key: 'branches', capability: 'branch:update', Component: BranchesSection },
   { key: 'catalog', capability: 'product:view', Component: BranchCatalogSection },
-];
-
-type ShortcutKey =
-  | 'counter'
-  | 'expenses'
-  | 'supply'
-  | 'supplyCatalog'
-  | 'desk'
-  | 'deliveries'
-  | 'supplyTrack'
-  | 'data';
-
-const SHORTCUTS: (Gate & { key: ShortcutKey; icon: IconType; to: string })[] = [
-  { key: 'counter', capability: 'counterOrder:create', icon: IoCalculatorOutline, to: '/counter' },
-  { key: 'expenses', capability: 'expense:log', icon: IoWalletOutline, to: '/expenses' },
-  // A branch orders raw material; an admin does not.
-  {
-    key: 'supply',
-    capability: 'supplyOrder:create',
-    hideWhen: { holds: 'analytics:viewBusiness' },
-    icon: IoCubeOutline,
-    to: '/supply',
-  },
-  { key: 'supplyCatalog', capability: 'supplyItem:manage', icon: IoPricetagsOutline, to: '/supply' },
-  { key: 'desk', capability: 'supplyOrder:fulfil', icon: IoFileTrayFullOutline, to: '/desk' },
-  // Whoever runs the desk is not who carries the run.
-  {
-    key: 'deliveries',
-    capability: 'supplyOrder:deliver',
-    hideWhen: { holds: 'supplyOrder:fulfil' },
-    icon: IoBicycleOutline,
-    to: '/deliveries',
-  },
-  { key: 'supplyTrack', capability: 'supplyOrder:view', icon: IoReceiptOutline, to: '/supply-orders' },
-  { key: 'data', capability: 'dataSource:manage', icon: IoCloudUploadOutline, to: '/upload' },
 ];
 
 export default function HomePage() {
@@ -95,21 +57,28 @@ export default function HomePage() {
   const business = useAuthStore((s) => s.business);
   const membership = useMembership();
   const { isLoading, error, refresh, stats } = useBranches();
-  const sales = useSalesSummary();
+  const today = useToday();
 
   useDocumentTitle(t('tabs.home'));
   // A branch added, or a sale rung up on a phone, shows up when this page is
   // opened again or the tab comes back into view.
-  useRefreshOnFocus(() => {
+  const refreshAll = () => {
     void refresh();
-    void sales.refresh();
-  });
+    void today.refresh();
+  };
+  useRefreshOnFocus(refreshAll);
 
   const firstName = user?.name?.trim().split(/\s+/)[0] ?? user?.email ?? '';
   const noAccess = hasNoActiveBusiness(user);
 
-  const mainSections = MAIN_SECTIONS.filter((section) => passesGate(membership, section));
-  const shortcuts = SHORTCUTS.filter((shortcut) => passesGate(membership, shortcut));
+  const hasQuickActions = QUICK_ACTIONS.some((action) =>
+    isQuickActionVisible(action, (capability) => hasCapability(membership, capability))
+  );
+  const sections = SECTIONS.filter(
+    (section) => passesGate(membership, section) && (section.key !== 'quickActions' || hasQuickActions)
+  );
+  const mainSections = sections.filter((section) => !section.side);
+  const sideSections = sections.filter((section) => section.side);
 
   // A branch-scoped member with no branch (requirement 18): say so, rather than
   // render cards with nothing in them. Somebody who can add a branch is invited
@@ -119,9 +88,9 @@ export default function HomePage() {
   const settled = !isLoading;
   const hasNoBranchAssigned = !!membership && !noAccess && !reachesEveryBranch && settled && stats.total === 0;
   const showAddFirstBranch = !error && !noAccess && settled && stats.total === 0 && canAddBranch;
-  const roleHasNothingYet = mainSections.length === 0 && shortcuts.length === 0;
+  const roleHasNothingYet = sections.length === 0;
 
-  const refreshing = isLoading || sales.isLoading;
+  const refreshing = isLoading || today.isLoading;
 
   return (
     <div className={styles.page}>
@@ -139,10 +108,7 @@ export default function HomePage() {
         <button
           type="button"
           className={styles.refresh}
-          onClick={() => {
-            void refresh();
-            void sales.refresh();
-          }}
+          onClick={refreshAll}
           disabled={refreshing}
           aria-label={t('web.home.refresh')}
           title={t('web.home.refresh')}
@@ -160,9 +126,9 @@ export default function HomePage() {
       {/* Requirement 28: nothing unless the plan is ending, in grace, or read-only. */}
       <PlanBanner membership={membership} />
 
-      {error || sales.error ? (
+      {error || today.error ? (
         <Enter delay={step(1)}>
-          <ErrorBanner message={(error || sales.error) as string} />
+          <ErrorBanner message={(error || today.error) as string} />
         </Enter>
       ) : null}
 
@@ -188,35 +154,24 @@ export default function HomePage() {
         </Enter>
       ) : null}
 
-      {!noAccess && (mainSections.length > 0 || shortcuts.length > 0) ? (
-        <div className={cx(styles.layout, mainSections.length > 0 && shortcuts.length > 0 && styles.split)}>
-          {mainSections.length > 0 ? (
-            <div className={styles.column}>
-              {mainSections.map(({ key, Component }, index) => (
-                <Enter key={key} delay={step(Math.min(index + 1, 5))}>
-                  <Component />
-                </Enter>
-              ))}
-            </div>
-          ) : null}
-
-          {shortcuts.length > 0 ? (
-            <Enter delay={step(2)} as="section" className={styles.shortcuts}>
-              <h2 className={styles.shortcutsTitle}>{t('web.home.shortcuts')}</h2>
-              <ul className={styles.shortcutList}>
-                {shortcuts.map((shortcut) => (
-                  <li key={shortcut.key}>
-                    <InfoCard
-                      icon={shortcut.icon}
-                      title={t(`home.${shortcut.key}Title`)}
-                      subtitle={t(`home.${shortcut.key}Subtitle`)}
-                      to={shortcut.to}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </Enter>
-          ) : null}
+      {!noAccess && sections.length > 0 ? (
+        <div className={cx(styles.layout, mainSections.length > 0 && sideSections.length > 0 && styles.split)}>
+          {/* Below the split each column is `display: contents`, so `order` lays
+              every section out in the app's sequence. */}
+          {[mainSections, sideSections].map((column, columnIndex) =>
+            column.length > 0 ? (
+              <div key={columnIndex} className={styles.column}>
+                {column.map(({ key, Component }) => {
+                  const order = sections.findIndex((section) => section.key === key);
+                  return (
+                    <Enter key={key} delay={step(Math.min(order + 1, 5))} style={{ order }}>
+                      <Component />
+                    </Enter>
+                  );
+                })}
+              </div>
+            ) : null
+          )}
         </div>
       ) : null}
 

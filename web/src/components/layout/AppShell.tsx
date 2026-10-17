@@ -1,6 +1,7 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { useCounterSync } from '@/hooks/useCounterSync';
 import { useNotificationPolling } from '@/hooks/useNotifications';
 import { useAuthStore } from '@/store/authStore';
 import PageLoader from './PageLoader';
@@ -19,6 +20,8 @@ export default function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   // The bell has no push to wake it yet; this keeps its count current.
   useNotificationPolling();
+  // Bills taken offline are sent when the connection returns, whichever page is open.
+  useCounterSync();
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   // Following a link in the drawer closes it.

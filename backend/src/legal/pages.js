@@ -162,14 +162,18 @@ records it keeps about you, ask that business first.</p>
   for your phone and the language it is set to, so a notification can reach you
   in your language.</li>
   <li><strong>Counter bills taken without a connection:</strong> kept in the app's
-  private storage on that phone until they reach our servers, then stored like any
-  other sale. A branch's phone number, if the business enters one, is printed on
-  its receipts.</li>
+  private storage on that phone, or in the web browser's own storage on that
+  computer, until they reach our servers, then stored like any other sale. A
+  branch's phone number, if the business enters one, is printed on its receipts.
+  So that the counter opens without a connection, the web version also keeps a copy
+  of the signed-in session and the app's own files in that browser; signing out
+  removes the session copy.</li>
   <li><strong>The receipt printer:</strong> to print tokens, the app asks Android
   for the "Nearby devices" permission and lists the printers already paired with
-  the phone. Which printer was chosen stays on the phone and is never sent to us;
-  a receipt goes only to that printer. The app does not search for devices and does
-  not use your location for this.</li>
+  the phone; in Chrome or Edge, the browser asks you to choose the printer once.
+  Which printer was chosen stays on that phone or in that browser and is never sent
+  to us; a receipt goes only to that printer. Neither searches for devices nor uses
+  your location for this.</li>
   <li><strong>Server logs:</strong> when the app talks to our servers, we log
   the time, the address the request came from (IP address), which account and
   business made it, and whether it succeeded. These are for security and for

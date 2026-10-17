@@ -112,3 +112,30 @@ export function pathTo<K extends RouteKey>(
 export type ParamlessRoute = {
   [K in RouteKey]: [PathParam<(typeof ROUTES)[K]['path']>] extends [never] ? K : never;
 }[RouteKey];
+
+/**
+ * The page standing for an app route that takes no path parameters — for links
+ * shared data names by the app's route, as Home's quick actions do. Null when no
+ * such page exists, which a test rules out for every route a tile names.
+ */
+export function routeForAppRoute(appRoute: GatedRoute): ParamlessRoute | null {
+  for (const [key, def] of Object.entries(ROUTES) as [RouteKey, RouteDef][]) {
+    const access = def.access as Access;
+    if (access && 'appRoute' in access && access.appRoute === appRoute && !def.path.includes(':')) {
+      return key as ParamlessRoute;
+    }
+  }
+  return null;
+}
+
+/**
+ * The address of that page. The app's route params become the query string —
+ * `{ tab: 'history' }` → `/payments?tab=history` — which is how a web page takes
+ * what the app hands a screen.
+ */
+export function pathForAppRoute(appRoute: GatedRoute, params?: Record<string, string>): string | null {
+  const key = routeForAppRoute(appRoute);
+  if (!key) return null;
+  const query = params ? new URLSearchParams(params).toString() : '';
+  return query ? `${ROUTES[key].path}?${query}` : ROUTES[key].path;
+}

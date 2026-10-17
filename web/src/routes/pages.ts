@@ -115,9 +115,13 @@ export const PAGES: Record<RouteKey, PageDef> = {
   payrollRun: { titleKey: 'payrollRun.title', icon: IoCashOutline },
   attendance: { titleKey: 'attendance.title', icon: IoFingerPrintOutline },
 
-  expenses: { titleKey: 'expenses.title', icon: IoWalletOutline },
-  addExpense: { titleKey: 'expenses.addTitle', icon: IoWalletOutline },
-  expenseCategories: { titleKey: 'costTypes.title', icon: IoWalletOutline },
+  expenses: { titleKey: 'expenses.title', icon: IoWalletOutline, Page: lazy(() => import('@/pages/ExpensesPage')) },
+  addExpense: { titleKey: 'expenses.addTitle', icon: IoWalletOutline, Page: lazy(() => import('@/pages/AddExpensePage')) },
+  expenseCategories: {
+    titleKey: 'costTypes.title',
+    icon: IoWalletOutline,
+    Page: lazy(() => import('@/pages/ExpenseCategoriesPage')),
+  },
 
   supply: { titleKey: 'supply.catalogTitle', icon: IoCubeOutline },
   supplyCart: { titleKey: 'supply.cartTitle', icon: IoCartOutline },
@@ -133,6 +137,10 @@ export const PAGES: Record<RouteKey, PageDef> = {
   addVendor: { titleKey: 'vendors.add', icon: IoStorefrontOutline },
   editVendor: { titleKey: 'vendors.edit', icon: IoStorefrontOutline },
 
-  counter: { titleKey: 'counter.title', icon: IoCalculatorOutline },
-  receiptPrinter: { titleKey: 'printer.title', icon: IoPrintOutline },
+  counter: { titleKey: 'counter.title', icon: IoCalculatorOutline, Page: lazy(() => import('@/pages/CounterPage')) },
+  receiptPrinter: {
+    titleKey: 'printer.title',
+    icon: IoPrintOutline,
+    Page: lazy(() => import('@/pages/ReceiptPrinterPage')),
+  },
 };

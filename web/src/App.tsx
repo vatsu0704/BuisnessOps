@@ -22,13 +22,21 @@ export default function App() {
 
   // Coming back to the tab re-reads the session, as the app does on returning
   // to the foreground: a role changed or access revoked meanwhile decides what
-  // this person may now see.
+  // this person may now see. So does the connection coming back, which also
+  // ends a session opened offline from the kept copy.
   useEffect(() => {
     function onVisibility() {
       if (document.visibilityState === 'visible' && useAuthStore.getState().token) void refreshSession();
     }
+    function onOnline() {
+      if (useAuthStore.getState().token) void refreshSession();
+    }
     document.addEventListener('visibilitychange', onVisibility);
-    return () => document.removeEventListener('visibilitychange', onVisibility);
+    window.addEventListener('online', onOnline);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('online', onOnline);
+    };
   }, [refreshSession]);
 
   return (

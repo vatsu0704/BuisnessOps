@@ -279,7 +279,7 @@ beside the API.
 4. Sign in on the site against the hosted API. A request from an origin that is not
    on the list is refused by the browser — that is the check that step 3 worked.
 
-**Four things that fail quietly:**
+**Five things that fail quietly:**
 
 - **`VITE_API_URL` is inlined at build time**, exactly like `EXPO_PUBLIC_API_URL`.
   Changing it on Render does nothing until the site is rebuilt.
@@ -291,7 +291,28 @@ beside the API.
   build only `web/` fails at `@shared/…`. It does *not* need `frontend`'s
   dependencies installed.
 - **HTTPS is not optional.** The browser only gives a page the location (punch-in,
-  W8) or push (W13) over HTTPS or on `localhost`. Render serves HTTPS by default.
+  W8), push (W13), the service worker that opens the counter offline, and Web
+  Serial for the Bluetooth receipt printer (W12) over HTTPS or on `localhost`.
+  Render serves HTTPS by default. On a plain-http address the counter still bills
+  — it just does not open offline and prints only through the print dialog.
+- **`/sw.js` must never be cached.** It is how a counter left open all day learns
+  there is a new build. `render.yaml` sends it with `Cache-Control: no-cache`;
+  after a deploy, `curl -I https://<site>/sw.js` should show that header and a
+  JavaScript content type (if the host ever answered it with `index.html`, the
+  worker would simply fail to register — harmless, but the counter would not open
+  offline).
+
+**How a deploy reaches an open counter.** Pages are fetched from the network
+first, so anyone online gets the new build on their next page load; the new worker
+then installs in the background and keeps the new files for offline use. The
+previous build's files are kept beside it, so a tab still on the old build can load
+its chunks; a tab that does hit a missing chunk reloads itself once.
+
+**If the service worker ever misbehaves**, build with
+`VITE_SERVICE_WORKER=off` (an environment variable on the Render site) and
+deploy: that build publishes a worker that deletes the kept files, unregisters
+itself and reloads its pages, and registers none. Bills are not in the worker's
+caches — they are in the browser's IndexedDB — so this never loses one.
 
 The session is a bearer token kept in the browser's `localStorage`, as the API
 issues it. Nothing on the site is secret: the bundle contains the API's address

@@ -1,13 +1,8 @@
+import type { ReportMetric } from '@/types/analytics';
 import { cx } from '@/utils/cx';
 import styles from './MetricGrid.module.css';
 
-export type Metric = {
-  label: string;
-  value: string;
-  /** A second line under the figure — "3 orders", "not settled". */
-  caption?: string;
-  tone?: 'default' | 'cost' | 'good';
-};
+export type Metric = ReportMetric;
 
 /**
  * The figures behind a net profit, in a grid that wraps — two across on a phone,

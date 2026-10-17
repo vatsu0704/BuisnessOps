@@ -108,7 +108,8 @@ export const NAV_GROUPS: NavGroup[] = [
         route: 'expenses',
         icon: IoWalletOutline,
         labelKey: 'expenses.title',
-        gates: [{ capability: 'expense:log' }],
+        // Reading the day's spending is enough: the page is read-only without `expense:log`.
+        gates: [{ capability: 'expense:view' }],
       },
     ],
   },

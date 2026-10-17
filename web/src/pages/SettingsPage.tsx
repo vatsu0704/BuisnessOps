@@ -5,7 +5,9 @@ import {
   IoCalendarOutline,
   IoFingerPrintOutline,
   IoLogOutOutline,
+  IoOptionsOutline,
   IoPeopleCircleOutline,
+  IoPrintOutline,
   IoQrCodeOutline,
   IoRibbonOutline,
   IoShieldCheckmarkOutline,
@@ -164,6 +166,24 @@ export default function SettingsPage() {
                 title={t('paymentAccounts.title')}
                 subtitle={t('paymentAccounts.settingsSubtitle')}
                 to={pathTo('paymentAccounts')}
+              />
+            ) : null}
+            {/* Requirement 34: how Reports groups each expense category. */}
+            {hasCapability(membership, 'expense:classify') ? (
+              <InfoCard
+                icon={IoOptionsOutline}
+                title={t('costTypes.title')}
+                subtitle={t('costTypes.settingsSubtitle')}
+                to={pathTo('expenseCategories')}
+              />
+            ) : null}
+            {/* Requirement 31: the till's printer is a setting of this browser. */}
+            {hasCapability(membership, 'counterOrder:create') ? (
+              <InfoCard
+                icon={IoPrintOutline}
+                title={t('printer.title')}
+                subtitle={t('printer.settingsSubtitle')}
+                to={pathTo('receiptPrinter')}
               />
             ) : null}
           </Enter>

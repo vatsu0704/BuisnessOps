@@ -1159,8 +1159,9 @@ Re-scopes R17 ("billing online, against the live server") and removes "offline b
 from *Not in scope*.
 
 **Confirmed:**
-- **The Android app now; the web counter later** (W12), reusing the shared pure code —
-  the sale queue's rules, the receipt layout and the printer encoder.
+- **The Android app first, then the web counter** (W12, built 2026-10-17), on the same
+  shared code — the sale queue's rules, the sender's rules, the receipt layout and the
+  printer encoder.
 - **One write path.** Every sale, online or offline, is sent to
   `POST /counter-sales/sync`. An online sale is an offline sale whose queue emptied at
   once, so there is no second path to keep honest.
@@ -1182,6 +1183,13 @@ from *Not in scope*.
   known session, rather than the sign-in screen.
 - **Only billing is offline.** Logging an expense and every other screen still need the
   server.
+- **In a browser** (W12, decided 2026-10-16): **fully offline** — the web app is kept
+  on the computer by a service worker, so the counter opens with no connection even
+  after the browser is closed — and the bills are kept in the browser's own storage
+  (IndexedDB), each saved before its token is shown. Two tabs of the counter share one
+  queue: a token is numbered as it is saved, so they never issue the same one, and only
+  one tab sends at a time. A browser that keeps no data (some private windows) takes no
+  bill and says why. The counter must have been opened online once in that browser.
 
 | | |
 | --- | --- |
@@ -1218,8 +1226,13 @@ from *Not in scope*.
   quantity, rate and amount, the total, and how it was paid. No GSTIN or FSSAI number.
 - **Printing never decides whether a sale happened.** The bill is saved first; a print
   that fails leaves the bill and a "Print again". A reprint is marked COPY.
-- **The printer is the phone's setting**, not the business's: which printer, 58 or 80mm
-  paper, and whether tokens print by themselves. Android only.
+- **The printer is the device's setting**, not the business's: which printer, 58 or 80mm
+  paper, and whether tokens print by themselves.
+- **In a browser** (W12, decided 2026-10-16): Chrome and Edge print **straight to the
+  paired Bluetooth printer** through Web Serial, with the same receipt bytes as the app,
+  so a token prints by itself; the printer is chosen once in the browser's own chooser.
+  Any other browser, or a USB printer the computer already has, prints **through the
+  print dialog** with a slip the paper's width — the dialog opens for every token.
 
 | | |
 | --- | --- |
@@ -1836,5 +1849,6 @@ Deliberate exclusions, recorded so they are not mistaken for oversights:
   slip as an image would allow it and was declined as slower per token.
 - **Offline expense logging, and every other screen offline** (R30). Only billing works
   without a connection.
-- **Printing from iOS or the web** (R31). The receipt printer is reached from the Android
-  app; the web counter (W12) will print through the browser.
+- **Printing from iOS** (R31). The receipt printer is reached from the Android app and,
+  since W12, from Chrome or Edge (or any browser's print dialog); the iOS app does not
+  print.

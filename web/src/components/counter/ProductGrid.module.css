@@ -1,0 +1,93 @@
+/* The column count comes from the room the menu has: two tiles in a 320px
+   window, more as the column widens — never a fixed percentage. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cell {
+  display: flex;
+  min-width: 0;
+}
+
+.tile {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-width: 0;
+  min-height: 92px;
+  padding: var(--space-md);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+  transition: transform var(--duration-quick) var(--ease-snappy), border-color var(--duration-quick) ease,
+    background-color var(--duration-quick) ease;
+}
+
+.tile:hover {
+  border-color: #c9c6f7;
+}
+
+.tile:active {
+  transform: scale(0.97);
+}
+
+.onBill {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+/* Two lines of name, as the app shows: a menu of real dish names holds in two. */
+.name {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+}
+
+.price {
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.count {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--color-white);
+}
+
+.plus {
+  flex: none;
+  color: var(--color-text-tertiary);
+}

@@ -148,3 +148,9 @@ export interface CounterSyncResponse {
   serverNow: string;
   results: CounterSaleSyncResult[];
 }
+
+/** Where sending the counter's sales stands (requirement 30). */
+export type CounterSyncState = 'idle' | 'syncing' | 'offline' | 'blocked';
+
+/** A trading branch the counter can bill at, remembered for an offline start. */
+export type CounterBranch = { id: string; name: string; code: string };

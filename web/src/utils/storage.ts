@@ -41,4 +41,8 @@ export const STORAGE_KEYS = {
   token: 'hisabkitab_token',
   businessId: 'hisabkitab_business_id',
   language: 'hisabkitab_language',
+  /** The last session the server confirmed, so the counter opens offline (requirement 30). */
+  sessionCache: 'hisabkitab_session_cache',
+  /** This browser's receipt printer settings (requirement 31). */
+  printer: 'hisabkitab_printer',
 } as const;

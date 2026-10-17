@@ -613,8 +613,12 @@ the web" page at its real route, so the navigation is already the finished one.
   and the pure helpers — `utils/format.ts`, `validation.ts`, `date.ts`,
   `upiUri.ts`, `expenseCategory.ts`, `hooks/useMonthCursor.ts`,
   `constants/salesTemplate.ts`, `constants/plans.ts` (how a plan is described, and
-  when Home's plan banner shows). A second copy of any of them would drift exactly
-  as the mirrors are checked not to.
+  when Home's plan banner shows), `constants/quickActions.ts` (Home's tiles and who
+  sees each), `utils/costMetrics.ts` (a report card's kinds of cost) and
+  `utils/dailyReport.ts` (Reports' Per day arithmetic), and the counter's pure half
+  (see *The counter works offline*). A second copy of any of them would drift
+  exactly as the mirrors are checked not to — the web's own `costMetrics.ts` had
+  already lost the per-day caption before it was shared.
 - **So a shared file imports only relative paths and four packages** — `i18next`,
   `react`, `react-dom`, `react-i18next` — the same fence as
   `permissions/catalog.js`. The web compiles these files with its own toolchain,
@@ -658,6 +662,24 @@ the web" page at its real route, so the navigation is already the finished one.
 - **`VITE_API_URL` is inlined at build time**, the same trap as
   `EXPO_PUBLIC_API_URL`. Serve the build from an origin the backend's
   `CORS_ORIGINS` allows once that is set.
+- **A service worker keeps the whole build** (`web/sw/service-worker.js`) so the
+  counter opens with no connection, even after a browser restart. The build writes
+  its file list into `dist/sw.js` (the plugin in `vite.config.ts`, which fails the
+  build if the worker's marker is gone). Its invariants: **the API is never
+  cached** (another origin, and `/api/`); pages are network-first and fall back to
+  this build's kept page; a hashed asset is kept only when it is not HTML, because
+  the host answers a missing file with the app's page; this build's and the
+  previous build's caches are kept, so an open tab can still load its chunks. It
+  registers only in a production build on a secure page, and `npm run shots`
+  blocks it. `VITE_SERVICE_WORKER=off` publishes a worker that removes itself.
+- **The receipt printer is reached through Web Serial** (`web/src/utils/printer.ts`):
+  Chrome and Edge open a printer paired in the system's Bluetooth settings over its
+  Serial Port Profile and are sent the shared `buildReceipt` bytes, so a web token
+  is the app's token. Web Serial names no device, so this site holds exactly one
+  port — choosing a printer forgets the others. Any other browser, or a USB
+  printer, prints through the print dialog (`utils/receiptHtml.ts`, built from the
+  same rows, every row HTML-escaped). How this browser prints is a setting of the
+  browser (`hisabkitab_printer`), not of an account.
 
 ## Native Android builds
 
@@ -883,15 +905,39 @@ does. The rules that make that safe, each of which is easy to break by tidying:
   serialised per key. Not SecureStore (secrets only, ~2KB a value) and not
   AsyncStorage (a native dependency for what `expo-file-system` already does).
   Use it for anything else that must survive offline; keep it out of the shared
-  files the web reads, which will use the browser's storage instead.
+  files the web reads — the web keeps its bills in IndexedDB (below).
 - **The app opens offline.** `authStore.bootstrap` restores the last session the
   server confirmed (`session-cache`) when the server cannot be reached, for the
   same token only. The cost is written down in TESTING_GUIDE's known limitations:
   an account disabled while its phone is offline keeps billing there until the
   phone next reaches the server.
 - **The pure half is shared.** `utils/counterQueue.ts`, `counterReceipt.ts`,
-  `receipt.ts` and `escpos.ts` import nothing but each other and the types, and
-  are tested in the web's Vitest — the web counter (W12) reuses them.
+  `receipt.ts`, `escpos.ts` and the sender's rules, `counterSyncRunner.ts`, import
+  nothing but each other and the types, and are tested in the web's Vitest. Each
+  app wires the runner to its own store, API call and axios errors
+  (`utils/counterSync.ts` in both); change *when* or *how* the counter sends in
+  the runner, never in one app's wiring.
+
+**The web counter keeps the same rules in a browser** (W12), and adds what tabs
+need. Each is easy to undo by tidying:
+
+- **Its bills are in IndexedDB, not localStorage** (`web/src/utils/counterPersistence.ts`).
+  A write resolves only once its transaction has committed (`durability: 'strict'`
+  for a sale) — "saved before printed" in a browser; localStorage returns before
+  the disk has it and swallows a full disk.
+- **Every change is one read-change-write transaction on the stored record**, and
+  the record is then the store's state. **A sale's token is chosen inside that
+  transaction**, from what is really stored, so two tabs of the counter never
+  issue the same token. Never write the store's in-memory copy back whole: it may
+  be a tab behind.
+- **One tab sends.** The drain runs under a Web Lock per business; a tab that
+  finds it held tries later. Without Web Locks (plain http) it just sends — a
+  resend is DUPLICATE. Other tabs hear of a change, and of the sync state, on a
+  BroadcastChannel.
+- **A browser that will not keep data takes no bill** (some private windows): the
+  counter says why rather than pretend to save.
+- **The page opens offline** from `hisabkitab_session_cache` (the web authStore,
+  same rules as the app's), and from the service worker — see *Web app*.
 
 ## Dependency overrides
 
@@ -1154,8 +1200,10 @@ when the bundle was made. There is no run-time configuration to correct it
 afterwards.
 
 **The web app is a static site, built the same way** — `render.yaml` describes it
-for Render. Three things about it are invariants: the build checks out the whole
+for Render. Four things about it are invariants: the build checks out the whole
 repository (it compiles `frontend/src`'s shared files), every address is rewritten
-to `index.html` (the pages are drawn in the browser), and once it is served the
-API's `CORS_ORIGINS` must name its origin. `Docs/DEPLOYMENT.md` *The web app* has
-the steps.
+to `index.html` (the pages are drawn in the browser), **`/sw.js` is served with
+`Cache-Control: no-cache`** (it is how an open counter learns of a new build; kept
+for a year, it would pin every shop to today's), and once it is served the API's
+`CORS_ORIGINS` must name its origin. `Docs/DEPLOYMENT.md` *The web app* has the
+steps, and `VITE_SERVICE_WORKER=off` is the way back if a worker ever misbehaves.

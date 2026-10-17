@@ -43,8 +43,11 @@ The web app does **not** copy the mobile app's code. `@shared/` resolves to
 | `permissions/index.ts`, `matrix.json`, `explain.ts`, `staffBase.ts` | The capability matrix (a mirror of the backend's) and R19's "Only Warehouse can …" sentences |
 | `navigation/routeCapabilities.ts` | What opening each screen needs — the web's pages open on the same rule |
 | `types/*.ts` (all but `notification.ts`) | The API's shapes |
-| `constants/brand.ts`, `brandMark.json`, `salesTemplate.ts` | The name, the logo, the sales-upload template |
+| `constants/brand.ts`, `brandMark.json`, `salesTemplate.ts`, `plans.ts` | The name, the logo, the sales-upload template, how a plan is described |
+| `constants/quickActions.ts` | Home's tiles and who sees each — a test proves every tile a role sees opens for it |
 | `utils/format.ts`, `validation.ts`, `date.ts`, `upiUri.ts`, `expenseCategory.ts`, `hooks/useMonthCursor.ts` | Amounts in Indian grouping, dates through the translation files, UPI links |
+| `utils/costMetrics.ts`, `dailyReport.ts` | A report card's kinds of cost, and Reports' Per day arithmetic |
+| `utils/counterQueue.ts`, `counterReceipt.ts`, `receipt.ts`, `escpos.ts` | The counter's pure half: the cart, tokens, the sync queue, the printed slip |
 
 **A shared file imports only relative paths and `i18next`, `react`, `react-dom`
 or `react-i18next`.** It is compiled by the web's toolchain, where `@/` means
@@ -66,23 +69,31 @@ web/
 ├── public/                 favicon (the app's own, from frontend/assets)
 ├── scripts/                check-i18n-parity.js, check-shared-imports.js,
 │                           shots/ (the screenshot harness: run, scenarios, pretend API)
+├── sw/                     service-worker.js — the build writes dist/sw.js from it, with
+│                           every file of that build, so the counter opens offline
 └── src/
     ├── api/                axios client, error translation, one file per resource
     ├── components/         BusinessFields, ExportActions (requirement 17's card), LanguageMenu, …
     │   ├── brand/          BrandMark, Wordmark
     │   ├── branches/       BranchPicker; the two branch forms' shared fields — kind and
     │   │                   payment model, the geofence card and its rules (geofence.ts)
+    │   ├── counter/        the counter's menu, bill panel, charge and bill dialogs, sync
+    │   │                   pill and the bills the server refused
+    │   ├── expense/        CategoryPicker, Breakdown
     │   ├── home/           Home's sections
+    │   ├── payments/       QrCode, UpiPayCard
     │   ├── products/       ProductRow, and the catalog rules (grouping, search, a branch's price)
     │   ├── reports/        Reports' cards, the month strip and bars, the branch × month table,
-    │   │                   and its rules (ranking, the month's reconciliation)
+    │   │                   Per day, and the ranking rules
     │   ├── upload/         TemplateGuide, and what an import's answer means
     │   ├── layout/         AppShell, Sidebar, TopBar, UserMenu, AuthHeader, ScreenBackground
     │   └── ui/             FormInput, FormTextArea, DateField, SearchField, FileDrop,
     │                       PrimaryButton, Button, ButtonLink, Dialog, ConfirmHost, PageHeader,
-    │                       OptionRow, ChipGroup, CheckChips, ChoiceTile, Pill, InfoCard, StatTile, …
+    │                       OptionRow, ChipGroup, CheckChips, ChoiceTile, Pill, InfoCard, StatTile,
+    │                       MonthCursor, …
     ├── constants/          navigation (every sidebar entry and who sees it), brand
-    ├── hooks/              useBranches, useSalesSummary, useMembership, useRefreshOnFocus,
+    ├── hooks/              useBranches, useToday, useMembership, useRefreshOnFocus, useCounterSync
+    │                       (sends the counter's bills while anyone who bills is signed in),
     │                       useGoBack (back to whichever page opened a form), …
     ├── i18n/               i18next setup, the web-only locale files
     ├── pages/              one per ported screen (Settings, Notifications, AddBranch, …),
@@ -90,12 +101,14 @@ web/
     ├── permissions/        re-exports the shared matrix
     ├── routes/             paths (every route and who may open it), pages (what each shows),
     │                       AppRoutes, guards (RequireAuth, GuestOnly, RequireAccess)
-    ├── store/              zustand: authStore, branchStore, salesStore, notificationStore,
-    │                       analyticsStore (keyed on the business and the month window)
+    ├── store/              zustand: authStore (with the offline session copy), branchStore,
+    │                       todayStore, notificationStore, analyticsStore (keyed on the business
+    │                       and the month window), counterStore (over IndexedDB), printerStore
     ├── styles/             tokens.css (the app's theme as CSS variables), global.css
     ├── theme/              motion values JavaScript needs
-    ├── types/
-    └── utils/
+    ├── types/              the app's own, re-exported; webSerial.d.ts for the printer
+    └── utils/              counterPersistence (IndexedDB), counterSync, printer (Web Serial),
+                            receiptHtml (the print-dialog slip), serviceWorker, …
 ```
 
 ## Conventions

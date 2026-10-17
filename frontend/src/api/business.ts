@@ -108,20 +108,6 @@ export async function createBranch(businessId: string, payload: CreateBranchPayl
   return data;
 }
 
-export interface SalesSummaryByCurrency {
-  currency: string;
-  // Prisma serializes Decimal sums as strings to avoid float precision loss.
-  totalSales: string;
-  transactionCount: number;
-}
-
-export async function getSalesSummary(businessId: string): Promise<SalesSummaryByCurrency[]> {
-  const { data } = await apiClient.get<{ byCurrency: SalesSummaryByCurrency[] }>(
-    `/businesses/${businessId}/sales-summary`
-  );
-  return data.byCurrency;
-}
-
 /**
  * Requirement 28 — the owner's view of the plan: where the subscription stands,
  * branches in use against branches paid for, and what each plan includes.

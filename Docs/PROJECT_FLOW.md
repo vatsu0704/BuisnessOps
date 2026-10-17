@@ -351,28 +351,30 @@ finishes it**, and add one when something ships deliberately incomplete.
      only what is on sale, so *Put back on sale* is unreachable once a product is
      withdrawn and left. The web's *Show withdrawn* for `product:manage` (W6,
      `web/src/pages/ProductsPage.tsx`) is the model.
-2. [ ] **Then either W8 or password reset** — not yet chosen. W8 continues the web
-   track; password reset is the largest gap before strangers use the app.
+2. [x] **Then the web** — chosen 2026-10-16: the web app's remaining parity, in the
+   order W7b (catch-up) → W9 → W12 → W8 → W10 → W11 → W13 (Section 15). Password
+   reset stays the largest gap before strangers use the app.
 
 **Web app** (Section 15):
 
 - [ ] W4 — online on Render. The repository is ready; Vatsal's steps: create the
   Blueprint, check `VITE_API_URL`, add the site to the API's `CORS_ORIGINS`.
+- [x] W7b — the catch-up with the 2026-10-14 mobile changes (Home, Reports per day,
+  Kinds of cost).
+- [x] W9 — expenses, the expense-gap card, the day-end export.
+- [x] W12 — the counter, offline (a service worker and the browser's storage), printing
+  to the Bluetooth printer from Chrome/Edge with the print dialog as the fallback. On a
+  real printer and offline in a real browser: Flow W12, Vatsal's run.
 - [ ] W8 — team and invites, staff, attendance and punch-in, payroll and payslips.
-- [ ] W9 — expenses, the expense-gap card, the day-end export.
 - [ ] W10 — supply catalog and cart, orders and order detail, the desk, deliveries.
-- [ ] W11 — supply payments, payment accounts, vendors, UPI QR.
-- [ ] W12 — counter.
+- [ ] W11 — supply payments with the History tab (R35), Payment QR codes with the
+  counter section, vendors, UPI QR.
 - [ ] W13 — browser push (needs a Firebase web app and a VAPID key).
-- [ ] The web Home's four missing cards: today's punch-in, the branches to chase for
-  expenses, and the two supply-payment cards (they arrive with W8, W9 and W11).
-- [ ] The web Home on today's figures and the quick-action tiles (R33), as the app now
-  opens — the tiles are shared data in `constants/quickActions.ts`, and `GET /today`
-  exists.
-- [ ] The web Reports' Per-day view and the Kinds-of-cost page (R34). The page's route
-  exists as "coming to the web"; `GET /analytics/daily` and the shared types are ready.
-- [ ] The web's payment History tab (R35) — the Payments page itself is still to port
-  (W11).
+- [ ] The web Home's three missing cards: today's punch-in and the two supply-payment
+  cards (they arrive with W8 and W11). The branches-to-chase card came with W9.
+- [x] The web Home on today's figures and the quick-action tiles (R33) — W7b.
+- [x] The web Reports' Per-day view and the Kinds-of-cost page (R34) — W7b.
+- [ ] The web's payment History tab (R35) — with the Payments page (W11).
 
 **Before anyone outside a pilot group uses it** (`DEPLOYMENT.md` → *Before you call
 it live*):
@@ -1866,12 +1868,22 @@ ships on its own — it replaces placeholders, passes `lint`, `lint:i18n`,
 | W5 | Add branch, branch settings, work calendar | ✅ |
 | W6 | Products, add / edit product, sales upload | ✅ |
 | W7 | Reports and the month-end export | ✅ |
-| W8 | Team and invites, staff, attendance and punch-in, payroll and payslips | ⏳ |
-| W9 | Expenses, the expense-gap card, the day-end export | ⏳ |
+| W7b | Catch-up with the 2026-10-14 mobile changes: Home on today's figures and quick actions, Reports per day, Kinds of cost | ✅ |
+| W9 | Expenses, the expense-gap card, the day-end export | ✅ |
+| W12 | Counter: offline, printing | ✅ code and shots; Flow W12 on a real printer is Vatsal's |
+| W8 | Team and invites, staff, attendance and punch-in, payroll and payslips | ⏳ next |
 | W10 | Supply catalog and cart, orders and order detail, the desk, deliveries | ⏳ |
-| W11 | Supply payments, payment accounts, vendors, UPI QR | ⏳ |
-| W12 | Counter | ⏳ |
+| W11 | Supply payments (with History), payment accounts, vendors, UPI QR | ⏳ |
 | W13 | Browser push (needs a Firebase web app and a VAPID key) | ⏳ |
+
+**Re-planned 2026-10-16**, after the counter, Home and Reports changed on the phone
+(Task 14). Vatsal chose the order above — the counter early, Expenses just before it
+because the counter shows the day's spending and links to *Log expense* — and two
+things about the web counter: it prints straight to the paired Bluetooth printer from
+Chrome or Edge (Web Serial over RFCOMM, the same receipt bytes as the app), with the
+browser's print dialog for any other browser or a USB printer; and it works **fully
+offline**, opening with no connection after a browser restart, which takes a service
+worker. Each phase's section below says what it brought as it lands.
 
 ### W1 — Foundation ✅
 
@@ -2017,6 +2029,117 @@ been deployed.
 - Verification: `npm test` (54, with the ranking, the month's reconciliation and the
   store's window key), the W7 scenarios in `npm run shots`, Flow W7.
 
+
+### W7b — Catch-up with the phone ✅
+
+What changed on the phone on 2026-10-14 that the web had already built, brought
+across. One fix it carried: since the cashier lost `analytics:viewBranch`, the web's
+Home figures — gated on it, and read from the all-time `/sales-summary` — had shown
+a cashier no figures at all.
+
+- **Home is the app's Home**: today's sales, bills and spending (`GET /today`, a
+  `todayStore` like the app's, gated `analytics:viewToday`), the **quick actions** from
+  the shared `constants/quickActions.ts` — the Billing tile large with today's takings,
+  the rest as many across as the column holds — and the recent bills. The sections run
+  in the app's order on a narrow window; from 1100px the quick actions take a column on
+  the right. The Shortcuts column, the all-time sales store and its tiles are gone from
+  the web, and the app's dead `getSalesSummary` with them (the backend route stays for
+  older APKs). Each tile's app route maps to a web page through `pathForAppRoute`, and
+  a test proves every tile a role sees opens for that role on every plan.
+- **Reports, Per day / Per month.** Per day is the app's `DailyReportSection` — one
+  month at a time, a chip per branch and *All branches*, the month card, the days
+  newest first — as rows that open below 900px and one *Day by day* table above it.
+  Its arithmetic moved to a shared `utils/dailyReport.ts` both apps use, and
+  `costMetrics` to a shared `utils/costMetrics.ts` (the web's copy had already
+  drifted: it lacked the per-day *shared over the month* caption). The month card
+  reads the server's own `cell.reconciliation`, so the web's `monthReconciliation` is
+  deleted — and the sentence now shows only when the server says it **balances**, in
+  both apps: a reader who cannot see every branch would otherwise be shown a sum that
+  is not the total above it.
+- **Kinds of cost** (`/expenses/categories`), from Reports' *How costs are grouped*
+  and from Settings: what each kind means, raw material and wages, and a Variable /
+  Fixed / Daily choice per category for `expense:classify`, shown at once and put back
+  if refused; read-only text for anyone else. Settings also gained the **Receipt
+  printer** row (the page arrives with W12).
+- The sidebar's Expenses entry opens on `expense:view`, the page's own gate, rather
+  than `expense:log`.
+- Verification: `npm test` (99, with `todayStore`, the shared per-day arithmetic, and
+  every tile opening for every role on every plan), `lint`, `lint:shared`,
+  `lint:i18n`, the app's `tsc` and lint gates, and `npm run shots` with the new
+  `home-accountant`, `reports-per-day`, `reports-per-day-branch`, `expense-categories`
+  and `expense-categories-readonly` scenarios. Flow W1 and Flow W7 (steps 9–13).
+
+### W9 — Expenses ✅
+
+- **Expenses** (`/expenses?branch=`) as in the app: a tile per branch, warehouses
+  included; today's spent against sold with the difference and the category chips;
+  the day's entries with who logged them, each removable (asked first) for
+  `expense:log`; the month with ‹ › , its total, its chips and its days; and the
+  day-end export (requirement 17) through the `ExportActions` W7 built. Today and its
+  entries sit beside the month on a wide window. Only the newest request's answer is
+  shown, so switching branch fast never leaves one branch's figures under another's
+  name.
+- **Log an expense** (`/expenses/new?branch=`): the branch (asked only when there is
+  more than one), the category chips with *+ Add a category* opening a dialog — the new
+  one chosen at once — the amount, the day (not after today), a note and how it was
+  paid. Saving refreshes Home's today figures before going back.
+- **Home's *Branches with nothing logged*** (`expense:viewAllBranches`), from
+  `GET /expense-compliance`: the branches to ring, or what each spent once all have
+  logged. **Found on the way, fixed in both apps:** the card wrote every amount in
+  rupees whatever the branch's currency; it now uses the branch's, falling back to
+  the business's.
+- A month cursor (`components/ui/MonthCursor`) for every page that steps through
+  months, over the shared `useMonthCursor`.
+- Verification: `npm test` (99), `lint`, `lint:shared`, `lint:i18n`, the app's `tsc`,
+  and `npm run shots` with `expenses`, `expenses-view-only`, `expenses-empty`,
+  `add-expense`, `add-expense-cashier`, `add-expense-new-category` and
+  `home-expenses-all-logged`. Flow W9.
+
+### W12 — The counter, offline, with its printer ✅
+
+The app's counter (Task 14) in a browser, on the same shared code, with the two
+choices Vatsal made on 2026-10-16: fully offline, and printing straight to the
+Bluetooth printer where the browser allows it.
+
+- **The counter page** (`/counter?branch=`): today's figures with the expenses and *Log
+  an expense*, the menu as buttons (as many across as the column holds; Enter adds the
+  focused one), today's bills, and the bill being rung up — beside the menu from 900px
+  of page, pinned to the foot of the screen below that — with its total on its own row
+  above a full-width **Charge** (Ctrl + Enter). The charge dialog is the app's sheet:
+  UPI as a QR for the exact amount (scan-only — the customer pays from their phone) or
+  cash with the change, **Payment done**, the token large with **Next bill** focused.
+  Bills open to print again or void (asked first). Refused bills wait in *Needs
+  attention* with Send again, Reopen that day and Remove (asked first).
+- **Offline, the app's rules in a browser.** The bills are in IndexedDB; every change is
+  one transaction on the stored record and a sale's token is numbered inside it, so two
+  tabs never issue the same token, and a sale is on disk before its token shows. One tab
+  sends at a time (a Web Lock); the others hear of changes on a BroadcastChannel. A
+  browser that keeps no data takes no bill. The session is kept like the app's
+  (`hisabkitab_session_cache`), and a **service worker** keeps the whole build, so the
+  page opens with no connection after a browser restart — network first for pages, the
+  API never cached, `/sw.js` never cached (`render.yaml`), a kill switch
+  (`VITE_SERVICE_WORKER=off`). No new dependency for any of it.
+- **The sender's rules are shared now** (`utils/counterSyncRunner.ts`): the drain, the
+  back-off, what 402/403/413/401 mean — the app's `counterSync.ts` is wiring over it,
+  and it has tests for the first time (11). **Found on the way, fixed in both apps:** a
+  413 halved the ceiling rather than the batch refused, so a one-sale batch refused as
+  too large was sent unchanged five times before giving up; it now halves the batch
+  that failed and gives a single sale straight to the back-off.
+- **Printing**: Chrome and Edge reach the paired printer through Web Serial and send the
+  app's own receipt bytes; any other browser prints a slip the roll's width through the
+  print dialog (escaped, from the same rows). **Receipt printer** (`/counter/printer`,
+  from the counter and Settings): how tokens print, choosing and forgetting the printer,
+  58/80 mm, auto-print, a test slip, and the preview. Home's recent bills now count the
+  bills this browser has not sent.
+- `qrcode-generator` joins the web's dependencies — the app's own QR encoder — with the
+  web's `QrCode` and `UpiPayCard`, ready for W10's cart and W11's payments.
+- Verification: `npm test` (130 — the shared runner, the counter store over a pretend
+  IndexedDB, the offline start, the printer over a pretend Web Serial, the dialog slip),
+  `lint` (which now type-checks the service worker too), `lint:shared`, `lint:i18n`,
+  `npm run build` (writes `dist/sw.js`), the app's `tsc`, and `npm run shots` with
+  fifteen counter and printer scenarios — taking a bill in UPI and cash, the token,
+  offline, refused, a bill, a closed day, a read-only plan, and the counter opened again
+  with no connection. Flow W12 needs a real printer and a real browser offline.
 
 ### Plan (requirement 28) ✅
 

@@ -4,31 +4,17 @@ import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import MetricGrid from '@/components/reports/MetricGrid';
-import { costMetrics } from '@/components/reports/costMetrics';
+import { costMetrics } from '@/utils/costMetrics';
 import PressableScale from '@/components/PressableScale';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { useMonthCursor } from '@/hooks/useMonthCursor';
 import { extractErrorMessage } from '@/api/client';
 import { getBranchDaily } from '@/api/analytics';
 import type { DailyReport } from '@/types/analytics';
+import { ALL_BRANCHES, dailyChoices, dailyTotal, daysFor, listedDays, resolveChoice } from '@/utils/dailyReport';
 import { formatAmount } from '@/utils/format';
-import { formatDate } from '@/utils/date';
+import { formatDate, todayISO } from '@/utils/date';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
-
-/** One day, in whichever of the two shapes (a branch's, the business's) it came. */
-type Day = {
-  day: string;
-  business: number;
-  saleCount: number;
-  variableExpenses: string;
-  fixedExpenses: string;
-  dailyExpenses: string;
-  totalCost: string;
-  profit: number;
-  rawMaterial: number;
-};
-
-const ALL = 'ALL';
 
 /**
  * Reports, day by day — requirement 34's "Per day".
@@ -51,7 +37,7 @@ export default function DailyReportSection() {
   const [report, setReport] = useState<DailyReport | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string>(ALL);
+  const [selected, setSelected] = useState<string>(ALL_BRANCHES);
   const [openDay, setOpenDay] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -75,65 +61,17 @@ export default function DailyReportSection() {
 
   const shown = report && report.month === monthKey ? report : null;
   // The whole business when the server sent its roll-up; otherwise a branch.
-  const choices = useMemo(() => {
-    const branches = shown?.branches ?? [];
-    return shown?.business ? [ALL, ...branches.map((row) => row.branchId)] : branches.map((row) => row.branchId);
-  }, [shown]);
-  const choice = choices.includes(selected) ? selected : (choices[0] ?? ALL);
-
-  const days = useMemo<Day[]>(() => {
-    if (!shown) return [];
-    if (choice === ALL && shown.business) {
-      return shown.business.days.map((cell) => ({
-        day: cell.day,
-        business: Number(cell.customerSales),
-        saleCount: cell.saleCount,
-        variableExpenses: cell.variableExpenses,
-        fixedExpenses: cell.fixedExpenses,
-        dailyExpenses: cell.dailyExpenses,
-        totalCost: cell.totalCost,
-        profit: Number(cell.netProfit),
-        rawMaterial: Number(cell.vendorSpend),
-      }));
-    }
-    const row = shown.branches.find((candidate) => candidate.branchId === choice);
-    return (row?.days ?? []).map((cell) => ({
-      day: cell.day,
-      business: Number(cell.sales),
-      saleCount: cell.saleCount,
-      variableExpenses: cell.variableExpenses,
-      fixedExpenses: cell.fixedExpenses,
-      dailyExpenses: cell.dailyExpenses,
-      totalCost: cell.totalCost,
-      profit: Number(cell.netProfit),
-      rawMaterial: Number(cell.materialSpend),
-    }));
-  }, [shown, choice]);
-
-  // A day that has not happened yet has nothing to show but its share of rent.
-  const today = new Date();
-  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const shownDays = isCurrentMonth ? days.filter((day) => day.day <= todayKey) : days;
-  const listed = [...shownDays].reverse();
+  const choices = useMemo(() => dailyChoices(shown), [shown]);
+  const choice = resolveChoice(shown, selected);
+  const days = useMemo(() => daysFor(shown, choice), [shown, choice]);
+  const listed = listedDays(days, isCurrentMonth ? todayISO() : null);
 
   const currency = shown?.currency ?? 'INR';
-  const total = useMemo(() => {
-    const add = (field: keyof Day) => days.reduce((sum, day) => sum + Number(day[field]), 0);
-    return {
-      business: add('business'),
-      saleCount: days.reduce((sum, day) => sum + day.saleCount, 0),
-      variableExpenses: String(add('variableExpenses')),
-      fixedExpenses: String(add('fixedExpenses')),
-      dailyExpenses: String(add('dailyExpenses')),
-      totalCost: String(add('totalCost')),
-      profit: add('profit'),
-      rawMaterial: add('rawMaterial'),
-    };
-  }, [days]);
+  const total = useMemo(() => dailyTotal(days), [days]);
 
   const nameOf = (id: string) =>
-    id === ALL ? t('reports.allBranches') : (shown?.branches.find((row) => row.branchId === id)?.branchName ?? '');
-  const rawMaterialKey = choice === ALL ? 'reports.variableIncludesVendors' : 'reports.variableIncludesMaterial';
+    id === ALL_BRANCHES ? t('reports.allBranches') : (shown?.branches.find((row) => row.branchId === id)?.branchName ?? '');
+  const rawMaterialKey = choice === ALL_BRANCHES ? 'reports.variableIncludesVendors' : 'reports.variableIncludesMaterial';
 
   return (
     <View style={styles.wrap}>
