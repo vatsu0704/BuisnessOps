@@ -16,8 +16,8 @@ type Props = {
 };
 
 /**
- * A page that explains why there is nothing here — not built for the web yet,
- * not part of this role, or not an address at all — and offers the way home.
+ * A page that explains why there is nothing here — not part of this role or
+ * plan, or not an address at all — and offers the way home.
  */
 export default function NoticePage({ icon: Icon, title, body, badge, badgeTone = 'brand' }: Props) {
   const { t } = useTranslation();
@@ -35,7 +35,7 @@ export default function NoticePage({ icon: Icon, title, body, badge, badgeTone =
       <p className={styles.body}>{body}</p>
       <Link to="/" className={styles.back}>
         <IoArrowBack size={16} aria-hidden="true" />
-        <span>{t('web.comingSoon.backHome')}</span>
+        <span>{t('web.common.backHome')}</span>
       </Link>
     </Enter>
   );

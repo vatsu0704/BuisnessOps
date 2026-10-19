@@ -1,0 +1,73 @@
+.card {
+  padding: var(--space-xl);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 600px) {
+  .card {
+    padding: var(--space-lg);
+  }
+}
+
+/* Today and its date are the way into the month's history, as the app's header row. */
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: inherit;
+  text-decoration: none;
+}
+
+.head:hover .date {
+  color: var(--color-primary);
+}
+
+.headText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.label {
+  font: var(--text-label);
+  font-size: 10.5px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.date {
+  margin-top: 1px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.chevron {
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+.status {
+  margin-top: var(--space-sm);
+  font-size: 13.5px;
+  color: var(--color-text-secondary);
+}
+
+.statusMuted {
+  color: var(--color-text-tertiary);
+}
+
+.error {
+  margin-top: var(--space-xs);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--color-error);
+}
+
+.button {
+  margin-top: var(--space-lg);
+}

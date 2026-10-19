@@ -1,0 +1,170 @@
+/* Sized by the room the page has, not the window: beside the sidebar a wide
+   window can still leave the list narrow. */
+.page {
+  container: orders / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+.page > header {
+  margin-bottom: 0;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-xxl);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xl);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  color: var(--color-text-tertiary);
+}
+
+.emptyTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.emptyBody {
+  max-width: 420px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Narrow: a card — the order and its amount on top, the pills, then who is
+   carrying it and any delay, each on its own line. */
+.row {
+  display: grid;
+  grid-template-areas:
+    'main amount chevron'
+    'pills pills pills'
+    'extra extra extra';
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-md) var(--space-md) var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: inherit;
+  transition:
+    border-color var(--duration-quick) ease,
+    box-shadow var(--duration-quick) ease;
+}
+
+.row:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.row:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.main {
+  grid-area: main;
+  min-width: 0;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.meta {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--color-text-tertiary);
+  overflow-wrap: anywhere;
+}
+
+/* Wraps: two pills fit side by side in English and not always in Gujarati. */
+.pills {
+  grid-area: pills;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.extra {
+  grid-area: extra;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.agent {
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.delay {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 5px var(--space-sm);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-warning);
+}
+
+.delay svg {
+  flex: none;
+}
+
+.amount {
+  grid-area: amount;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chevron {
+  grid-area: chevron;
+  align-self: center;
+  color: var(--color-text-tertiary);
+}
+
+/* Wide: one line of a table — the order, its state, who has it, the amount. */
+@container orders (min-width: 760px) {
+  .row {
+    grid-template-areas: 'main pills extra amount chevron';
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1.6fr) minmax(0, 1.5fr) minmax(96px, auto) auto;
+    align-items: center;
+    gap: var(--space-lg);
+  }
+
+  .amount {
+    text-align: right;
+  }
+}

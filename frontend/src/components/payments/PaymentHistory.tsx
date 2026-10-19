@@ -19,6 +19,7 @@ import { colors, radius, spacing, typography } from '@/theme';
 import { formatDate, formatTime } from '@/utils/date';
 import { formatAmount, formatAmountPrecise } from '@/utils/format';
 import { payeeOf } from '@/utils/upi';
+import { historyTotals } from '@/utils/supplyPayments';
 
 type Model = 'ALL' | 'FOCO' | 'FM';
 
@@ -67,18 +68,7 @@ export default function PaymentHistory({ header }: { header?: React.ReactElement
 
   const shown = history && history.month === monthKey ? history : null;
   const currency = shown?.orders[0]?.currency ?? 'INR';
-  const totals = useMemo(() => {
-    const sum = (filter: (row: History['totals'][number]) => boolean) =>
-      (shown?.totals ?? []).filter(filter).reduce(
-        (acc, row) => ({ amount: acc.amount + Number(row.totalAmount), count: acc.count + row.orderCount }),
-        { amount: 0, count: 0 }
-      );
-    return {
-      foco: sum((row) => row.operatingModel === 'FOCO' && row.paymentStatus === 'VERIFIED'),
-      fm: sum((row) => row.operatingModel === 'FM' && (row.paymentStatus === 'VERIFIED' || row.paymentStatus === 'PAID')),
-      waiting: sum((row) => row.paymentStatus === 'PAID'),
-    };
-  }, [shown]);
+  const totals = useMemo(() => historyTotals(shown?.totals ?? []), [shown]);
 
   const listHeader = (
     <View style={styles.headerBlock}>

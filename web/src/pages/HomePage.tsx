@@ -6,9 +6,11 @@ import NoBusinessAccessNotice from '@/components/NoBusinessAccessNotice';
 import BranchCatalogSection from '@/components/home/BranchCatalogSection';
 import BranchesSection from '@/components/home/BranchesSection';
 import ExpenseGapsCard from '@/components/home/ExpenseGapsCard';
+import { PaymentsCard, PaymentsToConfirmCard } from '@/components/home/PaymentsCards';
 import PlanBanner from '@/components/home/PlanBanner';
 import QuickActionsSection from '@/components/home/QuickActionsSection';
 import RecentBillsSection from '@/components/home/RecentBillsSection';
+import TodayPunchCard from '@/components/home/TodayPunchCard';
 import TodaySection from '@/components/home/TodaySection';
 import Enter from '@/components/ui/Enter';
 import ErrorBanner from '@/components/ui/ErrorBanner';
@@ -17,6 +19,7 @@ import PhaseNotice from '@/components/ui/PhaseNotice';
 import { useBranches } from '@/hooks/useBranches';
 import { useMembership } from '@/hooks/useBusinessId';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useMyStaffMember } from '@/hooks/useMyStaffMember';
 import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
 import { useToday } from '@/hooks/useToday';
 import { pathTo } from '@/routes/paths';
@@ -34,19 +37,30 @@ import styles from './HomePage.module.css';
  * `side` puts a section in the right-hand column on a wide window; narrower,
  * every section is one column in the app's order, so the quick actions come
  * straight after today's figures, as on the phone.
- *
- * Not yet on the web, and so not listed: today's punch card and the two
- * supply-payment cards. Each comes with the page it belongs to.
  */
 type Section = Gate & { key: string; Component: ComponentType; side?: boolean };
 
 const SECTIONS: Section[] = [
+  // Punching in is a daily action, one click from opening the site. It needs no
+  // capability — it is listed only for somebody with a staff record (below), so
+  // an owner who does not punch gets no empty card.
+  { key: 'punch', capability: null, Component: TodayPunchCard },
   { key: 'today', capability: 'analytics:viewToday', Component: TodaySection },
   // Ungated: each tile carries its own gate, and the section is dropped when none passes.
   { key: 'quickActions', capability: null, Component: QuickActionsSection, side: true },
   { key: 'recentBills', capability: 'counterOrder:create', Component: RecentBillsSection },
   // The back office's list of branches to ring (requirement 10).
   { key: 'expenseGaps', capability: 'expense:viewAllBranches', Component: ExpenseGapsCard },
+  // Requirement 27 — what accounts has to pay for.
+  { key: 'payments', capability: 'supplyPayment:settle', Component: PaymentsCard },
+  // Requirement 26 — the desk's card; anyone who also pays has both lists behind
+  // the card above, and two cards to one page is one too many.
+  {
+    key: 'paymentsToConfirm',
+    capability: 'supplyPayment:verify',
+    hideWhen: { holds: 'supplyPayment:settle' },
+    Component: PaymentsToConfirmCard,
+  },
   { key: 'branches', capability: 'branch:update', Component: BranchesSection },
   { key: 'catalog', capability: 'product:view', Component: BranchCatalogSection },
 ];
@@ -58,6 +72,7 @@ export default function HomePage() {
   const membership = useMembership();
   const { isLoading, error, refresh, stats } = useBranches();
   const today = useToday();
+  const { isStaff, refresh: refreshMyStaff } = useMyStaffMember();
 
   useDocumentTitle(t('tabs.home'));
   // A branch added, or a sale rung up on a phone, shows up when this page is
@@ -65,6 +80,8 @@ export default function HomePage() {
   const refreshAll = () => {
     void refresh();
     void today.refresh();
+    // Somebody added to the roster on another device gets their punch card.
+    void refreshMyStaff();
   };
   useRefreshOnFocus(refreshAll);
 
@@ -75,7 +92,10 @@ export default function HomePage() {
     isQuickActionVisible(action, (capability) => hasCapability(membership, capability))
   );
   const sections = SECTIONS.filter(
-    (section) => passesGate(membership, section) && (section.key !== 'quickActions' || hasQuickActions)
+    (section) =>
+      passesGate(membership, section) &&
+      (section.key !== 'quickActions' || hasQuickActions) &&
+      (section.key !== 'punch' || isStaff)
   );
   const mainSections = sections.filter((section) => !section.side);
   const sideSections = sections.filter((section) => section.side);

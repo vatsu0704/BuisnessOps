@@ -1,3 +1,4 @@
+import type { IconType } from 'react-icons';
 import { IoStorefrontOutline } from 'react-icons/io5';
 import ChoiceTile from '@/components/ui/ChoiceTile';
 import type { Branch } from '@/types/branch';
@@ -18,6 +19,8 @@ type Props<B extends PickableBranch> = {
   onChange: (branchId: string) => void;
   /** The line under each name; the branch code unless said otherwise. */
   caption?: (branch: B) => string | undefined;
+  /** Each tile's icon; a shop front unless said otherwise — a warehouse gets a box. */
+  icon?: (branch: B) => IconType;
 };
 
 /**
@@ -37,6 +40,7 @@ export default function BranchPicker<B extends PickableBranch>({
   value,
   onChange,
   caption = (branch) => branch.code,
+  icon = () => IoStorefrontOutline,
 }: Props<B>) {
   return (
     <fieldset className={styles.fieldset}>
@@ -49,7 +53,7 @@ export default function BranchPicker<B extends PickableBranch>({
             value={branch.id}
             title={branch.name}
             caption={caption(branch)}
-            icon={IoStorefrontOutline}
+            icon={icon(branch)}
             selected={branch.id === value}
             onSelect={() => onChange(branch.id)}
           />

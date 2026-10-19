@@ -1,0 +1,362 @@
+/* Sized by the room the page has, not the window. */
+.page {
+  container: cart / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+.page > header {
+  margin-bottom: 0;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-xxl);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xl);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  color: var(--color-text-tertiary);
+}
+
+.emptyTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.emptyBody {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* Wide: the lines beside how it is being paid. */
+@container cart (min-width: 860px) {
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    align-items: start;
+  }
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* The supplier's name wraps beside its icon rather than pushing the line wider. */
+.supplier {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--text-label);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.supplier svg {
+  flex: none;
+}
+
+.supplier span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Narrow: the name across the top, the quantity and the line's total under it —
+   so a long item name never squeezes the number field. */
+.line {
+  display: grid;
+  grid-template-areas:
+    'text text'
+    'qty total';
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+@container cart (min-width: 520px) {
+  .line {
+    grid-template-areas: 'text qty total';
+    grid-template-columns: minmax(0, 1fr) auto minmax(84px, auto);
+  }
+}
+
+.lineText {
+  grid-area: text;
+  min-width: 0;
+}
+
+.lineName {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.lineMeta {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--color-text-tertiary);
+}
+
+.qty {
+  grid-area: qty;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.stepper {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.stepper:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.stepper:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.stepper:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.qtyInput {
+  width: 64px;
+  padding: 6px var(--space-xs);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.qtyInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.lineTotal {
+  grid-area: total;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: right;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.subtotal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-xs) var(--space-sm);
+  padding: 0 var(--space-xs);
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.subtotal strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.info {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-light);
+}
+
+.info svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--color-primary);
+}
+
+.infoTitle {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.infoBody {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.payment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.paymentTitle {
+  float: left;
+  width: 100%;
+  margin-bottom: var(--space-sm);
+  padding: 0;
+  font: var(--text-label);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+/* Two tiles side by side while each holds its caption, one above the other after. */
+.modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-sm);
+  clear: both;
+}
+
+.payCards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* The total and Place stay in view at the foot of the page while the lines
+   scroll. Stacked: the total on its own line and the button full width. */
+.tray {
+  position: sticky;
+  bottom: var(--space-sm);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.trayRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-xs) var(--space-sm);
+}
+
+.trayLabel {
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.trayTotal {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.trayNote {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
+
+/* On a wide page the button need not span the whole width. */
+@container cart (min-width: 860px) {
+  .tray {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    align-items: center;
+    column-gap: var(--space-lg);
+  }
+
+  .trayRow {
+    justify-content: flex-start;
+  }
+
+  .trayNote {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .tray > button {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}

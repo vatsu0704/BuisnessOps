@@ -1,0 +1,168 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+.page > header {
+  margin-bottom: 0;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-xl);
+}
+
+/* The record and its days beside the actions taken on it, once the window holds both. */
+.layout {
+  display: grid;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+@media (min-width: 1000px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.identity {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.identityText {
+  flex: 1;
+  min-width: 0;
+}
+
+.meta {
+  margin-top: 2px;
+  font-size: 13.5px;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.salary {
+  margin-top: var(--space-sm);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.warn {
+  margin-top: var(--space-sm);
+  font-size: 12.5px;
+  color: var(--color-warning);
+}
+
+.warnBlock {
+  margin-bottom: var(--space-md);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--color-warning);
+}
+
+.empty {
+  padding: var(--space-sm) 0;
+  font-size: 13.5px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+}
+
+.days,
+.slips {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A column: the date and its status on one line, the punch trace under them. */
+.day {
+  padding: var(--space-md) 0;
+}
+
+.day + .day,
+.slip + .slip {
+  border-top: 1px solid var(--color-border);
+}
+
+.day:first-child,
+.slip:first-child {
+  padding-top: 0;
+}
+
+.day:last-child,
+.slip:last-child {
+  padding-bottom: 0;
+}
+
+.dayHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.dayDate {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* The status chips above Save need room enough not to read as part of the button. */
+.formButton {
+  margin-top: var(--space-lg);
+}
+
+.slip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md) 0;
+}
+
+.slipText {
+  flex: 1;
+  min-width: 0;
+}
+
+.slipHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.printButton {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.printButton:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.printButton:disabled {
+  cursor: progress;
+}

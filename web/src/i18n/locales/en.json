@@ -1,6 +1,7 @@
 {
   "common": {
-    "back": "Back"
+    "back": "Back",
+    "backHome": "Back to Home"
   },
   "form": {
     "showPassword": "Show password",
@@ -26,11 +27,6 @@
   },
   "home": {
     "refresh": "Refresh"
-  },
-  "comingSoon": {
-    "badge": "Coming to the web",
-    "body": "This part of {{appName}} already works in the mobile app and is on its way to the web. Until it lands here, use the app on your phone.",
-    "backHome": "Back to Home"
   },
   "noAccess": {
     "title": "Not part of your role",
@@ -127,5 +123,15 @@
     "forget": "Forget this printer",
     "kioskTip": "To print without the dialog each time, make the receipt printer this computer's default and start Chrome with --kiosk-printing.",
     "testDialog": "The sample token is in the print dialog. Check the slip fits the paper."
+  },
+  "staff": {
+    "printPayslip": "Print or save the payslip"
+  },
+  "supply": {
+    "addOne": "Add one {{name}}",
+    "addAnother": "Add one more {{name}} — {{count}} in your order",
+    "less": "One less {{name}}",
+    "more": "One more {{name}}",
+    "quantityOf": "Quantity of {{name}}, in {{unit}}"
   }
 }

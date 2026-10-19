@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '@/theme';
 import { formatTime } from '@/utils/date';
-import { supplyStatusKey } from '@/components/supply/SupplyPills';
+import { supplyStatusKey } from '@/utils/supplyStatus';
 import type { SupplyOrderEvent } from '@/types/supply';
 
 /**

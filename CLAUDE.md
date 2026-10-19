@@ -600,10 +600,9 @@ at the point you throw it:
 ## Web app
 
 `web/` is the browser version, React 19 + Vite + React Router, against the same
-API. It is being ported screen by screen; `Docs/PROJECT_FLOW.md` section 15 says
-which screens are on the web, and every one that is not yet renders a "coming to
-the web" page at its real route, so the navigation is already the finished one.
-`web/README.md` has the layout and the commands.
+API. It was ported screen by screen and now has a page for every screen of the
+app; `Docs/PROJECT_FLOW.md` section 15 is the record, and browser push (W13) is
+what remains. `web/README.md` has the layout and the commands.
 
 - **It reads the mobile app's code, it does not copy it.** `@shared/` is
   `frontend/src`, and the web imports from there: the four locale files, the
@@ -614,9 +613,16 @@ the web" page at its real route, so the navigation is already the finished one.
   `upiUri.ts`, `expenseCategory.ts`, `hooks/useMonthCursor.ts`,
   `constants/salesTemplate.ts`, `constants/plans.ts` (how a plan is described, and
   when Home's plan banner shows), `constants/quickActions.ts` (Home's tiles and who
-  sees each), `utils/costMetrics.ts` (a report card's kinds of cost) and
-  `utils/dailyReport.ts` (Reports' Per day arithmetic), and the counter's pure half
-  (see *The counter works offline*). A second copy of any of them would drift
+  sees each), `utils/costMetrics.ts` (a report card's kinds of cost),
+  `utils/dailyReport.ts` (Reports' Per day arithmetic), `utils/teamRules.ts` (who may
+  be invited and to what, requirement 18's cashier rules and 409s, who may remove
+  whom), `utils/account.ts` (a deleted account), `permissions/staffBase.ts`, the
+  supply rules — `utils/supplyActions.ts` (which steps an order offers whom),
+  `supplyStatus.ts` (how a status and a payment read), `supplyGroups.ts` (how a cart
+  splits and the catalog groups), `whatsappNumber.ts` (the pure half of
+  `whatsapp.ts`) and `supplyPayments.ts` (what is owed grouped by payee, the
+  one-payee selection, the history totals) — and the counter's pure half (see *The
+  counter works offline*). A second copy of any of them would drift
   exactly as the mirrors are checked not to — the web's own `costMetrics.ts` had
   already lost the per-day caption before it was shared.
 - **So a shared file imports only relative paths and four packages** — `i18next`,

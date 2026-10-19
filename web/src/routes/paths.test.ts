@@ -59,7 +59,7 @@ describe('route access', () => {
     expect(canOpenRoute(membershipAs('WAREHOUSE'), 'payments')).toBe(true);
   });
 
-  it('has a page or placeholder for every route', () => {
+  it('has a page for every route', () => {
     for (const key of KEYS) expect(PAGES[key], key).toBeDefined();
   });
 });

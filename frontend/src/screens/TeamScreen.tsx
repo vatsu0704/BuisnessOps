@@ -8,14 +8,17 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { assignBranchAccess, removeBranchAccess, revokeInvite, revokeMembership } from '@/api/team';
 import { extractErrorMessage } from '@/api/client';
-import type { ApiErrorBody } from '@/api/errorMessages';
 import type { CashierConflicts, PendingInvite, TeamMember } from '@/types/team';
-import { roleHas } from '@/permissions';
-import { SINGLE_BRANCH_ROLE } from '@/permissions/explain';
-import { hasCashierConflicts, useCashierByBranch, useTeam } from '@/hooks/useTeam';
+import { useCashierByBranch, useTeam } from '@/hooks/useTeam';
 import { useBranches } from '@/hooks/useBranches';
 import CashierBranchPicker from '@/components/CashierBranchPicker';
-import type { MembershipRole } from '@/types/user';
+import {
+  asAssignmentConflict,
+  canRemoveMember,
+  hasCashierConflicts,
+  isSingleBranchRole,
+  reachesEveryBranch,
+} from '@/utils/teamRules';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import InfoCard from '@/components/InfoCard';
 import Pill from '@/components/Pill';
@@ -30,52 +33,9 @@ import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Team'>;
 
-// Describes the LISTED member's role — do they implicitly reach every branch?
-// This is a property of the row being rendered, not a permission check on the
-// viewer, which is why it asks roleHas directly rather than going through
-// utils/permissions, whose helpers all take the viewer's membership.
-//
-// It was a hardcoded {OWNER, ADMIN} set. MANAGER joined them in requirement 14
-// and WAREHOUSE arrived with the order desk, and both would otherwise have been
-// rendered with branch pills — or with the "no branches yet" warning — while
-// actually reaching every branch. The warning in particular would have been an
-// invitation to fix something that was not broken.
-const reachesEveryBranch = (role: MembershipRole) => roleHas(role, 'branch:allAccess');
-
-/**
- * Requirement 18 - the role limited to exactly one branch.
- *
- * Read off the mirrored matrix and compared with the backend by
- * `lint:permissions`, so this screen cannot offer a shape the server refuses. It
- * changes two things about a row: the branch is shown as a single assignment that
- * can be *moved* rather than a set of pills that can be removed one by one, and
- * having none is called out instead of being left to look like an empty list.
- */
-const isSingleBranchRole = (role: MembershipRole) => role === SINGLE_BRANCH_ROLE;
-
-/**
- * Requirement 18's two refusals, recognised so the app can ask rather than merely report.
- *
- * Both are 409 and both name the blocker in `params` - the cashier being
- * displaced, the branch being vacated - which is what makes a confirmation worth
- * showing. Anything else falls through to the ordinary error banner.
- */
-function asAssignmentConflict(
-  err: unknown
-): { code: string; branch: string; cashier?: string; currentBranch?: string } | null {
-  const response = (err as { response?: { status?: number; data?: ApiErrorBody } }).response;
-  const code = response?.data?.code;
-  if (response?.status !== 409) return null;
-  if (code !== 'BRANCH_ALREADY_HAS_CASHIER' && code !== 'CASHIER_ALREADY_HAS_BRANCH') return null;
-  const params = (response.data?.params ?? {}) as Record<string, unknown>;
-  if (typeof params.branch !== 'string') return null;
-  return {
-    code,
-    branch: params.branch,
-    cashier: typeof params.cashier === 'string' ? params.cashier : undefined,
-    currentBranch: typeof params.currentBranch === 'string' ? params.currentBranch : undefined,
-  };
-}
+// Who reaches every branch, who holds exactly one, who may remove whom and what
+// requirement 18's 409s say are `utils/teamRules.ts`, shared with the web's Team
+// page so the two cannot disagree about any of it.
 
 export default function TeamScreen({ navigation }: Props) {
   const { t } = useTranslation();
@@ -238,29 +198,7 @@ export default function TeamScreen({ navigation }: Props) {
     [businessId, load, t]
   );
 
-  /**
-   * Mirrors the two server-side guards, so the app never offers a button that
-   * is going to come back 400 or 403: nobody may revoke themselves (which is
-   * also what stops a business losing its only owner), and nobody may remove
-   * someone who outranks them.
-   *
-   * The rank is the mirror of REVOKE_RANK in backend/src/services/
-   * business.service.js — change one and change the other. It is not in the
-   * capability matrix on purpose: "who outranks whom" is a rule about two
-   * specific memberships, not a permission a role holds on its own.
-   *
-   * It was `member.role === 'OWNER' && viewer.role !== 'OWNER'`, which was the
-   * whole rule while only OWNER and ADMIN could reach this screen. Requirement
-   * 14 put MANAGER here too, and a manager removing the admin who issued their
-   * account is the same escalation one rung down.
-   */
-  const rankOf = (role: MembershipRole) => ({ OWNER: 3, ADMIN: 2, MANAGER: 1 }[role as string] ?? 0);
-
-  const canRemove = (member: TeamMember) =>
-    !!viewer &&
-    member.status === 'ACTIVE' &&
-    member.id !== viewer.id &&
-    rankOf(member.role) <= rankOf(viewer.role);
+  const canRemove = (member: TeamMember) => canRemoveMember(viewer, member);
 
   return (
     <View style={styles.container}>
@@ -299,7 +237,7 @@ export default function TeamScreen({ navigation }: Props) {
               it is the one thing on this screen asking for a decision. */}
           {hasCashierConflicts(conflicts) ? (
             <AnimatedEntrance delay={step(1)} style={styles.block}>
-              <ConflictPanel conflicts={conflicts as CashierConflicts} />
+              <ConflictPanel conflicts={conflicts} />
             </AnimatedEntrance>
           ) : null}
 

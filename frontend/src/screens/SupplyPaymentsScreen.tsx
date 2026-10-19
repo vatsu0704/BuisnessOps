@@ -26,24 +26,12 @@ import { formatDate, toISODate } from '@/utils/date';
 import { formatAmount, formatAmountPrecise } from '@/utils/format';
 import { haptics } from '@/utils/haptics';
 import { payeeOf, upiNote } from '@/utils/upi';
+import { groupByPayee, readyIds, toggleSelection, type PayeeSection } from '@/utils/supplyPayments';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { useScreenEdges } from '@/hooks/useScreenEdges';
 
 type Tab = 'pay' | 'confirm' | 'history';
-
-/** The orders one payment can cover: everything owed to one payee. */
-type PayeeSection = {
-  key: string;
-  payeeName: string;
-  isVendor: boolean;
-  readyTotal: number;
-  readyCount: number;
-  currency: string;
-  data: SupplyPaymentOrder[];
-};
-
-const payeeKey = (order: SupplyPaymentOrder) => order.vendorId ?? 'WAREHOUSE';
 
 /**
  * Paying for supply orders, and confirming payments arrived — requirements 26
@@ -102,35 +90,8 @@ export default function SupplyPaymentsScreen() {
     }, [refresh])
   );
 
-  const sections = useMemo<PayeeSection[]>(() => {
-    const byPayee = new Map<string, PayeeSection>();
-    for (const order of due) {
-      const key = payeeKey(order);
-      const section =
-        byPayee.get(key) ??
-        ({
-          key,
-          payeeName: order.vendor?.name ?? t('supply.fromWarehouse'),
-          isVendor: !!order.vendor,
-          readyTotal: 0,
-          readyCount: 0,
-          currency: order.currency,
-          data: [],
-        } satisfies PayeeSection);
-      section.data.push(order);
-      if (order.status === 'DELIVERED') {
-        section.readyTotal += Number(order.totalAmount);
-        section.readyCount += 1;
-      }
-      byPayee.set(key, section);
-    }
-    // The warehouse first, then vendors by name — the same order the cart uses.
-    return [...byPayee.values()].sort((a, b) => {
-      if (!a.isVendor) return -1;
-      if (!b.isVendor) return 1;
-      return a.payeeName.localeCompare(b.payeeName);
-    });
-  }, [due, t]);
+  // By payee, the warehouse first — the rules are shared with the web app.
+  const sections = useMemo(() => groupByPayee(due, t('supply.fromWarehouse')), [due, t]);
 
   // What is selected and still payable. An order paid from another phone since
   // it was ticked drops out of the list on refresh, and so out of here.
@@ -142,20 +103,14 @@ export default function SupplyPaymentsScreen() {
     if (order.status !== 'DELIVERED') return;
     haptics.tap();
     setNotice(null);
-    setSelected((prev) => {
-      // One payee per payment: ticking somebody else's order starts over.
-      const samePayee = selection.length === 0 || payeeKey(selection[0]) === payeeKey(order);
-      const next = samePayee ? new Set(prev) : new Set<string>();
-      if (next.has(order.id)) next.delete(order.id);
-      else next.add(order.id);
-      return next;
-    });
+    // One payee per payment: ticking somebody else's order starts over.
+    setSelected((prev) => toggleSelection(prev, selection, order));
   }
 
   function selectAllReady(section: PayeeSection) {
     haptics.tap();
     setNotice(null);
-    setSelected(new Set(section.data.filter((order) => order.status === 'DELIVERED').map((order) => order.id)));
+    setSelected(readyIds(section));
   }
 
   async function settle() {

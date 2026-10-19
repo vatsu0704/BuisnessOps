@@ -22,9 +22,12 @@ app** in `web/` has sign-in, sign-up, Home with today's figures and the quick ac
 (Flow W1), Settings with the business switcher (Flow W2), the notification bell and
 centre (Flow W3), branches and the work calendar (Flow W5), products and sales upload
 (Flow W6), Reports by day and by month with the kinds of cost and the month-end
-export (Flow W7), expenses with the day-end export (Flow W9), and the counter —
-offline, with its receipt printer (Flow W12) — so far; its other pages say they are
-coming to the web.
+export (Flow W7), expenses with the day-end export (Flow W9), the counter —
+offline, with its receipt printer (Flow W12) — and the team, staff, attendance and
+payroll (Flow W8), supply — the catalog, the cart, the desk, deliveries and the
+order page (Flow W10) — and supply money: Payments, Payment QR codes and Vendors
+(Flow W11). That is every page the app has; only browser notifications (W13) are
+still to come.
 
 ---
 
@@ -2382,8 +2385,8 @@ account from Flow 1, or the seed data's logins.
      profit anywhere. The **accountant** sees today's figures and a **Payment
      history** tile, no Billing tile and no recent bills. The **delivery agent** sees
      Orders and Deliveries tiles and no figures. Type `/desk` into the address bar
-     as a cashier: **Not part of your role**, not the desk. Every tile opens its page
-     (most still *Coming to the web*), never *Not part of your role*.
+     as a cashier: **Not part of your role**, not the desk. Every tile opens its page,
+     never *Not part of your role*.
 7. Narrow the window to phone width.
    - ✅ **Expected:** the sidebar folds away behind a menu button; it opens over a
      dimmed page and closes with ✕, Escape, a click outside, or following a link.
@@ -2461,9 +2464,8 @@ move a supply order from the phone (Flow 17g–17h).
      **Mark all read** while anything is unread. Switch language: the whole history
      re-renders in it.
 3. Click an unread notification about an order.
-   - ✅ **Expected:** its dot goes at once and it opens that order's page (until W10
-     ports it, the page says it is coming to the web). One the role can no longer
-     open goes to Home instead.
+   - ✅ **Expected:** its dot goes at once and it opens that order's page. One the
+     role can no longer open goes to Home instead.
 4. Leave the tab open on any page, and from the phone have the warehouse accept an
    order. Within a minute — or at once when you switch back to the tab:
    - ✅ **Expected:** the bell's count rises without a reload.
@@ -2744,6 +2746,199 @@ Sign in as an owner (or a cashier), the backend running, the migrations applied.
       above a full-width Charge, nothing cut or scrolling sideways; the charge dialog's
       QR still fits.
 
+## Flow W8 — The web app: the team, staff, attendance and payroll
+
+The web's version of Flows 6–9, 12–14, 16 and 17u. Sign in as an owner, the backend
+running, with at least two shops, a warehouse and a cashier already on one shop (Flow 17u).
+
+1. **Settings → Team**.
+   - ✅ **Expected:** *Invite a member* at the top, pending invites (dashed), then each
+     member as a card — the owner as *You* with no remove, an admin or manager
+     *Access to all branches*, a cashier's one shop with *Change branch*, a staff
+     member's shops each with a ×, removed members faded and struck through.
+2. On a staff member's shop, click **×**.
+   - ✅ **Expected:** a question naming the person and the shop; *Remove* takes it
+     off and the card reloads. Cancel leaves it.
+3. On a cashier with no shop (or any cashier), **Change branch**, and pick the shop
+   that already has a cashier.
+   - ✅ **Expected:** the list says who runs each shop before you choose. Choosing the
+     taken one asks *Move the branch?*, naming both people (and the shop the first
+     cashier leaves empty). Confirm: both cards change. Cancel: nothing changes.
+4. **Invite a member** → an email, **Cashier**, the taken shop → **Send invite**.
+   - ✅ **Expected:** *That branch already has a cashier*, naming them; confirming sends the invite and
+     Team shows it as pending. Choose **Delivery agent** instead: shops as chips, any
+     number. On a Starter business only four roles show, with *Other roles come with
+     a higher plan*.
+5. **Remove access** on a member.
+   - ✅ **Expected:** asks first; the card fades as *Removed*. As a manager, there is
+     no remove on the owner or an admin.
+6. **Staff** in the sidebar.
+   - ✅ **Expected:** the shops as tiles (the warehouse with a box), *Today's
+     attendance* for the chosen one with Present / Absent / Unmarked and a row per
+     person; the staff list with roles and shops; *Payroll* with the month, its
+     payslips and *Run payroll for <month>*.
+7. Click a roster row and choose **Half day**.
+   - ✅ **Expected:** the chips open under the row; the pill changes to *Half day* and
+     the counts move.
+8. **Add staff** → type the email of the warehouse desk's account.
+   - ✅ **Expected:** *<name> is already on the team as Warehouse*, the role filled in,
+     and *Where is their base?* offering only the warehouse (chosen, if there is one).
+     A delivery agent's email: no choice, a line saying where the record is filed. A
+     new name with no email: every location, none chosen. Save → back on Staff with
+     them in the list.
+9. Open a staff member.
+   - ✅ **Expected:** role, shop and salary; the month cursor; *This month* with six
+     figures; every day with its status and, for a punched day, the times and
+     *Punched here* (opens a map); *Mark a day*, *Payroll — <month>* and *Past
+     payslips*. The date in *Mark a day* stays inside the month on screen.
+10. Mark a day **Absent** → **Save**; then **Generate payslip**.
+    - ✅ **Expected:** the day appears in the list; a draft payslip joins *Past
+      payslips*. The print button opens the print dialog with the payslip in the
+      page's language (₹ and Gujarati print correctly); *Save as PDF* saves it.
+11. **Edit** → change the salary and the shop → **Save changes**; then
+    **Deactivate**.
+    - ✅ **Expected:** the detail shows the new figures. Deactivate asks first and
+      marks them *Inactive* in the list; *Reactivate* does not ask.
+12. Staff → **Run payroll for <month>**.
+    - ✅ **Expected:** gross, deductions and net; a row per person who will be paid;
+      *skipped* with the reason (no salary set, inactive); this month carries *still in
+      progress*. **Generate N payslips** → *Generated N payslips*, and Staff's payroll
+      card lists them.
+13. Sign in as the cashier (Flow 17u) → Home.
+    - ✅ **Expected:** *Today* with the date and **Punch in** at the top. In a browser
+      that is allowed location, **Punch in** → *Punched in at <time>*, then **Punch
+      out**. At a shop with a geofence, from outside it: the server's sentence with the
+      distance. With location blocked for the site: the sentence adds how to allow it.
+14. **Staff → My attendance** (or Settings → My attendance) as that cashier, and as the
+    owner.
+    - ✅ **Expected:** the cashier sees today and the month; the owner — with no staff
+      record — is told they are not on the staff, and Home has no punch card.
+15. Narrow the window to 320px in Gujarati on Team, Staff, a staff member and the
+    payroll run.
+    - ✅ **Expected:** one column, nothing cut or scrolling sideways; the payroll totals
+      one per row.
+
+## Flow W10 — The web app: raw material, the cart, the desk and deliveries
+
+The web's version of Flows 17f–17k, 17w (the item side), 17x and 17y. The backend
+running, with a warehouse, a company-operated (FOCO) shop and a franchise (FM) shop,
+a cashier on each, a warehouse desk, a delivery agent and an accountant (Flow 17u),
+and one vendor with a WhatsApp number (Flow 17w).
+
+1. As the **warehouse desk**, **Supply** in the sidebar.
+   - ✅ **Expected:** *Raw material* with *Add an item* and a *Vendors* card; every
+     row has a chevron and the whole row opens it; a withdrawn item is faded and
+     says *Withdrawn*.
+2. **Add an item** → a name, a unit, a category, no price, *Supplied by* the
+   vendor → save. Open it again → **Stop supplying this**.
+   - ✅ **Expected:** it is listed under *From <vendor>* with *No price yet*.
+     Stopping asks first and marks it withdrawn; *Supply it again* does not ask. On a
+     Growth business, *Supplied by* offers only the warehouse and the vendor the item
+     already has.
+3. As the **FOCO cashier**, **Supply** → **+** on two warehouse items and the
+   vendor's item, **+** again on one.
+   - ✅ **Expected:** the chip shows the count (2 on the second click — one line, not
+     two); the bar at the foot shows the items and the total. An unpriced item has no
+     **+**.
+4. **Review order** → type `20` into a quantity and press Enter; press **−** on
+   another until it goes.
+   - ✅ **Expected:** the lines grouped *From the warehouse* and *From <vendor>* with
+     subtotals; the totals follow; the line comes off at zero. *Accounts pays for
+     this order* and nothing to choose. *This becomes 2 orders…* over **Place order**.
+5. **Place order**.
+   - ✅ **Expected:** *Supply orders*, with both new orders and no cart.
+6. As the **FM cashier**, order from the warehouse only → **Review order** →
+   **Pay now**.
+   - ✅ **Expected:** one QR with the exact amount; **Place order** stays off until
+     **Payment done**; *Not yet* takes the tick back. With a vendor whose UPI ID is not
+     set, there is no choice — *Pay on delivery*, and why.
+7. As the **desk**, **Desk**.
+   - ✅ **Expected:** every branch's orders, oldest first, each naming its branch; no
+     carts; the status chips narrow it (`?status=` in the address). Wide, each order is
+     one line; narrow, a card.
+8. Open a placed warehouse order → **Accept** → **+60 min**; **Mark packed**;
+   **Dispatch**.
+   - ✅ **Expected:** the question opens under the buttons; an *Expected by* pill
+     appears. **Dispatch** lists the agents, the freest chosen, with *Nobody yet*
+     last; dispatching names them on the order and in *What has happened*.
+9. On another, **Cannot supply** → *Out of stock* → a note → submit.
+   - ✅ **Expected:** cancelled, the reason and the note on the history.
+10. Open the FOCO shop's vendor order.
+    - ✅ **Expected:** **Mark as sent to the vendor** and **Send on WhatsApp**, which
+      opens WhatsApp (or its web page) addressed to the vendor with the order written
+      out in the page's language.
+11. As the **delivery agent**, **Deliveries** → the FM shop's pay-on-delivery run →
+    **Mark delivered**.
+    - ✅ **Expected:** *Payment on delivery* asks how it was taken: **Cash taken**,
+      or **Show the QR** for the cashier to scan and *They have paid — mark
+      delivered*; *Not yet* closes it. **Report a delay** takes minutes, a reason and
+      a note.
+12. As the **FM cashier**, open the vendor order → **Received**.
+    - ✅ **Expected:** *Have you paid <vendor> the ₹…?* — cash, UPI now, or *Received
+      — I will pay later*, which leaves a **Pay ₹…** on the order.
+13. As the **accountant**, open the FM order paid before ordering.
+    - ✅ **Expected:** **Received** and **Not received**; *Not received* asks first,
+      then the cashier sees **Pay ₹…** on it.
+14. As a cashier, open a placed order → **Cancel order**.
+    - ✅ **Expected:** asks first; cancelled. Each order page's back link returns to
+      the list it was opened from.
+15. Narrow the window to 320px in Gujarati on the catalog, the cart, the desk and an
+    order with a question open.
+    - ✅ **Expected:** one column, nothing cut or scrolling sideways; the cart's total
+      and *Place order* stacked at the foot; the order's address before its lines.
+
+## Flow W11 — The web app: paying for supply orders, Payment QR codes and vendors
+
+The web's version of Flows 17v, 17w, 17x (the paying half), 17y, 17z and 17ae. The
+backend running, with the orders from Flow W10 — some FOCO orders delivered and
+unpaid, an FM order paid before ordering — and the accountant, the desk and the owner.
+
+1. As the **accountant**, Home.
+   - ✅ **Expected:** *Payments to make* with the figure ready to pay (or how many are
+     on their way); no *Payments to confirm* card — the accountant pays, so both lists
+     are behind the one card.
+2. Click it: **Payments**, on *To pay*.
+   - ✅ **Expected:** three tabs as tiles with their counts. Orders grouped *From the
+     warehouse*, then each vendor, each with what has arrived and *Select all that
+     arrived*; an order on its way is faded with a clock and cannot be ticked.
+3. Tick two warehouse orders, then one of a vendor's.
+   - ✅ **Expected:** the bar at the foot shows *2 orders selected* and the exact
+     total; ticking the vendor's starts over with that one alone.
+4. Select the warehouse's arrived orders → **Pay these**.
+   - ✅ **Expected:** one QR for the exact total, the order numbers in its note, and
+     *This payment covers* beside it on a wide window. **Payment done** asks first;
+     confirm → *Paid ₹… for N orders*, and those orders leave the list. **Back**
+     returns to the list with nothing paid.
+5. **To confirm** → **Received** on the FM order.
+   - ✅ **Expected:** asks *Did the money arrive?*; confirming takes it off the list.
+6. **History** → step back a month, then **FM**.
+   - ✅ **Expected:** the paid totals for the whole month, the waiting line when a
+     payment is unconfirmed, and each order with its payments — who, when and the
+     reference. FM hides the accounts tile. Clicking an order opens it; its back link
+     returns to History.
+7. As the **desk**, Home → *Payments to confirm*.
+   - ✅ **Expected:** *Payments* with no tab row — the desk only confirms, and has no
+     History.
+8. As the **owner**, **Settings → Payment QR codes**.
+   - ✅ **Expected:** the counter's UPI ID, then each shop as a row saying whether it
+     uses the business's or its own; the warehouse; each vendor with *QR set* / *QR
+     not set*. Typing `abc` shows *That is not a UPI ID*; a valid one draws the
+     preview QR and enables **Save**. Saving says *Saved* and the line under it names
+     you and the time. **Remove UPI ID** asks first.
+9. Open a shop's row and give it its own UPI ID.
+   - ✅ **Expected:** the row then says *Own UPI ID*; the counter at that shop charges
+     to it (Flow W12).
+10. As the **desk**, Supply → **Vendors** → **Add vendor**: a name and a WhatsApp
+    number → **Add vendor**.
+    - ✅ **Expected:** back on Vendors with it listed, *QR not set*. Open it: where its
+      payments go is said read-only. **Stop using this vendor** asks first and fades
+      it; *Use this vendor again* does not ask. On a Growth business there is no *Add
+      vendor*, just the plan's sentence; the vendors already there can be edited.
+11. Narrow the window to 320px in Gujarati on Payments (with a selection), its paying
+    view, History and Payment QR codes with a row open.
+    - ✅ **Expected:** one column, nothing cut or scrolling sideways; the selected
+      total and *Pay these* stacked at the foot.
+
 ---
 
 ## Known limitations (not bugs — don't file these)
@@ -2787,12 +2982,12 @@ Sign in as an owner (or a cashier), the backend running, the migrations applied.
   plan lacks is refused, with a sentence saying so, before the screen catches up.
 - **The 25-logins-per-branch fair use is stated, not enforced.**
 
-- **The web app has sign-in, sign-up, Home, Settings, notifications, branches, the
-  work calendar, products, sales upload, Reports (by day and by month), Kinds of
-  cost, Expenses and the counter so far.** Every other page it lists shows *Coming to
-  the web* until it is ported; use the mobile app for that work. Its Home also lacks
-  three of the app's cards — today's punch-in and the two supply-payment cards — and
-  the counter's UPI ID is still set up from the app (Payment QR codes, W11).
+- **The web app has every page the mobile app has, but does not pop notifications
+  up** — see the next item.
+- **A punch from a laptop is only as exact as the browser's location**, which on a
+  computer usually comes from Wi-Fi — good to tens of metres, sometimes worse. A
+  branch with a tight geofence may refuse a punch from inside it; punch from the
+  phone, or widen the radius.
 - **The web does not pop notifications up.** They arrive in the bell, which asks the
   server every minute while its tab is in view and at once when the tab comes back.
   Browser push is the last phase of the web plan (W13) and needs a Firebase web app

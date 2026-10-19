@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { IoCompassOutline } from 'react-icons/io5';
 import AppShell from '@/components/layout/AppShell';
 import FullPageLoader from '@/components/layout/FullPageLoader';
-import ComingSoonPage from '@/pages/ComingSoonPage';
 import NoticePage from '@/pages/NoticePage';
 import { GuestOnly, RequireAccess, RequireAuth } from './guards';
 import { PAGES } from './pages';
@@ -18,7 +17,7 @@ const ROUTE_KEYS = Object.keys(ROUTES) as RouteKey[];
 /**
  * Every address the web app answers: one route per entry in `routes/paths.ts`,
  * each guarded by the same rule the app opens that screen on, and each showing
- * its page from `routes/pages.ts` — or "coming to the web" until it is ported.
+ * its page from `routes/pages.ts`.
  */
 export default function AppRoutes() {
   const { t } = useTranslation();
@@ -47,10 +46,10 @@ export default function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
           {ROUTE_KEYS.map((key) => {
-            const { Page, titleKey, icon } = PAGES[key];
+            const Page = PAGES[key];
             const element = (
               <RequireAccess route={key}>
-                {Page ? <Page /> : <ComingSoonPage icon={icon} title={t(titleKey)} />}
+                <Page />
               </RequireAccess>
             );
             return key === 'home' ? (

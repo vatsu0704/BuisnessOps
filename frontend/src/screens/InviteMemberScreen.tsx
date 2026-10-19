@@ -7,16 +7,19 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { inviteMember } from '@/api/team';
 import { extractErrorMessage } from '@/api/client';
-import type { ApiErrorBody } from '@/api/errorMessages';
-import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import { useCashierByBranch } from '@/hooks/useTeam';
 import { refreshTeam } from '@/store/teamStore';
 import { confirm } from '@/utils/confirm';
 import { isValidEmail } from '@/utils/validation';
-import { ROLES, planAllowsRole, roleHas } from '@/permissions';
-import { SINGLE_BRANCH_ROLE } from '@/permissions/explain';
-import type { MembershipRole } from '@/types/user';
+import { planAllowsRole } from '@/permissions';
+import {
+  BRANCH_SCOPED_ROLES,
+  INVITABLE_ROLES,
+  asBranchConflict,
+  isSingleBranchRole,
+  type InvitableRole,
+} from '@/utils/teamRules';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import CashierBranchPicker from '@/components/CashierBranchPicker';
 import FormInput from '@/components/FormInput';
@@ -32,51 +35,9 @@ import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'InviteMember'>;
 
-// OWNER is a valid MembershipRole but is never invitable (there's exactly
-// one, created at signup) — narrowing the type here, not just the runtime
-// list below, is what keeps roleHint_OWNER from needing to exist at all.
-type InvitableRole = Exclude<MembershipRole, 'OWNER'>;
-
-// Derived from the permission matrix, and deliberately: a hand-written list
-// here is how a role ends up existing in the database, holding capabilities in
-// the matrix, and being impossible to actually give anyone. The backend's
-// validator derives the same list from the same matrix.
-const INVITABLE_ROLES = ROLES.filter((r): r is InvitableRole => r !== 'OWNER');
-
-// Which roles a branch selection is required for.
-//
-// MANAGER left this set in requirement 14: the role is business-wide now, so
-// its BranchAccess rows have no effect and asking for them would be theatre.
-// These are the roles whose reach `branch:allAccess` does NOT cover.
-const BRANCH_SCOPED_ROLES = new Set<InvitableRole>(
-  INVITABLE_ROLES.filter((r) => !roleHas(r, 'branch:allAccess'))
-);
-
-/**
- * Requirement 18 - one branch, and one cashier on it.
- *
- * Read from the mirrored matrix rather than written as a literal role name, and
- * compared with the backend by `lint:permissions`, so the picker below cannot
- * offer a shape the server refuses. For this one role the branch list is
- * single-select: tick-boxes would let somebody choose two branches, and the
- * invite would be rejected before it was ever created.
- */
-const isSingleBranchRole = (role: InvitableRole) => role === SINGLE_BRANCH_ROLE;
-
-/**
- * Is this failure requirement 18's "that branch already has a cashier"?
- *
- * The 409 carries the holder's name as a param, which is the whole reason the
- * app can ask a real question instead of reporting a failure and leaving the
- * admin to work out what to do next.
- */
-function asBranchConflict(err: unknown): { branch: string; cashier: string } | null {
-  const body = (err as { response?: { status?: number; data?: ApiErrorBody } }).response;
-  if (body?.status !== 409 || body.data?.code !== 'BRANCH_ALREADY_HAS_CASHIER') return null;
-  const params = body.data.params ?? {};
-  if (typeof params.branch !== 'string' || typeof params.cashier !== 'string') return null;
-  return { branch: params.branch, cashier: params.cashier };
-}
+// Which roles may be invited, which of them need a branch, requirement 18's
+// single-branch role and its 409 are `utils/teamRules.ts`, shared with the web's
+// invite page.
 
 // Seven roles is past the point where a name alone identifies one at a glance,
 // so each gets a glyph.

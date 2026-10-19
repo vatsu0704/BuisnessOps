@@ -1,0 +1,42 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  background: var(--color-warning-bg);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.title svg {
+  flex: none;
+  color: var(--color-warning);
+}
+
+.body {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+/* Each conflict is one line of fact, indented so the list reads as items under
+   the explanation rather than as more of it. */
+.lines {
+  margin: 0;
+  padding-left: var(--space-lg);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--color-text);
+}
+
+.lines li + li {
+  margin-top: 2px;
+}

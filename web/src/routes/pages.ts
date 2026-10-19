@@ -1,146 +1,60 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
-import type { ParseKeys } from 'i18next';
-import type { IconType } from 'react-icons';
-import {
-  IoBarChartOutline,
-  IoBicycleOutline,
-  IoBusinessOutline,
-  IoCalculatorOutline,
-  IoPrintOutline,
-  IoCalendarOutline,
-  IoCardOutline,
-  IoCartOutline,
-  IoCashOutline,
-  IoCloudUploadOutline,
-  IoCubeOutline,
-  IoFileTrayFullOutline,
-  IoFingerPrintOutline,
-  IoHomeOutline,
-  IoNotificationsOutline,
-  IoOptionsOutline,
-  IoPeopleOutline,
-  IoPersonAddOutline,
-  IoPersonOutline,
-  IoPricetagsOutline,
-  IoQrCodeOutline,
-  IoReceiptOutline,
-  IoRibbonOutline,
-  IoStorefrontOutline,
-  IoTrashOutline,
-  IoWalletOutline,
-} from 'react-icons/io5';
 import type { RouteKey } from './paths';
-
-type PageDef = {
-  /** The page's name, which is also the placeholder's title until it is ported. */
-  titleKey: ParseKeys;
-  icon: IconType;
-  /** The page itself, loaded when first opened. Absent: "coming to the web". */
-  Page?: LazyExoticComponent<ComponentType>;
-};
 
 /**
  * Every route's page. A `Record` over `RouteKey`, so adding a route fails `tsc`
- * until it says what it shows — and porting a screen is adding its `Page` here.
+ * until it has a page — the web has one for every screen of the app.
  *
  * Each page is its own chunk: someone who only ever opens Home never downloads
  * the counter.
  */
-export const PAGES: Record<RouteKey, PageDef> = {
-  home: { titleKey: 'tabs.home', icon: IoHomeOutline, Page: lazy(() => import('@/pages/HomePage')) },
+export const PAGES: Record<RouteKey, LazyExoticComponent<ComponentType>> = {
+  home: lazy(() => import('@/pages/HomePage')),
 
-  settings: { titleKey: 'settings.title', icon: IoOptionsOutline, Page: lazy(() => import('@/pages/SettingsPage')) },
-  addBusiness: {
-    titleKey: 'addBusiness.title',
-    icon: IoBusinessOutline,
-    Page: lazy(() => import('@/pages/AddBusinessPage')),
-  },
-  deleteAccount: {
-    titleKey: 'deleteAccount.title',
-    icon: IoTrashOutline,
-    Page: lazy(() => import('@/pages/DeleteAccountPage')),
-  },
-  plan: { titleKey: 'plans.title', icon: IoRibbonOutline, Page: lazy(() => import('@/pages/PlanPage')) },
-  notifications: {
-    titleKey: 'notificationCentre.title',
-    icon: IoNotificationsOutline,
-    Page: lazy(() => import('@/pages/NotificationsPage')),
-  },
+  settings: lazy(() => import('@/pages/SettingsPage')),
+  addBusiness: lazy(() => import('@/pages/AddBusinessPage')),
+  deleteAccount: lazy(() => import('@/pages/DeleteAccountPage')),
+  plan: lazy(() => import('@/pages/PlanPage')),
+  notifications: lazy(() => import('@/pages/NotificationsPage')),
 
-  addBranch: {
-    titleKey: 'addBranch.title',
-    icon: IoStorefrontOutline,
-    Page: lazy(() => import('@/pages/AddBranchPage')),
-  },
-  branchSettings: {
-    titleKey: 'branchSettings.title',
-    icon: IoStorefrontOutline,
-    Page: lazy(() => import('@/pages/BranchSettingsPage')),
-  },
-  workCalendar: {
-    titleKey: 'workCalendar.title',
-    icon: IoCalendarOutline,
-    Page: lazy(() => import('@/pages/WorkCalendarPage')),
-  },
+  addBranch: lazy(() => import('@/pages/AddBranchPage')),
+  branchSettings: lazy(() => import('@/pages/BranchSettingsPage')),
+  workCalendar: lazy(() => import('@/pages/WorkCalendarPage')),
 
-  products: {
-    titleKey: 'products.title',
-    icon: IoPricetagsOutline,
-    Page: lazy(() => import('@/pages/ProductsPage')),
-  },
-  addProduct: {
-    titleKey: 'addProduct.title',
-    icon: IoPricetagsOutline,
-    Page: lazy(() => import('@/pages/AddProductPage')),
-  },
-  editProduct: {
-    titleKey: 'editProduct.title',
-    icon: IoPricetagsOutline,
-    Page: lazy(() => import('@/pages/EditProductPage')),
-  },
-  upload: {
-    titleKey: 'upload.title',
-    icon: IoCloudUploadOutline,
-    Page: lazy(() => import('@/pages/UploadPage')),
-  },
+  products: lazy(() => import('@/pages/ProductsPage')),
+  addProduct: lazy(() => import('@/pages/AddProductPage')),
+  editProduct: lazy(() => import('@/pages/EditProductPage')),
+  upload: lazy(() => import('@/pages/UploadPage')),
 
-  reports: { titleKey: 'reports.title', icon: IoBarChartOutline, Page: lazy(() => import('@/pages/ReportsPage')) },
+  reports: lazy(() => import('@/pages/ReportsPage')),
 
-  team: { titleKey: 'team.title', icon: IoPeopleOutline },
-  inviteMember: { titleKey: 'inviteMember.title', icon: IoPersonAddOutline },
-  staff: { titleKey: 'staffHub.title', icon: IoPeopleOutline },
-  addStaff: { titleKey: 'addStaff.title', icon: IoPersonAddOutline },
-  staffDetail: { titleKey: 'staffDetail.title', icon: IoPersonOutline },
-  editStaff: { titleKey: 'editStaff.title', icon: IoPersonOutline },
-  payrollRun: { titleKey: 'payrollRun.title', icon: IoCashOutline },
-  attendance: { titleKey: 'attendance.title', icon: IoFingerPrintOutline },
+  team: lazy(() => import('@/pages/TeamPage')),
+  inviteMember: lazy(() => import('@/pages/InviteMemberPage')),
+  staff: lazy(() => import('@/pages/StaffPage')),
+  addStaff: lazy(() => import('@/pages/AddStaffPage')),
+  staffDetail: lazy(() => import('@/pages/StaffDetailPage')),
+  editStaff: lazy(() => import('@/pages/EditStaffPage')),
+  payrollRun: lazy(() => import('@/pages/PayrollRunPage')),
+  attendance: lazy(() => import('@/pages/AttendancePage')),
 
-  expenses: { titleKey: 'expenses.title', icon: IoWalletOutline, Page: lazy(() => import('@/pages/ExpensesPage')) },
-  addExpense: { titleKey: 'expenses.addTitle', icon: IoWalletOutline, Page: lazy(() => import('@/pages/AddExpensePage')) },
-  expenseCategories: {
-    titleKey: 'costTypes.title',
-    icon: IoWalletOutline,
-    Page: lazy(() => import('@/pages/ExpenseCategoriesPage')),
-  },
+  expenses: lazy(() => import('@/pages/ExpensesPage')),
+  addExpense: lazy(() => import('@/pages/AddExpensePage')),
+  expenseCategories: lazy(() => import('@/pages/ExpenseCategoriesPage')),
 
-  supply: { titleKey: 'supply.catalogTitle', icon: IoCubeOutline },
-  supplyCart: { titleKey: 'supply.cartTitle', icon: IoCartOutline },
-  addSupplyItem: { titleKey: 'supply.addItem', icon: IoCubeOutline },
-  editSupplyItem: { titleKey: 'supply.editItem', icon: IoCubeOutline },
-  supplyOrders: { titleKey: 'supply.ordersTitle', icon: IoReceiptOutline },
-  supplyOrderDetail: { titleKey: 'supply.ordersTitle', icon: IoReceiptOutline },
-  desk: { titleKey: 'supply.deskTitle', icon: IoFileTrayFullOutline },
-  deliveries: { titleKey: 'supply.deliveriesTitle', icon: IoBicycleOutline },
-  payments: { titleKey: 'payments.title', icon: IoCardOutline },
-  paymentAccounts: { titleKey: 'paymentAccounts.title', icon: IoQrCodeOutline },
-  vendors: { titleKey: 'vendors.title', icon: IoStorefrontOutline },
-  addVendor: { titleKey: 'vendors.add', icon: IoStorefrontOutline },
-  editVendor: { titleKey: 'vendors.edit', icon: IoStorefrontOutline },
+  supply: lazy(() => import('@/pages/SupplyCatalogPage')),
+  supplyCart: lazy(() => import('@/pages/SupplyCartPage')),
+  addSupplyItem: lazy(() => import('@/pages/SupplyItemFormPage')),
+  editSupplyItem: lazy(() => import('@/pages/SupplyItemFormPage')),
+  supplyOrders: lazy(() => import('@/pages/SupplyOrdersPage')),
+  supplyOrderDetail: lazy(() => import('@/pages/SupplyOrderDetailPage')),
+  desk: lazy(() => import('@/pages/DeskPage')),
+  deliveries: lazy(() => import('@/pages/DeliveriesPage')),
+  payments: lazy(() => import('@/pages/SupplyPaymentsPage')),
+  paymentAccounts: lazy(() => import('@/pages/PaymentAccountsPage')),
+  vendors: lazy(() => import('@/pages/VendorsPage')),
+  addVendor: lazy(() => import('@/pages/VendorFormPage')),
+  editVendor: lazy(() => import('@/pages/VendorFormPage')),
 
-  counter: { titleKey: 'counter.title', icon: IoCalculatorOutline, Page: lazy(() => import('@/pages/CounterPage')) },
-  receiptPrinter: {
-    titleKey: 'printer.title',
-    icon: IoPrintOutline,
-    Page: lazy(() => import('@/pages/ReceiptPrinterPage')),
-  },
+  counter: lazy(() => import('@/pages/CounterPage')),
+  receiptPrinter: lazy(() => import('@/pages/ReceiptPrinterPage')),
 };

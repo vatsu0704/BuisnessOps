@@ -1,0 +1,111 @@
+.card {
+  container: upi-editor / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+  padding: var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The fields side by side once the card is wide enough for both labels. */
+@container upi-editor (min-width: 620px) {
+  .fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-lg);
+  }
+}
+
+/* The code beside its explanation while there is room, above it after. */
+.preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md) var(--space-lg);
+}
+
+/* Small, because it is a check, not a payment — still large enough to scan. */
+.qrFrame {
+  flex: none;
+  width: 168px;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+}
+
+.previewHint {
+  flex: 1 1 200px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.audit {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-tertiary);
+}
+
+.audit svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.error {
+  font-size: 13px;
+  color: var(--color-error);
+}
+
+.saved {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-success);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.remove {
+  align-self: center;
+  padding: var(--space-sm) var(--space-md);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-error);
+  cursor: pointer;
+}
+
+.remove:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.remove:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.remove:disabled {
+  cursor: default;
+  opacity: 0.5;
+}

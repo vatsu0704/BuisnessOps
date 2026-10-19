@@ -1,0 +1,44 @@
+.name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+/* Never cut: an address that is cut off is an address nobody can use. */
+.address {
+  margin-top: var(--space-xs);
+  font-size: 13.5px;
+  line-height: 1.5;
+  white-space: pre-line;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.missing {
+  margin-top: var(--space-xs);
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.map {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+  padding: 6px var(--space-md);
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.map:hover span {
+  text-decoration: underline;
+}
+
+.map:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

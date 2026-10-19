@@ -43,6 +43,13 @@ import { formatTime } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 import { payeeOf, upiNote } from '@/utils/upi';
 import { openWhatsApp } from '@/utils/whatsapp';
+import {
+  DELAY_REASONS,
+  PROMISE_CHOICES,
+  supplyOrderActions,
+  vendorOrderLines,
+  type SupplyPrimaryAction,
+} from '@/utils/supplyActions';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { useScreenEdges } from '@/hooks/useScreenEdges';
@@ -84,18 +91,6 @@ import { useScreenEdges } from '@/hooks/useScreenEdges';
  * - A company-operated branch's order shows none of this: accounts pays it.
  */
 
-const DELAY_REASONS: SupplyDelayReason[] = [
-  'TRAFFIC',
-  'STOCK_OUT',
-  'VEHICLE_ISSUE',
-  'WEATHER',
-  'STAFF_SHORTAGE',
-  'OTHER',
-];
-
-/** Quick promises, so accepting does not need a date picker to say "an hour". */
-const PROMISE_CHOICES = [30, 60, 120];
-
 /**
  * `dispatch` and `assign` share one picker and differ in two ways: dispatch
  * also moves the order, and only dispatch may end with nobody named.
@@ -105,9 +100,6 @@ const PROMISE_CHOICES = [30, 60, 120];
  * `pay` is the branch paying for an order after it was placed.
  */
 type Panel = 'none' | 'delay' | 'reject' | 'accept' | 'dispatch' | 'assign' | 'collect' | 'receive' | 'pay';
-
-/** Stages at which the desk may still change who is carrying it. */
-const ASSIGNABLE = ['ACCEPTED', 'PACKED', 'DISPATCHED'];
 
 export default function SupplyOrderDetailScreen() {
   const edges = useScreenEdges();
@@ -204,26 +196,16 @@ export default function SupplyOrderDetailScreen() {
   const payee = payeeOf(order);
   const qrNote = upiNote(order.branch?.code, [order.orderNumber]);
 
-  // Money the branch still owes on arrival. Mirrors the server's rule rather
-  // than guessing at it: an ONLINE order, a COD one already paid, or one
-  // accounts pays for has nothing left to hand over.
-  const cashOutstanding = order.paymentMode === 'COD' && order.paymentStatus === 'PENDING';
-
-  // A franchise branch paying for its own order after placing it: the
-  // warehouse said a payment never arrived, or a vendor's goods came and were
-  // not paid for then. Pay-on-delivery to the warehouse is NOT offered early —
-  // that money is taken by the agent at the counter.
-  const payable =
-    canOrder &&
-    order.paymentMode !== 'ACCOUNTS' &&
-    order.status !== 'DRAFT' &&
-    order.status !== 'CANCELLED' &&
-    (order.paymentStatus === 'FAILED' ||
-      (fromVendor && order.paymentStatus === 'PENDING' && order.status === 'DELIVERED'));
-
-  const payPrimary = payable
-    ? { label: t('supply.payAmount', { amount }), icon: 'qr-code' as const, onPress: () => openPanel('pay') }
-    : null;
+  // Which buttons this order offers this person — the rules are shared with the
+  // web app, so the two cannot disagree about them.
+  const actions = supplyOrderActions(order, {
+    fulfil: canFulfil,
+    deliver: canDeliver,
+    delay: canDelay,
+    order: canOrder,
+    receive: canReceive,
+    verify: canVerify,
+  });
 
   /**
    * The single next step, decided by who supplies it, its status, and what this
@@ -231,54 +213,36 @@ export default function SupplyOrderDetailScreen() {
    * state — a delivered order, or a cashier looking at one the warehouse is
    * packing.
    */
-  const warehousePrimary =
-    canFulfil && order.status === 'PLACED'
-      ? { label: t('supply.accept'), icon: 'checkmark' as const, onPress: () => openPanel('accept') }
-      : canFulfil && order.status === 'ACCEPTED'
-        ? { label: t('supply.pack'), icon: 'cube' as const, onPress: () => void run(packSupplyOrder) }
-        : canFulfil && order.status === 'PACKED'
-          ? {
-              label: t('supply.dispatch'),
-              icon: 'bicycle' as const,
-              // Dispatch asks who is taking it rather than going out blind. The
-              // picker preselects the freest agent, so the common case is still
-              // one press after this one.
-              onPress: () => openPanel('dispatch'),
-            }
-          : canDeliver && order.status === 'DISPATCHED'
-            ? {
-                label: t('supply.deliver'),
-                icon: 'checkmark-done' as const,
-                // Pay on delivery asks first (requirement 22): the goods arriving
-                // is not evidence the money did, and only the person at the
-                // counter knows. Anything already settled — or paid by accounts
-                // — is delivered straight away: a question whose answer cannot
-                // matter only teaches people to tap through it.
-                onPress: () =>
-                  cashOutstanding ? openPanel('collect') : void run((b, id) => deliverSupplyOrder(b, id)),
-              }
-            : payPrimary;
-
-  // A vendor owed on arrival is asked about; one paid already, or paid by
-  // accounts, is simply received.
-  const vendorOwed = fromVendor && cashOutstanding;
-  const vendorPrimary =
-    canFulfil && order.status === 'PLACED' && order.operatingModel === 'FOCO'
-      ? {
-          label: t('supply.markSentToVendor'),
-          icon: 'paper-plane' as const,
-          onPress: () => void run((b, id) => acceptSupplyOrder(b, id)),
-        }
-      : canReceive && ['PLACED', 'ACCEPTED'].includes(order.status)
-        ? {
-            label: t('supply.markReceived'),
-            icon: 'checkmark-done' as const,
-            onPress: () =>
-              vendorOwed ? openPanel('receive') : void run((b, id) => receiveSupplyOrder(b, id)),
-          }
-        : payPrimary;
-
-  const primary = fromVendor ? vendorPrimary : warehousePrimary;
+  const PRIMARY: Record<
+    SupplyPrimaryAction,
+    { label: string; icon: keyof typeof Ionicons.glyphMap; onPress: () => void }
+  > = {
+    accept: { label: t('supply.accept'), icon: 'checkmark', onPress: () => openPanel('accept') },
+    pack: { label: t('supply.pack'), icon: 'cube', onPress: () => void run(packSupplyOrder) },
+    // Dispatch asks who is taking it rather than going out blind. The picker
+    // preselects the freest agent, so the common case is still one press after
+    // this one.
+    dispatch: { label: t('supply.dispatch'), icon: 'bicycle', onPress: () => openPanel('dispatch') },
+    deliver: {
+      label: t('supply.deliver'),
+      icon: 'checkmark-done',
+      onPress: () => void run((b, id) => deliverSupplyOrder(b, id)),
+    },
+    collect: { label: t('supply.deliver'), icon: 'checkmark-done', onPress: () => openPanel('collect') },
+    sendToVendor: {
+      label: t('supply.markSentToVendor'),
+      icon: 'paper-plane',
+      onPress: () => void run((b, id) => acceptSupplyOrder(b, id)),
+    },
+    receive: {
+      label: t('supply.markReceived'),
+      icon: 'checkmark-done',
+      onPress: () => void run((b, id) => receiveSupplyOrder(b, id)),
+    },
+    receiveAsk: { label: t('supply.markReceived'), icon: 'checkmark-done', onPress: () => openPanel('receive') },
+    pay: { label: t('supply.payAmount', { amount }), icon: 'qr-code', onPress: () => openPanel('pay') },
+  };
+  const primary = actions.primary ? PRIMARY[actions.primary] : null;
 
   /**
    * Withdrawing an order cannot be undone — placing it again means rebuilding
@@ -316,14 +280,11 @@ export default function SupplyOrderDetailScreen() {
    */
   async function sendOnWhatsApp() {
     if (!order?.vendor?.phone) return;
-    const lines = order.items
-      .map((line) => `• ${line.itemNameSnapshot} × ${Number(line.quantity)} ${line.unitSnapshot}`)
-      .join('\n');
     const text = t('supply.whatsappMessage', {
       number: order.orderNumber ?? '',
       branch: order.branch?.name ?? '',
       address: order.branch?.addressLine ?? order.branch?.city ?? '',
-      lines,
+      lines: vendorOrderLines(order),
       total: amount,
     });
     const opened = await openWhatsApp(order.vendor.phone, text);
@@ -346,31 +307,17 @@ export default function SupplyOrderDetailScreen() {
     }
   }
 
-  const delayable = ['PLACED', 'ACCEPTED', 'PACKED', 'DISPATCHED'].includes(order.status);
-  // The desk rejects what reaches the desk: every warehouse order, and a vendor
-  // order only when it was the desk's to forward.
-  const rejectable = fromVendor
-    ? canFulfil && order.operatingModel === 'FOCO' && ['PLACED', 'ACCEPTED'].includes(order.status)
-    : canFulfil && ['PLACED', 'ACCEPTED', 'PACKED'].includes(order.status);
-  // Changing the carrier, separately from dispatching: the agent who was given
-  // it goes home, and the run has to go to somebody else. A vendor brings its
-  // own goods, so there is nobody of ours to name.
-  const reassignable = canFulfil && !fromVendor && ASSIGNABLE.includes(order.status);
-  const cancellable = canOrder && ['DRAFT', 'PLACED'].includes(order.status);
-  // The warehouse confirms money that came to the warehouse — not a vendor's,
-  // and not accounts paying the business's own bill.
-  const verifiable =
-    canVerify &&
-    !fromVendor &&
-    order.paymentMode !== 'ACCOUNTS' &&
-    (order.paymentStatus === 'PAID' || order.paymentStatus === 'FAILED');
-  // Whoever is sending it on: the desk for a company-operated branch, the
-  // branch itself for a franchise.
-  const sendable =
-    fromVendor &&
-    !!order.vendor?.phone &&
-    ['PLACED', 'ACCEPTED'].includes(order.status) &&
-    (order.operatingModel === 'FOCO' ? canFulfil : canOrder);
+  // The steps that are not the next one. Reassigning is changing the carrier
+  // separately from dispatching: the agent who was given it goes home, and the
+  // run has to go to somebody else.
+  const {
+    delay: delayable,
+    reject: rejectable,
+    reassign: reassignable,
+    cancel: cancellable,
+    verify: verifiable,
+    whatsapp: sendable,
+  } = actions;
 
   return (
     <View style={styles.container}>
@@ -747,7 +694,7 @@ export default function SupplyOrderDetailScreen() {
             ) : null}
 
             {/* --- The actions that are not the next step --- */}
-            {(canDelay && delayable) || rejectable || cancellable || verifiable || reassignable || sendable ? (
+            {delayable || rejectable || cancellable || verifiable || reassignable || sendable ? (
               <AnimatedEntrance delay={step(4)} style={styles.block}>
                 <View style={styles.actions}>
                   {sendable ? (
@@ -772,7 +719,7 @@ export default function SupplyOrderDetailScreen() {
                     </PressableScale>
                   ) : null}
 
-                  {canDelay && delayable ? (
+                  {delayable ? (
                     <PressableScale
                       testID="supply-action-delay"
                       style={styles.action}
@@ -793,7 +740,7 @@ export default function SupplyOrderDetailScreen() {
                         <Ionicons name="shield-checkmark-outline" size={16} color={colors.success} />
                         <Text style={styles.actionText}>{t('supply.markVerified')}</Text>
                       </PressableScale>
-                      {order.paymentStatus === 'PAID' ? (
+                      {actions.verifyFailed ? (
                         <PressableScale
                           testID="supply-action-verify-failed"
                           style={styles.action}

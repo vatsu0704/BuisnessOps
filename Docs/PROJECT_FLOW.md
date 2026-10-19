@@ -365,16 +365,16 @@ finishes it**, and add one when something ships deliberately incomplete.
 - [x] W12 — the counter, offline (a service worker and the browser's storage), printing
   to the Bluetooth printer from Chrome/Edge with the print dialog as the fallback. On a
   real printer and offline in a real browser: Flow W12, Vatsal's run.
-- [ ] W8 — team and invites, staff, attendance and punch-in, payroll and payslips.
-- [ ] W10 — supply catalog and cart, orders and order detail, the desk, deliveries.
-- [ ] W11 — supply payments with the History tab (R35), Payment QR codes with the
+- [x] W8 — team and invites, staff, attendance and punch-in, payroll and payslips.
+- [x] W10 — supply catalog and cart, orders and order detail, the desk, deliveries.
+- [x] W11 — supply payments with the History tab (R35), Payment QR codes with the
   counter section, vendors, UPI QR.
 - [ ] W13 — browser push (needs a Firebase web app and a VAPID key).
-- [ ] The web Home's three missing cards: today's punch-in and the two supply-payment
-  cards (they arrive with W8 and W11). The branches-to-chase card came with W9.
+- [x] The web Home's missing cards: the branches-to-chase card came with W9, today's
+  punch-in with W8, the two supply-payment cards with W11.
 - [x] The web Home on today's figures and the quick-action tiles (R33) — W7b.
 - [x] The web Reports' Per-day view and the Kinds-of-cost page (R34) — W7b.
-- [ ] The web's payment History tab (R35) — with the Payments page (W11).
+- [x] The web's payment History tab (R35) — with the Payments page (W11).
 
 **Before anyone outside a pilot group uses it** (`DEPLOYMENT.md` → *Before you call
 it live*):
@@ -1812,9 +1812,10 @@ functionality, ported in the order of the plan below.
   hardcoded strings. The theme's tokens are repeated as CSS variables in
   `web/src/styles/tokens.css`.
 - **Every surface the app has already has a route** with the same capability
-  gate as its tab or Home card. Until it is ported it shows a "coming to the web"
-  page; a role without the capability gets "not part of your role" instead. So the
-  sidebar is the finished one, and porting a screen replaces one placeholder.
+  gate as its tab or Home card; a role without the capability gets "not part of
+  your role". Each showed a "coming to the web" page until it was ported, so the
+  sidebar was the finished one from the start. Since W11 every route has its page,
+  and the placeholder is gone.
 
 ### W0 — Foundation, sign-in, sign-up, Home ✅
 
@@ -1871,10 +1872,10 @@ ships on its own — it replaces placeholders, passes `lint`, `lint:i18n`,
 | W7b | Catch-up with the 2026-10-14 mobile changes: Home on today's figures and quick actions, Reports per day, Kinds of cost | ✅ |
 | W9 | Expenses, the expense-gap card, the day-end export | ✅ |
 | W12 | Counter: offline, printing | ✅ code and shots; Flow W12 on a real printer is Vatsal's |
-| W8 | Team and invites, staff, attendance and punch-in, payroll and payslips | ⏳ next |
-| W10 | Supply catalog and cart, orders and order detail, the desk, deliveries | ⏳ |
-| W11 | Supply payments (with History), payment accounts, vendors, UPI QR | ⏳ |
-| W13 | Browser push (needs a Firebase web app and a VAPID key) | ⏳ |
+| W8 | Team and invites, staff, attendance and punch-in, payroll and payslips | ✅ |
+| W10 | Supply catalog and cart, orders and order detail, the desk, deliveries | ✅ |
+| W11 | Supply payments (with History), payment accounts, vendors, UPI QR | ✅ |
+| W13 | Browser push (needs a Firebase web app and a VAPID key) | ⏳ next — needs Vatsal's Firebase web app and VAPID key first |
 
 **Re-planned 2026-10-16**, after the counter, Home and Reports changed on the phone
 (Task 14). Vatsal chose the order above — the counter early, Expenses just before it
@@ -2140,6 +2141,161 @@ Bluetooth printer where the browser allows it.
   fifteen counter and printer scenarios — taking a bill in UPI and cash, the token,
   offline, refused, a bill, a closed day, a read-only plan, and the counter opened again
   with no connection. Flow W12 needs a real printer and a real browser offline.
+
+### W8 — People ✅
+
+The app's people screens in a browser (built 2026-10-17): the team and its invites,
+staff records, attendance and punching in, payroll and payslips — eight pages, each
+opening on the app's own route rule, and Home's punch-in card.
+
+- **Team** (`/team`, from Settings): pending invites, then every member as a card in a
+  grid that wraps — "every branch" for a role that reaches them all, one branch that
+  *moves* for a cashier (requirement 18: the picker opens in the card and names who runs
+  each branch; an occupied branch comes back as the server's 409, the swap is asked, and
+  the same request goes again with `confirm`), removable branches for anyone else.
+  Withdrawing an invite, removing a member and removing a branch ask first; requirement
+  18's conflict report sits above the list, read-only. Each action is offered for the
+  capability its endpoint is guarded by (`team:revoke`, `team:manageBranchAccess`).
+- **Invite** (`/team/invite`): the email, the roles as rows with an icon and a sentence,
+  narrowed by the plan with the note when some are missing, the cashier's single branch
+  (naming the current cashier) or several branches for anyone else, and the same 409 →
+  confirm → resend at this door.
+- **Staff** (`/staff`, everyone's): for whoever may add staff, today's roster for a
+  branch (`?branch=`) with a one-click mark on each row, the staff list, and — with
+  `payroll:run` — the month's payslips, each printable, and *Run payroll*; for anyone
+  else, their own attendance and payslips, or a sentence saying they are not on the
+  staff. **Add staff** asks who first, because the email decides the next question
+  (`staffBase`): the warehouse desk is based at a warehouse, a business-wide role is not
+  asked and the line says where the record is filed, anyone else picks a location; pay
+  only with `staff:setPay`. **Staff detail** has the month as payroll sees it, every day
+  with when and where they punched (a map link), marking a day held inside the month on
+  screen, a payslip for the month, and the payslips so far. **Edit staff** changes
+  everything the app's screen does; deactivating asks, reactivating does not.
+- **Payroll run** (`/payroll/2026/10?branch=`): totals, who is paid, who was skipped and
+  why, one button — preview and run in one shape. **Attendance** (`/attendance`): today
+  with Punch in / Punch out, the month under it. **Home**: the punch card, for somebody
+  with a staff record only, saying so on a weekly off.
+- **Payslips print through the browser's dialog** ("Save as PDF" is one of its choices)
+  from the server's own document in the page's language, as the export summary does.
+- **A punch uses the browser's location** (`web/src/utils/punch.ts`): sent when the
+  browser gives one, the punch tried without it otherwise, and when a branch needed it
+  and the browser had blocked it for the site, the refusal says how to allow it. The
+  privacy page now says a web punch records where the browser says the computer is.
+- **Shared now** (`utils/teamRules.ts`, the app imports it too): which roles may be
+  invited and which need branches, the single-branch role, who runs each branch,
+  requirement 18's two 409s, and who may remove whom. The web holds the team and "am I
+  on the staff?" in stores (`teamStore`, `myStaffStore`) — Team, Invite and Add staff
+  read one member list.
+- Verification: `npm test` (155 — the shared team rules, the team store, the staff
+  record's 404-is-an-answer), `lint`, `lint:shared`, `lint:i18n`, the app's `tsc` and
+  its translation, error, permission and receipt checks, and `npm run shots` with
+  thirty-five people scenarios across owner, manager, cashier, staff and accountant —
+  the swap questions, the deactivate question, a refused punch, a finished run. **Found
+  on the way:** a payroll total in half a 320px phone broke mid-figure; the totals stack
+  there now. Flow W8 is the walkthrough against the real backend.
+
+### W10 — Supply ✅
+
+The app's supply screens in a browser (built 2026-10-18): the raw-material catalog
+and the branch's cart, the item form, the three lists of orders — the branch's, the
+warehouse desk's, the delivery agent's — and the order page with every step anyone
+may take. Eight pages, each opening on the app's own route rule.
+
+- **Raw material** (`/supply?branch=`): one list doing two jobs, as in the app. A
+  branch clicks **+** to add one (the chip then shows how many are in the order) and
+  the order waits at the foot of the page with its count and total; the desk opens
+  an item to edit it, sees what it has withdrawn, and has *Add an item* and the way
+  to Vendors. Once any item comes from a vendor the list is headed by who supplies
+  each part, then by category; a search box past six items. The rows wrap into as
+  many columns as the page holds.
+- **The cart** (`/supply/cart/:id`): the lines grouped by supplier — the way the
+  server will split the order — each with a number field and steppers, subtotals
+  when there is more than one supplier, and how it is paid beside them on a wide
+  page: nothing to choose for a company-operated branch (accounts pays); for a
+  franchise, *Pay now* with one QR per supplier, each ticked off before *Place
+  order* opens, or *Pay on delivery* — and only that, with the reason, when a
+  supplier has no UPI ID yet. The total and *Place order* stay in view at the foot.
+  A cart that splits lands on the orders list; one that does not, on its order.
+- **Add / edit an item**: name, unit, category, a price that may be empty (not yet
+  orderable), *Supplied by* as rows once there are vendors — narrowed by the plan
+  (`vendors`), keeping a withdrawn vendor on the item it already has — and *Stop
+  supplying this*, which asks; *Supply it again* does not.
+- **Supply orders, Desk, Deliveries** (`/supply-orders`, `/desk?status=`,
+  `/deliveries`): one list, three sources. Each order is a card on a narrow page and
+  one line of a table on a wide one — number, branch and supplier, the status and
+  payment pills, who is carrying it and the last delay, the amount. The desk has the
+  status chips; the branch's list starts with its open cart.
+- **The order page** (`/supply-orders/:id`): the state, the next step as one button
+  and the other steps beside it, what is on it, where it is going (a map link), and
+  what has happened. The steps that need an answer open under the buttons, so the
+  order stays in view: when it will be ready; who is taking it (the freest agent
+  chosen already, *Nobody yet* allowed for a dispatch); how the money was taken at
+  the counter, with the warehouse's QR on request; whether the vendor was paid on
+  arrival; paying again; a delay or a rejection with its reason. *Cancel order* and
+  *Not received* ask first. A vendor order sends itself to the vendor through a
+  WhatsApp link. The back link returns to the list it was opened from.
+- **Shared now** (the app imports them too): which buttons an order offers whom
+  (`utils/supplyActions.ts` — the next step, the delay, reject, reassign, cancel,
+  verify and WhatsApp rules, and the vendor's message lines), how a status and a
+  payment read and their colours (`utils/supplyStatus.ts`), how a cart and the
+  catalog group (`utils/supplyGroups.ts`), and the WhatsApp number and link
+  (`utils/whatsappNumber.ts`; `whatsapp.ts` keeps the phone's opener). The web holds
+  the vendors and the two payment lists in stores (`vendorStore`,
+  `supplyPaymentStore`); every step on the order page refreshes the payment lists,
+  which W11's Payments page and Home cards read.
+- Verification: `npm test` (179 — the order-action rules asked of the matrix role
+  by role, the cart and catalog grouping, the status words, the WhatsApp number, the
+  two stores), `lint`, `lint:shared`, `lint:i18n`, the app's `tsc`, and `npm run
+  shots` with thirty-five supply scenarios across cashier (company-operated and
+  franchise), owner, desk, agent and accountant. **Found on the way:** the desk's
+  catalog rows were links only on their text, so the chevron did nothing — the whole
+  row opens the item now; and a question's Cancel, wrapping above its submit at
+  320px, now drops under it. Flow W10 is the walkthrough against the real backend.
+
+### W11 — Supply money ✅
+
+The app's money screens in a browser (built 2026-10-18), which leaves no page on the
+web still to port: Payments with its three tabs, Payment QR codes, Vendors and the
+vendor form, and Home's two payment cards.
+
+- **Payments** (`/payments?tab=pay|confirm|history`): the tabs this person may use, as
+  tiles with their counts, the tab in the address so Home's cards and the Payment
+  history tile open the right one.
+  - *To pay* (`supplyPayment:settle`): every company-operated branch's unpaid order,
+    grouped by who it is owed to — the warehouse, then each vendor — with the arrived
+    figure and *Select all that arrived* per payee. An order on its way is dimmed and
+    cannot be ticked; ticking somebody else's starts a new selection, because one
+    payment pays one UPI ID. The ticked total stays at the foot with *Pay these*,
+    which opens one QR for the whole selection beside the orders it covers; *Payment
+    done* asks first and says *Paid ₹… for N orders*.
+  - *To confirm* (`supplyPayment:verify`): payments franchise branches sent the
+    warehouse; *Received* asks, then confirms. *Not received* stays on the order page.
+  - *History* (`supplyPayment:viewHistory`, requirement 35): the month cursor, All /
+    FOCO / FM, the paid totals over the whole month, what still waits to be
+    confirmed, and each order with its payments — who, when, the reference.
+- **Payment QR codes** (`/payment-accounts`, `paymentAccount:manage`): the counter's
+  UPI ID and each shop's own (rows that open one at a time), the warehouse's (for
+  whoever confirms payments to it), and each vendor's. One editor for all of them: the
+  UPI ID checked as it is typed, the name a payer's app shows, a preview QR with no
+  amount, who changed it last and when, and *Remove UPI ID*, which asks. This is
+  also where the counter's UPI ID is set up on the web now.
+- **Vendors** (`/vendors`, from the catalog): the desk's list, each saying whether
+  its QR is set; *Add vendor* on Franchise and the plan's sentence below it.
+  **Vendor form**: a name and the WhatsApp number orders go to, where its payments
+  go said read-only (accounts sets it), and *Stop using this vendor*, which asks.
+- **Home**: *Payments to make* for whoever pays (the figure ready to pay, or how
+  many are on their way) and *Payments to confirm* for whoever confirms and does not
+  pay — the app's `{ holds, unless }` gate.
+- **The "coming to the web" page is gone.** `routes/pages.ts` is now a plain map
+  from every route to its page, so a route added later fails `tsc` until it has one.
+- **Shared now** (`utils/supplyPayments.ts`, the app imports it too): grouping what
+  is owed by payee, the one-payee selection, *Select all that arrived*, and the
+  history totals.
+- Verification: `npm test` (185 — the payment rules among them), `lint`,
+  `lint:shared`, `lint:i18n`, the app's `tsc`, and `npm run shots` with twenty-three
+  money scenarios across accountant, desk and owner — a selection, the batch QR, a
+  payment recorded, the FM history, a shop's own counter UPI ID, a vendor with none,
+  a Growth business's vendors. Flow W11 is the walkthrough against the real backend.
 
 ### Plan (requirement 28) ✅
 

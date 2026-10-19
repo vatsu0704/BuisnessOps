@@ -139,12 +139,13 @@ records it keeps about you, ask that business first.</p>
   your phone number. Your password is stored only as a one-way hash; nobody,
   including us, can read it. We also keep the language you chose for the app.</li>
   <li><strong>Location, when you punch in or out:</strong> if you allow it, the
-  app records where your phone was at that moment and stores it with that day's
+  app records where your phone was at that moment — or, punching in from the web
+  version, where the browser says the computer is — and stores it with that day's
   attendance, so the business can confirm you were at the branch. It is read
-  only while you are using the app, never in the background. You can refuse the
-  permission; a business that requires punching in at the branch may then not
-  accept the punch. Branch addresses and map coordinates entered by the business
-  are stored too.</li>
+  only at the moment you punch, never in the background. You can refuse the
+  permission, on the phone or in the browser; a business that requires punching
+  in at the branch may then not accept the punch. Branch addresses and map
+  coordinates entered by the business are stored too.</li>
   <li><strong>Business records:</strong> what a business enters or uploads —
   branches, products and prices, sales, expenses, supply orders, vendors, and the
   UPI IDs payments are made to.</li>

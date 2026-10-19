@@ -1,0 +1,112 @@
+/* The order page's inline questions — accept, dispatch, collect, delay, reject.
+   Inline rather than a dialog, so the order stays on screen while somebody says
+   what is wrong with it; outlined in the brand colour so it reads as "asking". */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-lg);
+  border: 1.5px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.body {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.hint {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+/* Rows stack, so another option costs height rather than squeezing the others. */
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* Cancel beside the submit while both fit. When a translation leaves no room, the
+   lines wrap upwards: the submit full width on top, Cancel centred under it —
+   never squeezed, and never Cancel first. */
+.actions {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+.actions > :last-child {
+  flex: 1 1 200px;
+}
+
+/* A quiet way out under the main choices: "Not yet", "Not sure yet". */
+.skip {
+  align-self: center;
+  padding: var(--space-sm) var(--space-md);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.skip:hover:not(:disabled) {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+.skip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.skip:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.emptyTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.emptyBody {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.error {
+  font-size: 13px;
+  color: var(--color-error);
+}

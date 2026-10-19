@@ -19,6 +19,7 @@ import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
 import SegmentedOption from '@/components/SegmentedOption';
 import { formatAmount } from '@/utils/format';
+import { groupCatalog, hasVendorItems as anyVendorItems, quantitiesInCart } from '@/utils/supplyGroups';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { useScreenEdges } from '@/hooks/useScreenEdges';
@@ -87,36 +88,15 @@ export default function SupplyCatalogScreen() {
     }, [load])
   );
 
-  const quantityInCart = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const line of cart?.items ?? []) {
-      if (line.inventoryItemId) counts.set(line.inventoryItemId, Number(line.quantity));
-    }
-    return counts;
-  }, [cart]);
+  const quantityInCart = useMemo(() => quantitiesInCart(cart?.items), [cart]);
 
   // Supplier, then category: the warehouse first and vendors by name, the same
   // order the cart splits an order in.
-  const hasVendorItems = useMemo(() => items.some((item) => item.vendorId !== null), [items]);
-  const grouped = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    const suppliers = new Map<string, { label: string | null; categories: Map<string, SupplyItem[]> }>();
-    for (const item of items) {
-      if (needle && !item.name.toLowerCase().includes(needle)) continue;
-      const supplierKey = item.vendorId ?? '';
-      const supplier = suppliers.get(supplierKey) ?? { label: item.vendor?.name ?? null, categories: new Map() };
-      const category = item.category?.trim() || t('supply.uncategorised');
-      supplier.categories.set(category, [...(supplier.categories.get(category) ?? []), item]);
-      suppliers.set(supplierKey, supplier);
-    }
-    return [...suppliers.entries()]
-      .sort(([a, x], [b, y]) => (a === '' ? -1 : b === '' ? 1 : (x.label ?? '').localeCompare(y.label ?? '')))
-      .map(([key, supplier]) => ({
-        key,
-        label: supplier.label,
-        categories: [...supplier.categories.entries()].sort(([a], [b]) => a.localeCompare(b)),
-      }));
-  }, [items, search, t]);
+  const hasVendorItems = useMemo(() => anyVendorItems(items), [items]);
+  const grouped = useMemo(
+    () => groupCatalog(items, { search, uncategorised: t('supply.uncategorised') }),
+    [items, search, t]
+  );
 
   async function addOne(item: SupplyItem) {
     if (!businessId || !branchId || busyItemId) return;

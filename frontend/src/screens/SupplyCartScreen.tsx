@@ -9,7 +9,7 @@ import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { extractErrorMessage } from '@/api/client';
 import { getSupplyOrder, placeSupplyOrder, updateSupplyOrderItem } from '@/api/supply';
-import type { ChoosablePaymentMode, SupplyOrder, SupplyOrderItem, SupplyOrderVendor } from '@/types/supply';
+import type { ChoosablePaymentMode, SupplyOrder } from '@/types/supply';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
@@ -18,39 +18,11 @@ import SegmentedOption from '@/components/SegmentedOption';
 import UpiPayCard from '@/components/payments/UpiPayCard';
 import { formatAmount } from '@/utils/format';
 import { haptics } from '@/utils/haptics';
+import { groupBySupplier } from '@/utils/supplyGroups';
 import { isUpiCurrency, supplierPayee, upiNote } from '@/utils/upi';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { useScreenEdges } from '@/hooks/useScreenEdges';
-
-/** One supplier's share of the cart — what becomes one order when it is placed. */
-type SupplierGroup = {
-  key: string;
-  vendor: SupplyOrderVendor | null;
-  lines: SupplyOrderItem[];
-  subtotal: number;
-};
-
-/**
- * The cart's lines grouped the way the server will split them: by each item's
- * supplier as it is now, the warehouse first and vendors by name.
- */
-function groupBySupplier(items: SupplyOrderItem[]): SupplierGroup[] {
-  const groups = new Map<string, SupplierGroup>();
-  for (const line of items) {
-    const vendor = line.inventoryItem?.vendor ?? null;
-    const key = vendor?.id ?? 'WAREHOUSE';
-    const group = groups.get(key) ?? { key, vendor, lines: [], subtotal: 0 };
-    group.lines.push(line);
-    group.subtotal += Number(line.lineTotal);
-    groups.set(key, group);
-  }
-  return [...groups.values()].sort((a, b) => {
-    if (!a.vendor) return -1;
-    if (!b.vendor) return 1;
-    return a.vendor.name.localeCompare(b.vendor.name);
-  });
-}
 
 /**
  * Review the order and send it — requirements 5, 24, 25 and 26.

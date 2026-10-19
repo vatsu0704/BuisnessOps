@@ -18,6 +18,10 @@ import { useAnalyticsStore } from '@/store/analyticsStore';
 import { useBranchStore } from '@/store/branchStore';
 import { useCounterStore } from '@/store/counterStore';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useMyStaffStore } from '@/store/myStaffStore';
+import { useTeamStore } from '@/store/teamStore';
+import { useSupplyPaymentStore } from '@/store/supplyPaymentStore';
+import { useVendorStore } from '@/store/vendorStore';
 import { useTodayStore } from '@/store/todayStore';
 import type { Business } from '@/types/business';
 import type { User } from '@/types/user';
@@ -210,6 +214,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     useBranchStore.getState().reset();
     useTodayStore.getState().reset();
     useNotificationStore.getState().reset();
+    useTeamStore.getState().reset();
+    useMyStaffStore.getState().reset();
+    useVendorStore.getState().reset();
+    useSupplyPaymentStore.getState().reset();
     // Cross-business totals belong to the account, not a business — the next
     // person to sign in on this browser must not see them for a frame.
     useAnalyticsStore.getState().reset();

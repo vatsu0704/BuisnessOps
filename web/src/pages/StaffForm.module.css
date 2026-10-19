@@ -1,0 +1,40 @@
+/* What Add staff and Edit staff have beyond the shared form page. */
+
+/* "This email is Hari, a delivery agent" — the sentence wraps inside the card. */
+.match {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  margin: calc(var(--space-xs) * -1) 0 var(--space-lg);
+  padding: 10px var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-primary-dark);
+}
+
+.match svg {
+  flex: none;
+}
+
+/* The whole card when there is nothing to choose: no margin left against its padding. */
+.implied {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--color-text-tertiary);
+}
+
+/* A field the reader may not change, said where the field would be. */
+.readOnlyNote {
+  margin-bottom: var(--space-lg);
+  font-size: 12.5px;
+  color: var(--color-text-tertiary);
+}
+
+/* Reactivating is the good direction: green, over the secondary button's ink. */
+.restore:not(:disabled),
+.restore:hover:not(:disabled) {
+  color: var(--color-success);
+}

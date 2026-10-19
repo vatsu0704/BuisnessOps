@@ -1,8 +1,10 @@
 import { useEffect, useMemo } from 'react';
 import { useTeamStore } from '@/store/teamStore';
 import { useBusinessId } from '@/hooks/useBusinessId';
-import { SINGLE_BRANCH_ROLE } from '@/permissions/explain';
-import type { CashierConflicts, PendingInvite, TeamMember } from '@/types/team';
+import { cashierByBranch } from '@/utils/teamRules';
+import type { PendingInvite, TeamMember } from '@/types/team';
+
+export { hasCashierConflicts } from '@/utils/teamRules';
 
 /** Stable empties, so the selectors below do not return a new value each render. */
 const NO_MEMBERS: TeamMember[] = [];
@@ -41,32 +43,11 @@ export function useTeam() {
 }
 
 /**
- * Requirement 18, as the question a branch picker actually asks: **who is the
- * cashier here?**
- *
- * A map from branch id to the cashier holding it, so the invite and Team screens
- * can say "Hari is the cashier here" beside a branch instead of letting the admin
- * pick it and be refused. The rule counts only ACTIVE memberships — a revoked
- * cashier's BranchAccess row survives deliberately, so that a re-invite restores
- * their scope, and it must not keep a branch looking occupied.
- *
- * Derived from the member list the store already holds, so it costs no request
- * and cannot disagree with what the Team screen is showing.
+ * Requirement 18: who is the cashier at each branch — `cashierByBranch` in
+ * `utils/teamRules.ts` (shared with the web) over the member list this store
+ * already holds, so it costs no request and cannot disagree with the Team screen.
  */
 export function useCashierByBranch(): Map<string, TeamMember> {
   const { members } = useTeam();
-  return useMemo(() => {
-    const byBranch = new Map<string, TeamMember>();
-    for (const member of members) {
-      if (member.role !== SINGLE_BRANCH_ROLE || member.status !== 'ACTIVE') continue;
-      for (const access of member.branchAccess) byBranch.set(access.branch.id, member);
-    }
-    return byBranch;
-  }, [members]);
-}
-
-/** Does this business have anything requirement 18 wants an admin to settle? */
-export function hasCashierConflicts(conflicts: CashierConflicts | null): boolean {
-  if (!conflicts) return false;
-  return conflicts.sharedBranches.length > 0 || conflicts.misassignedCashiers.length > 0;
+  return useMemo(() => cashierByBranch(members), [members]);
 }

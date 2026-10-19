@@ -47,7 +47,10 @@ The web app does **not** copy the mobile app's code. `@shared/` resolves to
 | `constants/quickActions.ts` | Home's tiles and who sees each — a test proves every tile a role sees opens for it |
 | `utils/format.ts`, `validation.ts`, `date.ts`, `upiUri.ts`, `expenseCategory.ts`, `hooks/useMonthCursor.ts` | Amounts in Indian grouping, dates through the translation files, UPI links |
 | `utils/costMetrics.ts`, `dailyReport.ts` | A report card's kinds of cost, and Reports' Per day arithmetic |
-| `utils/counterQueue.ts`, `counterReceipt.ts`, `receipt.ts`, `escpos.ts` | The counter's pure half: the cart, tokens, the sync queue, the printed slip |
+| `utils/counterQueue.ts`, `counterReceipt.ts`, `receipt.ts`, `escpos.ts`, `counterSyncRunner.ts` | The counter's pure half: the cart, tokens, the sync queue, the printed slip, when and how it sends |
+| `utils/teamRules.ts`, `account.ts` | Who may be invited and to what, requirement 18's cashier rules and 409s, who may remove whom; a deleted account |
+| `utils/supplyActions.ts`, `supplyStatus.ts`, `supplyGroups.ts`, `whatsappNumber.ts` | Which steps a supply order offers whom, how its status and payment read, how a cart splits by supplier and the catalog groups, a vendor's WhatsApp link |
+| `utils/supplyPayments.ts` | What is owed grouped by payee, the one-payee-per-payment selection, the month's payment totals |
 
 **A shared file imports only relative paths and `i18next`, `react`, `react-dom`
 or `react-i18next`.** It is compiled by the web's toolchain, where `@/` means
@@ -57,7 +60,7 @@ or in CI none — so `vite.config.ts` dedupes those four and `tsconfig.app.json`
 maps them to `web/node_modules`. `npm run lint:shared` names any import that
 breaks this.
 
-The strings only the web needs (its sidebar, its placeholder pages) live in
+The strings only the web needs (its sidebar, its notice pages) live in
 `src/i18n/locales/` and are merged under `web.*`. Only English ships in the main
 bundle; Hindi, Gujarati and Marathi are fetched when chosen.
 
@@ -81,10 +84,12 @@ web/
     │   │                   pill and the bills the server refused
     │   ├── expense/        CategoryPicker, Breakdown
     │   ├── home/           Home's sections
-    │   ├── payments/       QrCode, UpiPayCard
+    │   ├── payments/       QrCode, UpiPayCard, UpiAccountEditor, PaymentHistory
     │   ├── products/       ProductRow, and the catalog rules (grouping, search, a branch's price)
     │   ├── reports/        Reports' cards, the month strip and bars, the branch × month table,
     │   │                   Per day, and the ranking rules
+    │   ├── supply/         SupplyOrderList (the branch's orders, the desk, deliveries), the
+    │   │                   status pills, the timeline, the delivery address, AgentPicker
     │   ├── upload/         TemplateGuide, and what an import's answer means
     │   ├── layout/         AppShell, Sidebar, TopBar, UserMenu, AuthHeader, ScreenBackground
     │   └── ui/             FormInput, FormTextArea, DateField, SearchField, FileDrop,
@@ -92,23 +97,27 @@ web/
     │                       OptionRow, ChipGroup, CheckChips, ChoiceTile, Pill, InfoCard, StatTile,
     │                       MonthCursor, …
     ├── constants/          navigation (every sidebar entry and who sees it), brand
-    ├── hooks/              useBranches, useToday, useMembership, useRefreshOnFocus, useCounterSync
+    ├── hooks/              useBranches, useToday, useTeam, useMyStaffMember, useVendors,
+    │                       useSupplyPayments, useMembership,
+    │                       useRefreshOnFocus, useCounterSync
     │                       (sends the counter's bills while anyone who bills is signed in),
     │                       useGoBack (back to whichever page opened a form), …
     ├── i18n/               i18next setup, the web-only locale files
     ├── pages/              one per ported screen (Settings, Notifications, AddBranch, …),
-    │                       plus ComingSoonPage and NoticePage
+    │                       plus NoticePage (not part of this role, not an address)
     ├── permissions/        re-exports the shared matrix
     ├── routes/             paths (every route and who may open it), pages (what each shows),
     │                       AppRoutes, guards (RequireAuth, GuestOnly, RequireAccess)
     ├── store/              zustand: authStore (with the offline session copy), branchStore,
     │                       todayStore, notificationStore, analyticsStore (keyed on the business
-    │                       and the month window), counterStore (over IndexedDB), printerStore
+    │                       and the month window), counterStore (over IndexedDB), printerStore,
+    │                       teamStore, myStaffStore ("am I on the staff here?")
     ├── styles/             tokens.css (the app's theme as CSS variables), global.css
     ├── theme/              motion values JavaScript needs
     ├── types/              the app's own, re-exported; webSerial.d.ts for the printer
     └── utils/              counterPersistence (IndexedDB), counterSync, printer (Web Serial),
-                            receiptHtml (the print-dialog slip), serviceWorker, …
+                            receiptHtml (the print-dialog slip), serviceWorker, punch (with the
+                            browser's location), …
 ```
 
 ## Conventions
@@ -118,8 +127,8 @@ They are the mobile app's, from `CLAUDE.md`, applied to the web:
 - **A page opens on the app's rule for the same screen.** Every route in
   `routes/paths.ts` names the app route it stands for (or, for a tab, the
   capability); `routes/pages.ts` is a `Record` over every route, so a new route
-  fails `tsc` until it has a page or a placeholder. Porting a screen = writing the
-  page and adding its `Page` there.
+  fails `tsc` until it has a page. A new app screen = its route in `paths.ts` and
+  its page in `pages.ts`.
 - **Anything irreversible asks first** through `confirm()` in `utils/confirm.ts` —
   the app's API, rendered once by `ConfirmHost` on a `<dialog>`. Only the
   destructive direction asks.
