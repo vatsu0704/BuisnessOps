@@ -72,7 +72,8 @@ bundle; Hindi, Gujarati and Marathi are fetched when chosen.
 ```
 web/
 ├── index.html
-├── public/                 favicon (the app's own, from frontend/assets)
+├── public/                 icons + site.webmanifest, all written by the app's
+│                           `npm run brand:assets` — never edited here
 ├── scripts/                check-i18n-parity.js, check-shared-imports.js,
 │                           shots/ (the screenshot harness: run, scenarios, pretend API)
 ├── sw/                     service-worker.js — the build writes dist/sw.js from it, with

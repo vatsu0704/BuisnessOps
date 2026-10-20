@@ -229,7 +229,14 @@ the same drawing as the launcher icon:
 
 - `play-icon-512.png` — the **512 × 512** Play icon,
 - `feature-graphic.png` — the **1024 × 500** feature graphic: the mark and the
-  two-colour wordmark, with the name read from `src/constants/brand.ts`.
+  two-colour wordmark, with the name read from `src/constants/brand.ts`,
+- `og-card.png` — the **1200 × 630** share card for the web app. It is here and
+  not in `web/public/` on purpose: the service worker precaches everything under
+  `dist/`, so an image that size there is a mandatory download for every visitor.
+  Upload it and point `web/index.html`'s `og:image` at the URL.
+
+Run them with **`npm run brand:assets`** in `frontend/`. Nothing in CI checks the
+rasters still match the drawing, so run it in the same change as the drawing.
 
 ### A8. Documents — done
 
