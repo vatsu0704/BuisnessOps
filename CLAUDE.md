@@ -513,15 +513,29 @@ branch card kept showing a stale list until the app was killed and reopened.
   buttons, hero cards and avatars is `gradient.brand` in the theme, not a pair of
   hex codes; the red one for Log out and for an irreversible final step is
   `DangerButton` (`outline` / `solid`), not a third inline copy of its style.
-- **The mark is drawn once, in `src/constants/brandMark.json`** — traced from the
-  supplied logo and fitted to Béziers, with each part's box and paints.
-  `BrandMark.tsx` renders it in the app, and `scripts/generate-brand-assets.js`
-  renders every PNG in `frontend/assets/` from it (launcher icon, adaptive icon —
-  which is also the launch splash's icon — favicon, notification icon), and the
-  Play listing's icon and feature graphic into `frontend/store-listing/`, so the
-  in-app logo, the launcher icon and the store page cannot drift apart. Change
-  the JSON, re-run the script (its header says how to get its renderer, which is
-  deliberately not a dependency), then rebuild. Its **`navy` and `coral` are also
+- **The mark is drawn once, in `src/constants/brandMark.json`** — the KP monogram,
+  fitted to Béziers from the supplied logo **image**, so it is an approximation of
+  that artwork rather than a copy of a vector. Its parts are `speedLine1..3`,
+  `kLetter` and `pLetter`, and those names are a **closed set in four places**: the
+  `PartName` union in `frontend/src/components/BrandMark.tsx` and in
+  `web/src/components/brand/BrandMark.tsx`, the `LAYERS` table in the web one, and
+  `PART_ORDER` in `scripts/generate-brand-assets.js` (which throws if a name goes
+  missing). Adding or renaming a part means all four. Drawing order matters: the P
+  paints over the tip of the K's arm, which is what makes the two letters interlock.
+- **`npm run brand:assets` renders every raster from it** — and nothing in CI checks
+  they are in step, so run it in the same change as a change to the drawing. It
+  writes `web/public/`'s icon set too; that folder used to be a hand copy of
+  `frontend/assets/`, which is how a favicon goes stale. The renderer is
+  deliberately not a dependency; the script's header says how to get it.
+- **Three numbers are locked together and checked before anything renders**:
+  `splashMarkWidth` in the drawing, `imageWidth` in `app.json`'s
+  `expo-splash-screen` block, and `ADAPTIVE_MARK_WIDTH` in the script.
+  `splashMarkWidth === imageWidth × ADAPTIVE_MARK_WIDTH ÷ 1024`, on a strict float
+  comparison, so a mark of different proportions means re-solving all three — the
+  KP mark is wider and shorter than the one before it and did.
+- **Both apps read the same drawing**, `BrandMark.tsx` in each, so the in-app logo,
+  the launcher icon, the favicon and the store page cannot drift apart. Its
+  **`navy` and `coral` are also
   `colors.primary` and `colors.accent`**, so the UI and the mark beside it cannot
   drift; the backend's printed documents and legal pages repeat the pair as
   `BRAND` and `ACCENT` in `documents/layout.js`, the one copy a PDF cannot import.

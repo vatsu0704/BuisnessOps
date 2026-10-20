@@ -15,22 +15,24 @@
   display: block;
 }
 
-/* A stem rising off the baseline into place. */
-.stem {
-  animation: rise 560ms var(--ease-gentle) backwards;
+/* A speed line arriving from the left. The overshoot is what makes it read as
+   speed rather than as a bar sliding into a slot — the app's spring does the
+   same thing, approximated here as a curve that passes its end point. */
+.streak {
+  animation: streak 480ms var(--ease-snappy) backwards;
   animation-delay: var(--layer-delay);
 }
 
-/* The ribbon, revealed by a window sliding left to right across it. */
-.ribbon {
-  animation: wipe var(--duration-slow) cubic-bezier(0.33, 1, 0.68, 1) backwards;
+/* The K, riding in behind the lines and settling. */
+.letter {
+  animation: ride 560ms var(--ease-gentle) backwards;
   animation-delay: var(--layer-delay);
 }
 
-/* The K's arm, growing out of its lower-left end, where it leaves the stem. */
-.arm {
+/* The P, growing out of its lower-left corner, where it meets the K's arm. */
+.grow {
   transform-origin: 0% 100%;
-  animation: flick 460ms var(--ease-snappy) backwards;
+  animation: grow 460ms var(--ease-snappy) backwards;
   animation-delay: var(--layer-delay);
 }
 
@@ -48,12 +50,12 @@
   }
 }
 
-@keyframes rise {
+@keyframes streak {
   from {
     opacity: 0;
-    transform: translateY(var(--rise));
+    transform: translateX(calc(var(--travel) * -1));
   }
-  60% {
+  45% {
     opacity: 1;
   }
   to {
@@ -62,19 +64,24 @@
   }
 }
 
-@keyframes wipe {
+@keyframes ride {
   from {
-    clip-path: inset(0 100% 0 0);
+    opacity: 0;
+    transform: translateX(calc(var(--travel) * -1));
+  }
+  55% {
+    opacity: 1;
   }
   to {
-    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    transform: none;
   }
 }
 
-@keyframes flick {
+@keyframes grow {
   from {
     opacity: 0;
-    transform: scale(0.35);
+    transform: scale(0.4);
   }
   50% {
     opacity: 1;
@@ -82,5 +89,15 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* Somebody who has asked for less motion gets the finished mark, not a mark
+   that moves more slowly. This is the whole of that promise — the file used to
+   claim it in a comment with no rule behind it. */
+@media (prefers-reduced-motion: reduce) {
+  .mark,
+  .layer {
+    animation: none;
   }
 }

@@ -1,0 +1,29 @@
+.lockup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+/* The name arrives as the P lands, rising a little into place. */
+.name {
+  animation: name-in 320ms var(--ease-gentle) backwards;
+  animation-delay: var(--name-at);
+}
+
+@keyframes name-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .name {
+    animation: none;
+  }
+}

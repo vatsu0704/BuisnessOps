@@ -1,146 +1,152 @@
 {
   "//": [
-    "The mark, traced from the supplied logo and fitted to cubic Beziers. navy and coral are the two brand colours: theme/index.ts reads both, so the UI and the logo cannot drift apart. Until KitnaPay there was one colour here and one primary; the mark now has two, so the pair is read rather than the single.",
-    "The HisabKitab mark, traced from the supplied logo and fitted to cubic Beziers.",
-    "This file is the ONE drawing of the mark: BrandMark.tsx renders it in the app and",
-    "frontend/scripts/generate-brand-assets.js renders it into every PNG in assets/",
-    "(launcher icon, adaptive icon, splash, favicon, notification icon). Change it here",
-    "and re-run that script, or the in-app logo and the launcher icon drift apart.",
+    "The KitnaPay mark: three speed lines, a navy K and a coral P leaning into them.",
+    "Fitted to cubic Beziers from the supplied logo image; it is an approximation of",
+    "that artwork, not a copy of a vector, so expect to refine it against the original.",
     "",
-    "Units: the mark is 1000 wide with its origin at the stems' top-left corner. Each part",
-    "carries the box it occupies, so it can be drawn and animated as its own layer.",
-    "The white gaps where the ribbon crosses the stems are not drawn - they are the",
-    "absence of paint, so they show whatever the mark sits on. The right stem's lower",
-    "piece runs 3 units up under the ribbon so no hairline seam shows where they meet.",
+    "This file is the ONE drawing of the mark. BrandMark.tsx renders it in the app,",
+    "web/src/components/brand/BrandMark.tsx renders the same JSON in the browser, and",
+    "scripts/generate-brand-assets.js renders every PNG in assets/ and store-listing/",
+    "from it, so the in-app logo, the launcher icon and the store page cannot drift.",
     "",
-    "(theme/index.ts), so the UI matches the logo. A paint names a gradient in paints.",
+    "Units: the mark is 1000 wide with its origin at its own top-left corner. Each part",
+    "carries the box it occupies, so it can be drawn and animated as its own layer, and",
+    "the parts are drawn in the order they appear here - the P paints over the tip of",
+    "the K's arm, which is what makes the two letters interlock.",
+    "",
+    "Every edge leans at the same angle. The geometry was built upright and sheared by",
+    "0.26 of its height, so a change of angle is one number re-applied, not forty points",
+    "re-derived.",
+    "",
+    "navy and coral are the two brand colours, and theme/index.ts reads both as",
+    "colors.primary and colors.accent - the UI and the mark beside it cannot drift apart.",
+    "A path with no paint is filled with navy; a paint names a gradient in paints.",
     "",
     "splashMarkWidth is the mark's width in dp on the launch splash. The system splash",
-    "shows adaptive-icon.png (mark 500 of 1024) at app.json's imageWidth of 288dp, so",
-    "the mark is 288 * 500 / 1024 dp there, and AnimatedSplash draws it at the same",
-    "width so the hand-over does not jump. generate-brand-assets.js checks the sum."
+    "shows adaptive-icon.png (mark 544 of 1024) at app.json's imageWidth of 288dp, so the",
+    "mark is 288 * 544 / 1024 = 153dp there, and AnimatedSplash draws it at the same width",
+    "so the hand-over does not jump. generate-brand-assets.js throws if the three disagree."
   ],
   "width": 1000,
-  "height": 657,
+  "height": 389.5,
   "navy": "#042A5E",
   "coral": "#FD494A",
-  "splashMarkWidth": 140.625,
+  "splashMarkWidth": 153,
   "paints": {
-    "stemUpper": {
+    "navyFall": {
       "x1": 0,
       "y1": 0,
-      "x2": 0,
+      "x2": 0.35,
       "y2": 1,
       "stops": [
         {
           "offset": 0,
-          "color": "#303031"
+          "color": "#0A3E79"
         },
         {
           "offset": 1,
-          "color": "#131313"
-        }
-      ]
-    },
-    "stemLower": {
-      "x1": 0,
-      "y1": 0,
-      "x2": 0,
-      "y2": 1,
-      "stops": [
-        {
-          "offset": 0,
-          "color": "#0F0F10"
-        },
-        {
-          "offset": 1,
-          "color": "#38383A"
-        }
-      ]
-    },
-    "ribbon": {
-      "userSpace": true,
-      "x1": 0,
-      "y1": 0,
-      "x2": 1000,
-      "y2": 0,
-      "stops": [
-        {
-          "offset": 0.07,
-          "color": "#0B3C7E"
-        },
-        {
-          "offset": 0.27,
-          "color": "#073267"
-        },
-        {
-          "offset": 0.46,
           "color": "#042A5E"
+        }
+      ]
+    },
+    "coralFall": {
+      "x1": 1,
+      "y1": 0,
+      "x2": 0.1,
+      "y2": 1,
+      "stops": [
+        {
+          "offset": 0,
+          "color": "#FF7A6B"
+        },
+        {
+          "offset": 0.55,
+          "color": "#FD494A"
+        },
+        {
+          "offset": 1,
+          "color": "#EE3A3B"
         }
       ]
     }
   },
   "parts": {
-    "leftStem": {
+    "speedLine1": {
       "box": [
-        0,
-        0,
-        148,
-        656.9
+        93.7,
+        83.8,
+        143.1,
+        33.2
       ],
       "paths": [
         {
-          "d": "M0 10.7C0 4.8 4.8 0 10.7 0L137.2 0C143.1 0 147.9 4.8 147.9 10.7L147.9 251.8C119.2 271 105.5 282.1 79.4 304.2C74.6 308.3 68.9 312.3 64.9 317.1C52.4 332.2 39.6 347 26.9 361.9C17.1 373.2 9.5 386.6 0 398.3Z",
-          "paint": "stemUpper"
+          "d": "M102.3 83.8L236.8 83.8L228.2 117L93.7 117Z"
+        }
+      ]
+    },
+    "speedLine2": {
+      "box": [
+        0.0,
+        155.4,
+        218.2,
+        33.2
+      ],
+      "paths": [
+        {
+          "d": "M8.6 155.4L218.2 155.4L209.6 188.6L0 188.6Z"
+        }
+      ]
+    },
+    "speedLine3": {
+      "box": [
+        84.4,
+        227.0,
+        115.2,
+        33.2
+      ],
+      "paths": [
+        {
+          "d": "M93.1 227L199.6 227L191 260.2L84.4 260.2Z"
+        }
+      ]
+    },
+    "kLetter": {
+      "box": [
+        192.3,
+        0,
+        392.9,
+        389.5
+      ],
+      "paths": [
+        {
+          "d": "M293.6 0L384.4 0L283.1 389.5L192.3 389.5Z",
+          "paint": "navyFall"
         },
         {
-          "d": "M0 586.7C5.4 574.5 10.4 562.7 17.2 551.2C42.8 507.6 101.2 468.6 147.9 452L147.9 623.4C147.9 641.9 133 656.8 114.5 656.8L7.2 656.8C3.2 656.8 0 653.6 0 649.7Z",
-          "paint": "stemLower"
-        }
-      ]
-    },
-    "rightStem": {
-      "box": [
-        358.6,
-        0,
-        148.2,
-        656.9
-      ],
-      "paths": [
-        {
-          "d": "M358.6 8.4C358.6 3.7 362.3 0 366.9 0L498.4 0C503 0 506.7 3.7 506.7 8.4L506.7 219.1C453.2 200.1 415.6 193.3 358.6 192.2Z",
-          "paint": "stemUpper"
+          "d": "M457.7 0L585.2 0L327.1 220L348.5 138Z",
+          "paint": "navyFall"
         },
         {
-          "d": "M358.6 371.1C369.9 372.3 381.2 372.3 392.2 373.6C399.6 374.5 441.3 385.3 449.6 388C452.1 388.8 454.2 390.7 456.7 391.6C467.5 395.6 477.6 399.6 487.8 405.2C494.1 408.6 499.3 412.5 506.7 415L506.7 650.9C506.7 654.2 504.1 656.8 500.8 656.8L364.5 656.8C361.2 656.8 358.6 654.2 358.6 650.9Z",
-          "paint": "stemLower"
+          "d": "M328.5 214.8L306.2 300.4L518.9 389.5L391.4 389.5Z",
+          "paint": "navyFall"
         }
       ]
     },
-    "ribbon": {
+    "pLetter": {
       "box": [
-        5.1,
-        231.4,
-        938.5,
-        425.5
-      ],
-      "paths": [
-        {
-          "d": "M943.5 649.1C941.1 652.1 939.9 655.7 935.6 656.7C920.1 656.8 859 656.8 838.8 656.8C805.6 656.8 769.8 656.8 739.4 647C716.9 635.6 692.4 603.4 675.2 584.6C646.8 553.5 541.7 442.4 512.3 425C400.1 358.5 234 359.9 118.4 419.4C86.2 436 56.6 457.3 30.6 482.1C22.1 490.2 14.9 499.5 5.4 506.2C1.8 478.5 39.8 416.8 56.5 393.2C122.9 299.2 233.1 228.7 351.6 231.5C566.6 236.6 677.7 365.3 813.8 510.5C837.3 535.5 933.6 627.9 943.5 649.1Z",
-          "paint": "ribbon"
-        }
-      ]
-    },
-    "arm": {
-      "box": [
-        551.7,
+        550.3,
         0,
-        447.5,
-        280.2
+        449.7,
+        389.5
       ],
       "paths": [
         {
-          "d": "M832.6 0C873.7 0 914.8 0 955.8 0C963.9 0 994.5 0 999 3C1000 10.4 991.6 20.1 986.9 24.6C968.3 42.5 949.3 60.3 930.5 78.1C878.8 127.3 827.9 177.8 776 226.9C749.2 252.1 717.9 279.2 678.8 280C644.7 280.7 605.9 268.2 577.1 250.4C571.3 246.9 552 241.4 551.7 233.5C551.6 227.6 563.9 220.7 568.1 217.1C585.3 202.4 600.8 186.3 617.9 171.5C657.6 136.9 694.5 98 732.3 61.5C766.2 28.7 781 2.2 832.6 0Z"
+          "d": "M651.6 0L749.4 0L648.1 389.5L550.3 389.5Z",
+          "paint": "coralFall"
+        },
+        {
+          "d": "M700.5 0L851.4 0C941.7 0,1000 57.1,981.7 127.5C963.3 197.9,875.3 255,785 255L634.1 255ZM752.2 69.9L722.1 185.1L806 185.1C856.1 185.1,903.5 159.4,911.8 127.5C920.1 95.6,886.1 69.9,836 69.9Z",
+          "paint": "coralFall"
         }
       ]
     }

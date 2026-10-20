@@ -1,29 +1,36 @@
 import { useEffect, useId } from 'react';
-import { StyleSheet, type ViewStyle } from 'react-native';
+import type { ViewStyle } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import Animated, {
-  Easing,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 import art from '@/constants/brandMark.json';
-import { duration, spring, step } from '@/theme/motion';
+import { spring, step } from '@/theme/motion';
 
 /**
- * The HisabKitab mark: the H's two stems, the ribbon that is both the H's
- * crossbar and the K's lower leg, and the K's arm.
+ * The KitnaPay mark: three speed lines, a navy K and a coral P leaning into them.
  *
  * It is drawn from constants/brandMark.json, the same geometry that
  * scripts/generate-brand-assets.js renders into the launcher icon and the
  * splash, so the in-app logo and the icon cannot drift apart.
  *
- * It draws itself in the order a hand would write it — the stems rise off the
- * baseline, the ribbon sweeps across them left to right, then the arm flicks
- * out. Each part is its own layer and every step is a transform or an opacity,
- * so the whole sequence runs on the UI thread.
+ * ## How it moves, and why
+ *
+ * The artwork is a still image, so the animation is read off the only motion
+ * cue in it — the three speed lines. The mark arrives the way the lines say it
+ * travels: they streak in from the left, longest first, the K rides in behind
+ * them, and the P lands last, growing out of the point where it overlaps the
+ * K's arm. About 1.2s end to end, once.
+ *
+ * Each line overshoots slightly and settles rather than stopping dead, which is
+ * one spring instead of a streak-then-retract pair — fewer moving parts, and
+ * nothing to get out of step when the stagger changes.
+ *
+ * Each part is its own layer and every step is a transform or an opacity, so
+ * the whole sequence runs on the UI thread.
  */
 
 type Paint = {
@@ -37,7 +44,8 @@ type Paint = {
 type Part = { box: number[]; paths: { d: string; paint?: string }[] };
 
 const PAINTS: Record<string, Paint> = art.paints;
-const PARTS: Record<'leftStem' | 'rightStem' | 'ribbon' | 'arm', Part> = art.parts;
+type PartName = 'speedLine1' | 'speedLine2' | 'speedLine3' | 'kLetter' | 'pLetter';
+const PARTS: Record<PartName, Part> = art.parts;
 
 /** Height of the mark when it is drawn `width` wide. */
 export function markHeight(width: number): number {
@@ -93,18 +101,25 @@ function PartArt({ part, scale, uid }: { part: Part; scale: number; uid: string 
 
 type LayerProps = { part: Part; scale: number; delay: number; uid: string };
 
-/** A stem rising off the baseline into place. */
-function Stem({ part, scale, delay, uid }: LayerProps) {
+/**
+ * A speed line arriving from the left.
+ *
+ * It travels in by its own length plus the room to its left, so a short line
+ * and a long one both enter from off the mark rather than appearing mid-air,
+ * and the spring's overshoot is what makes it read as speed rather than as a
+ * bar sliding into a slot.
+ */
+function Streak({ part, scale, delay, uid }: LayerProps) {
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withDelay(delay, withSpring(1, spring.gentle));
+    progress.value = withDelay(delay, withSpring(1, spring.snappy));
   }, [delay, progress]);
 
-  const rise = part.box[3] * scale * 0.18;
+  const travel = (part.box[0] + part.box[2]) * scale;
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: Math.min(1, progress.value * 1.6),
-    transform: [{ translateY: (1 - progress.value) * rise }],
+    opacity: Math.min(1, progress.value * 2.4),
+    transform: [{ translateX: -(1 - progress.value) * travel }],
   }));
 
   return (
@@ -114,34 +129,29 @@ function Stem({ part, scale, delay, uid }: LayerProps) {
   );
 }
 
-/**
- * The ribbon, revealed by a window sliding left to right across it. The window
- * clips (overflow hidden) and moves one way while the drawing inside moves the
- * other, so the drawing stays put and only the window's edge travels — a wipe
- * made of two translations.
- */
-function Ribbon({ part, scale, delay, uid }: LayerProps) {
+/** The K, riding in behind the lines and settling onto the baseline. */
+function Letter({ part, scale, delay, uid }: LayerProps) {
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withDelay(delay, withTiming(1, { duration: duration.slow, easing: Easing.out(Easing.cubic) }));
+    progress.value = withDelay(delay, withSpring(1, spring.gentle));
   }, [delay, progress]);
 
-  const width = part.box[2] * scale;
-  const windowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: -(1 - progress.value) * width }] }));
-  const artStyle = useAnimatedStyle(() => ({ transform: [{ translateX: (1 - progress.value) * width }] }));
+  const travel = part.box[2] * scale * 0.35;
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(1, progress.value * 1.8),
+    transform: [{ translateX: -(1 - progress.value) * travel }],
+  }));
 
   return (
-    <Animated.View style={[layerStyle(part.box, scale), styles.clip, windowStyle]}>
-      <Animated.View style={artStyle}>
-        <PartArt part={part} scale={scale} uid={uid} />
-      </Animated.View>
+    <Animated.View style={[layerStyle(part.box, scale), animatedStyle]}>
+      <PartArt part={part} scale={scale} uid={uid} />
     </Animated.View>
   );
 }
 
-/** The K's arm, growing out from its lower-left end, where it leaves the stem. */
-function Arm({ part, scale, delay, uid }: LayerProps) {
+/** The P, growing out of its lower-left corner, where it meets the K's arm. */
+function Grow({ part, scale, delay, uid }: LayerProps) {
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -151,7 +161,7 @@ function Arm({ part, scale, delay, uid }: LayerProps) {
   const halfW = (part.box[2] * scale) / 2;
   const halfH = (part.box[3] * scale) / 2;
   const animatedStyle = useAnimatedStyle(() => {
-    const s = 0.35 + 0.65 * progress.value;
+    const s = 0.4 + 0.6 * progress.value;
     // A scale pivots on the centre; shifting by the pivot's offset times (1 - s)
     // pins the lower-left corner instead.
     return {
@@ -183,14 +193,13 @@ export default function BrandMark({ width = 44, delay = 0 }: Props) {
 
   return (
     <Animated.View style={[{ width, height: markHeight(width) }, animatedStyle]}>
-      <Stem part={PARTS.leftStem} scale={scale} delay={delay + step(0)} uid={`${uid}l`} />
-      <Stem part={PARTS.rightStem} scale={scale} delay={delay + step(1)} uid={`${uid}r`} />
-      <Ribbon part={PARTS.ribbon} scale={scale} delay={delay + step(2)} uid={`${uid}b`} />
-      <Arm part={PARTS.arm} scale={scale} delay={delay + step(6)} uid={`${uid}a`} />
+      {/* The longest line leads: the eye follows it in and the K arrives on it. */}
+      <Streak part={PARTS.speedLine2} scale={scale} delay={delay + step(0)} uid={`${uid}s2`} />
+      <Streak part={PARTS.speedLine1} scale={scale} delay={delay + step(1)} uid={`${uid}s1`} />
+      <Streak part={PARTS.speedLine3} scale={scale} delay={delay + step(1.5)} uid={`${uid}s3`} />
+      <Letter part={PARTS.kLetter} scale={scale} delay={delay + step(2)} uid={`${uid}k`} />
+      <Grow part={PARTS.pLetter} scale={scale} delay={delay + step(5)} uid={`${uid}p`} />
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
-  clip: { overflow: 'hidden' },
-});

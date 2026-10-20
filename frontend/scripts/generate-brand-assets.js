@@ -55,8 +55,8 @@ try {
 const ASSETS = path.join(__dirname, '..', 'assets');
 const STORE = path.join(__dirname, '..', 'store-listing');
 const WHITE = '#FFFFFF';
-// theme/index.ts's colors.text — the ink `Wordmark` sets the first word in.
-const INK = '#18181B';
+// The wordmark's two colours — theme/index.ts's colors.primary and colors.accent,
+// which are brandMark.json's navy and coral. Read from the drawing, not retyped.
 // Text needs a font, which a bare SVG renderer does not have; the system's will
 // do for a store banner. Segoe UI on Windows, Roboto on Linux, Arial elsewhere.
 const FONT_FAMILY = "'Segoe UI', Roboto, Arial, sans-serif";
@@ -71,8 +71,14 @@ const APP_NAME_PARTS = (() => {
   return [match[1], match[2]];
 })();
 
-// Drawing order matters: the ribbon paints over the top of the right stem's lower piece.
-const PATHS = ['leftStem', 'rightStem', 'ribbon', 'arm'].flatMap((name) => art.parts[name].paths);
+// Drawing order matters: the P paints over the tip of the K's arm, which is what
+// makes the two letters interlock.
+const PART_ORDER = ['speedLine1', 'speedLine2', 'speedLine3', 'kLetter', 'pLetter'];
+const PATHS = PART_ORDER.flatMap((name) => {
+  const part = art.parts[name];
+  if (!part) throw new Error(`brandMark.json has no part named ${name} — PART_ORDER is out of date.`);
+  return part.paths;
+});
 
 function gradients() {
   return Object.entries(art.paints)
@@ -92,7 +98,7 @@ function svg({ size, width = size, height = size, markWidth, markX, background =
   const scale = markWidth / art.width;
   const x = markX ?? (width - markWidth) / 2;
   const y = (height - art.height * scale) / 2;
-  const fill = (p) => (silhouette ? WHITE : p.paint ? `url(#${p.paint})` : art.blue);
+  const fill = (p) => (silhouette ? WHITE : p.paint ? `url(#${p.paint})` : art.navy);
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     background ? `<rect width="${width}" height="${height}" fill="${background}"/>` : '',
@@ -111,7 +117,7 @@ function wordmark(x, y, fontSize) {
   return (
     `<text x="${x}" y="${y}" font-family="${FONT_FAMILY}" font-weight="800" font-size="${fontSize}" ` +
     `letter-spacing="${(-fontSize * 0.018).toFixed(2)}">` +
-    `<tspan fill="${INK}">${first}</tspan><tspan fill="${art.blue}">${second}</tspan></text>`
+    `<tspan fill="${art.navy}">${first}</tspan><tspan fill="${art.coral}">${second}</tspan></text>`
   );
 }
 
@@ -179,8 +185,11 @@ function render(file, options, dir = ASSETS) {
   console.log(`  ${file.padEnd(23)} ${width}×${height}, mark ${Math.round(options.markWidth)} wide`);
 }
 
-// 500 wide puts the mark's corners 299px from the centre, inside the 313px safe radius.
-const ADAPTIVE_MARK_WIDTH = 500;
+// Android masks the adaptive icon to a circle. 544 wide puts the mark's corners
+// 292px from the centre, inside the 313px safe radius — and 288 × 544/1024 is
+// exactly 153, which is brandMark.json's splashMarkWidth. The KP mark is wider
+// and shorter than the mark before it, so all three had to be re-solved.
+const ADAPTIVE_MARK_WIDTH = 544;
 
 // AnimatedSplash draws the mark at brandMark.json's splashMarkWidth so the
 // system splash hands over without a jump. That is only true while it equals
@@ -207,6 +216,25 @@ render('favicon.png', { size: 196, markWidth: 156, background: WHITE });
 // 80 of 96: Android's 24dp notification icon keeps its artwork inside the middle 20dp.
 render('notification-icon.png', { size: 96, markWidth: 80, silhouette: true });
 
+// Android 13+ themed icon: one colour, masked by the launcher into whatever the
+// wallpaper suggests. Drawn as the silhouette, so the shape carries it alone.
+render('monochrome-icon.png', { size: 1024, markWidth: ADAPTIVE_MARK_WIDTH, silhouette: true });
+
+// The web set, written straight into web/public/. favicon.png had been a hand
+// copy of the one in assets/, with nothing keeping the two in step.
+const WEB = path.join(__dirname, '..', '..', 'web', 'public');
+console.log('\nRendering the web icon set into web/public/:');
+render('favicon-16.png', { size: 16, markWidth: 15, background: WHITE }, WEB);
+render('favicon-32.png', { size: 32, markWidth: 29, background: WHITE }, WEB);
+render('favicon.png', { size: 196, markWidth: 156, background: WHITE }, WEB);
+// Apple adds the rounded corners itself and refuses transparency.
+render('apple-touch-icon.png', { size: 180, markWidth: 140, background: WHITE }, WEB);
+render('pwa-192.png', { size: 192, markWidth: 150, background: WHITE }, WEB);
+render('pwa-512.png', { size: 512, markWidth: 400, background: WHITE }, WEB);
+// Maskable: a launcher may crop to the circle inscribed in the middle 80%, so
+// the mark is drawn small enough to survive that.
+render('pwa-maskable-512.png', { size: 512, markWidth: 272, background: WHITE }, WEB);
+
 console.log('\nRendering store artwork into store-listing/:');
 render('play-icon-512.png', { size: 512, markWidth: 300, background: WHITE }, STORE);
 {
@@ -225,6 +253,26 @@ render('play-icon-512.png', { size: 512, markWidth: 300, background: WHITE }, ST
   const baseline = height / 2 - word.top - word.height / 2;
   render(
     'feature-graphic.png',
+    { width, height, markWidth, markX, background: WHITE, extra: wordmark(textX, baseline, fontSize) },
+    STORE
+  );
+}
+
+{
+  // The Open Graph card. Deliberately NOT in web/public/: the service worker
+  // precaches everything in dist/, so a 1200x630 image there becomes a mandatory
+  // download for every visitor. It is uploaded and referenced by absolute URL.
+  const width = 1200;
+  const height = 630;
+  const markWidth = 300;
+  const gap = 52;
+  const fontSize = 118;
+  const word = measureWordmark(fontSize);
+  const markX = (width - (markWidth + gap + word.width)) / 2;
+  const textX = markX + markWidth + gap - word.left;
+  const baseline = height / 2 - word.top - word.height / 2;
+  render(
+    'og-card.png',
     { width, height, markWidth, markX, background: WHITE, extra: wordmark(textX, baseline, fontSize) },
     STORE
   );
