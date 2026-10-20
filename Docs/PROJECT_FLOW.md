@@ -2630,3 +2630,135 @@ and permission gates. Four new screenshot scenarios — `calendar-open`,
 `@react-native-community/datetimepicker`, which is genuinely native, localized by
 the OS and the right control on a phone. The two do not need to match here: this
 is the one place where the browser was the odd one out, not the app.
+
+## 17. KitnaPay — the rebrand (2026-10-20)
+
+HisabKitab became **KitnaPay**: a new name, a new KP mark with speed lines, and a
+navy/coral palette in place of the purple-blue. The fourth name this repository
+has had, so `CLAUDE.md`'s *Naming* section — which records what may keep an old
+name and why — is as much the deliverable as the rename itself.
+
+| Part | What | Status |
+| --- | --- | --- |
+| 1 | Rename, and the storage carry-overs | ✅ |
+| 2 | The palette | ✅ |
+| 3 | The mark, its animation, every icon | ✅ |
+| 4 | Splash and preloader | ✅ |
+
+### What the brief got wrong about this repo
+
+Three things, all worth keeping written down:
+
+- **No Hostinger and no Neon.** `render.yaml` ships `web/` as a Render static site;
+  the API is `buisnessops.onrender.com`, configured by hand in Render's dashboard;
+  the database is plain Postgres. `PLAY_STORE_RELEASE.md` recommends moving to
+  Railway, which is a separate decision.
+- **There is no marketing website.** `web/` is the full app. It had no manifest, no
+  OG tags, no robots.txt and no sitemap, so the web icon set was greenfield.
+- **It is Expo managed with prebuild, not bare RN.** No `AppRegistry`, `MainActivity`,
+  `AppDelegate`, Xcode project, `pod install` or hand-edited `strings.xml`.
+  `frontend/android/` is gitignored prebuild output and `frontend/ios/` does not
+  exist, so `app.json` plus `npx expo prebuild --clean` is the whole native change.
+
+Also: there was **no deep-link scheme**. `kitnapay://` is now in `app.json`, but
+nothing consumes it — adding real deep links is new work, not part of a rename.
+
+### Part 1 — the rename ✅
+
+335 hits across 94 files. The interesting part was what could **not** simply change.
+
+`APP_NAME` and `APP_NAME_PARTS` are now two values rather than one derived from the
+other: the logo sets the wordmark as "Kitna" + lowercase "pay", while everything
+written says KitnaPay. Deriving either from the other would mean artwork that does
+not match the logo or prose that does not match the brand.
+
+**Three stores had to be carried over, not renamed.** SecureStore's token, business
+and language keys (`LEGACY_KEYS` in `secureStorage.ts`, inside `getItem` rather
+than a startup migration — `i18n` reads the language key while its module is still
+evaluating, so there is no moment early enough); the web's six localStorage keys
+(`carryLegacyKeys()` at module load); and `textStore`'s document directory, which
+is **moved**, because it holds the counter's unsent bills and pointing a constant
+at a new path would strand money that was taken but never recorded.
+
+The web's **IndexedDB database keeps the name `hisabkitab`**. It holds unsent bills
+too, a copy-and-delete migration that half-fails loses them, and the name is
+invisible to everyone but devtools. The store, the channel and the locks were renamed.
+
+Left alone on purpose: the `buisnessops*` database names (two destructive-operation
+guards match on them), the `// BizIQ:` comments inside `frontend/patches/` (editing
+a patch changes its hash and breaks every install), and 82 `@test.buisnessops.dev`
+fixture addresses that nothing resolves.
+
+One thing fell out of this that had been stuck: the **test database had never had
+the password-reset migration**, so the whole backend suite could not run. `npm run
+test:setup` applied it and the suite passes at 483, the 12 password-reset tests
+among them for the first time.
+
+### Part 2 — the palette ✅
+
+Navy `#042A5E` primary, coral `#FD494A` accent, light pink `#FDDDDE`. Which leads
+was a measurement: navy is 14.0:1 on white, **coral is 3.37:1** and fails AA for
+body text, white-on-coral fails too, and coral on the pink is 2.66:1. So coral is
+the mark, the "pay" and large figures, and `accentStrong` `#C81E1F` (5.7:1) carries
+coral text and any white label on a coral fill.
+
+`error` moved from `#DC2626` to `#B42318`: coral sat close enough to the old red
+that a loss figure, a validation message and brand chrome would have read alike,
+and Reports puts all three on one screen.
+
+115 hardcoded colour literals became tokens, and **five places that encoded primary
+as decimal `rgba(69,57,227,…)`** — which would have silently kept the old purple —
+are now derived from `--primary-rgb`.
+
+`brandMark.json` carries **navy and coral** where it carried one `blue`. The
+property that the logo and the UI cannot drift apart is kept; the mark simply has
+two colours now.
+
+### Part 3 — the mark ✅
+
+Three speed lines, a navy K, a coral P. Fitted to Béziers from the supplied logo
+**image**, so it is an approximation — the original vector would replace
+`brandMark.json` with nothing else changing. Built upright and sheared by 0.26 of
+its height, because every edge leans at the same angle.
+
+The animation is read off the only motion cue a still image has, the speed lines:
+they streak in from the left, longest first, the K rides in behind them, the P
+lands last out of the point where it overlaps the K's arm. ~1.2s, once, transform
+and opacity only. No Lottie, no Framer Motion — both would be a second drawing or
+a new runtime for something the two apps already do.
+
+`prefers-reduced-motion` on the web was **claimed in a comment and not implemented**;
+it is now a media query, and `AnimatedLogo`'s `onFinish` fires under it so nobody
+is stranded on a loader waiting for an animation that never runs.
+
+The generator went from 6 rasters to 16, including the whole web icon set written
+straight into `web/public/` — which had been a hand copy of `frontend/assets/`.
+`ADAPTIVE_MARK_WIDTH` 500 → 544 and `splashMarkWidth` 140.625 → 153: the three
+numbers it checks on a strict float comparison all had to be re-solved for a mark
+of different proportions.
+
+### Part 4 — splash and preloader ✅
+
+The hand-off is unchanged in shape and still correct: the system splash draws the
+adaptive icon at `imageWidth` 288dp and `AnimatedSplash` draws the mark at exactly
+`splashMarkWidth`, so nothing jumps. It also gained a **3s cap** — a splash that
+never ends is worse than one that ends early, and bootstrap can hang on an
+unreachable server.
+
+**The background stayed white.** Navy would be the stronger first impression and
+the palette is navy-led, but the mark is two colours: on navy the K disappears and
+the splash would show a white silhouette at the one moment the actual logo matters
+most. Switching means four things together — the background here, the same colour
+in `app.json`, `androidStatusBar.barStyle`, and a white variant of the mark — or
+the hand-over flashes.
+
+**The web preloader animates once per visit, not once per page.** `FullPageLoader`
+is the `Suspense` fallback for every lazy route and both auth guards, so a 1.2s
+draw-in would have replayed on every navigation — the logo becoming a stutter in
+the middle of the app.
+
+### Verification
+
+Both type-checks, 234 web tests, 483 backend tests, the translation, permission,
+shared-import and prose gates, and the full screenshot suite at nine widths in
+English and Gujarati. `Docs/TESTING_GUIDE.md` Flow 40 is the manual pass.

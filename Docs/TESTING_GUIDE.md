@@ -3092,7 +3092,61 @@ this flow — it opens Android's own picker, which is native and correct there.
 9. At a **320px** window, in Gujarati, open each of the above.
    - ✅ **Expected:** the panel fits with a margin either side, and the page never
      scrolls sideways.
+
+## Flow 40 — The KitnaPay rebrand
+
+**Setup:** a device that had the **old** build installed and signed in, with at
+least one unsent counter bill queued on it. That state is the point of this flow.
+
+1. Install the new build **over** the old one is not possible — the package id
+   changed, so it installs beside it. Open the new one.
+   - ✅ **Expected:** new name under the icon, the KP mark as the launcher icon.
+2. **The splash.**
+   - ✅ **Expected:** white, the mark centred, and **no flash** between the system
+     splash and the app's own — the mark must not jump or resize at the hand-over.
+   - ✅ **Expected:** the speed lines streak in, the K follows, the P lands, then
+     the name. About 1.2s, once.
+3. **Sign-in state.** This is the migration, and the part worth being careful about.
+   - ✅ **Expected:** on the *old* build you are still signed in. The new build is a
+     separate install with empty storage, so it starts signed out — that is correct
+     and not the migration failing.
+   - ⚠️ The carry-over is for an **update in place**, not a side-by-side install. To
+     test it properly, build the new code with the OLD package id, install over the
+     old app, and check you are still signed in, still in the same business, still
+     in the same language, and the queued bill is still queued.
+4. **The web, in a browser that used the HisabKitab build.**
+   - ✅ **Expected:** still signed in. The `hisabkitab_*` keys are carried to
+     `kitnapay_*` at load.
+   - ✅ **Expected:** an unsent bill is still there. The IndexedDB database keeps its
+     old name on purpose.
+5. **Colour.** Walk Home, Counter, Reports, Settings.
+   - ✅ **Expected:** navy buttons, links and selected rows; coral only on the mark,
+     the "pay" of the wordmark and accents. No purple anywhere.
+   - ✅ **Expected:** on Reports, a **loss** figure still reads as a loss — the red is
+     deeper than coral so the two do not blur together.
+6. **The web preloader.** Load the app, then move between pages.
+   - ✅ **Expected:** the mark draws itself on the **first** load only. Navigating
+     between pages shows the finished lockup, never a replayed animation.
+7. Turn on **reduce motion** in the OS and reload the web app.
+   - ✅ **Expected:** the finished mark, no draw-in, and the app still gets past the
+     loader rather than waiting for an animation that never runs.
+8. **Favicon and share card.** Check the browser tab, and paste the URL into a chat.
+   - ✅ **Expected:** the KP favicon. The share card has no image until the OG image
+     is uploaded and `index.html`'s `og:image` is pointed at it — see *Known
+     limitations*.
 ## Known limitations (not bugs — don't file these)
+
+- **The mark is an approximation of the logo image.** It was fitted to Béziers by
+  eye from a screenshot, not converted from the original vector. Supply the SVG,
+  AI or Figma file and `brandMark.json` can be replaced without touching anything
+  that reads it.
+- **The share card has no image yet.** `og-card.png` is rendered into
+  `frontend/store-listing/`, but it is deliberately not served from `web/public/`:
+  the service worker precaches everything there, so it would be a mandatory
+  download for every visitor. Upload it and point `index.html`'s `og:image` at it.
+- **The storage carry-over only fires on an update in place.** The package id
+  changed, so a new install sits beside the old one with empty storage. The
+  carry-over code is for whoever later ships an update over an existing install.
 
 - **A date on the web is picked, not typed.** The browser's own date input let
   you type 20/10/2026; its calendar could not be styled or translated, so it was
