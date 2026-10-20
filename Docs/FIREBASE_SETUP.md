@@ -7,6 +7,28 @@ in the codebase works until steps 1–5 are finished, because two files that are
 You need about fifteen minutes and a Google account. It is free — Firebase Cloud
 Messaging has no paid tier for what this uses.
 
+> ### If you already set this up before the KitnaPay rebrand, read this first
+>
+> The package name changed from `com.biziq.app` to `com.kitnapay.app`, and a
+> `google-services.json` is bound to the package it was issued for. The one on
+> disk still says `com.biziq.app`, so **the Android build now fails outright**:
+>
+> ```
+> Execution failed for task ':app:processDebugGoogleServices'.
+> > No matching client found for package name 'com.kitnapay.app' in
+>   .../android/app/google-services.json
+> ```
+>
+> Nothing is broken and nothing has to be recreated. Open the **existing**
+> project (`biziq-73272`), do **Step 2** below to add a second Android app for
+> `com.kitnapay.app`, and replace `frontend/google-services.json` with the file
+> it gives you. Keep the old `com.biziq.app` entry — deleting it would stop push
+> reaching anyone still on an old build. `backend/firebase-service-account.json`
+> belongs to the project, not to the app, so it does not change; skip steps 4–5.
+>
+> Until that is done, the new name and the new icon cannot reach the phone: both
+> are compiled in, so they only appear after a prebuild **and** a rebuild.
+
 ## What KitnaPay actually uses Firebase for
 
 **Cloud Messaging (FCM), and nothing else.** No Firebase Auth, no Firestore, no

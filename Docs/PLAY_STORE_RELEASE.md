@@ -19,8 +19,14 @@ is built, change its status here in the same change.
 ## What stood in the way, and where it stands
 
 Three Google rules blocked an upload. All three are now met in code
-(2026-10-07); what is left before the first upload is the package rename (A1)
-and Part B.
+(2026-10-07); what is left before the first upload is Part B.
+
+**One thing blocks even a local build today, and it is not a Google rule.** The
+package rename (A1) is done in code, but `frontend/google-services.json` is still
+the file Firebase issued for `com.biziq.app`, and Gradle refuses: *"No matching
+client found for package name 'com.kitnapay.app'"*. Register the new package in
+the existing Firebase project and replace that file — `Docs/FIREBASE_SETUP.md`
+opens with the five-minute version. Nothing else is in the way of a build.
 
 1. **Target Android 16 (API level 36).** Since 31 August 2026, every new app and
    every update must target it. KitnaPay was on Expo SDK 51 / React Native 0.74,
