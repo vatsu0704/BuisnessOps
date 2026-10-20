@@ -22,7 +22,9 @@ import AnimatedEntrance from '@/components/AnimatedEntrance';
 import Pill from '@/components/Pill';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
+import SearchInput from '@/components/SearchInput';
 import UpiAccountEditor from '@/components/payments/UpiAccountEditor';
+import { filterByQuery, isSearchable } from '@/utils/optionSearch';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { useScreenEdges } from '@/hooks/useScreenEdges';
@@ -62,6 +64,8 @@ export default function PaymentAccountsScreen() {
   const [account, setAccount] = useState<PaymentAccount | null>(null);
   const [openVendorId, setOpenVendorId] = useState<string | null>(null);
   const [openBranchId, setOpenBranchId] = useState<string | null>(null);
+  const [branchQuery, setBranchQuery] = useState('');
+  const [vendorQuery, setVendorQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -173,8 +177,22 @@ export default function PaymentAccountsScreen() {
               {account && account.counterBranches.length > 0 ? (
                 <>
                   <Text style={[styles.sectionHint, styles.subHint]}>{t('paymentAccounts.counterBranchesHint')}</Text>
+                  {/* A filter, not a chooser. This screen's job is auditing —
+                      seeing which shops have a QR and which do not — and a
+                      dropdown would hide exactly that. */}
+                  {isSearchable(account.counterBranches.length) ? (
+                    <SearchInput
+                      testID="payment-accounts-branch-search"
+                      value={branchQuery}
+                      onChangeText={setBranchQuery}
+                      placeholder={t('branches.search')}
+                    />
+                  ) : null}
                   <View style={styles.list}>
-                    {account.counterBranches.map((branch) => {
+                    {filterByQuery(account.counterBranches, branchQuery, (branch) => ({
+                      primary: branch.name,
+                      secondary: [branch.upiId],
+                    })).map((branch) => {
                       const isOpen = openBranchId === branch.branchId;
                       return (
                         <View key={branch.branchId}>
@@ -264,8 +282,19 @@ export default function PaymentAccountsScreen() {
                   <Text style={styles.emptyBody}>{t('paymentAccounts.noVendorsBody')}</Text>
                 </View>
               ) : null}
+              {isSearchable(vendors.length) ? (
+                <SearchInput
+                  testID="payment-accounts-vendor-search"
+                  value={vendorQuery}
+                  onChangeText={setVendorQuery}
+                  placeholder={t('vendors.search')}
+                />
+              ) : null}
               <View style={styles.list}>
-                {vendors.map((vendor) => {
+                {filterByQuery(vendors, vendorQuery, (vendor) => ({
+                  primary: vendor.name,
+                  secondary: [vendor.upiId],
+                })).map((vendor) => {
                   const isOpen = openVendorId === vendor.id;
                   return (
                     <View key={vendor.id} style={!vendor.isActive && styles.withdrawn}>

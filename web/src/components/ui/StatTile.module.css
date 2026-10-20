@@ -1,4 +1,6 @@
+/* Sized by the room the tile has, so the figure inside can scale to it. */
 .tile {
+  container-type: inline-size;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -17,8 +19,13 @@
   color: var(--color-text-secondary);
 }
 
+/* The figure shrinks with its tile rather than breaking mid-number: these hold a
+   shop's takings, which have no ceiling, and "₹1,23,45,678" split over two lines
+   is unreadable. 22px is the designed size and it keeps it wherever it fits.
+   `overflow-wrap` stays as the backstop — at the floor of 13px a figure longer
+   than a crore still wraps rather than pushing the page sideways. */
 .value {
-  font-size: 22px;
+  font-size: clamp(13px, 9cqi, 22px);
   font-weight: 800;
   letter-spacing: -0.5px;
   color: var(--color-text);

@@ -91,6 +91,8 @@ interface AuthState {
   isBootstrapping: boolean;
   isSubmitting: boolean;
   token: string | null;
+  /** See the action below — used after a password change issues a fresh token. */
+  replaceToken: (token: string) => Promise<void>;
   user: User | null;
   business: Business | null;
   error: string | null;
@@ -211,6 +213,20 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       set({ isSubmitting: false, error: extractErrorMessage(err) });
       throw err;
     }
+  },
+
+  /**
+   * Swap in a token the server has just issued, keeping the session otherwise
+   * untouched.
+   *
+   * Changing a password ends every session older than it, including the one
+   * that asked. Without this, "change my password" would mean "sign me out" on
+   * the device you did it on — while still, correctly, signing out the others.
+   */
+  replaceToken: async (token) => {
+    await secureStorage.setItem(TOKEN_KEY, token);
+    setAuthToken(token);
+    set({ token });
   },
 
   signup: async (payload) => {

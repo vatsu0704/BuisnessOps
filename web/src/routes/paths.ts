@@ -25,6 +25,8 @@ export const ROUTES = {
   home: { path: '/', access: null },
 
   settings: { path: '/settings', access: null },
+  // No capability: anybody may change their own password.
+  changePassword: { path: '/settings/password', access: null },
   // Open, as in the app: Settings offers it to an owner and to somebody revoked
   // from every business — who holds no capability at all, and needs it most.
   addBusiness: { path: '/settings/add-business', access: null },
@@ -33,6 +35,7 @@ export const ROUTES = {
   plan: { path: '/settings/plan', access: { appRoute: 'Plan' } },
   notifications: { path: '/notifications', access: null },
 
+  branches: { path: '/branches', access: { appRoute: 'Branches' } },
   addBranch: { path: '/branches/new', access: { appRoute: 'AddBranch' } },
   branchSettings: { path: '/branches/:branchId', access: { appRoute: 'BranchSettings' } },
   workCalendar: { path: '/work-calendar', access: { appRoute: 'WorkCalendar' } },

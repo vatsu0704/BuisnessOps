@@ -837,14 +837,18 @@ The tab bar and the screens behind it are now decided by role. Use the accounts
 from Flow 15a.
 
 1. Log in as the **cashier**.
-   - ✅ **Expected:** tabs **Home · Products · Staff · Settings**. No Reports.
+   - ✅ **Expected:** tabs **Home · Products · Staff · Settings**. No Reports tab —
+     five tabs is the budget, and the business-wide view is not theirs.
    - ✅ **Expected:** Home leads with **Today's sales · Bills · Today's
      expenses** for their branch, then **Quick actions** — **Billing** across the
-     top with today's takings on it, then Items, Expenses, Order supplies and
-     Supply orders — then **Recent bills**, then the catalog for their branch.
-     No **Reports** tile: a cashier sees what the till did today, not the
-     branch's costs or profit (requirement 33). No **Your branches** card and no
-     **Branches to chase** card.
+     top with today's takings on it, then Items, Expenses, **Reports**, Order
+     supplies and Supply orders — then **Recent bills**, then the catalog for
+     their branch. No **Your branches** card and no **Branches to chase** card.
+   - ✅ **Expected:** the **Reports** tile opens their own branch's report
+     (changed 2026-10-19). One branch card, **no** net-profit card for the
+     business above it, **no** "All branches" choice on the Per day view and no
+     "All businesses" choice — a cashier reads their shop, not the chain. The
+     branch's wage bill is part of its fixed costs, as it is for a manager.
    - ✅ **Expected:** in Products they can add a product for *their* branch, and
      the whole-business option is not offered at all — not offered-and-refused.
 2. Log in as the **warehouse** user or the **delivery agent**.
@@ -2941,7 +2945,178 @@ unpaid, an FM order paid before ordering — and the accountant, the desk and th
 
 ---
 
+## Flow 36 — A business with many branches
+
+**Setup:** a business with more than six branches. The quickest way to get one is
+to add branches until there are seven; the behaviour changes at exactly that point,
+so six and seven are both worth looking at.
+
+1. **Home → Your branches.**
+   - ✅ **Expected:** the first five, then **"+N more"** — and it is now a **link**.
+     Open it.
+2. **Branches** (also reachable from **Settings → Your branches**).
+   - ✅ **Expected:** every branch and warehouse, each with its model or kind, code,
+     city and region, and a pin on the ones that enforce a punch-in radius. A
+     branch you could not reach before — the sixth, the fiftieth — opens its
+     settings from here.
+   - ✅ **Expected:** a **search box**, because there are more than six. Type part of
+     a branch's name, its code, or its city. Typing a word that starts a name
+     ("highway") ranks that branch above one that merely mentions it somewhere.
+3. **Any screen that asks which branch** — Counter, Expenses, Add expense, Staff,
+   Add staff, Products, Add product, Supply catalog, Upload.
+   - ✅ **Expected:** with six or fewer branches, the chips or tiles you have always
+     seen. With seven or more, a field showing the chosen branch; tapping it opens
+     a list with a box to type in.
+   - ✅ **Expected:** the **counter keeps its chips up to twelve**. That is deliberate
+     — it is used one-handed, at speed, and sometimes offline.
+4. **Team → change a cashier's branch**, and **Invite member** with a STAFF role.
+   - ✅ **Expected:** the cashier picker says who holds each branch already, and
+     still lets you take it (you are asked to confirm the swap afterwards, as
+     before). The staff invite picks **several** branches: the field says how many
+     are chosen and lists them underneath, each removable where it sits.
+5. **Settings → Business.**
+   - ✅ **Expected:** if you belong to more than one business, a dropdown rather
+     than a stack of rows.
+6. **Sign up / Add business / Add branch / Branch settings.**
+   - ✅ **Expected:** country, currency and timezone are **dropdowns you can type
+     into**, not text boxes. Search "kolkata" and `Asia/Kolkata` comes up; search
+     "Bharat" and India does.
+   - ⚠️ This one matters beyond tidiness: a typed timezone the server cannot
+     recognise used to become UTC silently, which files a shop's evening sales
+     against the day before.
+7. **Payment QR codes** with more than six shops or vendors.
+   - ✅ **Expected:** the list stays whole — you can still see at a glance which
+     have a QR and which do not — with a **filter** above it.
+
+## Flow 37 — The counter, a day at a time
+
+**Setup:** a branch with bills on more than one day. Sign in as the **cashier**.
+
+1. On the **Counter**, above today's figures, there is a day with a chevron each
+   side.
+   - ✅ **Expected:** it opens on **today**, and the forward chevron is dimmed.
+     Tomorrow cannot be reached, by chevron or by the calendar.
+2. Step **back one day**.
+   - ✅ **Expected:** that day's bills and its three figures, now labelled "that
+     day". **No product grid, no cart, no Charge** — a day that is over is a
+     record, not a till. A **Back to today** button appears.
+   - ✅ **Expected:** the sync pill and anything needing attention stay. They are
+     about this device's unsent bills, not about the day on screen.
+   - ✅ **Expected:** opening a bill still offers **Print again**.
+3. **Tap the date** and pick a day from the calendar.
+   - ✅ **Expected:** future days are dimmed and cannot be chosen, and the panel
+     opens centred under the date between the two chevrons.
+4. On a day the shop did not trade.
+   - ✅ **Expected:** "No bills on …", not an error.
+5. **Turn the connection off** and step back a day.
+   - ✅ **Expected:** it says there is no connection and shows only the bills this
+     device still holds for that day — **the totals are hidden**, because a figure
+     short of the server's is worse than none. **Today still bills normally.**
+6. Return to **today** and take a bill.
+   - ✅ **Expected:** the token continues from where today left off. (This is the
+     one that would break if a past day's figures were ever saved as today's.)
+
+## Flow 38 — Forgetting a password
+
+**Setup:** the migration applied (`npm run migrate:deploy` in `backend/`) and the
+backend restarted. **No email account is needed**: with `SMTP_URL` unset the
+backend writes the link to its own log instead, which is enough to walk the whole
+flow. Set `PUBLIC_WEB_URL` to where the web app is served, or the link will have
+no host.
+
+1. On the web's **sign in** page, under the password, there is now **Forgot
+   password?**. The phone's sign-in screen has the same link.
+2. Open it and enter the email you sign in with.
+   - ✅ **Expected:** "Check your email", naming the address back.
+   - ✅ **Expected:** enter an address with **no account** — the same answer. That
+     is deliberate: anything else would let a stranger ask who banks here.
+3. Look in the **backend's terminal** for the `mail_skipped` line and copy the
+   link out of it. Open it in a browser.
+4. Choose a new password and save.
+   - ✅ **Expected:** "Password changed", and a note that the other devices have
+     been signed out.
+   - ✅ **Expected:** open the **same link again** — refused as not valid. One use.
+   - ✅ **Expected:** ask for a second link, then try the **first** one — refused.
+     Asking again retires the previous link.
+5. **The old sessions are really gone.** Before resetting, leave the phone app
+   signed in to that account. After the reset, pull to refresh on the phone.
+   - ✅ **Expected:** it signs out. A session token lasts seven days and cannot be
+     withdrawn, so this is the whole point of the change.
+6. Sign in with the **new** password, on both.
+7. **Settings → Change password.**
+   - ✅ **Expected:** the wrong current password is refused by name.
+   - ✅ **Expected:** the right one changes it and **leaves you signed in here**,
+     while any other device signed in to that account is signed out.
+8. Ask for six links in a row from one browser.
+   - ✅ **Expected:** the sixth is refused for a few minutes. Asking twice within a
+     minute for the same address quietly sends only the first.
+
+
+## Flow 39 — The calendar (web only)
+
+**Setup:** the **web** app, signed in as the owner. The phone app is not part of
+this flow — it opens Android's own picker, which is native and correct there.
+
+1. **Expenses → Add expense**, and tap the **date** field.
+   - ✅ **Expected:** HisabKitab's own calendar — the brand blue, the app's
+     rounded panel, the app's border. **Not** the browser's grey one.
+   - ✅ **Expected:** **today has a ring, the chosen day is filled.** The two are
+     never confusable.
+   - ✅ **Expected:** days after today are dimmed and do nothing; the forward
+     chevron is dimmed once there is no month left to reach.
+2. Switch the language to **ગુજરાતી** and open it again.
+   - ✅ **Expected:** the month and the weekday headings are in Gujarati. This is
+     the whole reason the browser's calendar had to go — it follows the browser's
+     language, which has never heard of the one chosen here.
+3. **Tap the month caption** ("October 2026").
+   - ✅ **Expected:** twelve months, the chevrons now stepping the **year**, and
+     months wholly out of range dimmed. The panel does **not** change size.
+4. Page back and forth through several months.
+   - ✅ **Expected:** the panel is the same height every month — six rows whether
+     February needs four or August needs six.
+5. With the field focused, move with the **keyboard**: arrows a day and a week,
+   PageUp/PageDown a month, Home/End to the ends of the week, Enter to choose.
+   - ✅ **Expected:** the focus **stops at the last day offered** — arrowing past
+     today does nothing rather than wandering into the dimmed days.
+   - ✅ **Expected:** Tab leaves the calendar in one press rather than walking all
+     42 days, and Escape closes it and puts focus back on the field.
+6. **Scroll so the date field sits near the bottom** of the window, then open it.
+   - ✅ **Expected:** the page scrolls just enough to show the whole panel,
+     including the **Today** button.
+7. **Staff → a staff member → Edit → Hired on.**
+   - ✅ **Expected:** a date years back is a few taps through the month chooser,
+     not sixty presses of a chevron.
+8. **Workweek & holidays → Add holiday.**
+   - ✅ **Expected:** here future dates *are* offered — a holiday is planned, not
+     recorded. Everywhere else the ceiling is today.
+9. At a **320px** window, in Gujarati, open each of the above.
+   - ✅ **Expected:** the panel fits with a margin either side, and the page never
+     scrolls sideways.
 ## Known limitations (not bugs — don't file these)
+
+- **A date on the web is picked, not typed.** The browser's own date input let
+  you type 20/10/2026; its calendar could not be styled or translated, so it was
+  replaced. The month chooser covers the long jumps that made typing worth having.
+- **The reset link opens the web app, not the phone app** — even when you asked
+  for it on the phone. Set the new password in the browser, then sign in to the
+  app with it. Unauthenticated deep links into the app are not built.
+- **Email addresses are not verified.** A reset link goes to whatever address the
+  account was created with, so a typo at sign-up means the link goes nowhere.
+- **A reset link needs `PUBLIC_WEB_URL` and the web app hosted** to be clickable
+  from a phone. Until then it only works on the machine running the server.
+
+- **A past day at the counter is read-only.** You can read it and print a bill
+  again, but voiding and reopening a day stay on today.
+- **A past day needs a connection.** Only today is kept on the device.
+- **A busy past day shows its newest 200 bills**, and says so.
+- **The Team list shows twenty people at a time**, with a button for the rest.
+
+- **A branch list becomes a dropdown at seven.** Below that it stays as chips or
+  rows. If you have six branches and expect a search box, add a seventh.
+- **Country, currency and timezone offer a fixed list.** Every ISO country is
+  there; currencies and timezones are the ones this product actually serves, and a
+  value already saved that is not in the list is still shown and kept. A missing
+  currency or zone is one line of data to add.
 
 - **Two phones billing one branch offline can print the same token number.** The
   one that syncs second is renumbered and shows "Printed as 7" — the record and the

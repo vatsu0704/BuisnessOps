@@ -58,10 +58,36 @@ describe('Public legal pages', () => {
   });
 
   it('warns at startup in production while the details are missing, and only then', () => {
-    expect(warningsFor({ NODE_ENV: 'production' })[0]).toContain('LEGAL_NAME, LEGAL_ADDRESS, SUPPORT_EMAIL');
+    const complete = {
+      NODE_ENV: 'production',
+      LEGAL_NAME: 'X',
+      LEGAL_ADDRESS: 'Y',
+      SUPPORT_EMAIL: 'z@example.in',
+      SMTP_URL: 'smtps://u:p@smtp.example.in:465',
+      MAIL_FROM: 'HisabKitab <no-reply@example.in>',
+      PUBLIC_WEB_URL: 'https://app.example.in',
+    };
+
+    expect(warningsFor({ NODE_ENV: 'production' }).join(' ')).toContain('LEGAL_NAME, LEGAL_ADDRESS, SUPPORT_EMAIL');
     expect(warningsFor({ NODE_ENV: 'development' })).toEqual([]);
-    expect(
-      warningsFor({ NODE_ENV: 'production', LEGAL_NAME: 'X', LEGAL_ADDRESS: 'Y', SUPPORT_EMAIL: 'z@example.in' })
-    ).toEqual([]);
+    expect(warningsFor(complete)).toEqual([]);
+  });
+
+  /**
+   * Optional, like the Firebase credential — a server with no mail account still
+   * starts. But a reset flow that silently does nothing is worse than none, so
+   * production says so every time.
+   */
+  it('warns in production when a password-reset link could not be emailed or opened', () => {
+    const operator = { NODE_ENV: 'production', LEGAL_NAME: 'X', LEGAL_ADDRESS: 'Y', SUPPORT_EMAIL: 'z@example.in' };
+    const warnings = warningsFor(operator).join(' ');
+
+    expect(warnings).toContain('SMTP_URL');
+    expect(warnings).toContain('PUBLIC_WEB_URL');
+    expect(warningsFor({ ...operator, SMTP_URL: 'smtps://u:p@h:465', PUBLIC_WEB_URL: 'https://a.in' }).join(' ')).toContain(
+      'MAIL_FROM'
+    );
+    // Development stays quiet, so a fresh checkout is not noisy.
+    expect(warningsFor({ NODE_ENV: 'development' })).toEqual([]);
   });
 });

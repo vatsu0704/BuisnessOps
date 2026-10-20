@@ -14,7 +14,7 @@ import {
 } from '@shared/utils/dailyReport';
 import { getBranchDaily } from '@/api/analytics';
 import { extractErrorMessage } from '@/api/client';
-import ChipGroup from '@/components/ui/ChipGroup';
+import Picker from '@/components/ui/Picker';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import MonthCursor from '@/components/ui/MonthCursor';
 import Spinner from '@/components/ui/Spinner';
@@ -95,14 +95,16 @@ export default function DailyReport({ refreshKey }: { refreshKey: number }) {
       <MonthCursor label={label} onPrev={goPrev} onNext={goNext} canGoNext={canGoNext} />
 
       {choices.length > 1 ? (
-        // Wrapping chips: any number of branches, and a name in Gujarati runs long.
-        <ChipGroup
+        // Wrapping chips up to six, a field to type into past that: a name in
+        // Gujarati runs long, and a chain has two hundred of them.
+        <Picker
           name="reports-day-branch"
           label={t('web.reports.branchColumn')}
           hideLabel
           options={choices.map((id) => ({ value: id, label: nameOf(id) }))}
           value={choice}
           onChange={setSelected}
+          flatAs="chips"
         />
       ) : null}
 

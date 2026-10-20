@@ -12,11 +12,11 @@ import { useBranchProducts } from '@/hooks/useBranchProducts';
 import { useMembership } from '@/hooks/useBusinessId';
 import { can } from '@/utils/permissions';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import BranchField from '@/components/BranchField';
 import InfoCard from '@/components/InfoCard';
 import PressableScale from '@/components/PressableScale';
 import ProductRow from '@/components/ProductRow';
 import ScreenBackground from '@/components/ScreenBackground';
-import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { useScreenEdges } from '@/hooks/useScreenEdges';
@@ -91,21 +91,13 @@ export default function ProductsScreen() {
         >
           {branches.length > 1 ? (
             <AnimatedEntrance delay={step(0)} style={styles.block}>
-              <Text style={styles.sectionTitle}>{t('products.branchSection')}</Text>
-              <View style={styles.grid}>
-                {branches.map((branch) => (
-                  <View key={branch.id} style={styles.gridItem}>
-                    <SegmentedOption
-                      testID={`products-branch-${branch.code}`}
-                      title={branch.name}
-                      caption={branch.code}
-                      icon="storefront-outline"
-                      selected={branch.id === branchId}
-                      onPress={() => setSelectedBranchId(branch.id)}
-                    />
-                  </View>
-                ))}
-              </View>
+              <BranchField
+                testIDPrefix="products-branch"
+                label={t('products.branchSection')}
+                branches={branches}
+                value={branchId}
+                onChange={setSelectedBranchId}
+              />
             </AnimatedEntrance>
           ) : null}
 
@@ -204,8 +196,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   list: { gap: spacing.sm },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  gridItem: { width: '48%' },
   emptyCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,

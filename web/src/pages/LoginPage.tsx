@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 import { IoArrowForward, IoBarChart, IoLockClosedOutline, IoMailOutline, IoStorefrontOutline, IoTrendingUp } from 'react-icons/io5';
 import AuthHeader from '@/components/layout/AuthHeader';
 import ScreenBackground from '@/components/layout/ScreenBackground';
@@ -119,6 +120,12 @@ export default function LoginPage() {
                     if (error) clearError();
                   }}
                 />
+
+                {/* Under the password it is about, above the button, which is
+                    where somebody who has just mistyped it looks. */}
+                <Link to="/forgot-password" className={styles.forgot}>
+                  {t('login.forgotPassword')}
+                </Link>
 
                 <PrimaryButton
                   type="submit"

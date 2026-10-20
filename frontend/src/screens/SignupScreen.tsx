@@ -10,12 +10,14 @@ import { openLegalPage } from '@/utils/legalLinks';
 import { useAuthStore } from '@/store/authStore';
 import type { Industry } from '@/types/business';
 import { INDUSTRY_OPTIONS } from '@/constants/industries';
+import { COUNTRIES, CURRENCIES, TIMEZONES } from '@/constants/regions';
 import { lookupInvite } from '@/api/team';
 import type { InviteLookupResult } from '@/types/team';
 import { isValidEmail } from '@/utils/validation';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import AuthHeader from '@/components/AuthHeader';
 import FormInput from '@/components/FormInput';
+import Picker from '@/components/Picker';
 import InfoCard from '@/components/InfoCard';
 import PasswordStrength from '@/components/PasswordStrength';
 import Pill from '@/components/Pill';
@@ -260,32 +262,48 @@ export default function SignupScreen({ navigation }: Props) {
                   ))}
                 </View>
 
-                <View style={styles.row}>
-                  <View style={styles.rowItem}>
-                    <FormInput
-                      label={t('signup.country')}
-                      icon="flag-outline"
-                      autoCapitalize="characters"
-                      value={country}
-                      onChangeText={onFieldChange(setCountry)}
-                    />
-                  </View>
-                  <View style={styles.rowItem}>
-                    <FormInput
-                      label={t('signup.currency')}
-                      icon="cash-outline"
-                      autoCapitalize="characters"
-                      value={defaultCurrency}
-                      onChangeText={onFieldChange(setDefaultCurrency)}
-                    />
-                  </View>
-                </View>
+                {/* Stacked rather than side by side: a country name grows, and half of a
+                    320dp phone does not hold "United Arab Emirates". */}
+                <Picker
+                  testIDPrefix="signup-country"
+                  label={t('signup.country')}
+                  icon="flag-outline"
+                  value={country}
+                  onChange={onFieldChange(setCountry)}
+                  options={COUNTRIES.map((item) => ({
+                    value: item.code,
+                    label: item.name,
+                    description: item.code,
+                    keywords: [item.code, ...(item.aliases ?? [])],
+                  }))}
+                />
 
-                <FormInput
+                <Picker
+                  testIDPrefix="signup-currency"
+                  label={t('signup.currency')}
+                  icon="cash-outline"
+                  value={defaultCurrency}
+                  onChange={onFieldChange(setDefaultCurrency)}
+                  options={CURRENCIES.map((item) => ({
+                    value: item.code,
+                    label: item.code,
+                    description: item.name,
+                    keywords: [item.name, item.symbol],
+                  }))}
+                />
+
+                <Picker
+                  testIDPrefix="signup-timezone"
                   label={t('signup.timezone')}
                   icon="time-outline"
                   value={timezone}
-                  onChangeText={onFieldChange(setTimezone)}
+                  onChange={onFieldChange(setTimezone)}
+                  options={TIMEZONES.map((item) => ({
+                    value: item.id,
+                    label: item.id,
+                    description: item.places.slice(0, 2).join(' · '),
+                    keywords: item.places,
+                  }))}
                 />
               </View>
             </AnimatedEntrance>
@@ -394,8 +412,6 @@ const styles = StyleSheet.create({
   fieldLabel: { ...typography.label, color: colors.text, marginBottom: spacing.sm },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
   gridItem: { width: '48%' },
-  row: { flexDirection: 'row', gap: spacing.md },
-  rowItem: { flex: 1 },
   mismatch: { fontSize: 12.5, color: colors.error, marginTop: -spacing.sm, marginBottom: spacing.sm },
   errorBanner: {
     flexDirection: 'row',

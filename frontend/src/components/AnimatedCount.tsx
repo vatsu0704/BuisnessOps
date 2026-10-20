@@ -6,9 +6,25 @@ type Props = {
   duration?: number;
   style?: StyleProp<TextStyle>;
   formatValue?: (value: number) => string;
+  /**
+   * Keep the figure on one line, shrinking the type until it fits rather than
+   * wrapping. A rupee figure broken across two lines is unreadable, and the
+   * figures these tiles hold grow without bound — ₹20,000 already wrapped in a
+   * third of a 320dp screen.
+   */
+  fitOneLine?: boolean;
+  /** How far `fitOneLine` may shrink before it stops. */
+  minimumFontScale?: number;
 };
 
-export default function AnimatedCount({ value, duration = 700, style, formatValue }: Props) {
+export default function AnimatedCount({
+  value,
+  duration = 700,
+  style,
+  formatValue,
+  fitOneLine = false,
+  minimumFontScale = 0.6,
+}: Props) {
   const [display, setDisplay] = useState(0);
   const fromRef = useRef(0);
 
@@ -32,5 +48,14 @@ export default function AnimatedCount({ value, duration = 700, style, formatValu
     return () => cancelAnimationFrame(frame);
   }, [value, duration]);
 
-  return <Text style={style}>{formatValue ? formatValue(display) : display}</Text>;
+  return (
+    <Text
+      style={style}
+      numberOfLines={fitOneLine ? 1 : undefined}
+      adjustsFontSizeToFit={fitOneLine}
+      minimumFontScale={fitOneLine ? minimumFontScale : undefined}
+    >
+      {formatValue ? formatValue(display) : display}
+    </Text>
+  );
 }

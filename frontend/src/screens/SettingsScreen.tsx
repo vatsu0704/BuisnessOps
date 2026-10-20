@@ -201,6 +201,20 @@ export default function SettingsScreen() {
             </AnimatedEntrance>
           ) : null}
 
+          {/* The second way in, so reaching a branch's settings does not depend
+              on it being one of the five Home previews. */}
+          {hasCapability(membership, 'branch:update') ? (
+            <AnimatedEntrance delay={step(7)} style={styles.block}>
+              <InfoCard
+                testID="settings-open-branches"
+                icon="storefront-outline"
+                title={t('branches.title')}
+                subtitle={t('branches.subtitle', { count: stats.total })}
+                onPress={() => navigation.navigate('Branches')}
+              />
+            </AnimatedEntrance>
+          ) : null}
+
           {canManageTeam ? (
             <AnimatedEntrance delay={step(7)} style={styles.block}>
               <InfoCard
@@ -255,6 +269,16 @@ export default function SettingsScreen() {
           ) : null}
 
           <AnimatedEntrance delay={step(8)} style={styles.block}>
+            <AnimatedEntrance delay={step(8)} style={styles.block}>
+              <InfoCard
+                testID="settings-change-password"
+                icon="key-outline"
+                title={t('changePassword.title')}
+                subtitle={t('changePassword.settingsSubtitle')}
+                onPress={() => navigation.navigate('ChangePassword')}
+              />
+            </AnimatedEntrance>
+
             <LanguageSelector />
           </AnimatedEntrance>
 

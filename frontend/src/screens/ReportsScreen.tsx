@@ -64,10 +64,15 @@ import type { BranchMonthlyRow } from '@/types/analytics';
  * ## Who reaches this
  *
  * The tab is gated on `analytics:viewBusiness`, so an owner, admin or manager. The
- * endpoint behind it is gated on the narrower `analytics:viewBranch` and scoped by
- * branch access, so a cashier calling it gets their own branch and no business
- * total — correct by construction, and deliberately not surfaced as a sixth tab,
- * because five is the documented budget in `TabNavigator`.
+ * screen and the endpoint behind it are gated on the narrower
+ * `analytics:viewBranch` and scoped by branch access, so a cashier gets their own
+ * branch and no business total — correct by construction, and deliberately not a
+ * sixth tab, because five is the documented budget in `TabNavigator`. A cashier
+ * reaches it from Home's Reports tile, which already asks for that capability.
+ *
+ * So for a one-branch reader this draws without a branch chooser, without the
+ * business roll-up card and without the cross-business section, each of which is
+ * already conditional on what the server actually sent.
  */
 export default function ReportsScreen() {
   const { t } = useTranslation();

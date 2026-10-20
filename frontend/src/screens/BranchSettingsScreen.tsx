@@ -11,11 +11,13 @@ import { extractErrorMessage } from '@/api/client';
 import type { Branch, BranchKind, BranchOperatingModel } from '@/types/branch';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import FormInput from '@/components/FormInput';
+import Picker from '@/components/Picker';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
 import OptionRow from '@/components/OptionRow';
 import SegmentedOption from '@/components/SegmentedOption';
+import { TIMEZONES } from '@/constants/regions';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
@@ -263,14 +265,22 @@ export default function BranchSettingsScreen({ navigation, route }: Props) {
                   <View style={styles.card}>
                     <Text style={styles.sectionTitle}>{t('branchSettings.timezone')}</Text>
                     <Text style={styles.hint}>{t('branchSettings.timezoneHint')}</Text>
-                    <FormInput
-                      testID="branch-settings-timezone"
+                    {/* Typed by hand until 2026-10-19. A zone the tzdb cannot
+                        resolve becomes UTC on the server without a word, and a
+                        branch on UTC files its evening sales a day early. */}
+                    <Picker
+                      testIDPrefix="branch-settings-timezone"
                       label={t('branchSettings.timezone')}
+                      hideLabel
                       icon="time-outline"
                       value={timezone}
-                      onChangeText={setTimezone}
-                      autoCapitalize="none"
-                      autoCorrect={false}
+                      onChange={setTimezone}
+                      options={TIMEZONES.map((item) => ({
+                        value: item.id,
+                        label: item.id,
+                        description: item.places.slice(0, 2).join(' · '),
+                        keywords: item.places,
+                      }))}
                     />
                   </View>
                 </AnimatedEntrance>

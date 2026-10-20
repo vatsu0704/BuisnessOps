@@ -209,3 +209,40 @@
   cursor: progress;
   opacity: 0.6;
 }
+
+/* The search box, the branch filter and the count that explains a short list. */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.count {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.showMore {
+  align-self: center;
+  padding: var(--space-sm) var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.showMore:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.showMore:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

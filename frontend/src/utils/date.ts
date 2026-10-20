@@ -119,6 +119,19 @@ export function formatDateLong(iso: string, t: TFunction): string {
 }
 
 /**
+ * "20 Sep 2026" — the whole date, as short as it goes.
+ *
+ * Between `formatDate`, which drops the year, and `formatDateLong`, which does
+ * not fit a control sized to sit between two chevrons: the counter's day cursor
+ * showed "12 ઓક્ટોબર 20…" on a 390px phone, and a date you cannot read the year
+ * of is no use on a screen whose whole job is saying which day you are looking at.
+ */
+export function formatDateMedium(iso: string, t: TFunction): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return `${d} ${t(`month.short.${m}` as 'month.short.1')} ${y}`;
+}
+
+/**
  * "9:05 AM" — a clock time in the reader's language.
  *
  * Deliberately not `toLocaleTimeString({ hour12: true })`. Hermes ships

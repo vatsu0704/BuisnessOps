@@ -13,11 +13,11 @@ import { useAuthStore } from '@/store/authStore';
 import { useBranches } from '@/hooks/useBranches';
 import { saveSalesTemplate } from '@/utils/saveTemplate';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import BranchField from '@/components/BranchField';
 import InfoCard from '@/components/InfoCard';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
-import SegmentedOption from '@/components/SegmentedOption';
 import TemplateGuide from '@/components/upload/TemplateGuide';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
@@ -162,21 +162,16 @@ export default function UploadScreen({ navigation }: Props) {
             <>
               <AnimatedEntrance delay={step(1)}>
                 <View style={styles.card}>
-                  <Text style={styles.sectionTitle}>{t('upload.branchSection')}</Text>
-                  <View style={styles.grid}>
-                    {branches.map((b) => (
-                      <View key={b.id} style={styles.gridItem}>
-                        <SegmentedOption
-                          testID={`upload-branch-${b.code}`}
-                          title={b.name}
-                          caption={[b.code, b.city].filter(Boolean).join(' · ')}
-                          icon="storefront-outline"
-                          selected={branchId === b.id}
-                          onPress={() => setBranchId(b.id)}
-                        />
-                      </View>
-                    ))}
-                  </View>
+                  {/* Shown even for a single branch, already chosen: where
+                      imported sales land is worth seeing before they land. */}
+                  <BranchField
+                    testIDPrefix="upload-branch"
+                    label={t('upload.branchSection')}
+                    branches={branches}
+                    value={branchId}
+                    onChange={setBranchId}
+                    caption={(b) => [b.code, b.city].filter(Boolean).join(' · ')}
+                  />
                 </View>
               </AnimatedEntrance>
 
@@ -339,8 +334,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     marginBottom: spacing.md,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  gridItem: { width: '48%' },
   dropZone: {
     alignItems: 'center',
     gap: spacing.xs,

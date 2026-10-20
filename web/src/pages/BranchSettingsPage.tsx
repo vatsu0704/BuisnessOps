@@ -20,6 +20,8 @@ import Card from '@/components/ui/Card';
 import Enter from '@/components/ui/Enter';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import FormInput from '@/components/ui/FormInput';
+import Picker from '@/components/ui/Picker';
+import { TIMEZONES } from '@shared/constants/regions';
 import FormTextArea from '@/components/ui/FormTextArea';
 import PageHeader from '@/components/ui/PageHeader';
 import PrimaryButton from '@/components/ui/PrimaryButton';
@@ -183,15 +185,20 @@ export default function BranchSettingsPage() {
           field's label; here the field is the heading and the sentence sits under it. */}
       <Enter delay={step(2)}>
         <Card>
-          <FormInput
+          <Picker
+            name="branch-timezone"
             label={t('branchSettings.timezone')}
-            description={t('branchSettings.timezoneHint')}
             icon={IoTimeOutline}
-            autoComplete="off"
-            spellCheck={false}
             value={draft.timezone}
-            onChange={(e) => set({ timezone: e.target.value })}
+            onChange={(timezone) => set({ timezone })}
+            options={TIMEZONES.map((zone) => ({
+              value: zone.id,
+              label: zone.id,
+              description: zone.places.slice(0, 2).join(' · '),
+              keywords: zone.places,
+            }))}
           />
+          <p className={styles.timezoneHint}>{t('branchSettings.timezoneHint')}</p>
           {/* What a rider reads to find the branch, beside the point the
               geofence checks: both answer "where is it". */}
           <FormTextArea

@@ -32,7 +32,12 @@ export default function MetricGrid({ metrics }: { metrics: Metric[] }) {
           <Text style={styles.label} numberOfLines={2}>
             {metric.label}
           </Text>
+          {/* Half a card wide, holding an amount with no ceiling: the figure
+              shrinks to stay on one line rather than breaking mid-number. */}
           <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
             style={[
               styles.value,
               metric.tone === 'cost' && styles.valueCost,

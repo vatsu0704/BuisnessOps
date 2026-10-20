@@ -1,0 +1,234 @@
+/* A month of days. Sized by its own content so it fits a 320px screen with the
+   popover's 16px gutters either side. */
+
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-md);
+}
+
+/* --- The month, and the chevrons either side of it ---------------------- */
+
+.header {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color var(--duration-quick) ease, color var(--duration-quick) ease;
+}
+
+.step:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.step:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.step:focus-visible,
+.caption:focus-visible,
+.today:focus-visible,
+.month:focus-visible,
+.day:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  height: 32px;
+  padding: 0 var(--space-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.caption:hover {
+  background: var(--color-background);
+}
+
+.caption span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.captionOpen {
+  transform: rotate(180deg);
+}
+
+/* --- The days ----------------------------------------------------------- */
+
+
+/* The rows exist for the `role="grid"`, not for the layout: `display: contents`
+   lets their seven buttons land in the grid's own columns. */
+.row {
+  display: contents;
+}
+.weekdays,
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.weekday {
+  padding-bottom: var(--space-xs);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Square cells, so the grid is a grid at every width rather than a set of
+     ovals that stretch as the panel does. */
+  aspect-ratio: 1;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background-color var(--duration-quick) ease, color var(--duration-quick) ease;
+}
+
+.day:hover {
+  background: var(--color-background);
+}
+
+/* The days either side of this month: shown so the weeks read as weeks, but
+   quiet enough that the month on screen is obvious at a glance. */
+.dayOutside {
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+}
+
+/* Today is a ring, never a fill — a fill would be indistinguishable from the
+   chosen day, which is the one thing this grid has to say clearly. */
+.dayToday {
+  box-shadow: inset 0 0 0 1.5px var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 800;
+}
+
+.daySelected,
+.daySelected:hover {
+  background: var(--gradient-brand);
+  box-shadow: none;
+  color: var(--color-white);
+  font-weight: 800;
+}
+
+/* `aria-disabled`, not `disabled` — see the component. So the look is ours to
+   draw and the pointer has to be told separately. */
+.dayDisabled,
+.dayDisabled:hover {
+  background: transparent;
+  color: var(--color-text-tertiary);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --- Choosing a month --------------------------------------------------- */
+
+.months {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-xs);
+  /* The same height as six rows of days plus their headings, so switching to
+     the months and back does not resize the panel. */
+  min-height: 232px;
+  align-content: center;
+}
+
+.month {
+  padding: var(--space-md) var(--space-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--duration-quick) ease, background-color var(--duration-quick) ease;
+}
+
+.month:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.month:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.monthSelected,
+.monthSelected:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+/* --- Today -------------------------------------------------------------- */
+
+.footer {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--color-border);
+}
+
+.today {
+  padding: var(--space-xs) var(--space-lg);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.today:hover {
+  background: var(--color-primary-light);
+}

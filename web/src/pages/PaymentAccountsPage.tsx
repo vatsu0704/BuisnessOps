@@ -14,6 +14,7 @@ import Enter from '@/components/ui/Enter';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import PageHeader from '@/components/ui/PageHeader';
 import Pill from '@/components/ui/Pill';
+import SearchField from '@/components/ui/SearchField';
 import Spinner from '@/components/ui/Spinner';
 import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
 import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
@@ -21,6 +22,7 @@ import { useVendors } from '@/hooks/useVendors';
 import { refreshVendors } from '@/store/vendorStore';
 import { step } from '@/theme/motion';
 import type { PaymentAccount } from '@/types/supply';
+import { filterByQuery, isSearchable } from '@shared/utils/optionSearch';
 import { cx } from '@/utils/cx';
 import { hasCapability } from '@/utils/permissions';
 import styles from './PaymentAccountsPage.module.css';
@@ -51,7 +53,18 @@ export default function PaymentAccountsPage() {
   const [account, setAccount] = useState<PaymentAccount | null>(null);
   const [openVendorId, setOpenVendorId] = useState<string | null>(null);
   const [openBranchId, setOpenBranchId] = useState<string | null>(null);
+  const [branchQuery, setBranchQuery] = useState('');
+  const [vendorQuery, setVendorQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const shownBranches = filterByQuery(account?.counterBranches ?? [], branchQuery, (branch) => ({
+    primary: branch.name,
+    secondary: [branch.upiId],
+  }));
+  const shownVendors = filterByQuery(vendors, vendorQuery, (vendor) => ({
+    primary: vendor.name,
+    secondary: [vendor.upiId],
+  }));
 
   const load = useCallback(async () => {
     if (!businessId) return;
@@ -113,8 +126,18 @@ export default function PaymentAccountsPage() {
               {account.counterBranches.length > 0 ? (
                 <>
                   <p className={styles.subHint}>{t('paymentAccounts.counterBranchesHint')}</p>
+                  {/* A filter, not a dropdown. This page's job is auditing —
+                      seeing which shops have a QR and which do not — and a
+                      chooser would hide exactly that. */}
+                  {isSearchable(account.counterBranches.length) ? (
+                    <SearchField
+                      label={t('branches.search')}
+                      value={branchQuery}
+                      onChange={setBranchQuery}
+                    />
+                  ) : null}
                   <ul className={styles.list}>
-                    {account.counterBranches.map((branch) => (
+                    {shownBranches.map((branch) => (
                       <ExpandableRow
                         key={branch.branchId}
                         open={openBranchId === branch.branchId}
@@ -183,8 +206,15 @@ export default function PaymentAccountsPage() {
                     <p className={styles.emptyBody}>{t('paymentAccounts.noVendorsBody')}</p>
                   </div>
                 ) : null}
+                {isSearchable(vendors.length) ? (
+                  <SearchField
+                    label={t('vendors.search')}
+                    value={vendorQuery}
+                    onChange={setVendorQuery}
+                  />
+                ) : null}
                 <ul className={styles.list}>
-                  {vendors.map((vendor) => (
+                  {shownVendors.map((vendor) => (
                     <ExpandableRow
                       key={vendor.id}
                       open={openVendorId === vendor.id}

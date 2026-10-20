@@ -92,7 +92,7 @@ function checkDictionary(label, dictionary) {
   return enKeys.length;
 }
 
-// --- 1, 2 & 3: the three backend dictionaries ------------------------------
+// --- 1-4: the four backend dictionaries ------------------------------------
 
 const { LABELS: NOTIFICATION_LABELS, NOTIFICATION_CODES } = require(
   path.join(BACKEND, 'notifications', 'labels.js')
@@ -106,7 +106,13 @@ const payslipKeys = checkDictionary('documents/payslip.labels.js', payslipLabels
 const { LABELS: EXPORT_LABELS } = require(path.join(BACKEND, 'documents', 'export.labels.js'));
 const exportKeys = checkDictionary('documents/export.labels.js', EXPORT_LABELS);
 
-// --- 3: every code the backend sends is renderable in the app --------------
+// The fourth, and the only one with no `?lang=`: an email has no app on the
+// other end to render anything, and nobody is signed in to ask. The reader's
+// `User.preferredLocale` is what picks the language.
+const { LABELS: RESET_LABELS } = require(path.join(BACKEND, 'mail', 'reset.labels.js'));
+const resetKeys = checkDictionary('mail/reset.labels.js', RESET_LABELS);
+
+// --- 5: every code the backend sends is renderable in the app --------------
 
 const appEn = JSON.parse(fs.readFileSync(APP_EN, 'utf8'));
 const appNotifications = appEn.notifications ?? {};
@@ -138,7 +144,8 @@ if (failures.length) {
 }
 
 console.log(
-  `backend i18n parity OK — ${notificationKeys} notification, ${payslipKeys} payslip and ` +
-    `${exportKeys} export labels match across ${Object.keys(NOTIFICATION_LABELS).length} ` +
-    `languages, and all ${NOTIFICATION_CODES.length} codes render in the app.`
+  `backend i18n parity OK — ${notificationKeys} notification, ${payslipKeys} payslip, ` +
+    `${exportKeys} export and ${resetKeys} reset-mail labels match across ` +
+    `${Object.keys(NOTIFICATION_LABELS).length} languages, and all ` +
+    `${NOTIFICATION_CODES.length} codes render in the app.`
 );

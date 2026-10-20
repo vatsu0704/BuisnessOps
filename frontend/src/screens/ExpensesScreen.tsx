@@ -21,11 +21,11 @@ import { categoryLabel } from '@/utils/expenseCategory';
 import { dateKeyFromApi, formatDate, formatTime } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import BranchField from '@/components/BranchField';
 import ExportActions from '@/components/ExportActions';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
-import SegmentedOption from '@/components/SegmentedOption';
 import StatTile from '@/components/StatTile';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
@@ -178,18 +178,15 @@ export default function ExpensesScreen({ navigation, route }: Props) {
 
           {branches.length > 1 ? (
             <AnimatedEntrance delay={step(0)} style={styles.block}>
-              <View style={styles.chipRow}>
-                {branches.map((branch) => (
-                  <View key={branch.id} style={styles.chipItem}>
-                    <SegmentedOption
-                      testID={`expenses-branch-${branch.code}`}
-                      title={branch.name}
-                      selected={activeBranchId === branch.id}
-                      onPress={() => setBranchId(branch.id)}
-                    />
-                  </View>
-                ))}
-              </View>
+              <BranchField
+                testIDPrefix="expenses-branch"
+                label={t('expenses.branch')}
+                hideLabel
+                branches={branches}
+                value={activeBranchId}
+                onChange={setBranchId}
+                caption={() => undefined}
+              />
             </AnimatedEntrance>
           ) : null}
 
@@ -415,8 +412,6 @@ const styles = StyleSheet.create({
   },
   // Three branch chips or five: a wrap with a minimum width degrades into rows
   // rather than dividing the line into slivers.
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chipItem: { minWidth: '30%', flexGrow: 1 },
   statRow: { flexDirection: 'row', gap: spacing.sm },
   differenceRow: {
     flexDirection: 'row',

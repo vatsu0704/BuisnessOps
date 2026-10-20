@@ -9,6 +9,7 @@ import * as Crypto from 'expo-crypto';
 import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
 import { useBranches } from '@/hooks/useBranches';
+import { usePastCounterDay } from '@/hooks/usePastCounterDay';
 import { useScreenEdges } from '@/hooks/useScreenEdges';
 import { useAuthStore } from '@/store/authStore';
 import { useCounterStore, type CounterBranch } from '@/store/counterStore';
@@ -19,9 +20,10 @@ import AnimatedEntrance from '@/components/AnimatedEntrance';
 import Pill from '@/components/Pill';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
-import SegmentedOption from '@/components/SegmentedOption';
 import StatTile from '@/components/StatTile';
 import AttentionCard from '@/components/counter/AttentionCard';
+import BranchField from '@/components/BranchField';
+import DayCursor from '@/components/DayCursor';
 import BillSheet from '@/components/counter/BillSheet';
 import CartTray from '@/components/counter/CartTray';
 import ChargeSheet, { type ChargeDone } from '@/components/counter/ChargeSheet';
@@ -98,6 +100,8 @@ const GRID_GAP = spacing.sm;
  */
 const MIN_TILE_WIDTH = 96;
 const MAX_COLUMNS = 6;
+/** Below this, the three figures above the grid take two rows instead of one. */
+const THREE_ACROSS_MIN_WIDTH = 400;
 
 // Stable empties for a store that belongs to another business, so a selector
 // returning one does not re-render on every store change.
@@ -169,22 +173,41 @@ export default function CounterScreen() {
   const sameDay = context?.todayKey === dayKey;
   const currency = context?.currency ?? business?.defaultCurrency ?? 'INR';
 
-  const todaysOrders = useMemo(
-    () => (branchId ? (orders[branchId] ?? []).filter((order) => order.tokenDate.slice(0, 10) === dayKey) : []),
-    [orders, branchId, dayKey]
+  // The day on screen. `null` means today — never a date string, because this
+  // screen stays open all day and one snapshotted at 09:00 is wrong after
+  // midnight.
+  const [dayCursor, setDayCursor] = useState<string | null>(null);
+  const shownDay = dayCursor && dayCursor < dayKey ? dayCursor : dayKey;
+  const isToday = shownDay === dayKey;
+  const past = usePastCounterDay(branchId, isToday ? null : shownDay);
+
+  // A past day's server rows are the hook's; today's come from the store, which
+  // is what keeps billing working with no connection.
+  const dayOrders = useMemo(
+    () =>
+      isToday
+        ? branchId
+          ? (orders[branchId] ?? []).filter((order) => order.tokenDate.slice(0, 10) === dayKey)
+          : []
+        : past.orders,
+    [isToday, orders, branchId, dayKey, past.orders]
   );
+  // The queue is asked about the shown day either way: bills this device never
+  // managed to send are still its own, and "what happened on Tuesday" has to
+  // include them.
   const bills = useMemo(
-    () => (branchId ? mergeBills(todaysOrders, queue, branchId, dayKey) : []),
-    [todaysOrders, queue, branchId, dayKey]
+    () => (branchId ? mergeBills(dayOrders, queue, branchId, shownDay) : []),
+    [dayOrders, queue, branchId, shownDay]
   );
   const unsynced = useMemo(
-    () => (branchId ? unsyncedFigures(todaysOrders, queue, branchId, dayKey) : { count: 0, total: 0 }),
-    [todaysOrders, queue, branchId, dayKey]
+    () => (branchId ? unsyncedFigures(dayOrders, queue, branchId, shownDay) : { count: 0, total: 0 }),
+    [dayOrders, queue, branchId, shownDay]
   );
-  const salesToday = (sameDay && context ? Number(context.totalAmount) : 0) + unsynced.total;
-  const billsToday = (sameDay && context ? context.orderCount : 0) + unsynced.count;
+  const daySummary = isToday ? (sameDay ? context : undefined) : (past.summary ?? undefined);
+  const salesToday = (daySummary ? Number(daySummary.totalAmount) : 0) + unsynced.total;
+  const billsToday = (daySummary ? daySummary.orderCount : 0) + unsynced.count;
   // The server sends expenses only to somebody who may read them.
-  const expensesToday = sameDay && context?.expenses ? Number(context.expenses.totalAmount) : null;
+  const expensesToday = daySummary?.expenses ? Number(daySummary.expenses.totalAmount) : null;
   const pendingCount = pendingSales(queue).length;
   const attention = rejectedSales(queue);
 
@@ -218,6 +241,11 @@ export default function CounterScreen() {
     const columns = Math.max(2, Math.min(MAX_COLUMNS, fitted));
     return (available - GRID_GAP * (columns - 1)) / columns;
   }, [windowWidth]);
+
+  // Three figures across need about 130dp each before a rupee amount has to
+  // shrink to stay readable. Below that the takings — the figure this strip is
+  // read for — take the whole first row, as Home's does.
+  const splitStats = expensesToday !== null && windowWidth < THREE_ACROSS_MIN_WIDTH;
 
   const refresh = useCallback(async () => {
     if (!businessId) return;
@@ -454,25 +482,23 @@ export default function CounterScreen() {
 
           {branches.length > 1 ? (
             <AnimatedEntrance delay={step(0)} style={styles.block}>
-              <View style={styles.branchGrid}>
-                {branches.map((item) => (
-                  <View key={item.id} style={styles.branchItem}>
-                    <SegmentedOption
-                      testID={`counter-branch-${item.code}`}
-                      title={item.name}
-                      caption={item.code}
-                      icon="storefront-outline"
-                      selected={item.id === branchId}
-                      onPress={() => {
-                        if (item.id === branchId) return;
-                        setSelectedBranchId(item.id);
-                        setCart([]);
-                        void refreshBranch(item.id);
-                      }}
-                    />
-                  </View>
-                ))}
-              </View>
+              {/* Chosen one-handed, at speed, possibly offline: two taps and a
+                  soft keyboard cost more here than a long wrapping row does, so
+                  this is the one caller that raises the threshold. */}
+              <BranchField
+                testIDPrefix="counter-branch"
+                label={t('common.whichBranch')}
+                hideLabel
+                branches={branches}
+                value={branchId}
+                searchFrom={12}
+                onChange={(id) => {
+                  if (id === branchId) return;
+                  setSelectedBranchId(id);
+                  setCart([]);
+                  void refreshBranch(id);
+                }}
+              />
             </AnimatedEntrance>
           ) : null}
 
@@ -487,24 +513,58 @@ export default function CounterScreen() {
 
           {/* Today at the counter — and, for whoever may read them, what it spent. */}
           <AnimatedEntrance delay={step(1)} style={styles.block}>
-            <View style={styles.statRow}>
-              <StatTile
-                label={t('counter.todaySales')}
-                value={salesToday}
-                accent={colors.success}
-                formatValue={(v) => formatAmount(v, currency)}
-              />
-              <StatTile label={t('counter.todayBills')} value={billsToday} />
-              {expensesToday !== null ? (
+            <DayCursor
+              testIDPrefix="counter-day"
+              value={shownDay}
+              today={dayKey}
+              onChange={(next) => setDayCursor(next === dayKey ? null : next)}
+            />
+
+            {/* A past day is a record, not a till: everything that would move
+                money is hidden rather than disabled, because `paymentDone`
+                computes the day from the clock, so a cart rung up while the
+                screen says Tuesday would bill today. */}
+            {!isToday ? <Text style={styles.pastDay}>{t('counter.pastDay')}</Text> : null}
+            {past.state === 'offline' ? (
+              <Text style={styles.pastDay}>{t('counter.pastDayOffline', { date: shownDay })}</Text>
+            ) : null}
+            {past.state === 'failed' && past.error ? (
+              <Text style={styles.pastDayError}>{past.error}</Text>
+            ) : null}
+
+            {isToday || past.state === 'ready' ? (
+            <View style={styles.statRows}>
+              <View style={styles.statRow}>
                 <StatTile
-                  label={t('counter.todayExpenses')}
-                  value={expensesToday}
-                  accent={colors.error}
+                  label={isToday ? t('counter.todaySales') : t('counter.daySales')}
+                  value={salesToday}
+                  accent={colors.success}
                   formatValue={(v) => formatAmount(v, currency)}
                 />
+                {splitStats ? null : <StatTile label={isToday ? t('counter.todayBills') : t('counter.dayBills')} value={billsToday} />}
+                {splitStats || expensesToday === null ? null : (
+                  <StatTile
+                    label={isToday ? t('counter.todayExpenses') : t('counter.dayExpenses')}
+                    value={expensesToday}
+                    accent={colors.error}
+                    formatValue={(v) => formatAmount(v, currency)}
+                  />
+                )}
+              </View>
+              {splitStats && expensesToday !== null ? (
+                <View style={styles.statRow}>
+                  <StatTile label={isToday ? t('counter.todayBills') : t('counter.dayBills')} value={billsToday} />
+                  <StatTile
+                    label={isToday ? t('counter.todayExpenses') : t('counter.dayExpenses')}
+                    value={expensesToday}
+                    accent={colors.error}
+                    formatValue={(v) => formatAmount(v, currency)}
+                  />
+                </View>
               ) : null}
             </View>
-            {can.logExpenses(membership) && branchId ? (
+            ) : null}
+            {isToday && can.logExpenses(membership) && branchId ? (
               <PressableScale
                 testID="counter-log-expense"
                 style={styles.link}
@@ -529,6 +589,7 @@ export default function CounterScreen() {
             </AnimatedEntrance>
           ) : null}
 
+          {isToday ? (
           <AnimatedEntrance delay={step(2)} style={styles.block}>
             <Text style={styles.sectionTitle}>{t('counter.tapToAdd')}</Text>
             {menu.length === 0 ? (
@@ -575,10 +636,17 @@ export default function CounterScreen() {
               </View>
             )}
           </AnimatedEntrance>
+          ) : null}
+
+          {bills.length === 0 && !isToday && past.state === 'ready' ? (
+            <AnimatedEntrance delay={step(3)} style={styles.block}>
+              <Text style={styles.empty}>{t('counter.noBillsOn', { date: shownDay })}</Text>
+            </AnimatedEntrance>
+          ) : null}
 
           {bills.length > 0 ? (
             <AnimatedEntrance delay={step(3)} style={styles.block}>
-              <Text style={styles.sectionTitle}>{t('counter.todayBillsSection')}</Text>
+              <Text style={styles.sectionTitle}>{isToday ? t('counter.todayBillsSection') : t('counter.dayBillsSection')}</Text>
               <View style={styles.list}>
                 {bills.map((bill) => {
                   const isVoid = bill.status === 'VOID';
@@ -627,6 +695,7 @@ export default function CounterScreen() {
           ) : null}
         </ScrollView>
 
+        {isToday ? (
         <CartTray
           lines={cart}
           currency={currency}
@@ -639,6 +708,7 @@ export default function CounterScreen() {
             setChargeOpen(true);
           }}
         />
+        ) : null}
       </SafeAreaView>
 
       <ChargeSheet
@@ -709,13 +779,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     marginBottom: spacing.sm,
   },
+  statRows: { gap: spacing.sm },
+  pastDay: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  pastDayError: { fontSize: 13, lineHeight: 18, color: colors.error },
   statRow: { flexDirection: 'row', gap: spacing.sm },
   link: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start', paddingTop: spacing.sm },
   linkText: { fontSize: 13, fontWeight: '700', color: colors.primary },
-  branchGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
   // Grow rather than sit at a fixed half-width, so an odd third branch fills its
   // own row instead of leaving a ragged gap beside it.
-  branchItem: { flexGrow: 1, flexBasis: '46%' },
   productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
   tile: {
     // Width is measured, not guessed — see the grid geometry note above.

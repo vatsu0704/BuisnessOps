@@ -11,7 +11,9 @@ import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import FormInput from '@/components/FormInput';
+import Picker from '@/components/Picker';
 import OptionRow from '@/components/OptionRow';
+import { COUNTRIES, CURRENCIES, TIMEZONES } from '@/constants/regions';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -286,21 +288,33 @@ export default function AddBranchScreen({ navigation }: Props) {
                       onChangeText={setPostalCode}
                     />
                   </View>
-                  <View style={styles.rowItem}>
-                    <FormInput
-                      label={t('addBranch.currency')}
-                      icon="cash-outline"
-                      autoCapitalize="characters"
-                      value={currency}
-                      onChangeText={setCurrency}
-                    />
-                  </View>
                 </View>
-                <FormInput
+                <Picker
+                  testIDPrefix="add-branch-currency"
+                  label={t('addBranch.currency')}
+                  icon="cash-outline"
+                  value={currency}
+                  onChange={setCurrency}
+                  options={CURRENCIES.map((item) => ({
+                    value: item.code,
+                    label: item.code,
+                    description: item.name,
+                    keywords: [item.name, item.symbol],
+                  }))}
+                />
+
+                <Picker
+                  testIDPrefix="add-branch-timezone"
                   label={t('addBranch.timezone')}
                   icon="time-outline"
                   value={timezone}
-                  onChangeText={setTimezone}
+                  onChange={setTimezone}
+                  options={TIMEZONES.map((item) => ({
+                    value: item.id,
+                    label: item.id,
+                    description: item.places.slice(0, 2).join(' · '),
+                    keywords: item.places,
+                  }))}
                 />
               </View>
             </AnimatedEntrance>

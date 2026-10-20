@@ -1,4 +1,14 @@
 {
+  "picker": {
+    "typeToFind": "Type to find",
+    "choose": "Choose",
+    "noMatches": "Nothing matches “{{query}}”",
+    "matchCount": "{{shown}} of {{total}}",
+    "none": "None chosen",
+    "selectedCount": "{{selected}} of {{total}} chosen",
+    "done": "Done",
+    "removeOne": "Remove {{name}}"
+  },
   "common": {
     "back": "Back",
     "backHome": "Back to Home"
@@ -84,6 +94,12 @@
     "previous": "Previous month",
     "next": "Next month"
   },
+  "calendar": {
+    "today": "Today",
+    "previousYear": "Previous year",
+    "nextYear": "Next year",
+    "chooseMonth": "Choose a month"
+  },
   "counter": {
     "doneBody": "The bill is saved in this browser. Hand the token to the customer.",
     "noMenuYet": "No menu is saved in this browser yet. Connect to the internet once to load it.",
@@ -104,7 +120,15 @@
       "offline_plural": "Offline — {{count}} bills saved in this browser, sent when the connection is back",
       "blocked": "{{count}} bill kept in this browser — the server is not taking new bills right now",
       "blocked_plural": "{{count}} bills kept in this browser — the server is not taking new bills right now"
-    }
+    },
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "backToToday": "Back to today",
+    "whichDay": "Which day",
+    "pastDay": "A day that is over — billing is on today.",
+    "pastDayOffline": "No connection. Showing only the bills this device still holds for {{date}}.",
+    "noBillsOn": "No bills on {{date}}",
+    "cappedAt": "Showing the newest {{count}} bills of this day."
   },
   "printer": {
     "subtitle": "How this browser prints each token",

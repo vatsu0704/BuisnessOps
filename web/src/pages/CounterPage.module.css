@@ -127,3 +127,13 @@
   font-size: 12px;
   color: var(--color-text-tertiary);
 }
+
+/* A day that is over: a record, not a till. */
+.pastDay {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}

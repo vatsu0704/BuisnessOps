@@ -9,15 +9,37 @@ const base = (businessId: string) => `/businesses/${businessId}`;
  * totals and last token, the branch's clock, the UPI payee, what prints at the
  * top of a token, and — for somebody who may read them — the day's expenses. The
  * counter keeps a copy so it bills with no connection.
+ *
+ * `date` reads a day that is over, for the day cursor. Note the summary's
+ * `todayKey`, `utcOffsetMinutes` and `serverNow` are always *now* whatever date
+ * is asked for — which is why a past day's summary must never be written into
+ * the store's `contexts`, where `todayKey` decides the next token.
  */
-export async function getCounterDaySummary(businessId: string, branchId: string): Promise<CounterDaySummary> {
-  const { data } = await apiClient.get<CounterDaySummary>(`${base(businessId)}/branches/${branchId}/counter-day`);
+export async function getCounterDaySummary(
+  businessId: string,
+  branchId: string,
+  date?: string
+): Promise<CounterDaySummary> {
+  const { data } = await apiClient.get<CounterDaySummary>(
+    `${base(businessId)}/branches/${branchId}/counter-day`,
+    { params: date ? { date } : undefined }
+  );
   return data;
 }
 
-/** The branch's bills today, newest first, as the server holds them. */
-export async function listCounterOrders(businessId: string, branchId: string): Promise<CounterOrder[]> {
-  const { data } = await apiClient.get<CounterOrder[]>(`${base(businessId)}/branches/${branchId}/counter-orders`);
+/**
+ * The branch's bills for a day, newest first, as the server holds them. Today
+ * unless `date` says otherwise. The server caps this at 200 rows.
+ */
+export async function listCounterOrders(
+  businessId: string,
+  branchId: string,
+  options: { date?: string } = {}
+): Promise<CounterOrder[]> {
+  const { data } = await apiClient.get<CounterOrder[]>(
+    `${base(businessId)}/branches/${branchId}/counter-orders`,
+    { params: options.date ? { date: options.date } : undefined }
+  );
   return data;
 }
 

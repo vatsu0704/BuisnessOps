@@ -4,6 +4,8 @@ import AddBranchScreen from '@/screens/AddBranchScreen';
 import AddBusinessScreen from '@/screens/AddBusinessScreen';
 import AddProductScreen from '@/screens/AddProductScreen';
 import EditProductScreen from '@/screens/EditProductScreen';
+import BranchesScreen from '@/screens/BranchesScreen';
+import ChangePasswordScreen from '@/screens/ChangePasswordScreen';
 import BranchSettingsScreen from '@/screens/BranchSettingsScreen';
 import UploadScreen from '@/screens/UploadScreen';
 import AttendanceScreen from '@/screens/AttendanceScreen';
@@ -45,6 +47,9 @@ export type AppStackParamList = {
   Tabs: undefined;
   AddBusiness: undefined;
   AddBranch: undefined;
+  // No capability: anybody may change their own password.
+  ChangePassword: undefined;
+  Branches: undefined;
   BranchSettings: { branchId: string };
   Upload: undefined;
   Attendance: undefined;
@@ -104,6 +109,8 @@ const Stack = createNativeStackNavigator<AppStackParamList>();
 const MODAL_SCREENS: { name: keyof AppStackParamList; component: ComponentType<any> }[] = [
   { name: 'AddBusiness', component: AddBusinessScreen },
   { name: 'AddBranch', component: AddBranchScreen },
+  { name: 'ChangePassword', component: ChangePasswordScreen },
+  { name: 'Branches', component: BranchesScreen },
   { name: 'BranchSettings', component: BranchSettingsScreen },
   { name: 'Upload', component: UploadScreen },
   { name: 'Attendance', component: AttendanceScreen },

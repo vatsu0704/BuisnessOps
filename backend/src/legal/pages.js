@@ -137,7 +137,13 @@ records it keeps about you, ask that business first.</p>
 <ul>
   <li><strong>Your account:</strong> your name, email address and, if you add it,
   your phone number. Your password is stored only as a one-way hash; nobody,
-  including us, can read it. We also keep the language you chose for the app.</li>
+  including us, can read it. We also keep the language you chose for the app, and
+  the time your password last changed, which is what signs your other devices out
+  when you change it.</li>
+  <li><strong>Resetting a password:</strong> if you ask for a reset link, we send
+  one email to that address and keep a one-way hash of the link for one hour, or
+  until it is used. The link itself is never stored, and nothing is kept once it
+  expires.</li>
   <li><strong>Location, when you punch in or out:</strong> if you allow it, the
   app records where your phone was at that moment — or, punching in from the web
   version, where the browser says the computer is — and stores it with that day's

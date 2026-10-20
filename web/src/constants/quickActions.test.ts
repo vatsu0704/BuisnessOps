@@ -69,14 +69,18 @@ describe('quick actions', () => {
     expect(pathForAppRoute('SupplyCatalog')).toBe('/supply');
   });
 
-  it('gives the till to whoever bills, and reports to nobody who only bills', () => {
+  it('gives the till to whoever bills, and a report to whoever runs a shop', () => {
     const has = (role: (typeof ROLES)[number]) => (capability: Parameters<typeof hasCapability>[1]) =>
       hasCapability(onPlan(role, 'FRANCHISE'), capability);
     const keysFor = (role: (typeof ROLES)[number]) =>
       QUICK_ACTIONS.filter((action) => isQuickActionVisible(action, has(role))).map((action) => action.key);
 
     expect(keysFor('CASHIER')).toContain('billing');
-    expect(keysFor('CASHIER')).not.toContain('reports');
+    // Their own shop's costs and profit since 2026-10-19. One tile serves an
+    // owner and a cashier because the server scopes the figures behind it to
+    // the branches the reader reaches.
+    expect(keysFor('CASHIER')).toContain('reports');
+    expect(keysFor('STAFF')).not.toContain('reports');
     expect(keysFor('OWNER')).toEqual(expect.arrayContaining(['billing', 'reports', 'paymentHistory']));
     expect(keysFor('OWNER')).not.toContain('supply');
     expect(keysFor('WAREHOUSE')).not.toContain('paymentHistory');

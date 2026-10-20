@@ -379,8 +379,11 @@ finishes it**, and add one when something ships deliberately incomplete.
 **Before anyone outside a pilot group uses it** (`DEPLOYMENT.md` → *Before you call
 it live*):
 
-- [ ] Password reset, password change and email verification — needs an email
-  channel, which is a product decision first.
+- [x] Password reset and password change — built 2026-10-19 (§16 stage 5). Plain
+  SMTP, so the provider stays a matter of configuration; unset, the link goes to
+  the server log and the flow is testable without an account.
+- [ ] **Email verification** — still unbuilt, and still the reason a reset link
+  can go to an address typed wrong at sign-up.
 - [ ] Error tracking.
 - [ ] Database backups.
 - [ ] Rate limiting beyond the auth routes — carefully: a whole shop shares one IP.
@@ -1770,11 +1773,13 @@ parity gates remain the real checks.
 
 ### Left open
 
-**Password reset, password change and email verification are still unbuilt**,
-and that is a decision rather than an oversight: it needs an email channel, and
-Firebase push cannot reach somebody who cannot sign in. It remains the largest
-gap before a launch to anyone outside a known pilot group, and it is the first
-item in `Docs/DEPLOYMENT.md`'s "Before you call it live".
+**Password reset and password change were built on 2026-10-19** — §16 stage 5.
+**Email verification is still unbuilt**, so an address mistyped at sign-up has no
+way back: the reset link is sent to it and nobody receives it.
+
+This paragraph said all three were unbuilt, on the reasoning that an email
+channel was a product decision first. What settled it was building against plain
+SMTP and leaving which account to open until later.
 
 Also unbuilt and listed there: error tracking, database backups, rate limiting
 beyond the auth routes, and proper pagination for the supply lists.
@@ -2304,3 +2309,324 @@ Built on both at once rather than ported: the owner's Plan page at `/settings/pl
 See Task 13 in section 13. Verification: `plans.test.ts`, the `plan*`, `home-trial-ending`,
 `home-grace`, `home-read-only-cashier`, `add-branch-starter` and `no-access-plan-*`
 scenarios in `npm run shots`.
+
+---
+
+## 16. Designed for two branches, run with two hundred (started 2026-10-19)
+
+Web parity finished with every screen ported (section 15; only W13 browser push is
+left, waiting on a Firebase web app). Reviewing the finished product against a
+business the size it is meant to serve, Vatsal found that **every list in both apps
+was built for a shop with two or three branches**, plus five smaller defects and one
+missing feature. This section is that work. It changes both apps and the backend
+together, so the two stay at parity.
+
+| Stage | What | Status |
+| --- | --- | --- |
+| 1 | Figures that fit, and the cashier's own reports | ✅ |
+| 2 | One searchable picker, everywhere — branches, businesses, country, currency, timezone; a reachable Branches list | ✅ |
+| 3 | Finding a team member: search and a branch filter | ✅ |
+| 4 | A day cursor on the counter | ✅ |
+| 5 | Forgetting a password | ✅ code; needs the migration applied |
+| 6 | The web's own calendar, in place of the browser's | ✅ |
+
+**Decisions taken with Vatsal on 2026-10-19:**
+
+- **A list becomes a dropdown at seven options.** Six or fewer keeps today's chips or
+  rows, so a two-branch shop loses nothing and a 200-branch owner types a few letters.
+  It governs choosing one of many — not a fixed enumerated set like the seven weekdays.
+- **A cashier reads their own shop in full**, wage bill included. See R33.
+- **Password reset by email link**, built against ordinary SMTP settings so any
+  provider works; which account to open is undecided, and the flow is testable
+  without one.
+
+### Stage 1 — Figures that fit, and the cashier's reports ✅
+
+**Big numbers.** Home's three tiles and the counter's identical strip shared a row at
+22px with no shrinking, so ₹20,000 already wrapped mid-number on a 320dp phone and a
+chain's day was unreadable. The figure stays **exact** — an owner wants the real
+number, not "₹1.2L" — and is made to fit instead:
+
+- The app's `StatTile` keeps its figure on one line and shrinks the type to fit
+  (`AnimatedCount` gained `fitOneLine`), and below 400dp today's sales takes the whole
+  first row while bills and spending share the second — which the web had done since
+  it was ported and the phone, where the screen is narrowest, had not.
+- The web's `StatTile` became an inline-size container and its figure
+  `clamp(13px, 9cqi, 22px)`, so it scales inside its own tile instead of breaking.
+- `MetricGrid` on both got the same treatment; the big per-day figure was already
+  sized for a crore and was left alone.
+
+**Reports for a cashier.** `CASHIER` was deliberately held to `analytics:viewToday`,
+which left the one person standing in the shop unable to see whether it made money.
+Adding `analytics:viewBranch` to that role was the **whole** change, because the scope
+was already enforced in one place: every analytics query narrows to `req.branchAccess`
+before it aggregates, the roll-up is driven by the separate `analytics:viewBusiness`,
+and a cashier is tied to exactly one branch by `SINGLE_BRANCH_ROLE`. So they get one
+branch card, `business: null`, no "All branches" and no cross-business view, and both
+apps already drew the page without those. The Reports **tab** stays on
+`analytics:viewBusiness` — five tabs is the budget — and the cashier reaches it from
+Home's Reports tile, which already asked for the capability they now hold.
+
+Verification: `lint:permissions` (48 capabilities, 8 roles), backend `npm test`
+(470, with two rewritten analytics tests proving a cashier gets their own branch and
+is refused another by name), web Vitest (185), both type-checks, and the new
+`home-big-numbers` and `reports-cashier` shots at four widths in English and Gujarati.
+The app's own tiles need a look on a device — it has no screenshot harness.
+
+### Stage 2 — One searchable picker, everywhere ✅
+
+Every branch control in both apps rendered the business's whole list, flat, every
+time somebody picked one. Fine at three branches, unusable at two hundred — and
+the phone had no shared branch control at all, so ten screens hand-rolled the same
+grid with small differences.
+
+**The rule, in one shared place.** `frontend/src/utils/optionSearch.ts` (pure,
+imported by both): `SEARCH_FROM = 7` and the matcher behind every picker. Six or
+fewer options keep the control they have always had; seven becomes a field you
+type into. The matching is shared because a cashier is assigned from a phone in
+the shop and from a desktop in the office, and the same keystrokes must offer the
+same branch first in both. It ranks an exact code above a name above a mention,
+counts a prefix at the start of **any** word ("highway" finds SG Highway,
+"kolkata" finds Asia/Kolkata), requires every typed word to match something, and
+is stable, so a list does not shuffle as somebody types. 17 tests.
+
+**The two controls.** `Picker` on each side, plus `MultiPicker` for Invite
+member's branch grants.
+
+- The web's is a real combobox over a listbox, not a dialog of radios, and the
+  reason is specific: `OptionRow` is a genuine `<input type="radio">`, and in a
+  radio group the arrow keys *select* as they move — arrowing through 200 filtered
+  branches on the Team screen would reassign the cashier 200 times.
+  `aria-activedescendant` moves without committing. Tab closes without committing
+  too: these choose records, and a half-typed query must not pick a branch.
+- The phone's is the field-and-sheet the language setting already was. That sheet
+  became `Sheet`, shared, and the language setting is its first caller. It pads
+  for the keyboard with `Keyboard.addListener` rather than `KeyboardAvoidingView`,
+  because a `Modal` is its own window that Android does not resize.
+- `MultiPicker` is a sibling rather than a flag: the value is a list, the closed
+  field is a count and removable pills, and picking must not close it. On the web
+  it is a dialog of real checkboxes — arrow keys do not toggle those, so the
+  simpler control is the right one there.
+
+**What was rebuilt on it.** The phone gained `BranchField`, which deleted the
+hand-rolled grid from Counter, Expenses, Add expense, Staff, Add/Edit staff,
+Products, Add/Edit product, Supply catalog and Upload; the web's existing
+`BranchPicker` gained the switch, which reached its own call sites untouched. Also
+both cashier-assignment pickers, Invite member's grants, Reports' per-day branch
+chooser, and the business switcher on both — Settings → Business is now a dropdown
+like the language one, whatever the count, because that list grows with the person
+rather than with the product.
+
+**Country, currency and timezone were free text**, in sign-up, Add business, Add
+branch and Branch settings, on both. They are now pickers over shared data in
+`frontend/src/constants/regions.ts` — every ISO country, 28 currencies, 83
+timezones. Not cosmetic: the backend resolves a timezone with the tzdb and falls
+back to **UTC without a word** when it cannot, and a branch on UTC files its
+evening sales against the day before. A test runs every id through `Intl` in the
+browser, which is also why the data is bundled — Hermes has no
+`Intl.supportedValuesOf`. The names are deliberately untranslated: they are
+reference data, and Settings already prints `IN`, `INR` and `Asia/Kolkata` as they
+are. `aliases` is the concession, so ભારત and Bharat both find India.
+
+**The 195 unreachable branches.** Branch settings was reachable only from Home's
+first five rows, and the "+N more" under them was plain text leading nowhere. There
+is now a **Branches** screen and `/branches` page — search, every branch with its
+model, code, city and region, and a link to each one's settings — reached from that
+text, which is now a link, and from a Settings row. `routeCapabilities.ts` gained
+`Branches: 'branch:update'`, and the web's route test demanded the page in the same
+change, which is what that test is for.
+
+**Two places deliberately keep their lists whole.** Payment accounts audits which
+shops have a QR and which do not, so a chooser would hide the answer: it gets a
+filter above the accordion instead. The weekly-off chips are exactly seven and
+stay chips — the rule is about choosing one of many, not about a fixed, known set.
+The counter keeps its branch grid to twelve, because it is used one-handed, at
+speed, and two taps plus a keyboard cost more there than a long row does.
+
+Verification: both type-checks, 208 web tests, the translation, permission and
+shared-import checks, and `npm run shots` with the new `picker-*`, `branches-list*`
+and `invite-branches-many` scenarios against a 24-branch fixture, at four widths in
+English and Gujarati. The phone's sheet has no screenshot harness and needs a look
+on a device.
+
+### Stage 3 — Finding a team member ✅
+
+Both Team screens listed every member of the business, unfiltered and uncapped. A
+business with two hundred branches has the staff to match, and "who runs Vesu
+Point?" meant scrolling until a name was recognised.
+
+- **Shared, pure:** `frontend/src/utils/teamFilter.ts` beside `teamRules.ts` —
+  `filterMembers` and `filterInvites` over the same matcher the pickers use, so
+  the phone and the browser agree on what a search finds. Nine tests.
+- Above both lists: a search box over name and email, and a **branch filter** when
+  there is more than one branch. The filter's catch is that a role holding
+  `branch:allAccess` has no `BranchAccess` row at all, so filtering on the rows
+  alone would hide every admin and manager from a branch's list — the people most
+  likely to be looked up. `memberReachesBranch` asks the matrix instead, and a
+  test pins it.
+- **Rendering is capped at twenty**, with a "Show N more". Two hundred cards in a
+  React Native `ScrollView` is slow, and `AgentPicker`'s note already explains why
+  a nested `VirtualizedList` is not the answer; both apps behave the same way.
+- A filtered list says how many of how many are shown, and an empty result says so
+  rather than looking like an empty team.
+
+### Stage 4 — A day cursor on the counter ✅
+
+A cashier can now pick a day and see that day's bills and totals. Future days
+cannot be chosen.
+
+**No backend change.** The day endpoints already took `?date=` and were already
+validated; no client had ever passed one. The web's API client had no `date`
+parameter at all, so that was added.
+
+**The offline rules decided the design: the counter store is not touched.** It
+still holds today, the queue, the persisted record and the sync runner. A past day
+is fetched by `usePastCounterDay` into screen-lifetime state, never persisted,
+never pruned, and never routed through `refreshBranch` — which also recomputes
+`skewMs` and re-runs `pruneQueue`.
+
+That is not caution for its own sake. `getDaySummary` returns `todayKey` as the
+branch's **real** today whatever date was asked for, so a past day's summary
+written into `contexts` would make `sameDay` true and hand `serverLast` the past
+day's `lastTokenNumber` as today's — **the next sale would reuse a token**.
+
+- `null` means today, never a date string: the counter stays open all day and one
+  snapshotted at 09:00 is wrong after midnight. The web mirrors it into `?date=`
+  so reload and Back behave; absent still means today.
+- **A past day is a record, not a till.** The product grid, the cart and Charge are
+  **hidden rather than disabled**, because `paymentDone` computes the day from the
+  clock — a cart rung up while the screen says Tuesday would bill today. The
+  cart's contents are kept, not cleared.
+- The three figures are relabelled ("Sales that day"), and so is the bill list's
+  heading.
+- **The queue is still asked about the shown day**, so a bill this device never
+  managed to send appears on the day it belongs to. `mergeBills` and
+  `unsyncedFigures` already did this; a test pins it.
+- Offline on a past day shows the bills the device holds and **hides the totals** —
+  a figure knowingly short of the server's is worse than none.
+- **The clamp is the branch's today**, `branchDayKey(...)`, not `new Date()`: a
+  machine set to UTC is already on yesterday between 18:30 and midnight in India,
+  exactly when a shop is busiest. `shiftDayKey` and `clampDayKey` are shared and
+  tested, and `shiftDayKey` builds at noon UTC so a daylight-saving zone cannot
+  land back on the day it started from.
+- The server caps a day at 200 rows with no flag, so a busy past day says it is
+  showing the newest 200.
+
+### Stage 5 — Forgetting a password ✅ (code; Vatsal applies the migration)
+
+There was no way to change a password at all — signed in or out — so a forgotten
+one meant a lost account and the business inside it. Nothing had ever left this
+backend except a Firebase push, which only reaches somebody already signed in.
+
+**Schema** (`20261019120000_password_reset`, hand-written, **not yet applied**):
+`password_reset_tokens` and `users.passwordChangedAt`.
+
+- The token is **never stored**, only its SHA-256, so a copy of the table cannot
+  reset anybody — the same reasoning as the `passwordHash` beside it. One hour,
+  single use, and a user's others are invalidated whenever one is minted or spent.
+- `passwordChangedAt` is what makes a reset mean anything: a session token is
+  stateless and lasts seven days, so without it the device the reset was meant to
+  shut out would stay signed in until the following week. `requireAuth` compares
+  it with the token's `iat`.
+
+**Mail** — `src/mail/send.js` over **nodemailer** (one new dependency, zero
+dependencies of its own), plain SMTP so Brevo, Resend, SendGrid, SES or a Gmail
+app password all work by filling in `SMTP_URL`. Unset is not an error: the module
+loads, every send becomes a no-op, and **the link is written to the log** — so the
+whole flow is testable before any mail account exists, and a production server
+warns at every start. That is the `FIREBASE_SERVICE_ACCOUNT` contract.
+
+`src/mail/reset.labels.js` is the **fourth fenced exception** to "the backend does
+not write prose", and it earns it the way the others do: an email has no app on
+the other end. Unlike a payslip there is no `?lang=`, but we are not guessing —
+`User.preferredLocale` is the language that account chose.
+`lint:backend-i18n` now compares four dictionaries, not three.
+
+**Two public routes, which doubles the API's unauthenticated surface**, so:
+
+- **Asking always succeeds**, whether or not the address has an account. The API
+  already has one existence oracle in the invite lookup; "does this person bank
+  here" is exactly what an attacker wants from a business app, and this must not
+  add a second. A disabled account is treated as no account.
+- A new `resetLimiter` (5 per 15 minutes per IP) **plus a one-a-minute floor per
+  address** in the service — the limiter counts IPs, which does not stop somebody
+  filling one inbox, and an inbox full of reset mail is how a real reset is missed.
+
+**`POST /auth/me/password`** is the primitive that was missing, and the reason
+Settings had nowhere to put one. It returns a **fresh token**, because the change
+has just ended every session older than it — including the one that asked. Without
+that, "change my password" would mean "sign me out".
+
+**Clients:** "Forgot password?" under the password field on both sign-in screens;
+a page and a screen that ask for the address and say the same thing either way;
+`/reset-password` on the web, deliberately **outside `GuestOnly`** so somebody
+already signed in who clicks their own link is not bounced to Home. The link opens
+the **web** page even from the phone: the app would otherwise need deep links that
+work before anybody is signed in, which nothing there does today. Change password
+is a screen and a page from Settings on both.
+
+`backend/src/legal/pages.js` says what is now kept — the time a password last
+changed, and a one-way hash of a reset link for an hour.
+
+**Verification:** 12 new backend tests (`tests/password-reset.test.js`) covering
+the oracle, the throttle, expiry, single use, the old sessions going and the
+fresh token staying. **They cannot run until the migration is applied** — and
+neither can the rest of the backend suite, because `requireAuth` now selects a
+column that does not exist yet. Everything else is green: both type-checks, 221
+web tests, the translation, permission, shared-import and prose gates.
+
+### Stage 6 — The web's own calendar ✅
+
+Stage 4's day cursor put a date field on the counter, and Vatsal opened it: the
+panel that dropped down was Chrome's, not HisabKitab's. Every web date came from
+`<input type="date">`, which carries the browser's own calendar — a different
+panel in Chrome, Firefox and Safari, none of them reachable from `tokens.css`
+(`::-webkit-calendar-picker-indicator` styles the little icon and nothing behind
+it), and all of them drawn in the **browser's** language. A shop running the app
+in Gujarati got an English calendar, because the language lives in `localStorage`
+and Chrome has never been told.
+
+**No package.** react-day-picker and the rest take their month and weekday names
+from `date-fns` or `Intl` locales, so the web would have printed one set of month
+names and the app — which reads `month.1` from the same four locale files — another.
+Those files are the single source for a month name precisely because Hermes has no
+dependable `Intl`, and a package would have quietly reintroduced the second source,
+needing full restyling to the tokens anyway. No Tailwind either: `web/` is CSS
+modules over the shared tokens, and a utility framework pulled in to style one
+popover would make this the only component that does not match.
+
+**What there is now:**
+
+- `web/src/utils/calendarGrid.ts` — `buildMonthGrid` and the range helpers, with
+  13 Vitest cases. **Always six rows**, so paging does not resize the panel under
+  the pointer, and **Sunday first**, because the column index is then the same
+  number `Date.getDay()` and the backend's `weeklyOffDays` already use.
+- `web/src/components/ui/Calendar.tsx` — the grid. Arrows move a day and a week,
+  PageUp/PageDown a month, Home/End across the week, Enter or Space chooses; one
+  cell is tabbable at a time. Out-of-range days are `aria-disabled`, never
+  `disabled`, which cannot hold focus and would drop the roving tabindex out of
+  the grid. Today is a ring and the chosen day a fill, so the two never read alike.
+- A **month chooser** behind the caption, with the chevrons stepping the year.
+  Paging to a hire date five years back is otherwise sixty presses.
+- `web/src/components/ui/DatePicker.tsx` — the popover. A `<button>`, not an input:
+  the native input is what brings the browser's panel. The trigger shows the date
+  through `formatDateLong`, or `formatDateMedium` in the short form — a new third
+  formatter in the shared `utils/date.ts`, because the counter's cursor rendered
+  "12 ઓક્ટોબર 20…" at 390px and a date missing its year is no use on a screen whose
+  job is saying which day you are reading.
+- Opening scrolls the panel into view (`block: 'nearest'`), so a date field at the
+  foot of a form does not open its calendar below the fold.
+
+`DateField` keeps its props, so the four pages that use it did not change;
+`DayCursor` swapped its native input for the short form. Those are the only two
+places the web ever rendered a date input, so nothing else was left behind.
+
+**Verification:** 234 web tests, both type-checks, the translation, shared-import
+and permission gates. Four new screenshot scenarios — `calendar-open`,
+`calendar-months`, `calendar-future-allowed` and `calendar-day-cursor` — at 320,
+390, 820 and 1440 in English and Gujarati; 194 scenarios in all.
+
+**The app is untouched.** It opens the platform's own picker through
+`@react-native-community/datetimepicker`, which is genuinely native, localized by
+the OS and the right control on a phone. The two do not need to match here: this
+is the one place where the browser was the odd one out, not the app.

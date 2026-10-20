@@ -445,13 +445,23 @@ describe('Branch analytics and net profit', () => {
   });
 
   describe('who may read what', () => {
-    // Requirement 33: a cashier sees today's takings (analytics:viewToday) and not
-    // the branch's costs, wages and profit, which is what this grid is.
-    it('refuses a cashier the grid — costs and profit are not theirs', async () => {
+    // A cashier was held to today's takings until 2026-10-19 and now reads their
+    // own shop's costs and profit. Granting analytics:viewBranch was the whole
+    // change: the scope below was already enforced, which is what made it safe.
+    it('gives a cashier their own branch, and no business total', async () => {
       const res = await grid(cashierToken, `?from=${MONTH}&to=${MONTH}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.branches.map((row) => row.branchId)).toEqual([shopAId]);
+      // analytics:viewBusiness is still not theirs, so there is nothing to roll
+      // up and the apps draw the page without its net-profit card.
+      expect(res.body.business).toBeNull();
+    });
+
+    it('refuses a cashier a branch that is not theirs, even by name', async () => {
+      const res = await grid(cashierToken, `?from=${MONTH}&to=${MONTH}&branchId=${shopBId}`);
       expect(res.statusCode).toBe(403);
-      expect(res.body.code).toBe('PERMISSION_DENIED');
-      expect(res.body.params.capability).toBe('analytics:viewBranch');
+      expect(res.body.code).toBe('BRANCH_ACCESS_DENIED');
     });
 
     it('refuses a role with no analytics capability at all', async () => {
@@ -715,8 +725,12 @@ describe('Branch analytics and net profit', () => {
       }
     });
 
-    it('is not the cashier’s, and needs a real month', async () => {
-      expect((await daily(cashierToken, `?month=${MONTH}`)).statusCode).toBe(403);
+    it('gives a cashier their own branch alone, and needs a real month', async () => {
+      const mine = await daily(cashierToken, `?month=${MONTH}`);
+      expect(mine.statusCode).toBe(200);
+      expect(mine.body.branches.map((row) => row.branchId)).toEqual([shopAId]);
+      expect(mine.body.business).toBeNull();
+
       const bad = await daily(ownerToken, '?month=2026-13');
       expect(bad.statusCode).toBe(400);
       expect(bad.body.details[0].code).toBe('FIELD_MUST_BE_MONTH');

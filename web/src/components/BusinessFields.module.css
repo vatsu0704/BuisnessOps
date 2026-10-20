@@ -25,3 +25,11 @@
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   column-gap: var(--space-md);
 }
+
+/* The timezone's note, which used to ride on the text field's own hint slot. */
+.fieldHint {
+  margin: calc(-1 * var(--space-xs)) 0 0;
+  font-size: 12.5px;
+  line-height: 17px;
+  color: var(--color-text-secondary);
+}

@@ -247,3 +247,49 @@
     transform: translateY(-8px);
   }
 }
+
+/* Forgot/reset password: one column, narrow, because there is one thing to do. */
+.narrow {
+  max-width: 460px;
+  margin: var(--space-xl) auto 0;
+  min-width: 0;
+}
+
+.sentTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-success);
+}
+
+.sentBody {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.sentNote {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+/* Under the password field it is about, right-aligned, out of the tab order's way. */
+.forgot {
+  align-self: flex-end;
+  margin-top: calc(-1 * var(--space-xs));
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.forgot:hover {
+  text-decoration: underline;
+}

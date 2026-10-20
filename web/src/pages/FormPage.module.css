@@ -43,3 +43,12 @@
 .fieldGroup {
   margin-bottom: var(--space-lg);
 }
+
+/* A sentence under a picker, where a text field would have carried it as its
+   own `description`. */
+.timezoneHint {
+  margin: calc(-1 * var(--space-xs)) 0 0;
+  font-size: 12.5px;
+  line-height: 17px;
+  color: var(--color-text-secondary);
+}

@@ -11,6 +11,7 @@ import { extractErrorMessage } from '@/api/client';
 import type { CashierConflicts, PendingInvite, TeamMember } from '@/types/team';
 import { useCashierByBranch, useTeam } from '@/hooks/useTeam';
 import { useBranches } from '@/hooks/useBranches';
+import { filterInvites, filterMembers } from '@/utils/teamFilter';
 import CashierBranchPicker from '@/components/CashierBranchPicker';
 import {
   asAssignmentConflict,
@@ -23,7 +24,9 @@ import AnimatedEntrance from '@/components/AnimatedEntrance';
 import InfoCard from '@/components/InfoCard';
 import Pill from '@/components/Pill';
 import PressableScale from '@/components/PressableScale';
+import Picker from '@/components/Picker';
 import ScreenBackground from '@/components/ScreenBackground';
+import SearchInput from '@/components/SearchInput';
 import { colors, radius, shadow, spacing } from '@/theme';
 import { step } from '@/theme/motion';
 import { isDeletedAccount } from '@/utils/account';
@@ -37,6 +40,11 @@ type Props = NativeStackScreenProps<AppStackParamList, 'Team'>;
 // requirement 18's 409s say are `utils/teamRules.ts`, shared with the web's Team
 // page so the two cannot disagree about any of it.
 
+/** How many people a page shows before asking. */
+const PAGE = 20;
+/** The branch filter's "every branch" row. Not a branch id, so it cannot collide. */
+const ALL = '__all__';
+
 export default function TeamScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const businessId = useBusinessId();
@@ -48,6 +56,23 @@ export default function TeamScreen({ navigation }: Props) {
   const { members, invites, conflicts, isLoading, error: loadError, refresh } = useTeam();
   const cashierByBranch = useCashierByBranch();
   const { tradingBranches } = useBranches();
+  const [query, setQuery] = useState('');
+  const [branchId, setBranchId] = useState<string | null>(null);
+  const [limit, setLimit] = useState(PAGE);
+
+  // A business with two hundred branches has the staff to match, and
+  // "who runs Vesu Point?" meant scrolling until a name was recognised.
+  const filter = { query, branchId };
+  const shownMembers = filterMembers(members, filter);
+  const shownInvites = filterInvites(invites, filter);
+  const total = members.length + invites.length;
+  const shownTotal = shownMembers.length + shownInvites.length;
+  const isFiltered = query.trim() !== '' || branchId !== null;
+  // Two hundred cards in a ScrollView is slow, and a VirtualizedList nested in
+  // one is unsupported — so the rest arrive on asking.
+  const visibleInvites = shownInvites.slice(0, limit);
+  const visibleMembers = shownMembers.slice(0, Math.max(0, limit - shownInvites.length));
+  const hidden = shownTotal - visibleInvites.length - visibleMembers.length;
 
   const [error, setError] = useState<string | null>(null);
   // Which row has a request in flight, so a slow network cannot be double-tapped
@@ -247,7 +272,48 @@ export default function TeamScreen({ navigation }: Props) {
             </AnimatedEntrance>
           ) : null}
 
-          {invites.map((invite, index) => (
+          {total > 0 ? (
+            <AnimatedEntrance delay={step(1)} style={styles.block}>
+              <View style={styles.filters}>
+                <SearchInput
+                  testID="team-search"
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder={t('team.search')}
+                />
+                {tradingBranches.length > 1 ? (
+                  <Picker
+                    testIDPrefix="team-branch-filter"
+                    label={t('team.atBranch')}
+                    hideLabel
+                    icon="storefront-outline"
+                    value={branchId ?? ALL}
+                    onChange={(next) => setBranchId(next === ALL ? null : next)}
+                    options={[
+                      { value: ALL, label: t('reports.allBranches') },
+                      ...tradingBranches.map((b) => ({
+                        value: b.id,
+                        label: b.name,
+                        description: b.code,
+                        keywords: [b.code, b.city, b.region],
+                      })),
+                    ]}
+                  />
+                ) : null}
+                {isFiltered ? (
+                  <Text style={styles.filterCount}>{t('team.showing', { shown: shownTotal, total })}</Text>
+                ) : null}
+              </View>
+            </AnimatedEntrance>
+          ) : null}
+
+          {isFiltered && shownTotal === 0 ? (
+            <AnimatedEntrance delay={step(2)} style={styles.block}>
+              <Text style={styles.emptyText}>{t('team.noMatches')}</Text>
+            </AnimatedEntrance>
+          ) : null}
+
+          {visibleInvites.map((invite, index) => (
             <AnimatedEntrance key={invite.id} delay={step(Math.min(index + 1, 5))} style={styles.block}>
               <View style={[styles.card, styles.pendingCard]}>
                 <View style={styles.cardHead}>
@@ -271,7 +337,7 @@ export default function TeamScreen({ navigation }: Props) {
             </AnimatedEntrance>
           ))}
 
-          {members.map((member, index) => {
+          {visibleMembers.map((member, index) => {
             const revoked = member.status === 'REVOKED';
             const isYou = member.id === viewer?.id;
             const deleted = isDeletedAccount(member.user);
@@ -392,6 +458,18 @@ export default function TeamScreen({ navigation }: Props) {
               </AnimatedEntrance>
             );
           })}
+
+          {hidden > 0 ? (
+            <AnimatedEntrance delay={step(5)} style={styles.block}>
+              <PressableScale
+                testID="team-show-more"
+                style={styles.showMore}
+                onPress={() => setLimit((shown: number) => shown + PAGE)}
+              >
+                <Text style={styles.showMoreText}>{t('team.showMore', { count: hidden })}</Text>
+              </PressableScale>
+            </AnimatedEntrance>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -438,6 +516,18 @@ function ConflictPanel({ conflicts }: { conflicts: CashierConflicts }) {
 }
 
 const styles = StyleSheet.create({
+  filters: { gap: spacing.sm },
+  filterCount: { fontSize: 12.5, color: colors.textSecondary },
+  showMore: {
+    alignSelf: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+  },
+  showMoreText: { fontSize: 13.5, fontWeight: '700', color: colors.primary },
   container: { flex: 1, backgroundColor: colors.background },
   safe: { flex: 1 },
   header: {

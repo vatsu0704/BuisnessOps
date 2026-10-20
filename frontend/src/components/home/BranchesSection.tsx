@@ -85,8 +85,18 @@ export default function BranchesSection() {
         </PressableScale>
       ))}
 
+      {/* A link, not a sentence. This said "+N more" and led nowhere, which on a
+          business with two hundred branches meant the other hundred and
+          ninety-five had no settings page anybody could open. */}
       {branches.length > PREVIEW_COUNT ? (
-        <Text style={styles.more}>{t('common.more', { count: branches.length - PREVIEW_COUNT })}</Text>
+        <PressableScale
+          testID="home-branches-all"
+          style={styles.more}
+          onPress={() => navigation.navigate('Branches')}
+        >
+          <Text style={styles.moreText}>{t('common.more', { count: branches.length - PREVIEW_COUNT })}</Text>
+          <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+        </PressableScale>
       ) : null}
     </View>
   );
@@ -109,5 +119,13 @@ const styles = StyleSheet.create({
   branchText: { flex: 1 },
   branchName: { fontSize: 14, fontWeight: '600', color: colors.text },
   branchMeta: { fontSize: 12, color: colors.textTertiary },
-  more: { fontSize: 12.5, color: colors.textTertiary, textAlign: 'center', marginTop: spacing.xs },
+  more: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  moreText: { fontSize: 12.5, fontWeight: '700', color: colors.primary },
 });

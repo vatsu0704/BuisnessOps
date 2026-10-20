@@ -110,7 +110,7 @@ const CAPABILITIES = {
   // --- Analytics and export (Tasks 8, 9) ---
   'analytics:viewBranch': "See a branch's own sales, costs and totals",
   'analytics:viewToday':
-    "See today's sales, bills and spending at the branches you reach — the figures at the top of Home (requirement 33). Narrower than analytics:viewBranch: no costs, wages or profit, which is why a cashier holds this one and not that",
+    "See today's sales, bills and spending at the branches you reach — the figures at the top of Home (requirement 33). Narrower than analytics:viewBranch: no costs, wages or profit, and no month behind it",
   'analytics:viewBusiness': 'See every branch compared, month by month, with net profit',
   'export:dayEnd': "Export everything entered on a given day",
   'export:monthEnd': "Export everything entered in a given month",
@@ -223,10 +223,18 @@ const ROLE_CAPABILITIES = {
     'attendance:viewRoster',
     'product:view',
     'product:manage',
-    // Requirement 33: today's sales, bills and spending — and NOT
-    // analytics:viewBranch, which is the branch's costs, wages and profit. Vatsal
-    // chose that a cashier sees what the till did today, not what the shop made.
+    // Requirement 33: today's sales, bills and spending.
     'analytics:viewToday',
+    // Their own shop's costs, wages and profit — and nobody else's. Reversed on
+    // 2026-10-19: a cashier was held to today's takings alone, which left the
+    // one person standing in the shop unable to see whether it made money. The
+    // scope comes for free and is enforced in one place: every analytics query
+    // narrows to `req.branchAccess` before it aggregates, and a cashier is tied
+    // to exactly one branch by SINGLE_BRANCH_ROLE below. What stays out of reach
+    // is analytics:viewBusiness, so there is no business roll-up and no
+    // "All branches" — the server sends `business: null` and both apps already
+    // draw the page without it.
+    'analytics:viewBranch',
     'export:dayEnd',
     'export:monthEnd',
   ],

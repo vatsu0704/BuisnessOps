@@ -1,5 +1,15 @@
 {
+  "picker": {
+    "choose": "Choose",
+    "typeToFind": "Type to find",
+    "noMatches": "Nothing matches “{{query}}”",
+    "none": "None chosen",
+    "selectedCount": "{{selected}} of {{total}} chosen",
+    "done": "Done",
+    "removeOne": "Remove {{name}}"
+  },
   "common": {
+    "whichBranch": "Which branch",
     "active": "active",
     "more": "+{{count}} more",
     "loading": "Loading…",
@@ -148,7 +158,10 @@
       "SUPPLY_PAYMENT_NOT_DUE": "Order {{orderNumber}} is not one accounts has to pay",
       "SUPPLY_PAYMENT_NOT_DELIVERED": "Order {{orderNumber}} has not been delivered yet — pay for it once it arrives",
       "SUPPLY_PAYMENT_MIXED_PAYEES": "One payment can only go to one payee — choose orders from the warehouse or from one vendor",
-      "COUNTER_SALE_REF_CONFLICT": "A different bill with the same reference is already recorded, so this one was kept on the phone."
+      "COUNTER_SALE_REF_CONFLICT": "A different bill with the same reference is already recorded, so this one was kept on the phone.",
+      "PASSWORD_RESET_TOKEN_INVALID": "This reset link is not valid. Ask for a new one.",
+      "PASSWORD_RESET_TOKEN_EXPIRED": "This reset link has expired. Ask for a new one.",
+      "PASSWORD_CHANGE_CURRENT_INCORRECT": "That is not your current password."
     },
     "validation": {
       "FIELD_REQUIRED": "{{field}} is required",
@@ -301,7 +314,8 @@
     "submitting": "Signing in...",
     "registerTitle": "New to {{appName}}?",
     "registerSubtitle": "Register your business and connect your first branch.",
-    "footer": "Multi-branch retail & F&B · Owner, manager and staff roles"
+    "footer": "Multi-branch retail & F&B · Owner, manager and staff roles",
+    "forgotPassword": "Forgot password?"
   },
   "signup": {
     "headerCaption": "Business intelligence",
@@ -724,7 +738,18 @@
       "blocked_plural": "{{count}} bills kept on this phone — the server is not taking new bills right now",
       "attention": "{{count}} bill needs attention",
       "attention_plural": "{{count}} bills need attention"
-    }
+    },
+    "daySales": "Sales that day",
+    "dayBills": "Bills",
+    "dayExpenses": "Spent that day",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "backToToday": "Back to today",
+    "whichDay": "Which day",
+    "pastDay": "A day that is over — billing is on today.",
+    "pastDayOffline": "No connection. Showing only the bills this device still holds for {{date}}.",
+    "noBillsOn": "No bills on {{date}}",
+    "dayBillsSection": "Bills that day"
   },
   "counterStatus": {
     "OPEN": "Open",
@@ -1010,7 +1035,12 @@
     "conflictSharedBranch": "{{branch}} has {{count}} cashiers: {{names}}",
     "conflictNoBranch": "{{name}} has no branch",
     "conflictTooManyBranches": "{{name}} has {{count}} branches",
-    "deletedAccount": "Deleted account"
+    "deletedAccount": "Deleted account",
+    "search": "Search by name or email",
+    "atBranch": "At which branch",
+    "showing": "Showing {{shown}} of {{total}}",
+    "noMatches": "Nobody here matches that.",
+    "showMore": "Show {{count}} more"
   },
   "inviteMember": {
     "title": "Invite a member",
@@ -1699,7 +1729,8 @@
     "withdraw": "Stop using this vendor",
     "restore": "Use this vendor again",
     "withdrawTitle": "Stop using {{name}}?",
-    "withdrawBody": "Their items can no longer be ordered until they are brought back. Orders already placed are not affected."
+    "withdrawBody": "Their items can no longer be ordered until they are brought back. Orders already placed are not affected.",
+    "search": "Search vendors"
   },
   "deleteAccount": {
     "title": "Delete your account",
@@ -1721,5 +1752,49 @@
     "confirmBodyOwner": "Your account and the businesses you own will be deleted, with all their records. This cannot be undone.",
     "confirmAction": "Delete",
     "readMore": "Read exactly what is deleted"
+  },
+  "branches": {
+    "title": "Your branches",
+    "subtitle": "{{count}} in this business",
+    "search": "Search branches",
+    "none": "No branches yet."
+  },
+  "forgotPassword": {
+    "title": "Forgot your password?",
+    "subtitle": "Tell us the email you sign in with and we will send a link to set a new one.",
+    "divider": "Your email",
+    "submit": "Send the link",
+    "sending": "Sending…",
+    "sentTitle": "Check your email",
+    "sentBody": "If we know {{email}}, a link to set a new password is on its way.",
+    "sentNote": "It works for an hour and can be used once. Look in spam if it is not there.",
+    "backToLogin": "Back to sign in",
+    "backToLoginSubtitle": "If you remembered it after all"
+  },
+  "resetPassword": {
+    "title": "Set a new password",
+    "subtitle": "Choose one you have not used here before.",
+    "divider": "New password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "submit": "Save it",
+    "saving": "Saving…",
+    "doneTitle": "Password changed",
+    "doneBody": "Sign in with your new password.",
+    "doneNote": "Every other phone and computer signed in to this account has been signed out.",
+    "noToken": "This link is incomplete. Open the one in the email, or ask for a new one.",
+    "signIn": "Sign in",
+    "signInSubtitle": "With your new password",
+    "askAgain": "Ask for a new link",
+    "passwordMismatch": "The two passwords do not match."
+  },
+  "changePassword": {
+    "title": "Change password",
+    "settingsSubtitle": "Set a new password for this account",
+    "hint": "Changing it signs out every other phone and computer using this account.",
+    "current": "Current password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "submit": "Change password"
   }
 }

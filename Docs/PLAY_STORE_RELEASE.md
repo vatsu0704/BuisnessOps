@@ -360,7 +360,7 @@ starts collecting something new.
 | --- | --- | --- | --- |
 | Location → Approximate and Precise | Yes | App functionality | Punch-in and punch-out position, stored with the attendance day; branch coordinates. Foreground only, never in the background |
 | Personal info → Name | Yes | App functionality, Account management | |
-| Personal info → Email address | Yes | Account management | The login |
+| Personal info → Email address | Yes | Account management | The login, and the one address a password-reset link is sent to |
 | Personal info → Phone number | Yes | App functionality | Optional on the account; staff phone numbers on staff records |
 | Financial info → Other financial info | Yes | App functionality | Sales, expenses, salaries and payroll that the business enters or uploads; UPI IDs |
 | Financial info → Purchase history | Yes | Account management | The business's subscription payments to us (R28): plan, amount, date and the UPI or bank reference, recorded by the operator. No card or bank account numbers. Nothing is bought inside the app |
@@ -377,9 +377,14 @@ Bluetooth scanning and no location use for it, so the Nearby-devices permission
 needs no Data safety row; if Play's form asks why the permission exists, the answer
 is "printing receipts on a paired Bluetooth printer".
 
-- **Is data shared with third parties?** No. Firebase (for push) and the hosting
-  company process data on your behalf. Google's form does not count that as
-  sharing.
+**Resetting a password collects nothing new.** The address is already covered by
+the row above. A one-way hash of the link is kept for an hour or until it is used,
+and the link itself is never stored — so there is no new data type to declare. The
+email provider is a processor, like the hosting company below.
+
+- **Is data shared with third parties?** No. Firebase (for push), the email
+  provider that carries a password-reset link, and the hosting company process
+  data on your behalf. Google's form does not count that as sharing.
 - **Encrypted in transit?** Yes. The API is HTTPS only.
 - **Can users ask for deletion?** Yes — in the app, and at
   `https://api.yourdomain.in/delete-account`.

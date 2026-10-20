@@ -186,11 +186,13 @@ for a terminal somebody is watching, and logging is silent under `NODE_ENV=test`
 These are not configuration — they are unbuilt, and each one is a decision
 rather than a step.
 
-- **There is no password reset, no password change and no email verification.**
-  Somebody who forgets their password has to be given a new one directly in the
-  database. For a pilot with known users that is survivable; for anyone outside
-  that circle it is a dead account. Building it needs an email channel, which is
-  a product decision: Firebase push cannot reach someone who cannot sign in.
+- **Password reset and password change are built** (2026-10-19), but they need
+  `SMTP_URL`, `MAIL_FROM` and `PUBLIC_WEB_URL` set, and the web app hosted for the
+  link to be clickable. Without them the server starts, warns at every start, and
+  writes the link to the log instead of sending it — which is fine for testing and
+  is a dead account for a real user.
+- **There is no email verification.** An address mistyped at sign-up takes the
+  reset link with it, and nothing about the account can be recovered.
 - **There is no error tracking.** The logs above are the whole of it — nothing
   aggregates, alerts, or tells you a 500 rate has moved.
 - **Rate limiting covers the auth routes only** (`middleware/rateLimit.js`), and

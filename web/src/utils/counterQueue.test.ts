@@ -5,6 +5,7 @@ import {
   applySyncResults,
   branchDayKey,
   cartTotal,
+  clampDayKey,
   markVoid,
   mergeBills,
   nextBatch,
@@ -13,6 +14,7 @@ import {
   pruneQueue,
   recordSale,
   setCartQuantity,
+  shiftDayKey,
   unsyncedFigures,
   type CounterQueue,
   type NewSale,
@@ -102,6 +104,44 @@ describe('days and tokens', () => {
     expect(nextTokenNumber(queue, 'b1', '2026-10-15', 0)).toBe(1);
     ({ queue } = record(queue, { branchId: 'b2', tokenNumber: 30 }));
     expect(nextTokenNumber(queue, 'b1', '2026-10-14', 0)).toBe(5);
+  });
+});
+
+describe('the day cursor', () => {
+  it('steps a day back and forward, across a month and a leap day', () => {
+    expect(shiftDayKey('2026-10-14', -1)).toBe('2026-10-13');
+    expect(shiftDayKey('2026-10-14', 1)).toBe('2026-10-15');
+    expect(shiftDayKey('2026-03-01', -1)).toBe('2026-02-28');
+    expect(shiftDayKey('2028-03-01', -1)).toBe('2028-02-29');
+    expect(shiftDayKey('2026-01-01', -1)).toBe('2025-12-31');
+  });
+
+  it('still moves one whole day across a daylight-saving shift', () => {
+    // Built at noon UTC, so a zone that springs forward cannot land back on the
+    // day it started from. India has no DST; `Branch.timezone` promises nothing.
+    expect(shiftDayKey('2026-03-29', 1)).toBe('2026-03-30');
+    expect(shiftDayKey('2026-10-25', 1)).toBe('2026-10-26');
+  });
+
+  it('never goes past the branch’s own today', () => {
+    expect(clampDayKey('2026-10-20', '2026-10-14')).toBe('2026-10-14');
+    expect(clampDayKey('2026-10-13', '2026-10-14')).toBe('2026-10-13');
+    expect(clampDayKey('2026-10-14', '2026-10-14')).toBe('2026-10-14');
+  });
+
+  /**
+   * The exception that makes a past day worth opening: bills this device never
+   * managed to send are still its own, and "what happened on Tuesday" has to
+   * include them.
+   */
+  it('shows a past day the sales this device still holds for it', () => {
+    const tuesday = '2026-10-13';
+    const { queue } = record(EMPTY_QUEUE, { dayKey: tuesday, tokenNumber: 7 });
+
+    expect(mergeBills([], queue, 'b1', tuesday)).toHaveLength(1);
+    expect(mergeBills([], queue, 'b1', '2026-10-14')).toHaveLength(0);
+    expect(unsyncedFigures([], queue, 'b1', tuesday)).toEqual({ count: 1, total: 30 });
+    expect(unsyncedFigures([], queue, 'b1', '2026-10-14')).toEqual({ count: 0, total: 0 });
   });
 });
 

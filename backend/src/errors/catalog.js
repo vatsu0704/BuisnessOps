@@ -30,6 +30,11 @@ const API_MESSAGES = {
   AUTH_BUSINESS_DETAILS_REQUIRED:
     'businessName, industry, country, defaultCurrency and timezone are required to create a new business',
   USER_NOT_FOUND: 'User not found',
+  // Asking for a reset link never fails, so these two are only ever met by
+  // somebody who followed one: expired, already used, or typed in wrong.
+  PASSWORD_RESET_TOKEN_INVALID: 'This reset link is not valid. Ask for a new one',
+  PASSWORD_RESET_TOKEN_EXPIRED: 'This reset link has expired. Ask for a new one',
+  PASSWORD_CHANGE_CURRENT_INCORRECT: 'That is not your current password',
   // The account exists and the password was right — it has been switched off.
   // Signing in again is exactly what will not help, so the message has to say
   // so rather than reading like an expired session.

@@ -21,6 +21,7 @@ import { buildReceipt, previewReceipt } from '@shared/utils/receipt';
 import { upiNote } from '@shared/utils/upiUri';
 import { extractErrorMessage } from '@/api/client';
 import { reopenCounterDay } from '@/api/counter';
+import { usePastCounterDay } from '@/hooks/usePastCounterDay';
 import BranchPicker from '@/components/branches/BranchPicker';
 import AttentionCard from '@/components/counter/AttentionCard';
 import BillDialog from '@/components/counter/BillDialog';
@@ -30,6 +31,7 @@ import ChargeDialog, { type ChargeDone } from '@/components/counter/ChargeDialog
 import ProductGrid from '@/components/counter/ProductGrid';
 import SyncPill from '@/components/counter/SyncPill';
 import ButtonLink from '@/components/ui/ButtonLink';
+import DayCursor from '@/components/ui/DayCursor';
 import Enter from '@/components/ui/Enter';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import PageHeader from '@/components/ui/PageHeader';
@@ -137,22 +139,48 @@ export default function CounterPage() {
   const sameDay = context?.todayKey === dayKey;
   const currency = context?.currency ?? business?.defaultCurrency ?? 'INR';
 
-  const todaysOrders = useMemo(
-    () => (branchId ? (orders[branchId] ?? []).filter((order) => order.tokenDate.slice(0, 10) === dayKey) : []),
-    [orders, branchId, dayKey]
+  // The day on screen. `null` means today — never a date string, because the
+  // counter stays open all day and one snapshotted at 09:00 is wrong after
+  // midnight. Kept in the address so reload and Back behave; absent is today.
+  const cursor = searchParams.get('date');
+  const shownDay = cursor && cursor < dayKey ? cursor : dayKey;
+  const isToday = shownDay === dayKey;
+  const past = usePastCounterDay(branchId, isToday ? null : shownDay);
+
+  function showDay(next: string) {
+    const params = new URLSearchParams(searchParams);
+    if (next === dayKey) params.delete('date');
+    else params.set('date', next);
+    setSearchParams(params, { replace: true });
+  }
+
+  // A past day's server rows are the hook's; today's come from the store, which
+  // is what keeps billing working with no connection.
+  const dayOrders = useMemo(
+    () =>
+      isToday
+        ? branchId
+          ? (orders[branchId] ?? []).filter((order) => order.tokenDate.slice(0, 10) === dayKey)
+          : []
+        : past.orders,
+    [isToday, orders, branchId, dayKey, past.orders]
   );
+  // The queue is asked about the shown day either way: bills this device never
+  // managed to send are still its own, and "what happened on Tuesday" has to
+  // include them.
   const bills = useMemo(
-    () => (branchId ? mergeBills(todaysOrders, queue, branchId, dayKey) : []),
-    [todaysOrders, queue, branchId, dayKey]
+    () => (branchId ? mergeBills(dayOrders, queue, branchId, shownDay) : []),
+    [dayOrders, queue, branchId, shownDay]
   );
   const unsynced = useMemo(
-    () => (branchId ? unsyncedFigures(todaysOrders, queue, branchId, dayKey) : { count: 0, total: 0 }),
-    [todaysOrders, queue, branchId, dayKey]
+    () => (branchId ? unsyncedFigures(dayOrders, queue, branchId, shownDay) : { count: 0, total: 0 }),
+    [dayOrders, queue, branchId, shownDay]
   );
-  const salesToday = (sameDay && context ? Number(context.totalAmount) : 0) + unsynced.total;
-  const billsToday = (sameDay && context ? context.orderCount : 0) + unsynced.count;
+  const daySummary = isToday ? (sameDay ? context : undefined) : (past.summary ?? undefined);
+  const salesToday = (daySummary ? Number(daySummary.totalAmount) : 0) + unsynced.total;
+  const billsToday = (daySummary ? daySummary.orderCount : 0) + unsynced.count;
   // The server sends expenses only to somebody who may read them.
-  const expensesToday = sameDay && context?.expenses ? Number(context.expenses.totalAmount) : null;
+  const expensesToday = daySummary?.expenses ? Number(daySummary.expenses.totalAmount) : null;
   const pendingCount = pendingSales(queue).length;
   const attention = rejectedSales(queue);
 
@@ -438,24 +466,45 @@ export default function CounterPage() {
         <div className={styles.main}>
           {/* Today at the counter — and, for whoever may read them, what it spent. */}
           <Enter delay={step(2)} as="section" className={styles.today}>
-            <div className={styles.stats}>
+            <DayCursor
+              value={shownDay}
+              today={dayKey}
+              onChange={showDay}
+              label={t('web.counter.whichDay')}
+            />
+
+            {/* A past day is a record, not a till: everything that would move
+                money is hidden rather than disabled, because `paymentDone`
+                computes the day from the clock, so a cart rung up while the
+                screen says Tuesday would bill today. */}
+            {!isToday ? <p className={styles.pastDay}>{t('web.counter.pastDay')}</p> : null}
+
+            {past.state === 'offline' ? (
+              <p className={styles.pastDay}>{t('web.counter.pastDayOffline', { date: shownDay })}</p>
+            ) : past.state === 'failed' && past.error ? (
+              <ErrorBanner message={past.error} />
+            ) : null}
+
+            {isToday || past.state === 'ready' ? (
+              <div className={styles.stats}>
               <StatTile
-                label={t('counter.todaySales')}
+                label={isToday ? t('counter.todaySales') : t('counter.daySales')}
                 value={salesToday}
                 accent="var(--color-success)"
                 formatValue={(v) => formatAmount(v, currency)}
               />
-              <StatTile label={t('counter.todayBills')} value={billsToday} />
+              <StatTile label={isToday ? t('counter.todayBills') : t('counter.dayBills')} value={billsToday} />
               {expensesToday !== null ? (
                 <StatTile
-                  label={t('counter.todayExpenses')}
+                  label={isToday ? t('counter.todayExpenses') : t('counter.dayExpenses')}
                   value={expensesToday}
                   accent="var(--color-error)"
                   formatValue={(v) => formatAmount(v, currency)}
                 />
               ) : null}
-            </div>
-            {canLogExpense ? (
+              </div>
+            ) : null}
+            {isToday && canLogExpense ? (
               <Link to={`${pathTo('addExpense')}?branch=${encodeURIComponent(branchId ?? '')}`} className={styles.link}>
                 <IoWalletOutline size={15} aria-hidden="true" />
                 {t('counter.logExpense')}
@@ -472,18 +521,26 @@ export default function CounterPage() {
             onRemove={(sale) => void removeFromBrowser(sale)}
           />
 
-          <Enter delay={step(3)} as="section" className={styles.section}>
-            <h2 className={styles.sectionTitle}>{t('counter.tapToAdd')}</h2>
-            {menu.length === 0 ? (
-              <p className={styles.empty}>{context ? t('counter.noProducts') : t('web.counter.noMenuYet')}</p>
-            ) : (
-              <ProductGrid products={menu} onCart={onCart} currency={currency} onAdd={addProduct} />
-            )}
-          </Enter>
+          {isToday ? (
+            <Enter delay={step(3)} as="section" className={styles.section}>
+              <h2 className={styles.sectionTitle}>{t('counter.tapToAdd')}</h2>
+              {menu.length === 0 ? (
+                <p className={styles.empty}>{context ? t('counter.noProducts') : t('web.counter.noMenuYet')}</p>
+              ) : (
+                <ProductGrid products={menu} onCart={onCart} currency={currency} onAdd={addProduct} />
+              )}
+            </Enter>
+          ) : null}
+
+          {bills.length === 0 && !isToday && past.state === 'ready' ? (
+            <Enter delay={step(4)} as="section" className={styles.section}>
+              <p className={styles.empty}>{t('web.counter.noBillsOn', { date: shownDay })}</p>
+            </Enter>
+          ) : null}
 
           {bills.length > 0 ? (
             <Enter delay={step(4)} as="section" className={styles.section}>
-              <h2 className={styles.sectionTitle}>{t('counter.todayBillsSection')}</h2>
+              <h2 className={styles.sectionTitle}>{isToday ? t('counter.todayBillsSection') : t('counter.dayBillsSection')}</h2>
               <BillList
                 bills={bills}
                 currency={currency}
@@ -492,21 +549,26 @@ export default function CounterPage() {
                   setOpenBill(bill);
                 }}
               />
+              {past.orders.length >= 200 ? (
+                <p className={styles.hint}>{t('web.counter.cappedAt', { count: past.orders.length })}</p>
+              ) : null}
               <p className={styles.hint}>{t('counter.billsHint')}</p>
             </Enter>
           ) : null}
         </div>
 
-        <aside className={styles.cart}>
-          <CartPanel
-            lines={cart}
-            currency={currency}
-            blockedReason={blockedReason}
-            onChangeQuantity={(index, quantity) => setCart((lines) => setCartQuantity(lines, index, quantity))}
-            onClear={() => setCart([])}
-            onCharge={openCharge}
-          />
-        </aside>
+        {isToday ? (
+          <aside className={styles.cart}>
+            <CartPanel
+              lines={cart}
+              currency={currency}
+              blockedReason={blockedReason}
+              onChangeQuantity={(index, quantity) => setCart((lines) => setCartQuantity(lines, index, quantity))}
+              onClear={() => setCart([])}
+              onCharge={openCharge}
+            />
+          </aside>
+        ) : null}
       </div>
 
       {/* Each tile added, said once for a screen reader. */}

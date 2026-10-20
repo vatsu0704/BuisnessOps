@@ -21,12 +21,12 @@ import { haptics } from '@/utils/haptics';
 import type { AttendanceStatus, DailyRoster, SalarySlip, StaffMember } from '@/types/staffing';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import AttendanceStatusPill from '@/components/AttendanceStatusPill';
+import BranchField from '@/components/BranchField';
 import AttendanceStatusPicker from '@/components/AttendanceStatusPicker';
 import InfoCard from '@/components/InfoCard';
 import Pill from '@/components/Pill';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
-import SegmentedOption from '@/components/SegmentedOption';
 import StatTile from '@/components/StatTile';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
@@ -148,18 +148,15 @@ export default function StaffHubScreen() {
             <>
               {branches.length > 1 ? (
                 <AnimatedEntrance delay={step(1)} style={styles.block}>
-                  <View style={styles.chipRow}>
-                    {branches.map((branch) => (
-                      <View key={branch.id} style={styles.chipItem}>
-                        <SegmentedOption
-                          testID={`staff-hub-branch-${branch.code}`}
-                          title={branch.name}
-                          selected={activeBranchId === branch.id}
-                          onPress={() => setBranchId(branch.id)}
-                        />
-                      </View>
-                    ))}
-                  </View>
+                  <BranchField
+                    testIDPrefix="staff-hub-branch"
+                    label={t('common.whichBranch')}
+                    hideLabel
+                    branches={branches}
+                    value={activeBranchId}
+                    onChange={setBranchId}
+                    caption={() => undefined}
+                  />
                 </AnimatedEntrance>
               ) : null}
 
@@ -396,8 +393,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   statRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chipItem: { minWidth: '30%', flexGrow: 1 },
   dayRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
   divided: { borderTopWidth: 1, borderTopColor: '#F4F4F5' },
   rowText: { flex: 1 },

@@ -68,8 +68,14 @@ export default function BranchesSection() {
         ))}
       </ul>
 
+      {/* A link, not a sentence. This led nowhere, which on a business with two
+          hundred branches meant the other hundred and ninety-five had no
+          settings page anybody could open. */}
       {branches.length > PREVIEW_COUNT ? (
-        <p className={styles.more}>{t('common.more', { count: branches.length - PREVIEW_COUNT })}</p>
+        <Link to={pathTo('branches')} className={styles.more}>
+          <span>{t('common.more', { count: branches.length - PREVIEW_COUNT })}</span>
+          <IoChevronForward size={14} aria-hidden="true" />
+        </Link>
       ) : null}
     </section>
   );

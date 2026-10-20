@@ -13,6 +13,7 @@ import FormInput from '@/components/FormInput';
 import HeroCard from '@/components/HeroCard';
 import InfoCard from '@/components/InfoCard';
 import Pill from '@/components/Pill';
+import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
 import SectionDivider from '@/components/SectionDivider';
@@ -139,6 +140,16 @@ export default function LoginScreen({ navigation }: Props) {
                   }}
                 />
 
+                {/* Under the password it is about, which is where somebody
+                    who has just mistyped it looks. */}
+                <PressableScale
+                  testID="login-forgot-password"
+                  style={styles.forgot}
+                  onPress={() => navigation.navigate('ForgotPassword')}
+                >
+                  <Text style={styles.forgotText}>{t('login.forgotPassword')}</Text>
+                </PressableScale>
+
                 <PrimaryButton
                   testID="login-submit"
                   title={isSubmitting ? t('login.submitting') : t('login.submit')}
@@ -171,6 +182,8 @@ export default function LoginScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  forgot: { alignSelf: 'flex-end', paddingVertical: spacing.xs },
+  forgotText: { fontSize: 13, fontWeight: '700', color: colors.primary },
   container: { flex: 1, backgroundColor: colors.background },
   safe: { flex: 1 },
   flex: { flex: 1 },

@@ -17,6 +17,10 @@ import type { Capability } from '../permissions';
  */
 export const ROUTE_CAPABILITY = {
   AddBranch: 'branch:create',
+  // Every branch, searchable. Home previews five and said "+N more" without
+  // offering anywhere to go, so a business with two hundred branches could
+  // reach the settings of exactly five of them.
+  Branches: 'branch:update',
   BranchSettings: 'branch:update',
   Upload: 'dataSource:manage',
   AddStaff: 'staff:create',

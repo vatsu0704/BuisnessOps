@@ -45,7 +45,7 @@
     "expense:classify": "Decide whether an expense category is a variable, fixed or day-to-day cost in Reports (requirement 34). Not part of expense:log: whoever records spending may add a category, but how the owner's report sorts it is the owner's",
     "expense:viewAllBranches": "See every branch's expenses, and which ones have logged nothing today",
     "analytics:viewBranch": "See a branch's own sales, costs and totals",
-    "analytics:viewToday": "See today's sales, bills and spending at the branches you reach — the figures at the top of Home (requirement 33). Narrower than analytics:viewBranch: no costs, wages or profit, which is why a cashier holds this one and not that",
+    "analytics:viewToday": "See today's sales, bills and spending at the branches you reach — the figures at the top of Home (requirement 33). Narrower than analytics:viewBranch: no costs, wages or profit, and no month behind it",
     "analytics:viewBusiness": "See every branch compared, month by month, with net profit",
     "export:dayEnd": "Export everything entered on a given day",
     "export:monthEnd": "Export everything entered in a given month",
@@ -178,6 +178,7 @@
       "product:view",
       "product:manage",
       "analytics:viewToday",
+      "analytics:viewBranch",
       "export:dayEnd",
       "export:monthEnd"
     ],

@@ -5,6 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import MetricGrid from '@/components/reports/MetricGrid';
 import { costMetrics } from '@/utils/costMetrics';
+import Picker from '@/components/Picker';
 import PressableScale from '@/components/PressableScale';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { useMonthCursor } from '@/hooks/useMonthCursor';
@@ -13,6 +14,7 @@ import { getBranchDaily } from '@/api/analytics';
 import type { DailyReport } from '@/types/analytics';
 import { ALL_BRANCHES, dailyChoices, dailyTotal, daysFor, listedDays, resolveChoice } from '@/utils/dailyReport';
 import { formatAmount } from '@/utils/format';
+import { isSearchable } from '@/utils/optionSearch';
 import { formatDate, todayISO } from '@/utils/date';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 
@@ -90,9 +92,13 @@ export default function DailyReportSection() {
         </PressableScale>
       </View>
 
-      {choices.length > 1 ? (
-        // A wrapping row of chips: there may be any number of branches, and a
-        // name in Gujarati runs long — so nothing here divides a fixed width.
+      {/* A wrapping row of chips: there may be any number of branches, and a
+          name in Gujarati runs long — so nothing here divides a fixed width.
+          Past six, even a wrapping row is a wall, so it becomes a field to type
+          into. The chips stay bespoke rather than moving into `Picker`: this is
+          the only place in the app that draws them, and "All branches" is not a
+          branch, so `BranchField` is not the right shape either. */}
+      {choices.length > 1 && !isSearchable(choices.length) ? (
         <View style={styles.chips}>
           {choices.map((id) => (
             <PressableScale
@@ -106,6 +112,18 @@ export default function DailyReportSection() {
             </PressableScale>
           ))}
         </View>
+      ) : null}
+
+      {isSearchable(choices.length) ? (
+        <Picker
+          testIDPrefix="reports-day-branch"
+          label={t('common.whichBranch')}
+          hideLabel
+          icon="storefront-outline"
+          value={choice}
+          onChange={setSelected}
+          options={choices.map((id) => ({ value: id, label: nameOf(id) }))}
+        />
       ) : null}
 
       {error ? (

@@ -1290,9 +1290,16 @@ from *Not in scope*.
   person gets is the same capability-and-job rule as Home's sections and the tab bar,
   and a tile only shows when its screen will open. Cards that carry a figure or a list
   — punch-in, payments due, branches to chase — stay cards.
-- **A cashier sees today, not profit.** A new capability, `analytics:viewToday`, gives
-  the figures above; the cashier no longer holds `analytics:viewBranch` (the branch's
-  costs, wages and profit), so there is no Reports tile for them.
+- **A cashier sees today at a glance, and their own shop in full.** A new capability,
+  `analytics:viewToday`, gives the figures above. The cashier was also held back from
+  `analytics:viewBranch` — the branch's costs, wages and profit — which **was reversed
+  on 2026-10-19**: the one person standing in the shop could not see whether it made
+  money. They now hold both, and the Reports tile opens for them. What stays out of
+  reach is `analytics:viewBusiness`, so a cashier gets their one branch, no business
+  roll-up and no "All branches": the server narrows every analytics query to
+  `req.branchAccess` before it aggregates, and a cashier is tied to exactly one branch
+  by `SINGLE_BRANCH_ROLE`. The branch's **total wage bill** is visible to them as one
+  figure in that report; no individual's pay is.
 - **Reports is reachable on every plan.** It was only a tab, gated on the
   business-wide view (Growth and up); it is now also a pushed screen behind the Reports
   tile, gated on `analytics:viewBranch`, so a single-shop owner can open it.
@@ -1309,8 +1316,9 @@ from *Not in scope*.
 
 - Home shows today's sales, bills and (if allowed) expenses that match the counter
   and the expense log, and the latest bills with a way to the counter.
-- Every tile a role sees opens; the cashier sees Billing but not Reports; the owner
-  sees Raw material but not Order supplies.
+- Every tile a role sees opens; the cashier sees Billing and Reports — their own
+  branch, with no business roll-up — and the owner sees Raw material but not Order
+  supplies.
 - The grid fits a 320dp phone in Gujarati, two across, labels whole.
 
 ### R34 — Reports by day and by month, in three kinds of cost
@@ -1741,7 +1749,8 @@ exception and the new lint scripts.
 5. The app's counter: cart on the phone, the charge sheet (UPI / cash), the queue in the
    app's own files, the sync runner, the offline session, the attention list, auto-print.
 6. Tests: `counter-sale-sync.test.js`; web Vitest for the queue and the receipt bytes.
-7. R33: `analytics:viewToday` (and `analytics:viewBranch` taken from the cashier),
+7. R33: `analytics:viewToday` (and `analytics:viewBranch` taken from the cashier,
+   which was given back on 2026-10-19 — see R33),
    `GET /today`, `todayStore` in place of the all-time `salesStore`, the shared
    `constants/quickActions.ts`, Home's Today / Quick actions / Recent bills sections,
    and `Reports` as a pushed route on `analytics:viewBranch`.

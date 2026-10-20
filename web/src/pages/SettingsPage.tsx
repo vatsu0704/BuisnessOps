@@ -8,7 +8,9 @@ import {
   IoOptionsOutline,
   IoPeopleCircleOutline,
   IoPrintOutline,
+  IoKeyOutline,
   IoQrCodeOutline,
+  IoStorefrontOutline,
   IoRibbonOutline,
   IoShieldCheckmarkOutline,
 } from 'react-icons/io5';
@@ -150,6 +152,22 @@ export default function SettingsPage() {
                 title={t('workCalendar.title')}
                 subtitle={t('workCalendar.weeklyOffHint')}
                 to={pathTo('workCalendar')}
+              />
+            ) : null}
+            {/* The second way in, so reaching a branch's settings does not
+                depend on it being one of the five Home previews. */}
+            <InfoCard
+              icon={IoKeyOutline}
+              title={t('changePassword.title')}
+              subtitle={t('changePassword.settingsSubtitle')}
+              to={pathTo('changePassword')}
+            />
+            {hasCapability(membership, 'branch:update') ? (
+              <InfoCard
+                icon={IoStorefrontOutline}
+                title={t('branches.title')}
+                subtitle={t('branches.subtitle', { count: stats.total })}
+                to={pathTo('branches')}
               />
             ) : null}
             {hasCapability(membership, 'team:view') ? (

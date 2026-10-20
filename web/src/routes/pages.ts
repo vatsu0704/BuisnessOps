@@ -12,11 +12,13 @@ export const PAGES: Record<RouteKey, LazyExoticComponent<ComponentType>> = {
   home: lazy(() => import('@/pages/HomePage')),
 
   settings: lazy(() => import('@/pages/SettingsPage')),
+  changePassword: lazy(() => import('@/pages/ChangePasswordPage')),
   addBusiness: lazy(() => import('@/pages/AddBusinessPage')),
   deleteAccount: lazy(() => import('@/pages/DeleteAccountPage')),
   plan: lazy(() => import('@/pages/PlanPage')),
   notifications: lazy(() => import('@/pages/NotificationsPage')),
 
+  branches: lazy(() => import('@/pages/BranchesPage')),
   addBranch: lazy(() => import('@/pages/AddBranchPage')),
   branchSettings: lazy(() => import('@/pages/BranchSettingsPage')),
   workCalendar: lazy(() => import('@/pages/WorkCalendarPage')),

@@ -2,7 +2,9 @@ import { IoBriefcaseOutline, IoCashOutline, IoFlagOutline, IoTimeOutline } from 
 import { useTranslation } from 'react-i18next';
 import ChoiceTile from '@/components/ui/ChoiceTile';
 import FormInput from '@/components/ui/FormInput';
+import Picker from '@/components/ui/Picker';
 import { INDUSTRY_OPTIONS } from '@/constants/industries';
+import { COUNTRIES, CURRENCIES, TIMEZONES } from '@shared/constants/regions';
 import type { Industry } from '@/types/business';
 import styles from './BusinessFields.module.css';
 
@@ -70,31 +72,52 @@ export default function BusinessFields({ value, onChange, labels }: Props) {
         ))}
       </fieldset>
 
+      {/* Typed by hand until 2026-10-19. A timezone the tzdb does not know is
+          resolved to UTC by the server without a word, which files a shop's
+          evening sales on the day before. */}
       <div className={styles.pair}>
-        <FormInput
+        <Picker
+          name="country"
           label={labels.country}
           icon={IoFlagOutline}
-          autoCapitalize="characters"
-          autoComplete="country"
           value={value.country}
-          onChange={(e) => set({ country: e.target.value.toUpperCase() })}
+          onChange={(country) => set({ country })}
+          options={COUNTRIES.map((country) => ({
+            value: country.code,
+            label: country.name,
+            description: country.code,
+            keywords: [country.code, ...(country.aliases ?? [])],
+          }))}
         />
-        <FormInput
+        <Picker
+          name="defaultCurrency"
           label={labels.currency}
           icon={IoCashOutline}
-          autoCapitalize="characters"
           value={value.defaultCurrency}
-          onChange={(e) => set({ defaultCurrency: e.target.value.toUpperCase() })}
+          onChange={(defaultCurrency) => set({ defaultCurrency })}
+          options={CURRENCIES.map((currency) => ({
+            value: currency.code,
+            label: currency.code,
+            description: currency.name,
+            keywords: [currency.name, currency.symbol],
+          }))}
         />
       </div>
 
-      <FormInput
+      <Picker
+        name="timezone"
         label={labels.timezone}
-        hint={labels.timezoneHint}
         icon={IoTimeOutline}
         value={value.timezone}
-        onChange={(e) => set({ timezone: e.target.value })}
+        onChange={(timezone) => set({ timezone })}
+        options={TIMEZONES.map((zone) => ({
+          value: zone.id,
+          label: zone.id,
+          description: zone.places.slice(0, 2).join(' · '),
+          keywords: zone.places,
+        }))}
       />
+      {labels.timezoneHint ? <p className={styles.fieldHint}>{labels.timezoneHint}</p> : null}
     </>
   );
 }

@@ -14,11 +14,11 @@ import { staffBase } from '@/permissions/staffBase';
 import type { TeamMember } from '@/types/team';
 import { isValidEmail, parseOptionalNumber } from '@/utils/validation';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import BranchField from '@/components/BranchField';
 import FormInput from '@/components/FormInput';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
-import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
@@ -324,25 +324,20 @@ export default function AddStaffScreen({ navigation }: Props) {
                     {baseQuestion === 'PREMISES' ? (
                       <Text style={styles.sectionHint}>{t('addStaff.branchHomeHint')}</Text>
                     ) : null}
-                    <View style={styles.grid}>
-                      {options.map((b) => (
-                        <View key={b.id} style={styles.gridItem}>
-                          <SegmentedOption
-                            testID={`add-staff-branch-${b.code}`}
-                            title={b.name}
-                            caption={[
-                              b.kind === 'WAREHOUSE' ? t('addBranch.kindWarehouse') : b.code,
-                              b.city,
-                            ]
-                              .filter(Boolean)
-                              .join(' · ')}
-                            icon={b.kind === 'WAREHOUSE' ? 'cube-outline' : 'storefront-outline'}
-                            selected={branchId === b.id}
-                            onPress={() => setBranchId(b.id)}
-                          />
-                        </View>
-                      ))}
-                    </View>
+                    <BranchField
+                      testIDPrefix="add-staff-branch"
+                      label={t('addStaff.branchSection')}
+                      hideLabel
+                      branches={options}
+                      value={branchId}
+                      onChange={setBranchId}
+                      caption={(b) =>
+                        [b.kind === 'WAREHOUSE' ? t('addBranch.kindWarehouse') : b.code, b.city]
+                          .filter(Boolean)
+                          .join(' · ')
+                      }
+                      icon={(b) => (b.kind === 'WAREHOUSE' ? 'cube-outline' : 'storefront-outline')}
+                    />
                   </>
                 )}
               </View>
@@ -492,8 +487,6 @@ const styles = StyleSheet.create({
   // Takes the leftover width so a long name wraps inside the card rather than
   // pushing past its edge.
   matchText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.primaryDark, lineHeight: 18 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  gridItem: { width: '48%' },
   setupNote: {
     backgroundColor: colors.background,
     borderRadius: radius.md,

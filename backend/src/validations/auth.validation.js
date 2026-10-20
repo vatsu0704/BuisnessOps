@@ -54,4 +54,39 @@ function validateDeleteAccount(body) {
   return errors;
 }
 
-module.exports = { validateSignup, validateLogin, validateDeleteAccount };
+// Only the address: whether an account exists for it is deliberately not said,
+// so there is nothing else to check here.
+function validateForgotPassword(body) {
+  const errors = [];
+  if (!isValidEmail(body.email)) errors.push(fieldError('EMAIL_REQUIRED', 'email'));
+  return errors;
+}
+
+// The same length rule signup uses, reusing its code so the sentence a person
+// reads is the one they already saw when they chose the first password.
+function validateResetPassword(body) {
+  const errors = [];
+  if (!body.token || typeof body.token !== 'string') errors.push(required('token'));
+  if (!body.password || typeof body.password !== 'string' || body.password.length < 8) {
+    errors.push(fieldError('PASSWORD_TOO_SHORT', 'password', { min: 8 }));
+  }
+  return errors;
+}
+
+function validateChangePassword(body) {
+  const errors = [];
+  if (!body.currentPassword || typeof body.currentPassword !== 'string') errors.push(required('currentPassword'));
+  if (!body.newPassword || typeof body.newPassword !== 'string' || body.newPassword.length < 8) {
+    errors.push(fieldError('PASSWORD_TOO_SHORT', 'newPassword', { min: 8 }));
+  }
+  return errors;
+}
+
+module.exports = {
+  validateSignup,
+  validateLogin,
+  validateDeleteAccount,
+  validateForgotPassword,
+  validateResetPassword,
+  validateChangePassword,
+};

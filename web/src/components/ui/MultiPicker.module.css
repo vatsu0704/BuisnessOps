@@ -1,0 +1,175 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.empty {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 48px;
+  min-width: 0;
+  padding: 0 var(--space-md);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--duration-quick) ease;
+}
+
+.field:hover:not(:disabled) {
+  border-color: #c9c6f7;
+}
+
+.field:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.field:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.fieldText {
+  flex: 1;
+  min-width: 0;
+}
+
+/* What is chosen, readable without opening anything, each coming off where it
+   sits — the shape the Team screen's branch grants already use. */
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  overflow-wrap: anywhere;
+}
+
+.pillRemove {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.pillRemove:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+.pillRemove:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+/* Scrolls inside the dialog rather than growing it past the screen. `svh`, not
+   `vh`: a mobile browser's collapsing chrome makes `vh` taller than the view. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-height: min(46svh, 360px);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-md);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.row:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.rowOn {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.rowText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.rowLabel {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.rowNote {
+  font-size: 12.5px;
+  line-height: 17px;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.noMatch {
+  padding: var(--space-md);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}

@@ -19,6 +19,10 @@ type Props = {
  * a line lower than its neighbours'. Bottom alignment keeps the figures on one
  * line however the labels fall — which matters most in Hindi, Gujarati and
  * Marathi, where they wrap sooner than the English ones do.
+ *
+ * The figure itself never wraps. Three of these share a row, so each gets about
+ * a third of the screen, and the number they hold has no ceiling — a shop's
+ * takings pass ₹1,00,000 and a chain's pass a crore. It shrinks to fit instead.
  */
 export default function StatTile({ label, value, caption, accent, formatValue }: Props) {
   return (
@@ -28,6 +32,7 @@ export default function StatTile({ label, value, caption, accent, formatValue }:
         <AnimatedCount
           value={value}
           formatValue={formatValue}
+          fitOneLine
           style={[styles.value, accent ? { color: accent } : null]}
         />
         {caption ? <Text style={styles.caption}>{caption}</Text> : null}

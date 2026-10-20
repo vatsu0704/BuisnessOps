@@ -11,6 +11,8 @@ import { ROUTES, type RouteKey } from './paths';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const SignupPage = lazy(() => import('@/pages/SignupPage'));
+const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
 
 const ROUTE_KEYS = Object.keys(ROUTES) as RouteKey[];
 
@@ -41,7 +43,27 @@ export default function AppRoutes() {
             </Suspense>
           }
         />
+        <Route
+          path="/forgot-password"
+          element={
+            <Suspense fallback={<FullPageLoader />}>
+              <ForgotPasswordPage />
+            </Suspense>
+          }
+        />
       </Route>
+
+      {/* Outside `GuestOnly` on purpose: somebody already signed in on this
+          browser who clicks their own reset link would otherwise be bounced to
+          Home without ever seeing the page the link was for. */}
+      <Route
+        path="/reset-password"
+        element={
+          <Suspense fallback={<FullPageLoader />}>
+            <ResetPasswordPage />
+          </Suspense>
+        }
+      />
 
       <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>

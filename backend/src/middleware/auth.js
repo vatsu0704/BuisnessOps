@@ -46,10 +46,24 @@ async function requireAuth(req, res, next) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, status: true },
+      select: { id: true, status: true, passwordChangedAt: true },
     });
 
     if (!user) return next(fail('AUTH_TOKEN_INVALID', 401));
+
+    // A password change ends every session that began before it. Without this a
+    // reset would leave the device it was meant to shut out signed in for the
+    // rest of the token's seven days — which is most of the point of resetting.
+    //
+    // `iat` is whole seconds, so the comparison is made in seconds too;
+    // whoever changed the password is handed a fresh token in the same response,
+    // and its `iat` is not earlier than the change.
+    if (user.passwordChangedAt) {
+      const changedAtSeconds = Math.floor(user.passwordChangedAt.getTime() / 1000);
+      if (typeof payload.iat === 'number' && payload.iat < changedAtSeconds) {
+        return next(fail('AUTH_TOKEN_INVALID', 401));
+      }
+    }
     // 403 rather than 401: the credentials were good, and the app must not
     // treat this as "your session expired, sign in again" — signing in again
     // is exactly what will not help.

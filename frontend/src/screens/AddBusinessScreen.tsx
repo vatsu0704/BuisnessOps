@@ -8,8 +8,10 @@ import type { AppStackParamList } from '@/navigation/AppNavigator';
 import { useAuthStore } from '@/store/authStore';
 import type { Industry } from '@/types/business';
 import { INDUSTRY_OPTIONS } from '@/constants/industries';
+import { COUNTRIES, CURRENCIES, TIMEZONES } from '@/constants/regions';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
 import FormInput from '@/components/FormInput';
+import Picker from '@/components/Picker';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -130,37 +132,50 @@ export default function AddBusinessScreen({ navigation }: Props) {
                   ))}
                 </View>
 
-                <View style={styles.row}>
-                  <View style={styles.rowItem}>
-                    <FormInput
-                      testID="add-business-country"
-                      label={t('addBusiness.country')}
-                      icon="flag-outline"
-                      autoCapitalize="characters"
-                      value={country}
-                      onChangeText={setCountry}
-                    />
-                  </View>
-                  <View style={styles.rowItem}>
-                    <FormInput
-                      testID="add-business-currency"
-                      label={t('addBusiness.currency')}
-                      icon="cash-outline"
-                      autoCapitalize="characters"
-                      value={defaultCurrency}
-                      onChangeText={setDefaultCurrency}
-                    />
-                  </View>
-                </View>
+                {/* Stacked rather than side by side: a country name grows, and half of a
+                    320dp phone does not hold "United Arab Emirates". */}
+                <Picker
+                  testIDPrefix="add-business-country"
+                  label={t('addBusiness.country')}
+                  icon="flag-outline"
+                  value={country}
+                  onChange={setCountry}
+                  options={COUNTRIES.map((item) => ({
+                    value: item.code,
+                    label: item.name,
+                    description: item.code,
+                    keywords: [item.code, ...(item.aliases ?? [])],
+                  }))}
+                />
 
-                <FormInput
-                  testID="add-business-timezone"
+                <Picker
+                  testIDPrefix="add-business-currency"
+                  label={t('addBusiness.currency')}
+                  icon="cash-outline"
+                  value={defaultCurrency}
+                  onChange={setDefaultCurrency}
+                  options={CURRENCIES.map((item) => ({
+                    value: item.code,
+                    label: item.code,
+                    description: item.name,
+                    keywords: [item.name, item.symbol],
+                  }))}
+                />
+
+                <Picker
+                  testIDPrefix="add-business-timezone"
                   label={t('addBusiness.timezone')}
                   icon="time-outline"
-                  hint={t('addBusiness.timezoneHint')}
                   value={timezone}
-                  onChangeText={setTimezone}
+                  onChange={setTimezone}
+                  options={TIMEZONES.map((item) => ({
+                    value: item.id,
+                    label: item.id,
+                    description: item.places.slice(0, 2).join(' · '),
+                    keywords: item.places,
+                  }))}
                 />
+                <Text style={styles.hint}>{t('addBusiness.timezoneHint')}</Text>
               </View>
             </AnimatedEntrance>
 
@@ -183,6 +198,7 @@ export default function AddBusinessScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  hint: { fontSize: 12.5, lineHeight: 17, color: colors.textTertiary, marginTop: -4 },
   container: { flex: 1, backgroundColor: colors.background },
   safe: { flex: 1 },
   flex: { flex: 1 },
@@ -211,8 +227,6 @@ const styles = StyleSheet.create({
   fieldLabel: { ...typography.label, color: colors.textSecondary, marginBottom: spacing.sm },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
   gridItem: { width: '48%' },
-  row: { flexDirection: 'row', gap: spacing.md },
-  rowItem: { flex: 1 },
   submitWrap: { marginTop: spacing.lg },
   footnote: {
     fontSize: 12.5,

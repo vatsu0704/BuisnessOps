@@ -21,6 +21,8 @@ import Card from '@/components/ui/Card';
 import Enter from '@/components/ui/Enter';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import FormInput from '@/components/ui/FormInput';
+import Picker from '@/components/ui/Picker';
+import { CURRENCIES, TIMEZONES } from '@shared/constants/regions';
 import FormTextArea from '@/components/ui/FormTextArea';
 import PageHeader from '@/components/ui/PageHeader';
 import PrimaryButton from '@/components/ui/PrimaryButton';
@@ -199,23 +201,32 @@ export default function AddBranchPage() {
               value={details.postalCode}
               onChange={(e) => set({ postalCode: e.target.value })}
             />
-            <FormInput
+            <Picker
+              name="branch-currency"
               label={t('addBranch.currency')}
               icon={IoCashOutline}
-              autoCapitalize="characters"
-              autoComplete="off"
               value={details.currency}
-              onChange={(e) => set({ currency: e.target.value.toUpperCase() })}
+              onChange={(currency) => set({ currency })}
+              options={CURRENCIES.map((currency) => ({
+                value: currency.code,
+                label: currency.code,
+                description: currency.name,
+                keywords: [currency.name, currency.symbol],
+              }))}
             />
           </div>
-          <FormInput
+          <Picker
+            name="branch-timezone"
             label={t('addBranch.timezone')}
             icon={IoTimeOutline}
-            autoComplete="off"
-            spellCheck={false}
             value={details.timezone}
-            onChange={(e) => set({ timezone: e.target.value })}
-            className={fieldStyles.last}
+            onChange={(timezone) => set({ timezone })}
+            options={TIMEZONES.map((zone) => ({
+              value: zone.id,
+              label: zone.id,
+              description: zone.places.slice(0, 2).join(' · '),
+              keywords: zone.places,
+            }))}
           />
         </Card>
       </Enter>

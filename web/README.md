@@ -27,7 +27,7 @@ set it in production to wherever this app is served.
 | `npm run lint:i18n` | The web's own strings exist in all four languages, and no translation it reads uses a tag `<Trans>` would empty |
 | `npm run lint:shared` | Every file reached in `frontend/src` imports only relative paths and the four pinned packages |
 | `npm test` | Vitest + Testing Library on jsdom |
-| `npm run shots [-- <filter>] [--widths=320,1440] [--langs=en,gu]` | Build, serve the build, and screenshot every scenario against a pretend API into `shots/`; fails on sideways scroll or a page error |
+| `npm run shots [-- <filter>] [--widths=320,1440] [--langs=en,gu]` | Build, serve the build, and screenshot every scenario against a pretend API into `shots/`; fails on sideways scroll or a page error. One page that will not load or settle is reported by name and the run carries on — a laptop suspending part way through used to throw away all 194 scenarios |
 
 `VITE_API_URL` is inlined at build time, exactly like the app's
 `EXPO_PUBLIC_API_URL`: a build calls whatever was in `.env` when it was made.
@@ -51,6 +51,9 @@ The web app does **not** copy the mobile app's code. `@shared/` resolves to
 | `utils/teamRules.ts`, `account.ts` | Who may be invited and to what, requirement 18's cashier rules and 409s, who may remove whom; a deleted account |
 | `utils/supplyActions.ts`, `supplyStatus.ts`, `supplyGroups.ts`, `whatsappNumber.ts` | Which steps a supply order offers whom, how its status and payment read, how a cart splits by supplier and the catalog groups, a vendor's WhatsApp link |
 | `utils/supplyPayments.ts` | What is owed grouped by payee, the one-payee-per-payment selection, the month's payment totals |
+| `utils/optionSearch.ts`, `types/picker.ts` | When a list becomes a dropdown (`SEARCH_FROM = 7`) and how typing ranks it — so the same keystrokes offer the same branch first on a phone and on a desktop |
+| `constants/regions.ts` | Countries, currencies and timezones, bundled rather than read from the platform because Hermes has no `Intl.supportedValuesOf` |
+| `utils/teamFilter.ts` | Finding one person in a team, and who reaches a branch — including the roles that reach every branch without holding a single grant |
 
 **A shared file imports only relative paths and `i18next`, `react`, `react-dom`
 or `react-i18next`.** It is compiled by the web's toolchain, where `@/` means
@@ -145,6 +148,13 @@ They are the mobile app's, from `CLAUDE.md`, applied to the web:
   belongs to (`loadedFor`), dedupes in-flight requests and keeps its data when a
   refresh fails. A page refetches on mount and when the browser tab comes back
   into view (`useRefreshOnFocus`).
+- **A date is `DateField` (in a form) or `DayCursor` (a strip), never
+  `<input type="date">`.** Both open `ui/DatePicker` over `ui/Calendar`, because
+  the native input brings the *browser's* calendar: unstyleable, different in
+  every browser, and drawn in the browser's language rather than the one chosen
+  in Settings. Don't add a date-picker package either — they name months from
+  `date-fns` or `Intl`, which would be a second source of month names beside the
+  locale files the app reads.
 - **Styles use the tokens** in `styles/tokens.css`, which repeat
   `frontend/src/theme/index.ts` value for value. Change both together.
 - **A layout must survive Gujarati at 320px.** Prefer grids that wrap

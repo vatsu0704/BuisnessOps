@@ -12,12 +12,12 @@ import { useBusinessId } from '@/hooks/useBusinessId';
 import { parseOptionalNumber } from '@/utils/validation';
 import type { Product } from '@/types/product';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import BranchField from '@/components/BranchField';
 import FormInput from '@/components/FormInput';
 import Pill from '@/components/Pill';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
-import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { confirm } from '@/utils/confirm';
@@ -291,20 +291,14 @@ export default function EditProductScreen({ navigation, route }: Props) {
                     <Text style={styles.hint}>{t('editProduct.branchPriceHint')}</Text>
 
                     {pricingBranches.length > 1 ? (
-                      <View style={styles.grid}>
-                        {pricingBranches.map((branch) => (
-                          <View key={branch.id} style={styles.gridItem}>
-                            <SegmentedOption
-                              testID={`edit-product-price-branch-${branch.code}`}
-                              title={branch.name}
-                              caption={branch.code}
-                              icon="storefront-outline"
-                              selected={branch.id === priceBranchId}
-                              onPress={() => setPriceBranchId(branch.id)}
-                            />
-                          </View>
-                        ))}
-                      </View>
+                      <BranchField
+                        testIDPrefix="edit-product-price-branch"
+                        label={t('editProduct.branchPriceSection')}
+                        hideLabel
+                        branches={pricingBranches}
+                        value={priceBranchId}
+                        onChange={setPriceBranchId}
+                      />
                     ) : null}
 
                     <View style={styles.row}>
@@ -401,8 +395,6 @@ const styles = StyleSheet.create({
   },
   hint: { fontSize: 12.5, color: colors.textTertiary, lineHeight: 17, marginBottom: spacing.md },
   notice: { fontSize: 12.5, color: colors.success, marginBottom: spacing.sm },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
-  gridItem: { width: '48%' },
   row: { flexDirection: 'row', gap: spacing.md },
   rowItem: { flex: 1 },
   dangerRow: {

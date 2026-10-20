@@ -81,6 +81,33 @@ export function branchDayKey(nowMs: number, skewMs: number, utcOffsetMinutes: nu
   return new Date(nowMs + skewMs + utcOffsetMinutes * 60_000).toISOString().slice(0, 10);
 }
 
+/**
+ * A day key moved by whole days, for the counter's day cursor.
+ *
+ * Built at **noon UTC** rather than midnight: `Branch.timezone` is free-form and
+ * promises nothing, so a zone that shifts for daylight saving would land a
+ * midnight-plus-24-hours on the same date it started from. India has no DST;
+ * other places this could run do.
+ */
+export function shiftDayKey(dayKey: string, delta: number): string {
+  const [year, month, day] = dayKey.split('-').map(Number);
+  const noon = Date.UTC(year, month - 1, day, 12);
+  return new Date(noon + delta * 86_400_000).toISOString().slice(0, 10);
+}
+
+/**
+ * Never later than the branch's own today.
+ *
+ * The clamp belongs to the client: the day endpoints check only the *shape* of a
+ * date, and a future one returns an empty day rather than an error. Reading the
+ * limit off the device's clock would be wrong in exactly the window a shop is
+ * busiest — between 18:30 and midnight IST, a machine set to UTC is already on
+ * the day before.
+ */
+export function clampDayKey(dayKey: string, todayKey: string): string {
+  return dayKey > todayKey ? todayKey : dayKey;
+}
+
 /** The branch's wall-clock time at an instant, for the printed receipt. */
 export function branchClock(instantIso: string, utcOffsetMinutes: number) {
   const local = new Date(Date.parse(instantIso) + utcOffsetMinutes * 60_000);

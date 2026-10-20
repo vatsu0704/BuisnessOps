@@ -14,10 +14,10 @@ import { extractErrorMessage } from '@/api/client';
 import { addSupplyCartItem, getSupplyCart, listSupplyItems } from '@/api/supply';
 import type { SupplyItem, SupplyOrder } from '@/types/supply';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import BranchField from '@/components/BranchField';
 import InfoCard from '@/components/InfoCard';
 import PressableScale from '@/components/PressableScale';
 import ScreenBackground from '@/components/ScreenBackground';
-import SegmentedOption from '@/components/SegmentedOption';
 import { formatAmount } from '@/utils/format';
 import { groupCatalog, hasVendorItems as anyVendorItems, quantitiesInCart } from '@/utils/supplyGroups';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
@@ -164,21 +164,13 @@ export default function SupplyCatalogScreen() {
 
           {canOrder && branches.length > 1 ? (
             <AnimatedEntrance delay={step(0)} style={styles.block}>
-              <Text style={styles.sectionTitle}>{t('supply.branch')}</Text>
-              <View style={styles.branchGrid}>
-                {branches.map((branch) => (
-                  <View key={branch.id} style={styles.branchItem}>
-                    <SegmentedOption
-                      testID={`supply-branch-${branch.code}`}
-                      title={branch.name}
-                      caption={branch.code}
-                      icon="storefront-outline"
-                      selected={branch.id === branchId}
-                      onPress={() => setSelectedBranchId(branch.id)}
-                    />
-                  </View>
-                ))}
-              </View>
+              <BranchField
+                testIDPrefix="supply-branch"
+                label={t('supply.branch')}
+                branches={branches}
+                value={branchId}
+                onChange={setSelectedBranchId}
+              />
             </AnimatedEntrance>
           ) : null}
 
@@ -351,12 +343,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     marginBottom: spacing.sm,
   },
-  branchGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   supplierBlock: { marginTop: spacing.xl },
   // The supplier's name wraps beside its icon rather than pushing the row wider.
   supplierHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supplierTitle: { flexShrink: 1, fontSize: 16, fontWeight: '800', color: colors.text },
-  branchItem: { flexGrow: 1, flexBasis: '46%' },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',

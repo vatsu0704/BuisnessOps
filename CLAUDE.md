@@ -422,6 +422,26 @@ into the task rather than waiting to be sent a screenshot.
   wrapping row of chips sized by their own content, as
   `AttendanceStatusPicker` does; nothing then breaks however long the
   translation runs or however many options are added later.
+- **A list that grows with the business becomes a dropdown at seven options.**
+  `SEARCH_FROM` in `utils/optionSearch.ts`, enforced inside `Picker`,
+  `MultiPicker`, `BranchField` and the web's `BranchPicker` — never at a call
+  site. Six or fewer keeps the chips, tiles or rows it already had, so a
+  two-branch shop loses nothing; seven becomes a field you type into, because an
+  owner with two hundred branches cannot scan them. Reach for those components
+  rather than mapping a list into `SegmentedOption`s or `OptionRow`s by hand: ten
+  screens did that, and every one of them showed all two hundred.
+  - The rule is about **choosing one of many**. A fixed, enumerated, known set
+    stays as chips however long — the seven weekdays of a weekly off are read as a
+    row and set by eye.
+  - A page whose job is **auditing** keeps its whole list and gets a filter above
+    it instead; Payment accounts exists to show which shops have a QR and which do
+    not, and a chooser would hide exactly that.
+  - `searchFrom` raises the threshold where a control is used at speed — the
+    counter's branch grid holds to twelve, one-handed and possibly offline, where
+    two taps and a soft keyboard cost more than a long wrapping row.
+  - **The matching is shared, not re-implemented.** A cashier is assigned from a
+    phone in the shop and from a desktop in the office; if "sg" offers a different
+    branch first in each, two people pick different shops from the same keystrokes.
 - **Let the type system carry the design step where it can.** `ROLE_ICONS` in
   `InviteMemberScreen` is a `Record` over every invitable role, so adding a role
   fails `tsc` until someone picks its icon — rather than rendering one row with
@@ -538,7 +558,7 @@ user-facing string** — render it with `t('section.key')` from
   Name the key after the tag (`<Text key="brand" …/>`). Dev-only, so nothing
   but the console shows it.
 
-**Four files are allowed to break this, and all of them are fenced.** Each one
+**Five files are allowed to break this, and all of them are fenced.** Each one
 earns it the same way — the rule's premise stops being true, rather than being
 quietly violated:
 
@@ -551,6 +571,11 @@ quietly violated:
 - `documents/export.labels.js` — the day-end and month-end spreadsheet and its
   printable summary (R17). An `.xlsx` cell cannot hold a translation key and
   neither can a printed page, and this too is fetched with `?lang=`.
+- `mail/reset.labels.js` — the password-reset email. There is no app on the
+  other end of an email and nobody is signed in to ask, so what leaves here is
+  what the person reads. Unlike the two documents there is no `?lang=`, but it is
+  not a guess either: `User.preferredLocale` is the language that account chose,
+  and it is the best thing known about a reader who cannot currently sign in.
 - `frontend/src/constants/receiptLabels.ts` — the counter's printed token slip
   (R31), and the only one of the four in the app. A 58mm receipt printer's
   built-in font is ASCII with no Indic glyphs, so there is no moment at which the
@@ -563,7 +588,7 @@ quietly violated:
 receipt labels (in `frontend/src` or `web/src`), or if a label is not printable
 ASCII. `npm run lint:notification-prose` fails if anything but `notifications/push.js`
 requires the notification label file, and `npm run lint:backend-i18n` compares all
-four languages in **all three** dictionaries, checks no translation drops a
+four languages in **all four** dictionaries, checks no translation drops a
 placeholder the English uses, and checks every code the backend can send has an
 app key. **Do not widen this further**: everywhere else, send a code and let the
 device render it — the export's double-count warning travels in its JSON as
@@ -621,8 +646,10 @@ what remains. `web/README.md` has the layout and the commands.
   `supplyStatus.ts` (how a status and a payment read), `supplyGroups.ts` (how a cart
   splits and the catalog groups), `whatsappNumber.ts` (the pure half of
   `whatsapp.ts`) and `supplyPayments.ts` (what is owed grouped by payee, the
-  one-payee selection, the history totals) — and the counter's pure half (see *The
-  counter works offline*). A second copy of any of them would drift
+  one-payee selection, the history totals) — `utils/optionSearch.ts` and
+  `types/picker.ts` (when a list becomes a dropdown, and how typing ranks it),
+  `constants/regions.ts` (countries, currencies and timezones) — and the counter's
+  pure half (see *The counter works offline*). A second copy of any of them would drift
   exactly as the mirrors are checked not to — the web's own `costMetrics.ts` had
   already lost the per-day caption before it was shared.
 - **So a shared file imports only relative paths and four packages** — `i18next`,
@@ -660,6 +687,21 @@ what remains. `web/README.md` has the layout and the commands.
   (it fills sign-up's timezone from the browser), a real `localStorage`, CSS
   `gap` and container queries. It still reads the locale files with
   `compatibilityJSON: 'v3'`, because the files are the app's.
+- **A date is `DatePicker`, never `<input type="date">`.** The native input
+  carries the browser's own calendar, and that panel cannot be styled
+  (`::-webkit-calendar-picker-indicator` reaches the little icon and nothing
+  behind it), differs in Chrome, Firefox and Safari, and draws its month and
+  weekday names in the **browser's** language — so a shop running the app in
+  Gujarati got an English calendar. `components/ui/Calendar.tsx` over
+  `utils/calendarGrid.ts` is the replacement, and `DateField` (in a form) and
+  `DayCursor` (a cursor strip) are the two ways in; the grid is six rows always,
+  so paging does not resize the panel, and Sunday-first, so a column index is the
+  same number as `Date.getDay()` and `weeklyOffDays`. **Do not reach for a
+  date-picker package** to replace it: react-day-picker and the rest name months
+  from `date-fns` or `Intl` locales, which would put a second source of month
+  names beside `month.1` in the four locale files — the single source precisely
+  because Hermes has no dependable `Intl`. The app is the exception and stays one:
+  it opens the platform's picker, which is native and OS-localized.
 - **Its storage keys are `hisabkitab_*`, not `biziq_*`.** The app keeps its old
   key names only because renaming them would sign out every installed copy; the
   web had no installed copies to sign out. The token lives in `localStorage`,
@@ -1117,6 +1159,15 @@ restarting is the whole change. Until all three are set the pages say the
 operator's details are being finalised — never a blank where a name should be —
 and a production server warns at every start. It does not refuse to start; the
 API has to run before the company exists.
+
+**`SMTP_URL`, `MAIL_FROM` and `PUBLIC_WEB_URL` are the only outbound email there
+is**, and they are optional on the same contract as `FIREBASE_SERVICE_ACCOUNT`: a
+server without them starts and serves. One thing is sent — a password-reset link
+— and unset, `mail/send.js` **writes that link to the log instead**, so the whole
+flow is testable before any mail account exists. A production server warns at
+every start, because a reset flow that silently does nothing is worse than none.
+Plain SMTP on purpose, so the provider is a matter of configuration. Without
+`PUBLIC_WEB_URL` the link has no host and cannot be opened.
 
 **`NODE_ENV=production` is not decoration — it switches behaviour.** It is what
 turns on the strict secret rules above and what turns the access log from

@@ -76,4 +76,21 @@ const signupLimiter = rateLimit({
   handler: tooManyRequests,
 });
 
-module.exports = { loginLimiter, signupLimiter };
+/**
+ * Asking for a reset link.
+ *
+ * Tighter than login because every request that lands sends an email: an
+ * attacker who cannot guess a password can still fill somebody's inbox, and an
+ * inbox full of reset mail is how a real reset gets missed. The service adds a
+ * per-address floor on top, which this cannot do — it counts IPs.
+ */
+const resetLimiter = rateLimit({
+  windowMs: FIFTEEN_MINUTES,
+  limit: 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: skipWhenTesting,
+  handler: tooManyRequests,
+});
+
+module.exports = { loginLimiter, signupLimiter, resetLimiter };

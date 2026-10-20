@@ -24,7 +24,7 @@ import { inviteMember } from '@/api/team';
 import fieldStyles from '@/components/branches/BranchFields.module.css';
 import CashierBranchPicker from '@/components/team/CashierBranchPicker';
 import Card from '@/components/ui/Card';
-import CheckChips from '@/components/ui/CheckChips';
+import MultiPicker from '@/components/ui/MultiPicker';
 import Enter from '@/components/ui/Enter';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import FormInput from '@/components/ui/FormInput';
@@ -98,12 +98,6 @@ export default function InviteMemberPage() {
     !emailInvalid &&
     (!needsBranches || selectedBranchIds.length > 0) &&
     !isSubmitting;
-
-  function toggleBranch(branchId: string) {
-    setSelectedBranchIds((current) =>
-      current.includes(branchId) ? current.filter((id) => id !== branchId) : [...current, branchId]
-    );
-  }
 
   /**
    * Changing the role can leave a choice behind that is no longer allowed: two
@@ -241,12 +235,18 @@ export default function InviteMemberPage() {
                   {t('inviteMember.branchSection')}
                 </h2>
                 <div className={fieldStyles.legendGap} />
-                <CheckChips
+                <MultiPicker
+                  name="invite-branches"
                   label={t('inviteMember.branchSection')}
                   hideLabel
-                  options={branches.map((b) => ({ value: b.id, label: b.name }))}
-                  selected={selectedBranchIds}
-                  onToggle={toggleBranch}
+                  options={branches.map((b) => ({
+                    value: b.id,
+                    label: b.name,
+                    description: b.code,
+                    keywords: [b.code, b.city, b.region],
+                  }))}
+                  value={selectedBranchIds}
+                  onChange={setSelectedBranchIds}
                 />
               </>
             )}

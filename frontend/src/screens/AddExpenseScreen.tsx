@@ -21,10 +21,10 @@ import { parseOptionalNumber } from '@/utils/validation';
 import { todayISO } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import BranchField from '@/components/BranchField';
 import CategoryPicker from '@/components/expense/CategoryPicker';
 import DateField from '@/components/DateField';
 import FormInput from '@/components/FormInput';
-import OptionRow from '@/components/OptionRow';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -174,18 +174,16 @@ export default function AddExpenseScreen({ navigation, route }: Props) {
             {branches.length > 1 ? (
               <AnimatedEntrance delay={step(0)} style={styles.block}>
                 <View style={styles.card}>
-                  <Text style={styles.sectionTitle}>{t('expenses.branch')}</Text>
-                  {branches.map((branch) => (
-                    <OptionRow
-                      key={branch.id}
-                      testID={`add-expense-branch-${branch.code}`}
-                      icon={branch.kind === 'WAREHOUSE' ? 'cube-outline' : 'storefront-outline'}
-                      title={branch.name}
-                      description={branch.city ?? undefined}
-                      selected={branchId === branch.id}
-                      onPress={() => setBranchId(branch.id)}
-                    />
-                  ))}
+                  <BranchField
+                    testIDPrefix="add-expense-branch"
+                    label={t('expenses.branch')}
+                    branches={branches}
+                    value={branchId}
+                    onChange={setBranchId}
+                    flatAs="rows"
+                    caption={(branch) => branch.city ?? undefined}
+                    icon={(branch) => (branch.kind === 'WAREHOUSE' ? 'cube-outline' : 'storefront-outline')}
+                  />
                 </View>
               </AnimatedEntrance>
             ) : null}

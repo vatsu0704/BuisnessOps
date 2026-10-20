@@ -8,6 +8,7 @@
 }
 
 .cell {
+  container-type: inline-size;
   min-width: 0;
   padding: 10px var(--space-md);
   border-radius: var(--radius-md);
@@ -21,9 +22,11 @@
   color: var(--color-text-secondary);
 }
 
+/* Shrinks with its cell rather than breaking mid-number — these cells are about
+   124px on a 320px phone and the amount in them has no ceiling. */
 .value {
   margin: 2px 0 0;
-  font-size: 15px;
+  font-size: clamp(11.5px, 12cqi, 15px);
   font-weight: 800;
   letter-spacing: -0.3px;
   color: var(--color-text);

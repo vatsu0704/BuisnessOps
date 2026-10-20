@@ -25,9 +25,9 @@ import CashierBranchPicker from '@/components/CashierBranchPicker';
 import FormInput from '@/components/FormInput';
 import OptionRow from '@/components/OptionRow';
 import PressableScale from '@/components/PressableScale';
+import MultiPicker from '@/components/MultiPicker';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
-import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { haptics } from '@/utils/haptics';
@@ -100,15 +100,6 @@ export default function InviteMemberScreen({ navigation }: Props) {
     (!needsBranches || selectedBranchIds.size > 0) &&
     !isSubmitting;
 
-  function toggleBranch(branchId: string) {
-    haptics.select();
-    setSelectedBranchIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(branchId)) next.delete(branchId);
-      else next.add(branchId);
-      return next;
-    });
-  }
 
   /**
    * Changing the role can leave an illegal selection behind: pick two branches
@@ -277,25 +268,21 @@ export default function InviteMemberScreen({ navigation }: Props) {
                       />
                     </>
                   ) : (
-                    <>
-                      <View style={styles.grid}>
-                        {branches.map((b) => (
-                          <View key={b.id} style={styles.gridItem}>
-                            <SegmentedOption
-                              testID={`invite-member-branch-${b.code}`}
-                              title={b.name}
-                              caption={b.code}
-                              icon="storefront-outline"
-                              selected={selectedBranchIds.has(b.id)}
-                              onPress={() => toggleBranch(b.id)}
-                            />
-                          </View>
-                        ))}
-                      </View>
-                      {branches.length === 0 ? (
-                        <Text style={styles.emptyText}>{t('inviteMember.noBranches')}</Text>
-                      ) : null}
-                    </>
+                    <MultiPicker
+                      testIDPrefix="invite-member-branch"
+                      label={t('inviteMember.branchSection')}
+                      hideLabel
+                      emptyLabel={t('inviteMember.noBranches')}
+                      options={branches.map((b) => ({
+                        value: b.id,
+                        label: b.name,
+                        description: b.code,
+                        keywords: [b.code, b.city, b.region],
+                        icon: 'storefront-outline' as const,
+                      }))}
+                      value={[...selectedBranchIds]}
+                      onChange={(next) => setSelectedBranchIds(new Set(next))}
+                    />
                   )}
                 </View>
               </AnimatedEntrance>
@@ -363,8 +350,6 @@ const styles = StyleSheet.create({
   sectionHint: { fontSize: 12.5, color: colors.textSecondary, lineHeight: 17, marginBottom: spacing.md },
   roleList: { gap: spacing.sm },
   planNote: { fontSize: 12.5, color: colors.textTertiary, lineHeight: 17, marginTop: spacing.sm },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  gridItem: { width: '48%' },
   emptyText: { fontSize: 13.5, color: colors.textTertiary, textAlign: 'center', paddingVertical: spacing.sm },
   submitWrap: { marginTop: spacing.lg },
   fieldError: { fontSize: 12.5, color: colors.error, marginTop: -spacing.sm, marginBottom: spacing.md },

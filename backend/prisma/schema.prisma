@@ -327,23 +327,51 @@ model Holiday {
 }
 
 model User {
-  id              String     @id @default(uuid())
-  email           String     @unique
-  passwordHash    String
-  name            String?
-  phone           String?
-  preferredLocale Locale     @default(EN)
-  status          UserStatus @default(ACTIVE)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id                String     @id @default(uuid())
+  email             String     @unique
+  passwordHash      String
+  name              String?
+  phone             String?
+  preferredLocale   Locale     @default(EN)
+  status            UserStatus @default(ACTIVE)
+  // When the password last changed. A token is stateless and lasts seven days,
+  // so without this a reset would leave every other device still signed in —
+  // including the one the reset was meant to shut out. `requireAuth` compares it
+  // with the token's `iat`. Null for an account whose password never changed.
+  passwordChangedAt DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   memberships             Membership[]
   staffMembers            StaffMember[]
   deviceTokens            DeviceToken[]
   notifications           Notification[]
   notificationPreferences NotificationPreference[]
+  passwordResetTokens     PasswordResetToken[]
 
   @@map("users")
+}
+
+// A one-time link to set a new password.
+//
+// The token itself is NEVER stored — only its SHA-256 — so a copy of this table
+// cannot be used to reset anybody. Same reasoning as `passwordHash` beside it:
+// what is kept has to be useless to whoever reads it.
+//
+// Unlike `Invite`, which is claimed by signing up with the address and never
+// expires, this is a secret with a clock: an hour, single use, and the user's
+// others are invalidated whenever a new one is minted or one is spent.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model Membership {

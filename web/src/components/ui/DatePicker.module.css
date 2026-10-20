@@ -1,0 +1,173 @@
+.wrap {
+  position: relative;
+  min-width: 0;
+}
+
+/* --- The closed field ---------------------------------------------------- */
+
+/* Deliberately `FormInput`'s field: the same 52px, the same icon tile, the same
+   border that turns brand blue. A date must not read as a different kind of
+   control from the text box above it. */
+.field {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: 52px;
+  padding: 0;
+  overflow: hidden;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--duration-quick) ease, box-shadow var(--duration-quick) ease;
+}
+
+.field:hover:not(:disabled) {
+  border-color: #d4d4d8;
+}
+
+.fieldOpen,
+.field:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.fieldInvalid,
+.fieldInvalid:hover:not(:disabled) {
+  border-color: var(--color-error);
+}
+
+.field:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.iconBox {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text-tertiary);
+  transition: background-color var(--duration-quick) ease, color var(--duration-quick) ease;
+}
+
+.fieldOpen .iconBox,
+.field:focus-visible .iconBox {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.value {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+  padding: var(--space-md);
+  overflow: hidden;
+  font-size: 15.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.placeholder {
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+}
+
+.chevron {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding-right: var(--space-md);
+  color: var(--color-text-tertiary);
+}
+
+/* --- The short form, for the counter's day strip ------------------------- */
+
+.wrapCompact {
+  min-width: 0;
+}
+
+.fieldCompact {
+  min-height: 36px;
+  border-width: 1px;
+  border-radius: var(--radius-md);
+}
+
+.fieldCompact .value {
+  padding: 0 var(--space-xs) 0 var(--space-md);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.fieldCompact .chevron {
+  padding-right: var(--space-sm);
+}
+
+/* --- The panel ----------------------------------------------------------- */
+
+/* Its own width, not the field's: a calendar has seven columns to fit and a
+   320px form field is narrower than they read at. Pinned to the left edge and
+   allowed to shrink to the viewport, so nothing can push the page sideways. */
+.panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 304px;
+  max-width: calc(100vw - 2 * var(--space-lg));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  animation: calendar-in var(--duration-quick) var(--ease-gentle) both;
+  transform-origin: top left;
+}
+
+/* In a cursor strip the field sits between two chevrons in the middle of the
+   row, so the panel hangs from its centre rather than its left edge. */
+.panelCentred {
+  left: 50%;
+  transform: translateX(-50%);
+  transform-origin: top center;
+}
+
+@keyframes calendar-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+  }
+}
+
+.panelCentred {
+  animation-name: calendar-in-centred;
+}
+
+@keyframes calendar-in-centred {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.97) translateY(-4px);
+  }
+}
+
+/* The panel would otherwise run off the bottom of a short window; let it sit
+   above the field when there is no room under it. */
+@media (max-height: 560px) {
+  .panel {
+    top: auto;
+    bottom: calc(100% + 6px);
+    transform-origin: bottom left;
+  }
+
+  .panelCentred {
+    transform-origin: bottom center;
+  }
+}

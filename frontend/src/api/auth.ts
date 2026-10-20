@@ -72,3 +72,31 @@ export async function deleteAccount(password: string): Promise<DeleteAccountResp
   );
   return data;
 }
+
+/**
+ * Ask for a reset link. Resolves whether or not the address has an account —
+ * the server will not say, because that would make this an oracle for who banks
+ * here. So the page that calls it says "if we know that address" either way.
+ */
+export async function forgotPassword(email: string): Promise<void> {
+  await apiClient.post('/auth/forgot-password', { email }, { timeout: AUTH_TIMEOUT_MS });
+}
+
+/** Spend the link from that email. No session comes back: they sign in after. */
+export async function resetPassword(payload: { token: string; password: string }): Promise<void> {
+  await apiClient.post('/auth/reset-password', payload, { timeout: AUTH_TIMEOUT_MS });
+}
+
+/**
+ * Change it while signed in. A new token comes back because the change has just
+ * ended every session older than it — including this one.
+ */
+export async function changePassword(payload: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<{ token: string }> {
+  const { data } = await apiClient.post<{ token: string }>('/auth/me/password', payload, {
+    timeout: AUTH_TIMEOUT_MS,
+  });
+  return data;
+}

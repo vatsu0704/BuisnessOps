@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import OptionRow from '@/components/OptionRow';
+import Picker from '@/components/Picker';
 import { colors, spacing } from '@/theme';
 import type { Branch } from '@/types/branch';
 import type { TeamMember } from '@/types/team';
@@ -62,29 +62,35 @@ export default function CashierBranchPicker({
     return <Text style={styles.empty}>{t('inviteMember.noBranches')}</Text>;
   }
 
+  // Who holds a branch stays this component's business, not the picker's: a
+  // generic control that knew about memberships would be the same mistake as
+  // one that checked a role name.
+  const options = branches.map((branch) => {
+    const holder = cashierByBranch.get(branch.id);
+    const isTheirOwn = !!holder && holder.id === forMembershipId;
+    return {
+      value: branch.id,
+      label: branch.name,
+      description: isTheirOwn
+        ? t('inviteMember.branchTheirs')
+        : holder
+          ? t('inviteMember.branchHeldBy', { name: holder.user.name ?? holder.user.email })
+          : t('inviteMember.branchFree'),
+      keywords: [branch.code, branch.city, branch.region, holder?.user.name, holder?.user.email],
+      icon: 'storefront-outline' as const,
+    };
+  });
+
   return (
     <View style={styles.list}>
-      {branches.map((branch) => {
-        const holder = cashierByBranch.get(branch.id);
-        const isTheirOwn = !!holder && holder.id === forMembershipId;
-        return (
-          <OptionRow
-            key={branch.id}
-            testID={`${testIDPrefix}-${branch.code}`}
-            icon="storefront-outline"
-            title={branch.name}
-            description={
-              isTheirOwn
-                ? t('inviteMember.branchTheirs')
-                : holder
-                  ? t('inviteMember.branchHeldBy', { name: holder.user.name ?? holder.user.email })
-                  : t('inviteMember.branchFree')
-            }
-            selected={selectedBranchId === branch.id}
-            onPress={() => onSelect(branch.id)}
-          />
-        );
-      })}
+      <Picker
+        testIDPrefix={testIDPrefix}
+        label={t('inviteMember.cashierBranchHint')}
+        hideLabel
+        options={options}
+        value={selectedBranchId}
+        onChange={onSelect}
+      />
     </View>
   );
 }

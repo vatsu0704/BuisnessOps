@@ -82,11 +82,29 @@ function problemsWith(env) {
  */
 function warningsFor(env) {
   if (env.NODE_ENV !== 'production') return [];
+  const warnings = [];
+
   const missing = missingOperatorVariables(env);
-  if (missing.length === 0) return [];
-  return [
-    `${missing.join(', ')} not set — /privacy and /delete-account say the operator's details are still being finalised.`,
-  ];
+  if (missing.length > 0) {
+    warnings.push(
+      `${missing.join(', ')} not set — /privacy and /delete-account say the operator's details are still being finalised.`
+    );
+  }
+
+  // Optional for the same reason the Firebase credential is: a server with no
+  // mail account still starts and serves. But a reset flow that silently does
+  // nothing is worse than none, so production says so at every start — and the
+  // link goes to the log, where it is at least reachable by hand.
+  if (!env.SMTP_URL) {
+    warnings.push('SMTP_URL not set — password-reset links are written to the log instead of emailed.');
+  } else if (!env.MAIL_FROM) {
+    warnings.push('MAIL_FROM not set — reset email will be sent with the provider default sender.');
+  }
+  if (!env.PUBLIC_WEB_URL) {
+    warnings.push('PUBLIC_WEB_URL not set — a password-reset link will have no host and cannot be opened.');
+  }
+
+  return warnings;
 }
 
 /**

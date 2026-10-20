@@ -25,7 +25,10 @@ import InfoCard from '@/components/ui/InfoCard';
 import PageHeader from '@/components/ui/PageHeader';
 import Pill from '@/components/ui/Pill';
 import Spinner from '@/components/ui/Spinner';
+import Picker from '@/components/ui/Picker';
+import SearchField from '@/components/ui/SearchField';
 import { useBranches } from '@/hooks/useBranches';
+import { filterInvites, filterMembers } from '@shared/utils/teamFilter';
 import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
 import { useRefreshOnFocus } from '@/hooks/useRefreshOnFocus';
 import { useCashierByBranch, useTeam } from '@/hooks/useTeam';
@@ -49,11 +52,19 @@ import styles from './TeamPage.module.css';
  * The rules — who reaches every branch, who may remove whom, what a 409 says —
  * are `@shared/utils/teamRules`, the same file the app's screen reads.
  */
+/** How many people a page shows before asking. */
+const PAGE = 20;
+/** The branch filter's "every branch" row. Not a branch id, so it cannot collide. */
+const ALL = '__all__';
+
 export default function TeamPage() {
   const { t } = useTranslation();
   const businessId = useBusinessId();
   const viewer = useMembership();
   const { members, invites, conflicts, isLoading, error: loadError, refresh } = useTeam();
+  const [query, setQuery] = useState('');
+  const [branchId, setBranchId] = useState<string | null>(null);
+  const [limit, setLimit] = useState(PAGE);
   const cashierByBranch = useCashierByBranch();
   const { tradingBranches } = useBranches();
   useRefreshOnFocus(refresh, { onMount: false });
@@ -177,6 +188,19 @@ export default function TeamPage() {
   const shownError = error || loadError;
   const nothingYet = !isLoading && members.length === 0 && invites.length === 0 && !shownError;
 
+  // A business with two hundred branches has the staff to match, and
+  // "who runs Vesu Point?" meant scrolling until a name was recognised.
+  const filter = { query, branchId };
+  const shownMembers = filterMembers(members, filter);
+  const shownInvites = filterInvites(invites, filter);
+  const total = members.length + invites.length;
+  const shownTotal = shownMembers.length + shownInvites.length;
+  const isFiltered = query.trim() !== '' || branchId !== null;
+  // 200 cards is a long page however fast it renders; the rest arrive on asking.
+  const visibleMembers = shownMembers.slice(0, Math.max(0, limit - shownInvites.length));
+  const visibleInvites = shownInvites.slice(0, limit);
+  const hidden = shownTotal - visibleInvites.length - visibleMembers.length;
+
   return (
     <div className={styles.page}>
       <PageHeader title={t('team.title')} backTo={pathTo('settings')} />
@@ -202,15 +226,44 @@ export default function TeamPage() {
         </Enter>
       ) : null}
 
+      {total > 0 ? (
+        <Enter delay={step(1)} className={styles.filters}>
+          <SearchField label={t('team.search')} value={query} onChange={setQuery} />
+          {tradingBranches.length > 1 ? (
+            <Picker
+              name="team-branch-filter"
+              label={t('team.atBranch')}
+              options={[
+                { value: ALL, label: t('reports.allBranches') },
+                ...tradingBranches.map((b) => ({
+                  value: b.id,
+                  label: b.name,
+                  description: b.code,
+                  keywords: [b.code, b.city, b.region],
+                })),
+              ]}
+              value={branchId ?? ALL}
+              onChange={(next) => setBranchId(next === ALL ? null : next)}
+              flatAs="chips"
+            />
+          ) : null}
+          {isFiltered ? (
+            <p className={styles.count}>{t('team.showing', { shown: shownTotal, total })}</p>
+          ) : null}
+        </Enter>
+      ) : null}
+
       {isLoading && members.length === 0 ? (
         <div className={styles.loading}>
           <Spinner size={24} />
         </div>
       ) : nothingYet ? (
         <p className={styles.empty}>{t('team.empty')}</p>
+      ) : shownTotal === 0 ? (
+        <p className={styles.empty}>{t('team.noMatches')}</p>
       ) : (
         <ul className={styles.grid}>
-          {invites.map((invite, index) => (
+          {visibleInvites.map((invite, index) => (
             <Enter as="li" key={invite.id} delay={step(Math.min(index + 2, 6))} className={cx(styles.card, styles.pending)}>
               <div className={styles.cardHead}>
                 <p className={styles.name}>{invite.email}</p>
@@ -231,7 +284,7 @@ export default function TeamPage() {
             </Enter>
           ))}
 
-          {members.map((member, index) => {
+          {visibleMembers.map((member, index) => {
             const revoked = member.status === 'REVOKED';
             const isYou = member.id === viewer?.id;
             const deleted = isDeletedAccount(member.user);
@@ -349,6 +402,12 @@ export default function TeamPage() {
           })}
         </ul>
       )}
+
+      {hidden > 0 ? (
+        <button type="button" className={styles.showMore} onClick={() => setLimit((n) => n + PAGE)}>
+          {t('team.showMore', { count: hidden })}
+        </button>
+      ) : null}
     </div>
   );
 }

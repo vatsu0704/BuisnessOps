@@ -12,6 +12,7 @@ import { useBusinessId, useMembership } from '@/hooks/useBusinessId';
 import { hasCapability } from '@/utils/permissions';
 import { parseOptionalNumber } from '@/utils/validation';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import BranchField from '@/components/BranchField';
 import FormInput from '@/components/FormInput';
 import OptionRow from '@/components/OptionRow';
 import PressableScale from '@/components/PressableScale';
@@ -227,20 +228,14 @@ export default function AddProductScreen({ navigation, route }: Props) {
             {scope === 'BRANCH' && branches.length > 1 ? (
               <AnimatedEntrance delay={step(2)} style={styles.block}>
                 <View style={styles.card}>
-                  <Text style={styles.sectionTitle}>{t('addProduct.branchSection')}</Text>
-                  <View style={styles.scopeList}>
-                    {branches.map((branch) => (
-                      <OptionRow
-                        key={branch.id}
-                        testID={`add-product-branch-${branch.code}`}
-                        icon="storefront-outline"
-                        title={branch.name}
-                        description={branch.code}
-                        selected={branch.id === branchId}
-                        onPress={() => setBranchId(branch.id)}
-                      />
-                    ))}
-                  </View>
+                  <BranchField
+                    testIDPrefix="add-product-branch"
+                    label={t('addProduct.branchSection')}
+                    branches={branches}
+                    value={branchId}
+                    onChange={setBranchId}
+                    flatAs="rows"
+                  />
                 </View>
               </AnimatedEntrance>
             ) : null}

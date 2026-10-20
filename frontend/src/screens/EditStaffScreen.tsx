@@ -18,12 +18,12 @@ import { parseOptionalNumber } from '@/utils/validation';
 import { dateKeyFromApi } from '@/utils/date';
 import type { StaffMember } from '@/types/staffing';
 import AnimatedEntrance from '@/components/AnimatedEntrance';
+import BranchField from '@/components/BranchField';
 import DateField from '@/components/DateField';
 import FormInput from '@/components/FormInput';
 import PressableScale from '@/components/PressableScale';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenBackground from '@/components/ScreenBackground';
-import SegmentedOption from '@/components/SegmentedOption';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import { step } from '@/theme/motion';
 import { confirm } from '@/utils/confirm';
@@ -311,29 +311,25 @@ export default function EditStaffScreen({ route, navigation }: Props) {
                       })}
                     </Text>
                   ) : (
-                    <View style={styles.grid}>
-                      {options.map((branch) => (
-                        <View key={branch.id} style={styles.gridItem}>
-                          <SegmentedOption
-                            testID={`edit-staff-branch-${branch.code}`}
-                            title={branch.name}
-                            caption={[
-                              branch.kind === 'WAREHOUSE'
-                                ? t('addBranch.kindWarehouse')
-                                : branch.code,
-                              branch.city,
-                            ]
-                              .filter(Boolean)
-                              .join(' · ')}
-                            icon={
-                              branch.kind === 'WAREHOUSE' ? 'cube-outline' : 'storefront-outline'
-                            }
-                            selected={branchId === branch.id}
-                            onPress={() => setBranchId(branch.id)}
-                          />
-                        </View>
-                      ))}
-                    </View>
+                    <BranchField
+                      testIDPrefix="edit-staff-branch"
+                      label={t('editStaff.branch')}
+                      hideLabel
+                      branches={options}
+                      value={branchId}
+                      onChange={setBranchId}
+                      caption={(branch) =>
+                        [
+                          branch.kind === 'WAREHOUSE' ? t('addBranch.kindWarehouse') : branch.code,
+                          branch.city,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')
+                      }
+                      icon={(branch) =>
+                        branch.kind === 'WAREHOUSE' ? 'cube-outline' : 'storefront-outline'
+                      }
+                    />
                   )}
                 </AnimatedEntrance>
 
@@ -422,8 +418,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     marginBottom: spacing.sm,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  gridItem: { width: '48%' },
   hint: { fontSize: 12.5, color: colors.textTertiary, marginBottom: spacing.lg },
   // The same size as `hint` but with no trailing margin and room to wrap: this
   // one ends its section rather than introducing a field, and the sentence runs
