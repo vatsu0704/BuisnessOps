@@ -3104,8 +3104,10 @@ least one unsent counter bill queued on it. That state is the point of this flow
 2. **The splash.**
    - ✅ **Expected:** white, the mark centred, and **no flash** between the system
      splash and the app's own — the mark must not jump or resize at the hand-over.
-   - ✅ **Expected:** the speed lines streak in, the K follows, the P lands, then
-     the name. About 1.2s, once.
+   - ✅ **Expected:** the K arrives from the left, the P unfurls out of it, the
+     four speed lines whip out backwards from under the K top to bottom, then the
+     name rises. About 1s, once — and no line should ever appear as a stub
+     floating beside the K.
 3. **Sign-in state.** This is the migration, and the part worth being careful about.
    - ✅ **Expected:** on the *old* build you are still signed in. The new build is a
      separate install with empty storage, so it starts signed out — that is correct

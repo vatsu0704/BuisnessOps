@@ -11,7 +11,7 @@ import art from '@/constants/brandMark.json';
 import { spring, step } from '@/theme/motion';
 
 /**
- * The KitnaPay mark: three speed lines, a navy K and a coral P leaning into them.
+ * The KitnaPay mark: four speed lines, a navy K and a coral P leaning into them.
  *
  * It is drawn from constants/brandMark.json, the same geometry that
  * scripts/generate-brand-assets.js renders into the launcher icon and the
@@ -19,18 +19,20 @@ import { spring, step } from '@/theme/motion';
  *
  * ## How it moves, and why
  *
- * The artwork is a still image, so the animation is read off the only motion
- * cue in it — the three speed lines. The mark arrives the way the lines say it
- * travels: they streak in from the left, longest first, the K rides in behind
- * them, and the P lands last, growing out of the point where it overlaps the
- * K's arm. About 1.2s end to end, once.
+ * The artwork is a still image, so the animation has to be read out of it. The
+ * only motion cue is the speed lines, and a speed line is a **wake**: it is what
+ * a thing leaves behind, not what arrives before it. So the letters land first
+ * and the streaks whip out backwards from under the K, top to bottom — about a
+ * second end to end, once.
  *
- * Each line overshoots slightly and settles rather than stopping dead, which is
- * one spring instead of a streak-then-retract pair — fewer moving parts, and
- * nothing to get out of step when the stagger changes.
+ * Each streak grows along its own length from its right-hand end, which is the
+ * end buried under the K's stem. It therefore appears to be drawn out from
+ * behind the letter, and because that end never moves there is no moment where a
+ * line and the stem are out of register. `brandMark.json` runs every line on
+ * under the stem for exactly this.
  *
- * Each part is its own layer and every step is a transform or an opacity, so
- * the whole sequence runs on the UI thread.
+ * Each part is its own layer and every step is a transform or an opacity, so the
+ * whole sequence runs on the UI thread.
  */
 
 type Paint = {
@@ -44,7 +46,7 @@ type Paint = {
 type Part = { box: number[]; paths: { d: string; paint?: string }[] };
 
 const PAINTS: Record<string, Paint> = art.paints;
-type PartName = 'speedLine1' | 'speedLine2' | 'speedLine3' | 'kLetter' | 'pLetter';
+type PartName = 'speedLine1' | 'speedLine2' | 'speedLine3' | 'speedLine4' | 'kLetter' | 'pLetter';
 const PARTS: Record<PartName, Part> = art.parts;
 
 /** Height of the mark when it is drawn `width` wide. */
@@ -102,12 +104,11 @@ function PartArt({ part, scale, uid }: { part: Part; scale: number; uid: string 
 type LayerProps = { part: Part; scale: number; delay: number; uid: string };
 
 /**
- * A speed line arriving from the left.
+ * A speed line drawing itself out backwards from under the K.
  *
- * It travels in by its own length plus the room to its left, so a short line
- * and a long one both enter from off the mark rather than appearing mid-air,
- * and the spring's overshoot is what makes it read as speed rather than as a
- * bar sliding into a slot.
+ * The scale pivots on the box's right edge — the end the stem covers — so the
+ * line lengthens to the left and its buried end never moves. The spring's
+ * overshoot is what makes it read as a whip rather than as a bar being extruded.
  */
 function Streak({ part, scale, delay, uid }: LayerProps) {
   const progress = useSharedValue(0);
@@ -116,10 +117,12 @@ function Streak({ part, scale, delay, uid }: LayerProps) {
     progress.value = withDelay(delay, withSpring(1, spring.snappy));
   }, [delay, progress]);
 
-  const travel = (part.box[0] + part.box[2]) * scale;
+  const halfW = (part.box[2] * scale) / 2;
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: Math.min(1, progress.value * 2.4),
-    transform: [{ translateX: -(1 - progress.value) * travel }],
+    // Fades in over the first half of the growth, so the shortest moment of a
+    // line — a stub a few units long — is not a dot beside the letter.
+    opacity: Math.min(1, progress.value * 2),
+    transform: [{ translateX: halfW * (1 - progress.value) }, { scaleX: progress.value }],
   }));
 
   return (
@@ -129,17 +132,17 @@ function Streak({ part, scale, delay, uid }: LayerProps) {
   );
 }
 
-/** The K, riding in behind the lines and settling onto the baseline. */
+/** The K, arriving from the left at speed and settling. */
 function Letter({ part, scale, delay, uid }: LayerProps) {
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withDelay(delay, withSpring(1, spring.gentle));
+    progress.value = withDelay(delay, withSpring(1, spring.snappy));
   }, [delay, progress]);
 
-  const travel = part.box[2] * scale * 0.35;
+  const travel = part.box[2] * scale * 0.42;
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: Math.min(1, progress.value * 1.8),
+    opacity: Math.min(1, progress.value * 2.2),
     transform: [{ translateX: -(1 - progress.value) * travel }],
   }));
 
@@ -150,7 +153,7 @@ function Letter({ part, scale, delay, uid }: LayerProps) {
   );
 }
 
-/** The P, growing out of its lower-left corner, where it meets the K's arm. */
+/** The P, unfurling out of its lower-left corner, where it meets the K's arm. */
 function Grow({ part, scale, delay, uid }: LayerProps) {
   const progress = useSharedValue(0);
 
@@ -161,11 +164,11 @@ function Grow({ part, scale, delay, uid }: LayerProps) {
   const halfW = (part.box[2] * scale) / 2;
   const halfH = (part.box[3] * scale) / 2;
   const animatedStyle = useAnimatedStyle(() => {
-    const s = 0.4 + 0.6 * progress.value;
+    const s = 0.55 + 0.45 * progress.value;
     // A scale pivots on the centre; shifting by the pivot's offset times (1 - s)
     // pins the lower-left corner instead.
     return {
-      opacity: Math.min(1, progress.value * 2),
+      opacity: Math.min(1, progress.value * 2.4),
       transform: [{ translateX: -halfW * (1 - s) }, { translateY: halfH * (1 - s) }, { scale: s }],
     };
   });
@@ -191,15 +194,16 @@ export default function BrandMark({ width = 44, delay = 0 }: Props) {
 
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: settle.value }] }));
 
+  // The lines are listed first because the K has to paint over the end of each
+  // one; they move last because a wake follows what made it.
   return (
     <Animated.View style={[{ width, height: markHeight(width) }, animatedStyle]}>
-      {/* The longest line leads: the eye follows it in and the K arrives on it. */}
-      <Streak part={PARTS.speedLine2} scale={scale} delay={delay + step(0)} uid={`${uid}s2`} />
-      <Streak part={PARTS.speedLine1} scale={scale} delay={delay + step(1)} uid={`${uid}s1`} />
-      <Streak part={PARTS.speedLine3} scale={scale} delay={delay + step(1.5)} uid={`${uid}s3`} />
-      <Letter part={PARTS.kLetter} scale={scale} delay={delay + step(2)} uid={`${uid}k`} />
-      <Grow part={PARTS.pLetter} scale={scale} delay={delay + step(5)} uid={`${uid}p`} />
+      <Streak part={PARTS.speedLine1} scale={scale} delay={delay + step(2)} uid={`${uid}s1`} />
+      <Streak part={PARTS.speedLine2} scale={scale} delay={delay + step(2.5)} uid={`${uid}s2`} />
+      <Streak part={PARTS.speedLine3} scale={scale} delay={delay + step(3)} uid={`${uid}s3`} />
+      <Streak part={PARTS.speedLine4} scale={scale} delay={delay + step(3.5)} uid={`${uid}s4`} />
+      <Letter part={PARTS.kLetter} scale={scale} delay={delay + step(0)} uid={`${uid}k`} />
+      <Grow part={PARTS.pLetter} scale={scale} delay={delay + step(1)} uid={`${uid}p`} />
     </Animated.View>
   );
 }
-

@@ -17,15 +17,23 @@
  *   favicon.png            196², white, for the web build.
  *   notification-icon.png  96², white silhouette on transparent. Android draws only a
  *                          notification icon's alpha, so colour would be thrown away.
+ *   monochrome-icon.png    1024², the same silhouette for Android 13+ themed icons.
+ *
+ * Into web/public/ — the browser set, which used to be a hand copy of the above:
+ *
+ *   favicon-16/32.png, favicon.png, apple-touch-icon.png (180²),
+ *   pwa-192.png, pwa-512.png, pwa-maskable-512.png.
  *
  * And, into store-listing/ — artwork for the store pages, never bundled into the app:
  *
  *   play-icon-512.png      512², white, opaque. The Play Store's listing icon, composed
  *                          like icon.png; Play rounds the corners itself.
  *   feature-graphic.png    1024×500, white, opaque. The banner across the top of the Play
- *                          listing: the mark and the wordmark, "Hisab" in ink and "Kitab"
- *                          in the brand blue, as `Wordmark` sets them. The two words come
- *                          from src/constants/brand.ts, the name's one source.
+ *                          listing: the mark and the wordmark, "Kitna" in navy and "pay"
+ *                          in coral, as `Wordmark` sets them. The two words come from
+ *                          src/constants/brand.ts, the name's one source.
+ *   og-card.png            1200×630, for link previews. Kept out of web/public/ on
+ *                          purpose — see where it is rendered below.
  *
  * Rendering needs @resvg/resvg-js, which is deliberately not a dependency: the app
  * never uses it, and it ships a native binary per platform that every `npm ci` would
@@ -71,9 +79,9 @@ const APP_NAME_PARTS = (() => {
   return [match[1], match[2]];
 })();
 
-// Drawing order matters: the P paints over the tip of the K's arm, which is what
-// makes the two letters interlock.
-const PART_ORDER = ['speedLine1', 'speedLine2', 'speedLine3', 'kLetter', 'pLetter'];
+// Drawing order matters: the K paints over the right-hand end of every speed
+// line, which is what lets a line run on under the stem.
+const PART_ORDER = ['speedLine1', 'speedLine2', 'speedLine3', 'speedLine4', 'kLetter', 'pLetter'];
 const PATHS = PART_ORDER.flatMap((name) => {
   const part = art.parts[name];
   if (!part) throw new Error(`brandMark.json has no part named ${name} — PART_ORDER is out of date.`);
@@ -186,7 +194,7 @@ function render(file, options, dir = ASSETS) {
 }
 
 // Android masks the adaptive icon to a circle. 544 wide puts the mark's corners
-// 292px from the centre, inside the 313px safe radius — and 288 × 544/1024 is
+// 296px from the centre, inside the 313px safe radius — and 288 × 544/1024 is
 // exactly 153, which is brandMark.json's splashMarkWidth. The KP mark is wider
 // and shorter than the mark before it, so all three had to be re-solved.
 const ADAPTIVE_MARK_WIDTH = 544;

@@ -8,8 +8,8 @@ import { spring, step } from '@/theme/motion';
 /** The wordmark's size and the gap, as fractions of the mark's width. */
 export const NAME_SIZE = 0.295;
 export const NAME_GAP = 0.09;
-/** The name arrives as the P lands — `BrandMark` starts the P at step(5). */
-export const NAME_AT = step(8);
+/** The name arrives behind the last streak — `BrandMark` starts that at step(3.5). */
+export const NAME_AT = step(6);
 
 type Props = {
   /** The mark's width in dp. The name is sized from it. */
@@ -33,9 +33,9 @@ type Props = {
  * The mark and the name, drawn in once.
  *
  * The one place the full lockup animates, so the splash and anything else that
- * wants it stay in step. `BrandMark` owns the mark's own sequence — the speed
- * lines, the K, the P — and this adds the name beneath it and says when the
- * whole thing has finished.
+ * wants it stay in step. `BrandMark` owns the mark's own sequence — the K, the
+ * P, then the four streaks behind them — and this adds the name beneath it and
+ * says when the whole thing has finished.
  */
 export default function AnimatedLogo({ size, autoplay = true, onFinish, onNameHeight, children, style }: Props) {
   const gap = Math.round(size * NAME_GAP);

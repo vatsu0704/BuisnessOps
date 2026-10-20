@@ -20,8 +20,8 @@ type Props = {
 /** The wordmark's size and the gap, as fractions of the mark's width. */
 const NAME_SIZE = 0.295;
 const NAME_GAP = 0.09;
-/** The wordmark arrives as the P lands. */
-const NAME_AT = step(8);
+/** The wordmark arrives behind the last streak, which leaves at step(3.5). */
+const NAME_AT = step(6);
 const NAME_MS = 320;
 
 /**

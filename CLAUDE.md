@@ -514,14 +514,24 @@ branch card kept showing a stale list until the app was killed and reopened.
   hex codes; the red one for Log out and for an irreversible final step is
   `DangerButton` (`outline` / `solid`), not a third inline copy of its style.
 - **The mark is drawn once, in `src/constants/brandMark.json`** — the KP monogram,
-  fitted to Béziers from the supplied logo **image**, so it is an approximation of
-  that artwork rather than a copy of a vector. Its parts are `speedLine1..3`,
-  `kLetter` and `pLetter`, and those names are a **closed set in four places**: the
-  `PartName` union in `frontend/src/components/BrandMark.tsx` and in
-  `web/src/components/brand/BrandMark.tsx`, the `LAYERS` table in the web one, and
-  `PART_ORDER` in `scripts/generate-brand-assets.js` (which throws if a name goes
-  missing). Adding or renaming a part means all four. Drawing order matters: the P
-  paints over the tip of the K's arm, which is what makes the two letters interlock.
+  fitted from the supplied logo **image**, so it is an approximation of that
+  artwork rather than a copy of a vector. A measured one: the outline is the
+  half-coverage contour of the anti-aliased raster fitted to cubic Béziers, and
+  re-rendered at the original size it is within about a pixel of it. Its parts are
+  `speedLine1..4`, `kLetter` and `pLetter`, and those names are a **closed set in
+  four places**: the `PartName` union in `frontend/src/components/BrandMark.tsx`
+  and in `web/src/components/brand/BrandMark.tsx`, the `LAYERS` table in the web
+  one, and `PART_ORDER` in `scripts/generate-brand-assets.js` (which throws if a
+  name goes missing). Adding or renaming a part means all four.
+- **The K and the P never overlap, and the speed lines run under the K.** In the
+  artwork a white keyline separates the two letters where the K passes in front,
+  so the P is traced *as it is seen* — already cut. The gap is therefore geometry
+  rather than a white shape, which is why the mark works on a dark background and
+  why either letter can move without the other. Lines 1 and 4 touch the stem in
+  the artwork and here run all the way through it, because each line animates by
+  growing from its right-hand end and that end has to stay hidden; lines 2 and 3
+  stop short of the stem in the artwork and keep their round caps. Drawing order
+  therefore matters only for the lines: the K paints over them.
 - **`npm run brand:assets` renders every raster from it** — and nothing in CI checks
   they are in step, so run it in the same change as a change to the drawing. It
   writes `web/public/`'s icon set too; that folder used to be a hand copy of

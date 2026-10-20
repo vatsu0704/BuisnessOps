@@ -10,11 +10,11 @@ import styles from './BrandMark.module.css';
  * logo on the web cannot drift from the logo on the phone.
  *
  * It draws itself the way the app's does, and for the same reason: the artwork
- * is a still image, so the motion is read off the only cue in it — the three
- * speed lines. They streak in from the left, longest first, the K rides in
- * behind them, and the P lands last out of the point where it overlaps the K's
- * arm. Each part is its own layer and every step is a transform or an opacity,
- * so it runs on the compositor.
+ * is a still image, so the motion is read off the only cue in it — the speed
+ * lines. A speed line is a wake, so the letters land first and the streaks whip
+ * out backwards from under the K, each growing from the end the stem covers so
+ * that end never moves. Each part is its own layer and every step is a transform
+ * or an opacity, so it runs on the compositor.
  *
  * `prefers-reduced-motion` shows it finished. That was claimed here before it
  * was true — the rule did not exist — so it is now a media query in the
@@ -30,7 +30,7 @@ type Paint = {
   stops: { offset: number; color: string }[];
 };
 type Part = { box: number[]; paths: { d: string; paint?: string }[] };
-type PartName = 'speedLine1' | 'speedLine2' | 'speedLine3' | 'kLetter' | 'pLetter';
+type PartName = 'speedLine1' | 'speedLine2' | 'speedLine3' | 'speedLine4' | 'kLetter' | 'pLetter';
 
 const PAINTS: Record<string, Paint> = art.paints;
 const PARTS: Record<PartName, Part> = art.parts;
@@ -77,13 +77,17 @@ function PartArt({ part, scale, uid }: { part: Part; scale: number; uid: string 
   );
 }
 
-/** The longest line leads: the eye follows it in and the K arrives on it. */
+/**
+ * Listed in paint order — the K has to cover the end of every line — and timed
+ * the other way round, because a wake follows what made it.
+ */
 const LAYERS: { name: PartName; motion: 'streak' | 'letter' | 'grow'; order: number }[] = [
-  { name: 'speedLine2', motion: 'streak', order: 0 },
-  { name: 'speedLine1', motion: 'streak', order: 1 },
-  { name: 'speedLine3', motion: 'streak', order: 1.5 },
-  { name: 'kLetter', motion: 'letter', order: 2 },
-  { name: 'pLetter', motion: 'grow', order: 5 },
+  { name: 'speedLine1', motion: 'streak', order: 2 },
+  { name: 'speedLine2', motion: 'streak', order: 2.5 },
+  { name: 'speedLine3', motion: 'streak', order: 3 },
+  { name: 'speedLine4', motion: 'streak', order: 3.5 },
+  { name: 'kLetter', motion: 'letter', order: 0 },
+  { name: 'pLetter', motion: 'grow', order: 1 },
 ];
 
 type Props = {
@@ -119,9 +123,9 @@ export default function BrandMark({ width = 44, delay = 0, animate = true, class
                 width: w * scale,
                 height: h * scale,
                 '--layer-delay': `${delay + step(order)}ms`,
-                // How far it comes in from: a line by its own length plus the
-                // room to its left, so a short one still enters from off the mark.
-                '--travel': `${(motion === 'streak' ? x + w : w * 0.35) * scale}px`,
+                // How far the K comes in from. A streak needs none: it grows
+                // along its own length from the end the stem covers.
+                '--travel': `${w * 0.42 * scale}px`,
               } as CSSProperties
             }
           >

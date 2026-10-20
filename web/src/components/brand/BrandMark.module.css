@@ -15,21 +15,23 @@
   display: block;
 }
 
-/* A speed line arriving from the left. The overshoot is what makes it read as
-   speed rather than as a bar sliding into a slot — the app's spring does the
-   same thing, approximated here as a curve that passes its end point. */
+/* A speed line drawing itself out backwards from under the K. It grows along
+   its own length from its right-hand end — the end the stem covers — so that
+   end never moves and the line and the letter are never out of register. The
+   overshoot is what makes it read as a whip; the app's spring does the same. */
 .streak {
-  animation: streak 480ms var(--ease-snappy) backwards;
+  transform-origin: 100% 50%;
+  animation: streak 420ms var(--ease-snappy) backwards;
   animation-delay: var(--layer-delay);
 }
 
-/* The K, riding in behind the lines and settling. */
+/* The K, arriving from the left at speed and settling. */
 .letter {
-  animation: ride 560ms var(--ease-gentle) backwards;
+  animation: ride 520ms var(--ease-snappy) backwards;
   animation-delay: var(--layer-delay);
 }
 
-/* The P, growing out of its lower-left corner, where it meets the K's arm. */
+/* The P, unfurling out of its lower-left corner, where it meets the K's arm. */
 .grow {
   transform-origin: 0% 100%;
   animation: grow 460ms var(--ease-snappy) backwards;
@@ -50,12 +52,14 @@
   }
 }
 
+/* The opacity trails the length on purpose: the shortest moment of a line is a
+   stub a few pixels long, and it should not read as a dot beside the letter. */
 @keyframes streak {
   from {
     opacity: 0;
-    transform: translateX(calc(var(--travel) * -1));
+    transform: scaleX(0);
   }
-  45% {
+  50% {
     opacity: 1;
   }
   to {
@@ -81,7 +85,7 @@
 @keyframes grow {
   from {
     opacity: 0;
-    transform: scale(0.4);
+    transform: scale(0.55);
   }
   50% {
     opacity: 1;

@@ -2716,16 +2716,30 @@ two colours now.
 
 ### Part 3 — the mark ✅
 
-Three speed lines, a navy K, a coral P. Fitted to Béziers from the supplied logo
-**image**, so it is an approximation — the original vector would replace
-`brandMark.json` with nothing else changing. Built upright and sheared by 0.26 of
-its height, because every edge leans at the same angle.
+Four speed lines, a navy K, a coral P. Fitted from the supplied logo **image**, so
+it is an approximation — the original vector would replace `brandMark.json` with
+nothing else changing — but a measured one rather than a hand-drawn one. The
+outline is the half-coverage contour of the anti-aliased raster, taken with
+marching squares and fitted to cubic Béziers; the speed lines are built as tapered
+stadiums, which is what the artwork draws; and both gradients are the mean colour
+in bins along the axis that best explains the shading, found by sweeping the axis.
+Rendered back at the original size the result differs from the artwork by about a
+pixel of outline and 7/255 of colour, the remainder being a soft fold on the P
+that one linear gradient cannot carry.
 
-The animation is read off the only motion cue a still image has, the speed lines:
-they streak in from the left, longest first, the K rides in behind them, the P
-lands last out of the point where it overlaps the K's arm. ~1.2s, once, transform
-and opacity only. No Lottie, no Framer Motion — both would be a second drawing or
-a new runtime for something the two apps already do.
+Two facts about the artwork drive the layering. The K passes **in front of** the P
+with a white keyline between them, so the P is traced as it is seen — already cut —
+and the gap lives in the geometry rather than in a white shape. And the speed lines
+pass **behind** the K.
+
+The animation is read off the only motion cue a still image has, the speed lines —
+and a speed line is a **wake**, so it follows. The K arrives from the left at
+speed, the P unfurls out of its lower-left corner where it meets the K's arm, and
+then the four streaks whip out backwards from under the stem, top to bottom. Each
+grows along its own length from the end the stem covers, so that end never moves
+and a line is never out of register with the letter. ~1.0s, once, transform and
+opacity only. No Lottie, no Framer Motion — both would be a second drawing or a
+new runtime for something the two apps already do.
 
 `prefers-reduced-motion` on the web was **claimed in a comment and not implemented**;
 it is now a media query, and `AnimatedLogo`'s `onFinish` fires under it so nobody
