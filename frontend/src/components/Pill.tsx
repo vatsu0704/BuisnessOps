@@ -6,9 +6,9 @@ export type PillTone = 'brand' | 'muted' | 'success' | 'warning' | 'danger';
 
 const TONES: Record<PillTone, { tint: string; background: string }> = {
   brand: { tint: colors.primary, background: colors.primaryLight },
-  muted: { tint: colors.textSecondary, background: '#F1F1F5' },
-  success: { tint: colors.success, background: '#E8F6ED' },
-  warning: { tint: colors.warning, background: '#FDF3E3' },
+  muted: { tint: colors.textSecondary, background: colors.mutedBg },
+  success: { tint: colors.success, background: colors.successBg },
+  warning: { tint: colors.warning, background: colors.warningBg },
   danger: { tint: colors.error, background: colors.errorBg },
 };
 

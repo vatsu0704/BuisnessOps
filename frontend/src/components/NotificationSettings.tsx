@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   deviceWarning: {
     flexDirection: 'row',
     gap: spacing.sm,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warningBg,
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.sm,

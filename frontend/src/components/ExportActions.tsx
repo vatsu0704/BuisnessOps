@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   warning: {
     flexDirection: 'row',
     gap: spacing.sm,
-    backgroundColor: '#FDF3E3',
+    backgroundColor: colors.warningBg,
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.sm,

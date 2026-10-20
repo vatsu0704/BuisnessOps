@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     marginTop: spacing.sm,
   },
-  bannerOk: { backgroundColor: '#F0FDF4' },
+  bannerOk: { backgroundColor: colors.successBg },
   bannerError: { backgroundColor: colors.errorBg },
   bannerText: { fontSize: 13, flex: 1 },
   bannerTextOk: { color: colors.success },

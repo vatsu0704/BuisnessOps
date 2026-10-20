@@ -103,7 +103,7 @@ thead .num {
 }
 
 .table tbody tr:hover .focus {
-  background: #e3e1fc;
+  background: var(--color-primary-light);
 }
 
 .focus .monthButton {

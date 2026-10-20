@@ -37,7 +37,7 @@ export default function FormInput({ label, icon, isPassword, hint, onFocus, onBl
   }));
 
   const animatedIconStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(focusProgress.value, [0, 1], ['#FAFAFB', colors.primaryLight]),
+    backgroundColor: interpolateColor(focusProgress.value, [0, 1], [colors.background, colors.primaryLight]),
   }));
 
   return (

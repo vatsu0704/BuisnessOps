@@ -44,12 +44,12 @@ export default function SyncPill({ state, pendingCount, attentionCount }: Props)
     icon = 'lock-closed-outline';
     text = t('counter.sync.blocked', { count: pendingCount });
     tint = colors.warning;
-    background = '#FDF3E3';
+    background = colors.warningBg;
   } else if (state === 'offline') {
     icon = 'cloud-offline-outline';
     text = t('counter.sync.offline', { count: pendingCount });
     tint = colors.warning;
-    background = '#FDF3E3';
+    background = colors.warningBg;
   } else {
     icon = 'cloud-upload-outline';
     text = t('counter.sync.pending', { count: pendingCount });

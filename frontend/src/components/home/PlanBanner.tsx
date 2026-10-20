@@ -25,7 +25,7 @@ import { step } from '@/theme/motion';
 const TONES: Record<PlanBannerKind, { tint: string; background: string; icon: keyof typeof Ionicons.glyphMap }> = {
   trialEnding: { tint: colors.primary, background: colors.primaryLight, icon: 'time-outline' },
   // The same warning wash Pill uses, so a warning reads the same everywhere.
-  grace: { tint: colors.warning, background: '#FDF3E3', icon: 'alert-circle-outline' },
+  grace: { tint: colors.warning, background: colors.warningBg, icon: 'alert-circle-outline' },
   readOnly: { tint: colors.error, background: colors.errorBg, icon: 'lock-closed-outline' },
 };
 

@@ -37,10 +37,10 @@ const styles = StyleSheet.create({
   eyebrow: {
     fontSize: 11,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.75)',
+    color: colors.textOnPrimaryMuted,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   title: { fontSize: 20, fontWeight: '800', color: colors.white, marginTop: spacing.sm },
-  subtitle: { fontSize: 13, color: 'rgba(255,255,255,0.86)', marginTop: spacing.xs, lineHeight: 19 },
+  subtitle: { fontSize: 13, color: colors.textOnPrimaryMuted, marginTop: spacing.xs, lineHeight: 19 },
 });

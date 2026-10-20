@@ -356,7 +356,7 @@ async function generateSalarySlipPdf(slip) {
     styles: {
       header: { fontSize: 18, bold: true, margin: [0, 0, 0, 4] },
       subheader: { fontSize: 13, margin: [0, 0, 0, 12] },
-      footer: { fontSize: 9, color: '#666666', margin: [0, 24, 0, 0] },
+      footer: { fontSize: 9, color: '#71717A', margin: [0, 24, 0, 0] },
     },
   };
 

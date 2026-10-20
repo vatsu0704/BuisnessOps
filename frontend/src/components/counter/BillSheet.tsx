@@ -126,7 +126,7 @@ export default function BillSheet({ bill, currency, canVoid, canPrint, busy, err
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(24,24,27,0.45)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   sheet: {
     maxHeight: '90%',
     backgroundColor: colors.background,

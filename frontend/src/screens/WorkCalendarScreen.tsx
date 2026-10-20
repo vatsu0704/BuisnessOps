@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   chipItem: { flex: 1 },
   hint: { fontSize: 11.5, color: colors.textTertiary, marginTop: spacing.sm, lineHeight: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
-  divided: { borderTopWidth: 1, borderTopColor: '#F4F4F5' },
+  divided: { borderTopWidth: 1, borderTopColor: colors.divider },
   rowText: { flex: 1 },
   name: { fontSize: 14.5, fontWeight: '700', color: colors.text },
   meta: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },

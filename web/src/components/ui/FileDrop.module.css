@@ -4,7 +4,7 @@
   align-items: center;
   gap: 4px;
   padding: var(--space-xl) var(--space-lg);
-  border: 1.5px dashed #c9c6f7;
+  border: 1.5px dashed var(--color-primary-light);
   border-radius: var(--radius-lg);
   background: var(--color-primary-light);
   text-align: center;
@@ -20,7 +20,7 @@
 
 .over {
   transform: scale(1.01);
-  background: #e3e1fc;
+  background: var(--color-primary-light);
 }
 
 .zone:has(input:focus-visible) {

@@ -10,10 +10,10 @@
   justify-content: center;
 }
 
-.ink {
-  color: var(--color-text);
+.navy {
+  color: var(--color-primary);
 }
 
-.blue {
-  color: var(--color-primary);
+.coral {
+  color: var(--color-accent);
 }

@@ -18,7 +18,7 @@
 }
 
 .tile:hover {
-  border-color: #c9c6f7;
+  border-color: var(--color-primary-light);
 }
 
 .tile:active {
@@ -57,7 +57,7 @@
 }
 
 .selected .caption {
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--color-text-on-primary-muted);
 }
 
 @keyframes pop {

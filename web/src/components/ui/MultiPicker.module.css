@@ -37,7 +37,7 @@
 }
 
 .field:hover:not(:disabled) {
-  border-color: #c9c6f7;
+  border-color: var(--color-primary-light);
 }
 
 .field:focus-visible {

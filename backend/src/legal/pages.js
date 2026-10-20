@@ -1,4 +1,4 @@
-const { BRAND } = require('../documents/layout');
+const { BRAND, ACCENT } = require('../documents/layout');
 const { isComplete } = require('./operator');
 
 /**
@@ -82,19 +82,20 @@ function page(title, body) {
 <title>${escapeHtml(title)} — KitnaPay</title>
 <style>
   :root { color-scheme: light; }
-  body { margin: 0; background: #F6F7FB; color: #1B1D2A;
+  body { margin: 0; background: #FAFAFB; color: #18181B;
          font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", sans-serif; }
   main { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
-  .brand { font-weight: 800; font-size: 20px; letter-spacing: -0.3px; }
-  .brand span { color: ${BRAND}; }
+  .brand { font-weight: 800; font-size: 20px; letter-spacing: -0.3px; color: ${BRAND}; }
+  /* The wordmark as the logo sets it: "Kitna" navy, "pay" coral. */
+  .brand span { color: ${ACCENT}; }
   h1 { font-size: 28px; line-height: 1.25; margin: 24px 0 4px; letter-spacing: -0.5px; }
-  .updated { color: #5B6075; font-size: 14px; margin: 0 0 28px; }
+  .updated { color: #71717A; font-size: 14px; margin: 0 0 28px; }
   h2 { font-size: 19px; margin: 32px 0 8px; color: ${BRAND}; }
   ul { padding-left: 22px; }
   li { margin: 4px 0; }
   a { color: ${BRAND}; }
   .card { background: #FFFFFF; border-radius: 14px; padding: 4px 22px 18px; box-shadow: 0 1px 3px rgba(20, 22, 40, 0.08); }
-  .notice { background: #FFF6E5; border: 1px solid #F1C66B; border-radius: 10px; padding: 12px 16px; margin: 8px 0; }
+  .notice { background: #FDF3E3; border: 1px solid #E8C07A; border-radius: 10px; padding: 12px 16px; margin: 8px 0; }
   .operator { line-height: 1.5; }
   .steps li { margin: 8px 0; }
 </style>

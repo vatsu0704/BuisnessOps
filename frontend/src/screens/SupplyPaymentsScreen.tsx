@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: '#E8F6ED',
+    backgroundColor: colors.successBg,
     padding: spacing.md,
     borderRadius: radius.md,
   },

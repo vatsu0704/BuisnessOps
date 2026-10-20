@@ -8,7 +8,7 @@
   flex-direction: column;
   width: var(--sidebar-width);
   border-right: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--color-text-on-primary-muted);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -87,7 +87,7 @@
 }
 
 .link:hover {
-  background: rgba(69, 57, 227, 0.06);
+  background: rgba(var(--primary-rgb), 0.06);
   color: var(--color-text);
 }
 
@@ -151,7 +151,7 @@
     inset: 0;
     z-index: 39;
     display: block;
-    background: rgba(24, 24, 27, 0.45);
+    background: var(--color-scrim);
     animation: fade var(--duration-base) ease;
   }
 }

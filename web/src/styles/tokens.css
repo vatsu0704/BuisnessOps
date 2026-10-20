@@ -11,27 +11,59 @@
 :root {
   color-scheme: light;
 
-  /* colors */
-  --color-primary: #4539e3;
-  --color-primary-dark: #3a2fc4;
-  --color-primary-light: #eeedfd;
+  /* colors — frontend/src/theme/index.ts mirrors this name for name.
+
+     Navy leads and coral accents, and that is a measurement not a preference:
+     navy is 14.0:1 on white, coral is 3.37:1 and fails AA for body text, and
+     white on a coral fill fails too. So coral is the mark, the "pay" of the
+     wordmark and large figures; --color-accent-strong (5.7:1) is what carries
+     coral text and the label on a coral fill. --color-error is deeper than the
+     stock red because coral sits close enough to it that a loss figure and
+     ordinary brand chrome would have read alike. */
+  --color-primary: #042a5e;
+  --color-primary-dark: #021c40;
+  --color-primary-light: #e7edf6;
+  --color-accent: #fd494a;
+  --color-accent-strong: #c81e1f;
+  --color-accent-light: #fdddde;
   --color-background: #fafafb;
   --color-surface: #ffffff;
   --color-border: #e4e4e7;
+  /* A field's border on hover — visibly darker than the resting one. */
+  --color-border-strong: #d4d4d8;
+  /* A hairline between rows — lighter than the border that outlines a shape. */
+  --color-divider: #f4f4f5;
   --color-text: #18181b;
   --color-text-secondary: #71717a;
   --color-text-tertiary: #a1a1aa;
-  --color-error: #dc2626;
+  --color-error: #b42318;
   --color-error-bg: #fef2f2;
   --color-success: #16a34a;
   --color-success-bg: #e8f6ed;
   --color-warning: #d97706;
   --color-warning-bg: #fdf3e3;
   --color-muted-bg: #f1f1f5;
+  /* Warning wording on the warning surface; --color-warning itself is 3.2:1. */
+  --color-warning-strong: #92400e;
+  /* On the brand gradient. The muted pair had drifted to four different alphas. */
+  --color-text-on-primary: #ffffff;
+  --color-text-on-primary-muted: rgba(255, 255, 255, 0.86);
+  --color-surface-on-primary: rgba(255, 255, 255, 0.18);
+  /* Behind a dialog or a drawer. */
+  --color-scrim: rgba(24, 24, 27, 0.45);
   --color-white: #ffffff;
 
-  /* The brand fill for buttons, hero cards and avatars (gradient.brand). */
-  --gradient-brand: linear-gradient(135deg, #5b4ff0 0%, var(--color-primary-dark) 100%);
+  /* Primary as its own channels, so anything needing it at an opacity can say
+     so instead of re-typing the hex as decimal rgb — which is how five places
+     kept the previous brand colour after it had been changed everywhere else. */
+  --primary-rgb: 4, 42, 94;
+  --accent-rgb: 253, 73, 74;
+  /* The brand fill for buttons, hero cards and avatars. Navy, not coral:
+     white text clears AA across the whole of it (10.7:1 at the light end),
+     which white on coral does not. */
+  --gradient-brand: linear-gradient(135deg, #0b3c7e 0%, var(--color-primary) 100%);
+  /* The coral pair — the mark and hero art, never small text. */
+  --gradient-accent: linear-gradient(135deg, #fd6b5b 0%, var(--color-accent) 100%);
   --gradient-disabled: linear-gradient(135deg, #c7c7cc 0%, #aeaeb2 100%);
 
   /* spacing */
@@ -74,5 +106,5 @@
   --sidebar-width: 264px;
   --topbar-height: 64px;
   --content-max: 1180px;
-  --focus-ring: 0 0 0 3px rgba(69, 57, 227, 0.28);
+  --focus-ring: 0 0 0 3px rgba(var(--primary-rgb), 0.28);
 }

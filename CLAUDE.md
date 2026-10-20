@@ -521,9 +521,22 @@ branch card kept showing a stale list until the app was killed and reopened.
   Play listing's icon and feature graphic into `frontend/store-listing/`, so the
   in-app logo, the launcher icon and the store page cannot drift apart. Change
   the JSON, re-run the script (its header says how to get its renderer, which is
-  deliberately not a dependency), then rebuild. Its `blue` is also
-  `colors.primary`, and the backend's printed documents and legal pages repeat it
-  as `BRAND` in `documents/layout.js`.
+  deliberately not a dependency), then rebuild. Its **`navy` and `coral` are also
+  `colors.primary` and `colors.accent`**, so the UI and the mark beside it cannot
+  drift; the backend's printed documents and legal pages repeat the pair as
+  `BRAND` and `ACCENT` in `documents/layout.js`, the one copy a PDF cannot import.
+- **Navy leads and coral accents, and that is a measurement.** Navy is 14.0:1 on
+  white; **coral is 3.37:1**, which fails AA for body text, and white on a coral
+  fill fails too — a coral button with a normal-size label is unreadable to the
+  standard, and coral on the light pink is 2.66:1. So coral is the mark, the
+  "pay" of the wordmark and large figures, and `accentStrong` (5.7:1) carries
+  coral *text* and the label on a coral fill. `error` is deeper than the stock
+  red for the same reason: coral sits close enough to `#DC2626` that a loss
+  figure and ordinary brand chrome would have read alike.
+- **Primary is also published as channels** — `--primary-rgb` in `tokens.css` —
+  so anything needing it at an opacity says `rgba(var(--primary-rgb), .28)`
+  rather than re-typing the hex as decimal. Five places had done the latter and
+  silently kept the previous brand colour after everything else had changed.
 
 ## Translations
 

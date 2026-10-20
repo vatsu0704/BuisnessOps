@@ -67,5 +67,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 13, fontWeight: '700', color: colors.text, textAlign: 'center' },
   titleSelected: { color: colors.white },
   caption: { fontSize: 11, color: colors.textTertiary, textAlign: 'center' },
-  captionSelected: { color: 'rgba(255,255,255,0.82)' },
+  captionSelected: { color: colors.textOnPrimaryMuted },
 });

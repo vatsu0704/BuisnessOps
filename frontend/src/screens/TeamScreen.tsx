@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
   },
   linkActionText: { fontSize: 13, fontWeight: '700', color: colors.primary },
   conflictCard: {
-    backgroundColor: '#FDF3E3',
+    backgroundColor: colors.warningBg,
     borderRadius: radius.lg,
     padding: spacing.lg,
     gap: spacing.xs,

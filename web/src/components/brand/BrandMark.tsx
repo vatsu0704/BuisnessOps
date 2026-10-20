@@ -65,7 +65,7 @@ function PartArt({ part, scale, uid }: { part: Part; scale: number; uid: string 
         })}
       </defs>
       {part.paths.map((path, index) => (
-        <path key={index} d={path.d} fill={path.paint ? `url(#${uid}-${path.paint})` : art.blue} />
+        <path key={index} d={path.d} fill={path.paint ? `url(#${uid}-${path.paint})` : art.navy} />
       ))}
     </svg>
   );

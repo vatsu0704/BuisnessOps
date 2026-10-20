@@ -25,7 +25,7 @@
 }
 
 .row:hover {
-  border-color: #d4d4f6;
+  border-color: var(--color-primary-light);
 }
 
 .row:active {
@@ -33,7 +33,7 @@
 }
 
 .rowUnread {
-  border-color: rgba(69, 57, 227, 0.35);
+  border-color: rgba(var(--primary-rgb), 0.35);
   background: linear-gradient(0deg, rgba(238, 237, 253, 0.55), rgba(238, 237, 253, 0.55)), var(--color-surface);
 }
 

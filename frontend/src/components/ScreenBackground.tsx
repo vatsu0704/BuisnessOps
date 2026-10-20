@@ -47,11 +47,13 @@ export default function ScreenBackground() {
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <LinearGradient colors={['#FCFCFF', '#EEF0FB']} style={StyleSheet.absoluteFill} />
+      {/* The page itself: white easing into the faintest navy. Not tokens — this is
+          art, and it has to stay far lighter than any surface drawn on top of it. */}
+      <LinearGradient colors={['#FCFCFF', '#EDF1F8']} style={StyleSheet.absoluteFill} />
       <Blob
-        id="bgIndigo"
+        id="bgNavy"
         size={width * 1.15}
-        color="#6366F1"
+        color="#1E4E8C"
         opacity={0.3}
         top={-width * 0.5}
         left={width * 0.15}
@@ -60,10 +62,10 @@ export default function ScreenBackground() {
         duration={9000}
       />
       <Blob
-        id="bgViolet"
+        id="bgCoral"
         size={width}
-        color="#8B5CF6"
-        opacity={0.24}
+        color="#FD494A"
+        opacity={0.16}
         top={height * 0.58}
         left={-width * 0.38}
         driftX={-12}
@@ -71,9 +73,9 @@ export default function ScreenBackground() {
         duration={11000}
       />
       <Blob
-        id="bgSky"
+        id="bgSteel"
         size={width * 0.75}
-        color="#38BDF8"
+        color="#6E9BD1"
         opacity={0.18}
         top={height * 0.28}
         left={width * 0.5}

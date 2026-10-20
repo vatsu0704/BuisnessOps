@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   errorText: { flex: 1, fontSize: 13, color: colors.error },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(24,24,27,0.45)',
+    backgroundColor: colors.scrim,
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },

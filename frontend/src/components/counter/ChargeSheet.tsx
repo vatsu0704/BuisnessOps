@@ -297,7 +297,7 @@ function Chip({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(24,24,27,0.45)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   sheet: {
     maxHeight: '94%',
     backgroundColor: colors.background,
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 14, fontWeight: '700', color: colors.text },
   chipTextSelected: { color: colors.primaryDark },
   changeBox: {
-    backgroundColor: '#E8F6ED',
+    backgroundColor: colors.successBg,
     borderRadius: radius.md,
     padding: spacing.md,
     gap: 2,

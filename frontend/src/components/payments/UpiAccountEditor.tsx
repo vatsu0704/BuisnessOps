@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   qrFrame: {
     padding: spacing.sm,
     borderRadius: radius.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },

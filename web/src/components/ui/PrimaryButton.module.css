@@ -17,7 +17,7 @@
 
 .button:hover:not(:disabled) {
   filter: brightness(1.06);
-  box-shadow: 0 8px 20px rgba(69, 57, 227, 0.28);
+  box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.28);
 }
 
 .button:active:not(:disabled) {

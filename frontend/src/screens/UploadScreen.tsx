@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   },
   dropTitle: { fontSize: 14.5, fontWeight: '700', color: colors.text, textAlign: 'center' },
   dropHint: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
-  columns: { marginTop: spacing.lg, backgroundColor: '#FAFAFC', borderRadius: radius.md, padding: spacing.md },
+  columns: { marginTop: spacing.lg, backgroundColor: colors.background, borderRadius: radius.md, padding: spacing.md },
   columnsLabel: {
     fontSize: 11,
     fontWeight: '700',
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   statRow: { flexDirection: 'row', gap: spacing.sm },
   stat: {
     flex: 1,
-    backgroundColor: '#FAFAFC',
+    backgroundColor: colors.background,
     borderRadius: radius.md,
     paddingVertical: spacing.md,
     alignItems: 'center',

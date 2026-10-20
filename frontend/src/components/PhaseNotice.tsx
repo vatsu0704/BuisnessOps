@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   body: { fontSize: 13.5, color: colors.textSecondary, lineHeight: 20, marginTop: spacing.sm },
   examples: {
     marginTop: spacing.lg,
-    backgroundColor: '#FAFAFC',
+    backgroundColor: colors.background,
     borderRadius: radius.md,
     padding: spacing.md,
     gap: spacing.sm,

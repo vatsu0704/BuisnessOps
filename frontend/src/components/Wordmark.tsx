@@ -32,8 +32,8 @@ export default function Wordmark({ size, align = 'left', style }: Props) {
       accessibilityRole="text"
       accessibilityLabel={APP_NAME}
     >
-      <Text style={[styles.word, type, styles.ink]}>{first}</Text>
-      <Text style={[styles.word, type, styles.blue]}>{second}</Text>
+      <Text style={[styles.word, type, styles.navy]}>{first}</Text>
+      <Text style={[styles.word, type, styles.coral]}>{second}</Text>
     </View>
   );
 }
@@ -42,6 +42,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', flexShrink: 1 },
   centred: { justifyContent: 'center' },
   word: { fontWeight: '800' },
-  ink: { color: colors.text },
-  blue: { color: colors.primary },
+  navy: { color: colors.primary },
+  coral: { color: colors.accent },
 });

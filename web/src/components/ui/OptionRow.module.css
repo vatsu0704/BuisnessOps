@@ -11,7 +11,7 @@
 }
 
 .row:hover {
-  border-color: #c9c6f7;
+  border-color: var(--color-primary-light);
 }
 
 .row:has(input:focus-visible) {

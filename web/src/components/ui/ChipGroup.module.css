@@ -38,7 +38,7 @@
 }
 
 .chip:hover {
-  border-color: #c9c6f7;
+  border-color: var(--color-primary-light);
 }
 
 .chip:has(input:focus-visible) {

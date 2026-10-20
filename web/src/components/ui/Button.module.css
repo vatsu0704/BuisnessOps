@@ -55,5 +55,5 @@
 }
 
 .dangerSolid:hover:not(:disabled) {
-  background: #b91c1c;
+  background: var(--color-accent-strong);
 }

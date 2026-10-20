@@ -13,7 +13,7 @@
 }
 
 .interactive:hover {
-  border-color: #d4d4f6;
+  border-color: var(--color-primary-light);
 }
 
 .interactive:hover .chevron {

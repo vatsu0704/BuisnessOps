@@ -18,7 +18,7 @@
 }
 
 .dialog::backdrop {
-  background: rgba(24, 24, 27, 0.45);
+  background: var(--color-scrim);
   animation: fade var(--duration-base) ease;
 }
 

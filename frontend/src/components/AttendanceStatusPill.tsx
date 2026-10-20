@@ -8,10 +8,10 @@ import type { AttendanceStatus } from '@/types/staffing';
  * press when marking a day is the colour the day wears afterwards.
  */
 export const ATTENDANCE_TONE: Record<AttendanceStatus, { bg: string; fg: string }> = {
-  PRESENT: { bg: '#DCFCE7', fg: colors.success },
-  HALF_DAY: { bg: '#FEF3C7', fg: colors.warning },
+  PRESENT: { bg: colors.successBg, fg: colors.success },
+  HALF_DAY: { bg: colors.warningBg, fg: colors.warning },
   ABSENT: { bg: colors.errorBg, fg: colors.error },
-  LEAVE: { bg: '#F1F1F5', fg: colors.textSecondary },
+  LEAVE: { bg: colors.mutedBg, fg: colors.textSecondary },
 };
 
 export default function AttendanceStatusPill({ status }: { status: AttendanceStatus }) {

@@ -22,8 +22,11 @@ const { html, raw, render } = require('./escape');
  *  - `font-variant-numeric: tabular-nums` on money so columns line up.
  */
 
-// The logo's blue — the app's colors.primary (frontend/src/constants/brandMark.json).
-const BRAND = '#4539E3';
+// The logo's two colours — the app's colors.primary and colors.accent, from
+// frontend/src/constants/brandMark.json. A document cannot import them, so this
+// is the one deliberate copy; change it with the theme.
+const BRAND = '#042A5E';
+const ACCENT = '#FD494A';
 const INK = '#18181B';
 const MUTED = '#71717A';
 const LINE = '#E4E4E7';
@@ -59,7 +62,7 @@ const STYLES = `
     display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px;
     font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
   }
-  .chip-draft { background: #FEF3C7; color: #92400E; }
+  .chip-draft { background: #FDF3E3; color: #92400E; }
   .chip-final { background: #DCFCE7; color: #166534; }
 
   .section { margin-top: 18px; }
@@ -167,4 +170,4 @@ function dataTable(columns, rows) {
   return html`<table class="data"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
-module.exports = { renderDocument, section, keyValues, statCards, dataTable, BRAND };
+module.exports = { renderDocument, section, keyValues, statCards, dataTable, BRAND, ACCENT };

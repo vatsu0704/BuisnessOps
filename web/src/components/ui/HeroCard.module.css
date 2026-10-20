@@ -21,7 +21,7 @@
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--color-text-on-primary-muted);
 }
 
 .title {
@@ -37,5 +37,5 @@
   margin-top: var(--space-xs);
   font-size: 13px;
   line-height: 19px;
-  color: rgba(255, 255, 255, 0.86);
+  color: var(--color-text-on-primary-muted);
 }

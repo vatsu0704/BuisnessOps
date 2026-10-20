@@ -69,7 +69,7 @@ export default function BranchRow({ branch, onPress, divided, testID }: Props) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
-  divided: { borderTopWidth: 1, borderTopColor: '#F4F4F5' },
+  divided: { borderTopWidth: 1, borderTopColor: colors.divider },
   dot: { width: 8, height: 8, borderRadius: 4 },
   text: { flex: 1 },
   name: { fontSize: 14.5, fontWeight: '700', color: colors.text },

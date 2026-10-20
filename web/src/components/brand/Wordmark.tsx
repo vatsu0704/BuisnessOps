@@ -27,10 +27,10 @@ export default function Wordmark({ size, align = 'left', className }: Props) {
   return (
     <span className={cx(styles.wordmark, align === 'center' && styles.centred, className)} style={type}>
       <span className="visually-hidden">{APP_NAME}</span>
-      <span className={styles.ink} aria-hidden="true">
+      <span className={styles.navy} aria-hidden="true">
         {first}
       </span>
-      <span className={styles.blue} aria-hidden="true">
+      <span className={styles.coral} aria-hidden="true">
         {second}
       </span>
     </span>

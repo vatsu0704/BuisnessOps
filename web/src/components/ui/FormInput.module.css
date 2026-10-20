@@ -34,7 +34,7 @@
 }
 
 .field:hover {
-  border-color: #d4d4d8;
+  border-color: var(--color-border-strong);
 }
 
 /* The animated border is the focus indicator, so the input's own ring is off. */

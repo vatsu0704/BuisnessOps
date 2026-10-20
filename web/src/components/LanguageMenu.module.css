@@ -14,7 +14,7 @@
 }
 
 .chip:hover {
-  background: #e2e0fc;
+  background: var(--color-primary-light);
 }
 
 .chip:active {

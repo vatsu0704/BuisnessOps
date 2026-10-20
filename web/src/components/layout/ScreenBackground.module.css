@@ -4,7 +4,7 @@
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
-  background: linear-gradient(180deg, #fcfcff 0%, #eef0fb 100%);
+  background: linear-gradient(180deg, #fcfcff 0%, #edf1f8 100%);
 }
 
 .blob {
@@ -18,7 +18,7 @@
   left: 18vw;
   width: 92vmax;
   height: 92vmax;
-  background: radial-gradient(closest-side, rgba(99, 102, 241, 0.3), rgba(99, 102, 241, 0));
+  background: radial-gradient(closest-side, rgba(30, 78, 140, 0.3), rgba(30, 78, 140, 0));
   animation: drift-a 9s ease-in-out infinite alternate;
 }
 
@@ -27,7 +27,7 @@
   left: -32vmax;
   width: 78vmax;
   height: 78vmax;
-  background: radial-gradient(closest-side, rgba(139, 92, 246, 0.24), rgba(139, 92, 246, 0));
+  background: radial-gradient(closest-side, rgba(253, 73, 74, 0.16), rgba(253, 73, 74, 0));
   animation: drift-b 11s ease-in-out infinite alternate;
 }
 
@@ -36,7 +36,7 @@
   left: 52vw;
   width: 60vmax;
   height: 60vmax;
-  background: radial-gradient(closest-side, rgba(56, 189, 248, 0.18), rgba(56, 189, 248, 0));
+  background: radial-gradient(closest-side, rgba(110, 155, 209, 0.18), rgba(110, 155, 209, 0));
   animation: drift-c 13s ease-in-out infinite alternate;
 }
 

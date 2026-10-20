@@ -51,7 +51,7 @@ export default function PrimaryButton({ title, loading, disabled, icon, style, o
         {...rest}
       >
         <LinearGradient
-          colors={isDisabled ? ['#C7C7CC', '#AEAEB2'] : gradient.brand}
+          colors={isDisabled ? gradient.disabled : gradient.brand}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.gradient}

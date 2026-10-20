@@ -1,5 +1,6 @@
 {
   "//": [
+    "The mark, traced from the supplied logo and fitted to cubic Beziers. navy and coral are the two brand colours: theme/index.ts reads both, so the UI and the logo cannot drift apart. Until KitnaPay there was one colour here and one primary; the mark now has two, so the pair is read rather than the single.",
     "The HisabKitab mark, traced from the supplied logo and fitted to cubic Beziers.",
     "This file is the ONE drawing of the mark: BrandMark.tsx renders it in the app and",
     "frontend/scripts/generate-brand-assets.js renders it into every PNG in assets/",
@@ -12,7 +13,6 @@
     "absence of paint, so they show whatever the mark sits on. The right stem's lower",
     "piece runs 3 units up under the ribbon so no hairline seam shows where they meet.",
     "",
-    "blue fills the arm (a path with no paint) and is also the app's primary colour",
     "(theme/index.ts), so the UI matches the logo. A paint names a gradient in paints.",
     "",
     "splashMarkWidth is the mark's width in dp on the launch splash. The system splash",
@@ -22,7 +22,8 @@
   ],
   "width": 1000,
   "height": 657,
-  "blue": "#4539E3",
+  "navy": "#042A5E",
+  "coral": "#FD494A",
   "splashMarkWidth": 140.625,
   "paints": {
     "stemUpper": {
@@ -31,8 +32,14 @@
       "x2": 0,
       "y2": 1,
       "stops": [
-        { "offset": 0, "color": "#303031" },
-        { "offset": 1, "color": "#131313" }
+        {
+          "offset": 0,
+          "color": "#303031"
+        },
+        {
+          "offset": 1,
+          "color": "#131313"
+        }
       ]
     },
     "stemLower": {
@@ -41,8 +48,14 @@
       "x2": 0,
       "y2": 1,
       "stops": [
-        { "offset": 0, "color": "#0F0F10" },
-        { "offset": 1, "color": "#38383A" }
+        {
+          "offset": 0,
+          "color": "#0F0F10"
+        },
+        {
+          "offset": 1,
+          "color": "#38383A"
+        }
       ]
     },
     "ribbon": {
@@ -52,15 +65,29 @@
       "x2": 1000,
       "y2": 0,
       "stops": [
-        { "offset": 0.07, "color": "#7C6DFB" },
-        { "offset": 0.27, "color": "#5244EE" },
-        { "offset": 0.46, "color": "#4438E2" }
+        {
+          "offset": 0.07,
+          "color": "#0B3C7E"
+        },
+        {
+          "offset": 0.27,
+          "color": "#073267"
+        },
+        {
+          "offset": 0.46,
+          "color": "#042A5E"
+        }
       ]
     }
   },
   "parts": {
     "leftStem": {
-      "box": [0, 0, 148, 656.9],
+      "box": [
+        0,
+        0,
+        148,
+        656.9
+      ],
       "paths": [
         {
           "d": "M0 10.7C0 4.8 4.8 0 10.7 0L137.2 0C143.1 0 147.9 4.8 147.9 10.7L147.9 251.8C119.2 271 105.5 282.1 79.4 304.2C74.6 308.3 68.9 312.3 64.9 317.1C52.4 332.2 39.6 347 26.9 361.9C17.1 373.2 9.5 386.6 0 398.3Z",
@@ -73,7 +100,12 @@
       ]
     },
     "rightStem": {
-      "box": [358.6, 0, 148.2, 656.9],
+      "box": [
+        358.6,
+        0,
+        148.2,
+        656.9
+      ],
       "paths": [
         {
           "d": "M358.6 8.4C358.6 3.7 362.3 0 366.9 0L498.4 0C503 0 506.7 3.7 506.7 8.4L506.7 219.1C453.2 200.1 415.6 193.3 358.6 192.2Z",
@@ -86,7 +118,12 @@
       ]
     },
     "ribbon": {
-      "box": [5.1, 231.4, 938.5, 425.5],
+      "box": [
+        5.1,
+        231.4,
+        938.5,
+        425.5
+      ],
       "paths": [
         {
           "d": "M943.5 649.1C941.1 652.1 939.9 655.7 935.6 656.7C920.1 656.8 859 656.8 838.8 656.8C805.6 656.8 769.8 656.8 739.4 647C716.9 635.6 692.4 603.4 675.2 584.6C646.8 553.5 541.7 442.4 512.3 425C400.1 358.5 234 359.9 118.4 419.4C86.2 436 56.6 457.3 30.6 482.1C22.1 490.2 14.9 499.5 5.4 506.2C1.8 478.5 39.8 416.8 56.5 393.2C122.9 299.2 233.1 228.7 351.6 231.5C566.6 236.6 677.7 365.3 813.8 510.5C837.3 535.5 933.6 627.9 943.5 649.1Z",
@@ -95,7 +132,12 @@
       ]
     },
     "arm": {
-      "box": [551.7, 0, 447.5, 280.2],
+      "box": [
+        551.7,
+        0,
+        447.5,
+        280.2
+      ],
       "paths": [
         {
           "d": "M832.6 0C873.7 0 914.8 0 955.8 0C963.9 0 994.5 0 999 3C1000 10.4 991.6 20.1 986.9 24.6C968.3 42.5 949.3 60.3 930.5 78.1C878.8 127.3 827.9 177.8 776 226.9C749.2 252.1 717.9 279.2 678.8 280C644.7 280.7 605.9 268.2 577.1 250.4C571.3 246.9 552 241.4 551.7 233.5C551.6 227.6 563.9 220.7 568.1 217.1C585.3 202.4 600.8 186.3 617.9 171.5C657.6 136.9 694.5 98 732.3 61.5C766.2 28.7 781 2.2 832.6 0Z"
