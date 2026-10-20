@@ -65,7 +65,9 @@ const LABELS = {
 };
 
 /** The product's name, filled in here so no wording above spells it out. */
-const APP_NAME = 'HisabKitab';
+// Cannot import frontend/src/constants/brand.ts — the backend does not reach
+// into the app's source. The one place the name is duplicated; keep in step.
+const APP_NAME = 'KitnaPay';
 
 /** `{{placeholders}}`, the same shape the app's i18next uses. */
 function render(template, params = {}) {

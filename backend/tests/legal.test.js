@@ -27,24 +27,24 @@ describe('Public legal pages', () => {
     const res = await request(app).get(path);
     expect(res.statusCode).toBe(200);
     expect(res.headers['content-type']).toMatch(/text\/html/);
-    expect(res.text).toContain('HisabKitab');
+    expect(res.text).toContain('KitnaPay');
   });
 
   it('says the operator is not named yet rather than naming nobody', async () => {
     const res = await request(app).get('/privacy');
     expect(res.text).toContain('Operator details are being finalised');
-    expect(res.text).not.toContain('HisabKitab is operated by');
+    expect(res.text).not.toContain('KitnaPay is operated by');
   });
 
   it('names the operator once all three details are set, escaped', async () => {
-    process.env.LEGAL_NAME = 'Hisab <Kitab> Pvt Ltd';
+    process.env.LEGAL_NAME = 'Kitna <Pay> Pvt Ltd';
     process.env.LEGAL_ADDRESS = '12 Ring Road\\nSurat 395002';
     process.env.SUPPORT_EMAIL = 'support@example.in';
 
     const res = await request(app).get('/privacy');
-    expect(res.text).toContain('HisabKitab is operated by');
-    expect(res.text).toContain('Hisab &lt;Kitab&gt; Pvt Ltd');
-    expect(res.text).not.toContain('<Kitab>');
+    expect(res.text).toContain('KitnaPay is operated by');
+    expect(res.text).toContain('Kitna &lt;Pay&gt; Pvt Ltd');
+    expect(res.text).not.toContain('<Pay>');
     expect(res.text).toContain('12 Ring Road<br>Surat 395002');
     expect(res.text).toContain('mailto:support@example.in');
     expect(res.text).not.toContain('Operator details are being finalised');
@@ -64,7 +64,7 @@ describe('Public legal pages', () => {
       LEGAL_ADDRESS: 'Y',
       SUPPORT_EMAIL: 'z@example.in',
       SMTP_URL: 'smtps://u:p@smtp.example.in:465',
-      MAIL_FROM: 'HisabKitab <no-reply@example.in>',
+      MAIL_FROM: 'KitnaPay <no-reply@example.in>',
       PUBLIC_WEB_URL: 'https://app.example.in',
     };
 

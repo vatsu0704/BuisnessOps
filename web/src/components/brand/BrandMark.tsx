@@ -5,7 +5,7 @@ import { cx } from '@/utils/cx';
 import styles from './BrandMark.module.css';
 
 /**
- * The HisabKitab mark, drawn from the mobile app's `brandMark.json` — the one
+ * The KitnaPay mark, drawn from the mobile app's `brandMark.json` — the one
  * drawing of it, which also renders the launcher icon and the favicon — so the
  * logo on the web cannot drift from the logo on the phone.
  *

@@ -3,7 +3,7 @@ plugins {
   id 'expo-module-gradle-plugin'
 }
 
-group = 'com.hisabkitab'
+group = 'com.kitnapay'
 version = '1.0.0'
 
 android {

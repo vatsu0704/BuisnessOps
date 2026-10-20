@@ -21,7 +21,17 @@ import * as FileSystem from 'expo-file-system/legacy';
  * same key are queued, so two saves in quick succession land in order.
  */
 const isWeb = Platform.OS === 'web';
-const ROOT = FileSystem.documentDirectory ? `${FileSystem.documentDirectory}hisabkitab/` : null;
+const ROOT = FileSystem.documentDirectory ? `${FileSystem.documentDirectory}kitnapay/` : null;
+
+/**
+ * Where this lived before the KitnaPay rename.
+ *
+ * It is moved, not abandoned: the folder holds the counter's **unsent bills**,
+ * so pointing the constant at a new path and walking away would strand a shop's
+ * queued sales where nothing will ever read them again — money taken and never
+ * recorded. The move happens once, inside `ensureRoot`, before the first read.
+ */
+const LEGACY_ROOT = FileSystem.documentDirectory ? `${FileSystem.documentDirectory}hisabkitab/` : null;
 
 const queues = new Map<string, Promise<unknown>>();
 let rootReady: Promise<void> | null = null;
@@ -31,19 +41,70 @@ function fileFor(key: string): string {
   return `${ROOT}${key}.json`;
 }
 
+/**
+ * Carry the old folder over, if it is still there and the new one is not.
+ *
+ * Both conditions matter. Moving onto an existing folder would fail on some
+ * platforms and clobber newer bills on others, and a device that has already
+ * migrated must not pay for the check twice — `rootReady` memoises the whole
+ * thing, so this runs at most once per launch.
+ *
+ * A failure here is swallowed deliberately: the worst case is that the old
+ * bills stay unread, which is what would happen anyway, and throwing would stop
+ * the counter from opening at all.
+ */
+async function adoptLegacyRoot(): Promise<boolean> {
+  if (!ROOT || !LEGACY_ROOT) return false;
+  try {
+    const legacy = await FileSystem.getInfoAsync(LEGACY_ROOT);
+    if (!legacy.exists) return false;
+    const current = await FileSystem.getInfoAsync(ROOT);
+    if (current.exists) return false;
+    await FileSystem.moveAsync({ from: LEGACY_ROOT, to: ROOT });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function ensureRoot(): Promise<void> {
   if (!ROOT) return Promise.resolve();
   if (!rootReady) {
-    rootReady = FileSystem.makeDirectoryAsync(ROOT, { intermediates: true }).catch(async (err) => {
-      // Already there is the normal case after the first launch.
-      const info = await FileSystem.getInfoAsync(ROOT);
-      if (!info.exists) {
-        rootReady = null;
-        throw err;
-      }
-    });
+    rootReady = adoptLegacyRoot()
+      .then((moved) => (moved ? undefined : FileSystem.makeDirectoryAsync(ROOT, { intermediates: true })))
+      .catch(async (err) => {
+        // Already there is the normal case after the first launch.
+        const info = await FileSystem.getInfoAsync(ROOT);
+        if (!info.exists) {
+          rootReady = null;
+          throw err;
+        }
+      });
   }
   return rootReady;
+}
+
+/**
+ * The browser half, for `npm run web` — the Expo preview, not the app in `web/`.
+ * Reads fall back to the old key once and copy it forward, so a preview tab that
+ * was mid-sale before the rename still has its bill.
+ */
+function webKey(key: string): string {
+  return `kitnapay_${key}`;
+}
+
+function readWeb(key: string): string | null {
+  try {
+    const current = window.localStorage.getItem(webKey(key));
+    if (current !== null) return current;
+    const legacy = window.localStorage.getItem(`hisabkitab_${key}`);
+    if (legacy === null) return null;
+    window.localStorage.setItem(webKey(key), legacy);
+    window.localStorage.removeItem(`hisabkitab_${key}`);
+    return legacy;
+  } catch {
+    return null;
+  }
 }
 
 /** Runs `job` after every earlier job for the same key has finished. */
@@ -65,11 +126,7 @@ async function readFile(uri: string): Promise<string | null> {
 
 export async function readText(key: string): Promise<string | null> {
   if (isWeb) {
-    try {
-      return window.localStorage.getItem(`hisabkitab_${key}`);
-    } catch {
-      return null;
-    }
+    return readWeb(key);
   }
   if (!ROOT) return null;
   return serialize(key, async () => {
@@ -82,7 +139,7 @@ export async function readText(key: string): Promise<string | null> {
 export async function writeText(key: string, value: string): Promise<void> {
   if (isWeb) {
     try {
-      window.localStorage.setItem(`hisabkitab_${key}`, value);
+      window.localStorage.setItem(webKey(key), value);
     } catch {
       // Storage disabled or full: the caller's in-memory state is still right.
     }
@@ -102,6 +159,7 @@ export async function writeText(key: string, value: string): Promise<void> {
 export async function removeText(key: string): Promise<void> {
   if (isWeb) {
     try {
+      window.localStorage.removeItem(webKey(key));
       window.localStorage.removeItem(`hisabkitab_${key}`);
     } catch {
       // ignore

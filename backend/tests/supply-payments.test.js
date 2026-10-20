@@ -186,10 +186,10 @@ describe('Paying for supply orders (Task 12)', () => {
       const res = await request(app)
         .patch(url('/payment-account'))
         .set(auth(people.accountant.token))
-        .send({ upiId: '  HisabWarehouse@OKAXIS ', upiName: 'HisabKitab Warehouse' });
+        .send({ upiId: '  KitnaWarehouse@OKAXIS ', upiName: 'KitnaPay Warehouse' });
       expect(res.statusCode).toBe(200);
       // Lower-cased and trimmed, so "is this the same ID?" is a comparison.
-      expect(res.body.upiId).toBe('hisabwarehouse@okaxis');
+      expect(res.body.upiId).toBe('kitnawarehouse@okaxis');
       expect(res.body.upiUpdatedByMembership.id).toBe(people.accountant.membershipId);
       expect(res.body.upiUpdatedAt).toBeTruthy();
     });

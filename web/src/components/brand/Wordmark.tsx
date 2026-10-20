@@ -10,10 +10,11 @@ type Props = {
 };
 
 /**
- * The name set the way the logo sets it: "Hisab" in ink, "Kitab" in the brand
- * blue. The two words wrap independently, so a header too narrow for the whole
- * name stacks "Kitab" under "Hisab" rather than clipping or shrinking it. A
- * screen reader hears it as one word.
+ * The name set the way the logo sets it: "Kitna" in navy, "pay" in coral.
+ * The two words wrap independently, so a header too narrow for the whole
+ * name stacks "pay" under "Kitna" rather than clipping or shrinking it. A
+ * screen reader hears it as one word, and as "KitnaPay" — the drawn mark
+ * keeps the logo's lowercase p, prose does not.
  */
 export default function Wordmark({ size, align = 'left', className }: Props) {
   const [first, second] = APP_NAME_PARTS;

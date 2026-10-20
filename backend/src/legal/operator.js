@@ -1,5 +1,5 @@
 /**
- * Who runs HisabKitab, as the public legal pages state it.
+ * Who runs KitnaPay, as the public legal pages state it.
  *
  * Read from the environment rather than written into the pages, because the
  * company does not exist yet: when it is registered, setting three variables on

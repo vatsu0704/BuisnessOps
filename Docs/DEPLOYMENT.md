@@ -1,4 +1,4 @@
-# Deploying the HisabKitab API
+# Deploying the KitnaPay API
 
 Everything needed to run `backend/` somewhere other than a laptop, and the
 handful of things that will go wrong quietly if they are skipped.
@@ -113,11 +113,11 @@ reach it by accident.
 
 ```
 cd backend
-docker build -t biziq-api .
+docker build -t kitnapay-api .
 docker run --rm -p 4000:4000 \
   -e DATABASE_URL="postgresql://…" \
   -e JWT_SECRET="…" \
-  biziq-api
+  kitnapay-api
 ```
 
 Two things about the build that are not obvious from the Dockerfile alone:
@@ -268,13 +268,13 @@ beside the API.
 **What to do, once** (Vatsal's steps; nothing here deploys by itself):
 
 1. Render dashboard → **New → Blueprint** → this repository. It finds
-   `render.yaml` and offers one static site, `hisabkitab-web`. The existing API
+   `render.yaml` and offers one static site, `kitnapay-web`. The existing API
    service is not in the file and is left alone.
 2. Before the first build, check **`VITE_API_URL`** on the new site. It defaults to
    `https://buisnessops.onrender.com/api`; point it at your own domain once the API
    has one, for the same reason as the app's address below.
 3. When the site is up, add its address to the API's **`CORS_ORIGINS`** (for
-   example `https://hisabkitab-web.onrender.com`, comma-separated with anything
+   example `https://kitnapay-web.onrender.com`, comma-separated with anything
    already there) and redeploy the API. Unset, the API accepts any origin, which
    works but lets any website call it from a visitor's browser. The phone app sends
    no `Origin` and is unaffected either way.

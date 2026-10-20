@@ -54,7 +54,7 @@ function pendingNotice() {
   return `<div class="notice">
   <strong>Operator details are being finalised.</strong>
   The legal name, registered address and contact email of the company that
-  operates HisabKitab will appear on this page before the app is offered to the
+  operates KitnaPay will appear on this page before the app is offered to the
   public.
 </div>`;
 }
@@ -65,7 +65,7 @@ function contactSection(operator) {
     return `<h2>Contact</h2>${pendingNotice()}`;
   }
   return `<h2>Contact</h2>
-<p>HisabKitab is operated by:</p>
+<p>KitnaPay is operated by:</p>
 <p class="operator"><strong>${escapeHtml(operator.name)}</strong><br>${addressHtml(operator.address)}</p>
 <p>Email: ${emailLink(operator.email)}</p>
 <p>This address is also where to raise a grievance about how your personal data
@@ -79,7 +79,7 @@ function page(title, body) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)} — HisabKitab</title>
+<title>${escapeHtml(title)} — KitnaPay</title>
 <style>
   :root { color-scheme: light; }
   body { margin: 0; background: #F6F7FB; color: #1B1D2A;
@@ -101,7 +101,7 @@ function page(title, body) {
 </head>
 <body>
 <main>
-<div class="brand">Hisab<span>Kitab</span></div>
+<div class="brand">Kitna<span>pay</span></div>
 <h1>${escapeHtml(title)}</h1>
 <p class="updated">Last updated ${LAST_UPDATED}</p>
 <div class="card">
@@ -116,7 +116,7 @@ ${body}
 function renderPrivacy(operator) {
   return page(
     'Privacy policy',
-    `<p>HisabKitab is an app that restaurant, retail and franchise businesses use to
+    `<p>KitnaPay is an app that restaurant, retail and franchise businesses use to
 run their branches: sales, staff attendance and payroll, supply orders and
 expenses. This policy explains what personal data the app collects, why, who it
 is shared with, and how you can have it deleted.</p>
@@ -125,12 +125,12 @@ ${isComplete(operator) ? '' : pendingNotice()}
 
 <h2>Who decides about your data</h2>
 <p>For <strong>your own account</strong> — your name, email address, phone number
-and settings — the operator of HisabKitab (named under <em>Contact</em>) is
+and settings — the operator of KitnaPay (named under <em>Contact</em>) is
 responsible.</p>
 <p>For <strong>a business's records</strong> — its sales, its staff records, the
 attendance and pay of the people who work there — the business that uses
-HisabKitab decides what it records, and we process that data on its behalf. If
-you work for a business that uses HisabKitab and have a question about the
+KitnaPay decides what it records, and we process that data on its behalf. If
+you work for a business that uses KitnaPay and have a question about the
 records it keeps about you, ask that business first.</p>
 
 <h2>What we collect</h2>
@@ -222,7 +222,7 @@ immediately rather than when its session expires.</p>
 
 <h2>How long we keep it</h2>
 <p>We keep your account for as long as you have it. A business's records are
-kept for as long as the business uses HisabKitab, because they are its books.
+kept for as long as the business uses KitnaPay, because they are its books.
 When you delete your account, what happens is set out under <em>Deleting your
 account</em> below.</p>
 
@@ -249,7 +249,7 @@ about you, ask us to correct or erase it, and raise a grievance, using the
 contact details below.</p>
 
 <h2>Children</h2>
-<p>HisabKitab is a tool for running a business and is meant for people aged 18
+<p>KitnaPay is a tool for running a business and is meant for people aged 18
 and over.</p>
 
 <h2>Changes to this policy</h2>
@@ -270,10 +270,10 @@ described above within 30 days and tell you when it is done.</p>`
     : pendingNotice();
 
   return page(
-    'Delete your HisabKitab account',
+    'Delete your KitnaPay account',
     `<h2>In the app</h2>
 <ol class="steps">
-  <li>Open HisabKitab and go to <strong>Settings</strong>.</li>
+  <li>Open KitnaPay and go to <strong>Settings</strong>.</li>
   <li>Scroll to the bottom and tap <strong>Delete account</strong>.</li>
   <li>Read what will be deleted, enter your password, and confirm.</li>
 </ol>

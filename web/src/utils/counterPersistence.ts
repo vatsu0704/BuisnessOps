@@ -40,10 +40,15 @@ export type CounterMessage =
   | { type: 'changed'; businessId: string }
   | { type: 'sync-state'; businessId: string; state: CounterSyncState; blockedMessage: string | null };
 
+// Deliberately NOT renamed with the rest of the rebrand. This database holds
+// unsent counter sales; migrating it means copying every record into a new
+// database and deleting the old, and a copy that half-fails loses a shop's
+// bills. The name is invisible to everyone but the devtools, so the risk buys
+// nothing. The store inside it, the channel below and the locks are renamed.
 const DB_NAME = 'hisabkitab';
 const DB_VERSION = 1;
 const STORE = 'counter';
-const CHANNEL = 'hisabkitab-counter';
+const CHANNEL = 'kitnapay-counter';
 
 let opening: Promise<IDBDatabase> | null = null;
 let persistAsked = false;

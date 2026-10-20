@@ -416,7 +416,7 @@ describe('reading the Firebase credential', () => {
   const { readServiceAccount } = require('../src/notifications/push');
   const credential = {
     type: 'service_account',
-    project_id: 'hisabkitab-test',
+    project_id: 'kitnapay-test',
     private_key: '-----BEGIN PRIVATE KEY-----\nnot-a-real-key\n-----END PRIVATE KEY-----\n',
   };
 

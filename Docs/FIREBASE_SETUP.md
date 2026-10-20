@@ -1,4 +1,4 @@
-# Firebase setup — push notifications for HisabKitab
+# Firebase setup — push notifications for KitnaPay
 
 Everything the app needs from Firebase, in the order it has to be done. Nothing
 in the codebase works until steps 1–5 are finished, because two files that are
@@ -7,10 +7,10 @@ in the codebase works until steps 1–5 are finished, because two files that are
 You need about fifteen minutes and a Google account. It is free — Firebase Cloud
 Messaging has no paid tier for what this uses.
 
-## What HisabKitab actually uses Firebase for
+## What KitnaPay actually uses Firebase for
 
 **Cloud Messaging (FCM), and nothing else.** No Firebase Auth, no Firestore, no
-Analytics, no Crashlytics. HisabKitab has its own accounts, its own Postgres and its
+Analytics, no Crashlytics. KitnaPay has its own accounts, its own Postgres and its
 own API; Firebase is only the pipe that wakes a phone up.
 
 That matters when you are clicking through the console: ignore every product it
@@ -22,15 +22,15 @@ offers you. If a step below does not mention it, skip it.
 
 1. Go to <https://console.firebase.google.com/> and sign in.
 2. **Create a project**.
-3. Name it `HisabKitab`. The console will suggest a project ID like
-   `hisabkitab-4f2c1` — that is fine, it only has to be globally unique.
+3. Name it `KitnaPay`. The console will suggest a project ID like
+   `kitnapay-4f2c1` — that is fine, it only has to be globally unique.
 
    > The project this app already uses was created while the product was called
    > BizIQ, so its name and ID say `biziq`. Leave it: a project's display name is
    > cosmetic, its ID can never change, and recreating it would mean a new
    > `google-services.json`, a new service-account key and every device
    > re-registering. Nothing a user sees comes from either.
-4. **Google Analytics: turn it off.** It asks on the second screen. HisabKitab does
+4. **Google Analytics: turn it off.** It asks on the second screen. KitnaPay does
    not use it, and leaving it on adds a consent surface and a second config file
    for no benefit.
 5. **Create project**, then **Continue** when it finishes.
@@ -43,7 +43,7 @@ This is the step that produces `google-services.json`.
 2. **Android package name** — type exactly:
 
    ```
-   com.biziq.app
+   com.kitnapay.app
    ```
 
    **This must match character for character.** It is `expo.android.package` in
@@ -51,7 +51,7 @@ This is the step that produces `google-services.json`.
    *Naming* in `CLAUDE.md`. A mismatch is the single most common cause of "the token
    registers but no notification ever arrives", and it fails silently — FCM
    accepts the token and drops every message sent to it.
-3. **App nickname** — anything, e.g. `HisabKitab Android`.
+3. **App nickname** — anything, e.g. `KitnaPay Android`.
 4. **Debug signing certificate SHA-1** — **leave it blank.** It is only needed
    for Google Sign-In and Dynamic Links, neither of which this app uses.
 5. **Register app**.
@@ -69,7 +69,7 @@ This is the step that produces `google-services.json`.
    console"). The Expo plugin does all of that wiring; you do not add the Gradle
    lines the console shows you.
 
-> **iOS:** not set up, and not needed yet — HisabKitab currently ships as an Android
+> **iOS:** not set up, and not needed yet — KitnaPay currently ships as an Android
 > development build. When iOS happens it needs its own app registration, a
 > `GoogleService-Info.plist`, and an APNs key uploaded to Firebase.
 
@@ -90,7 +90,7 @@ credentials for that.
 5. **This file is a credential. Treat it like a password.** It is already in
    `.gitignore` — do not commit it, do not paste it into a chat or an issue, and
    do not put it in the frontend. Anyone holding it can send notifications to
-   every HisabKitab user.
+   every KitnaPay user.
 
    If it ever leaks, come back to this tab, delete the key, and generate a new
    one. That revokes the old one immediately.
@@ -181,7 +181,7 @@ Two EAS credential slots look relevant here and are not:
   wants a Google Cloud service account with Play Developer API access — not
   `google-services.json`, and not the Firebase key from step 3. Uploading the
   wrong file fails with `"private_key": Required`.
-- **FCM V1 service account key** lets *Expo's* push service talk to FCM. HisabKitab
+- **FCM V1 service account key** lets *Expo's* push service talk to FCM. KitnaPay
   never uses it: the app takes the raw device token
   (`getDevicePushTokenAsync`) and the backend sends with `firebase-admin`,
   so Expo is not in the delivery path.
@@ -218,14 +218,14 @@ Two EAS credential slots look relevant here and are not:
 Notification permission was denied. Android only asks once — after that, the
 prompt never reappears and the app cannot re-trigger it. Fix it in the OS:
 long-press the app icon → **App info** → **Notifications** → turn them on. Then
-reopen HisabKitab, which re-registers on every launch.
+reopen KitnaPay, which re-registers on every launch.
 
 **Permission granted, but nothing ever arrives.**
 In order of likelihood:
 
 1. **The APK predates `google-services.json`.** Rebuild (step 5). This is the
    common one.
-2. **The package name does not match.** `com.biziq.app` in the Firebase console
+2. **The package name does not match.** `com.kitnapay.app` in the Firebase console
    must equal `expo.android.package` in `frontend/app.json`.
 3. **The backend has no service account.** Look for the `[push]` line in its
    startup output.
@@ -237,13 +237,13 @@ Services** cannot receive FCM at all — there is nothing to deliver the message
 Use an image whose name says "Google Play", or a real phone.
 
 **Notifications arrive but are silent.** Android 13+ gives each app's channels
-their own settings. HisabKitab creates one channel, "Updates", the first time the app
+their own settings. KitnaPay creates one channel, "Updates", the first time the app
 runs. Check **App info → Notifications → Updates**.
 
 **They stop arriving after a few days on a Xiaomi/Oppo/Vivo/OnePlus phone.**
 These vendors kill background apps aggressively. In **App info → Battery**,
 choose **Unrestricted** / **No restrictions**. This is a known Android
-fragmentation problem, not a HisabKitab bug — <https://dontkillmyapp.com> documents
+fragmentation problem, not a KitnaPay bug — <https://dontkillmyapp.com> documents
 it per manufacturer.
 
 ---

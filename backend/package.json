@@ -1,7 +1,7 @@
 {
-  "name": "buisnessops-backend",
+  "name": "kitnapay-backend",
   "version": "1.0.0",
-  "description": "Node.js + Express + PostgreSQL (Prisma) API for HisabKitab",
+  "description": "Node.js + Express + PostgreSQL (Prisma) API for KitnaPay",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {

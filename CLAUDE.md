@@ -4,7 +4,7 @@
 
 ## What this project is
 
-**HisabKitab** is a multi-tenant AI business intelligence platform for restaurant,
+**KitnaPay** is a multi-tenant AI business intelligence platform for restaurant,
 retail and franchise owners. The core loop: an owner asks a question in plain
 language ("What were October sales versus last year?") and receives an answer
 computed from their own sales data, with the underlying numbers traceable.
@@ -47,41 +47,55 @@ Update them in the same change as the code, not as a follow-up.
 
 ### Naming
 
-The product is **HisabKitab** — one word, capital H and K. It has been renamed
-twice, "BuisnessOps" then "BizIQ" then HisabKitab (2026-10-04), so the rule is
-about where a name may live, not just what it is:
+The product is **KitnaPay** — one word, capital K and P. It has been renamed
+three times, "BuisnessOps" then "BizIQ" then "HisabKitab" then KitnaPay
+(2026-10-20), so the rule is about where a name may live, not just what it is:
 
 - **What a person reads changes; what a machine keys on stays.** These keep an
   old name on purpose and are not typos to fix:
-  - the Android package and iOS bundle id `com.biziq.app` — Firebase's
-    `google-services.json` is registered against it, and a new id installs as
-    a second app beside the old one and orphans every push token. A one-way door
-    once published; ask first.
-  - the EAS `slug` `biziq` — EAS checks it against `extra.eas.projectId` and
-    refuses to build when they disagree.
-  - the SecureStore keys `biziq_token`, `biziq_business_id`, `biziq_language`
-    — renaming them signs every user out and forgets their language.
-  - the npm package `biziq-frontend`, the `BIZIQ_API_PORT` variable, and the
-    `// BizIQ:` comments inside `frontend/patches/` (editing a patch file is not
-    worth the risk to a comment).
-  - the repository folder, the Postgres database `buisnessops`, the hosted
-    `buisnessops.onrender.com`, and git history, from the first rename.
-- **In the app the name has one source: `APP_NAME` in
-  `frontend/src/constants/brand.ts`**, kept as its two words (`APP_NAME_PARTS`).
-  `Wordmark` renders it the way the logo sets it — "Hisab" in ink, "Kitab" in the
-  brand blue — and translations write `{{appName}}`, which i18next fills from
+  - the Postgres databases `buisnessops`, `buisnessops_test` and `buisnessops_ci`
+    — `jest.setup.js` and `scripts/dev-plan.sql` match on those names as a guard
+    before anything destructive, so renaming the database disarms the rail that
+    stops a test run wiping development data.
+  - the web's IndexedDB database `hisabkitab` (`counterPersistence.ts`) — it holds
+    unsent counter sales, and a migration that half-fails loses a shop's bills.
+    The store, the channel and the locks inside it were renamed; the database was
+    not, and the file says why.
+  - the `// BizIQ:` comments inside `frontend/patches/` — editing a patch file
+    changes its hash and `patch-package --error-on-fail` then breaks every install.
+  - the test fixture addresses `@test.buisnessops.dev` (82 of them) — nothing
+    resolves them, and churning 21 test files would bury a real diff.
+  - the repository folder, the hosted `buisnessops.onrender.com`, the upload
+    keystore `biziq-upload-keystore.jks` (changing the *key* makes Play refuse the
+    upload; only its filename is cosmetic), and git history.
+- **What was renamed, and what had to be carried over.** The storage keys could
+  not simply change: they hold the session, the chosen business and the language.
+  `LEGACY_KEYS` in `frontend/src/utils/secureStorage.ts` and `carryLegacyKeys()`
+  in `web/src/utils/storage.ts` move each one on first read; `textStore.ts` **moves
+  the whole `hisabkitab/` folder** to `kitnapay/`, because it holds unsent bills and
+  pointing a constant at a new path would strand money that was taken but never
+  recorded. All three are deletable once no pre-rename install is left in the field.
+- **In the app the name has one source: `frontend/src/constants/brand.ts`**, and
+  it is deliberately **two values**. `APP_NAME_PARTS` (`['Kitna', 'pay']`) is what
+  the mark draws — the logo's lowercase p — and `APP_NAME` (`'KitnaPay'`) is what
+  sentences say. Deriving one from the other would force a choice between artwork
+  that does not match the logo and prose that does not match the brand.
+  `Wordmark` renders the parts the way the logo sets them — "Kitna" in navy,
+  "pay" in coral — and translations write `{{appName}}`, which i18next fills from
   `interpolation.defaultVariables`, so no caller passes it and no locale file
   spells it. A brand name reads the same in every language, so it is not a
   translation key; never type it into a component or a locale file.
   `lint:errors` knows the app supplies `{{appName}}`, as it knows about `{{field}}`.
 - **A header too narrow for the name stacks it, never cuts it.** `Wordmark`'s two
   words are separate `Text` nodes in a wrapping row, so on a 320dp phone Home and
-  the sign-up header show "Hisab" over "Kitab" — a stacked lockup — rather than
+  the sign-up header show "Kitna" over "pay" — a stacked lockup — rather than
   clipping, shrinking or breaking mid-word. The parent only has to let it shrink.
-- **Two places cannot import it** and repeat the name: `app.json`'s `name` (the
-  launcher label) and its iOS location-permission sentence. Both are compiled
-  in, so they change only after `npx expo prebuild -p android` and a rebuild — an
-  APK from before then still shows the old name and icon.
+- **Five places cannot import it** and repeat the name: `app.json`'s `name` (the
+  launcher label) and its iOS location-permission sentence, `web/index.html`'s
+  `<title>` and `theme-color` (both render before any script does), and the
+  backend's `mail/reset.labels.js`, which does not reach into `frontend/src`. The
+  first two are compiled in, so they change only after `npx expo prebuild -p android`
+  and a rebuild — an APK from before then still shows the old name and icon.
 - **Where a sentence puts the name matters.** The Login heading is one string
   with the name tagged inside it (`<brand>{{appName}}</brand>`, rendered with
   `Trans`), not a prefix plus the name, because Hindi, Gujarati and Marathi put
@@ -702,11 +716,11 @@ what remains. `web/README.md` has the layout and the commands.
   names beside `month.1` in the four locale files — the single source precisely
   because Hermes has no dependable `Intl`. The app is the exception and stays one:
   it opens the platform's picker, which is native and OS-localized.
-- **Its storage keys are `hisabkitab_*`, not `biziq_*`.** The app keeps its old
-  key names only because renaming them would sign out every installed copy; the
-  web had no installed copies to sign out. The token lives in `localStorage`,
-  which is what a bearer-token API leaves a browser — an httpOnly cookie would
-  need the backend to issue one.
+- **Its storage keys are its own**, named in `STORAGE_KEYS` — the two run on
+  different origins and never read each other's storage. Both were renamed at the
+  KitnaPay rebrand and both carry the old names forward on first read; see
+  *Naming*. The token lives in `localStorage`, which is what a bearer-token API
+  leaves a browser — an httpOnly cookie would need the backend to issue one.
 - **`VITE_API_URL` is inlined at build time**, the same trap as
   `EXPO_PUBLIC_API_URL`. Serve the build from an origin the backend's
   `CORS_ORIGINS` allows once that is set.
@@ -727,7 +741,7 @@ what remains. `web/README.md` has the layout and the commands.
   port — choosing a printer forgets the others. Any other browser, or a USB
   printer, prints through the print dialog (`utils/receiptHtml.ts`, built from the
   same rows, every row HTML-escaped). How this browser prints is a setting of the
-  browser (`hisabkitab_printer`), not of an account.
+  browser (`kitnapay_printer`), not of an account.
 
 ## Native Android builds
 
@@ -984,7 +998,7 @@ need. Each is easy to undo by tidying:
   BroadcastChannel.
 - **A browser that will not keep data takes no bill** (some private windows): the
   counter says why rather than pretend to save.
-- **The page opens offline** from `hisabkitab_session_cache` (the web authStore,
+- **The page opens offline** from `kitnapay_session_cache` (the web authStore,
   same rules as the app's), and from the service worker — see *Web app*.
 
 ## Dependency overrides
@@ -1221,7 +1235,7 @@ both compile and type-check cleanly, then yield `undefined` at runtime and fall
 back silently. The cast form sat in `api/client.ts` for months undetected,
 because its fallback *was* the dev URL: over `adb reverse` a broken inline is
 indistinguishable from a working one, and only a release APK pointed at the
-hosted API exposed it — as "cannot reach the HisabKitab server at
+hosted API exposed it — as "cannot reach the KitnaPay server at
 http://localhost:4000/api" on a server that was up. No cast is needed anyway,
 since `@types/node` types `process.env` as a string dictionary.
 

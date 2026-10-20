@@ -9,11 +9,13 @@ type Props = {
 };
 
 /**
- * The name set the way the logo sets it: "Hisab" in ink, "Kitab" in the brand
- * blue.
+ * The name set the way the logo sets it: "Kitna" in navy, "pay" in coral.
+ *
+ * The drawn mark keeps the logo's lowercase p; prose spells it KitnaPay, so
+ * the accessible label is `APP_NAME` and not the parts joined.
  *
  * The two words are separate Text nodes in a wrapping row, so a header too
- * narrow for the whole name puts "Kitab" under "Hisab" — a stacked lockup —
+ * narrow for the whole name puts "pay" under "Kitna" — a stacked lockup —
  * instead of clipping it, shrinking it or breaking it mid-word. The row shrinks
  * itself; a parent only has to let it (a column that stretches it, or
  * `flexShrink: 1` on whatever wraps it in a row). At its natural width it is

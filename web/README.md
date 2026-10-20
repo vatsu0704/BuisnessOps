@@ -1,6 +1,6 @@
-# HisabKitab — web app
+# KitnaPay — web app
 
-The browser version of HisabKitab: React 19, TypeScript, Vite, React Router.
+The browser version of KitnaPay: React 19, TypeScript, Vite, React Router.
 It talks to the same API as the mobile app (`../backend`) and is being brought
 to parity with it screen by screen — `Docs/PROJECT_FLOW.md` section 15 tracks
 which screens are on the web so far.

@@ -1,6 +1,6 @@
 # Requirements — Branch Operations
 
-This document captures the requirements for turning HisabKitab from a reporting product
+This document captures the requirements for turning KitnaPay from a reporting product
 into an operations product, and breaks them into the tasks that build them. It is the
 source of truth for *what* is being built and *why*; [PROJECT_FLOW.md](PROJECT_FLOW.md)
 tracks *where each task has got to*, and [database-table.md](database-table.md) holds
@@ -22,11 +22,11 @@ same thing in the original list and in this document.
 
 ## 1. What changes about the product
 
-HisabKitab today **analyses** a business. Sales arrive as a CSV export from a POS, and the
+KitnaPay today **analyses** a business. Sales arrive as a CSV export from a POS, and the
 app reports on them. Attendance and payroll were added later. Nothing in the app
 creates a business transaction.
 
-These requirements make HisabKitab **run** the business:
+These requirements make KitnaPay **run** the business:
 
 - A branch takes counter orders and issues tokens, and the day's sales are a
   by-product of that rather than a file someone uploads later.
@@ -996,7 +996,7 @@ every branch's money is not reading every branch's people.
 > How should I set the pricing for it and generate the income? Give me the options — per
 > owner login, per staff member onboarded, or something else.
 
-HisabKitab had no revenue model (`PROJECT_FLOW.md` §12). This requirement decides what a
+KitnaPay had no revenue model (`PROJECT_FLOW.md` §12). This requirement decides what a
 business pays for and builds the plans and their limits into the app; collecting the
 money online is a later stage.
 

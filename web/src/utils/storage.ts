@@ -33,16 +33,48 @@ export const storage = {
 /**
  * The keys this app stores under.
  *
- * New names, not the app's `biziq_*` ones: those keep the old product name only
- * because renaming them would sign out every installed copy. The web app has no
- * installed copies to sign out, so it starts with the current name.
+ * Its own names, not the mobile app's `kitnapay_token` and friends: the two run
+ * on different origins and never read each other's storage, and the app's names
+ * carry their own rename history (see `LEGACY_KEYS` in its `secureStorage.ts`).
  */
 export const STORAGE_KEYS = {
-  token: 'hisabkitab_token',
-  businessId: 'hisabkitab_business_id',
-  language: 'hisabkitab_language',
+  token: 'kitnapay_token',
+  businessId: 'kitnapay_business_id',
+  language: 'kitnapay_language',
   /** The last session the server confirmed, so the counter opens offline (requirement 30). */
-  sessionCache: 'hisabkitab_session_cache',
+  sessionCache: 'kitnapay_session_cache',
   /** This browser's receipt printer settings (requirement 31). */
-  printer: 'hisabkitab_printer',
+  printer: 'kitnapay_printer',
 } as const;
+
+/**
+ * Carry each key over from its `hisabkitab_*` name, once, at module load.
+ *
+ * This is not cosmetic: `token` and `sessionCache` are what let the counter open
+ * with no connection, so renaming them without this would sign a shop out —
+ * and, on a till that is offline at the time, sign it out of a session it cannot
+ * get back until the internet returns.
+ *
+ * It runs here rather than in a store's init because the stores read these keys
+ * while they are being created. Removing the old key after copying keeps a
+ * browser from carrying two copies of a session around for good.
+ *
+ * Deletable once no browser that used the HisabKitab build is still in use.
+ */
+function carryLegacyKeys(): void {
+  for (const key of Object.values(STORAGE_KEYS)) {
+    const legacy = key.replace(/^kitnapay_/, 'hisabkitab_');
+    try {
+      if (window.localStorage.getItem(key) !== null) continue;
+      const found = window.localStorage.getItem(legacy);
+      if (found === null) continue;
+      window.localStorage.setItem(key, found);
+      window.localStorage.removeItem(legacy);
+    } catch {
+      // Private window or blocked site data: nothing to carry, nothing to fix.
+      return;
+    }
+  }
+}
+
+carryLegacyKeys();

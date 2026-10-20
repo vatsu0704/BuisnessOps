@@ -1,5 +1,5 @@
 -- =============================================================================
--- HisabKitab — seven months of test data for two businesses
+-- KitnaPay — seven months of test data for two businesses
 -- =============================================================================
 --
 -- Run the whole file in a query tool (pgAdmin, DBeaver, psql) connected to the
@@ -120,7 +120,7 @@ BEGIN
 
   SELECT id INTO v_owner_user FROM users WHERE lower(email) = lower(v_owner_email);
   IF v_owner_user IS NULL THEN
-    RAISE EXCEPTION 'No HisabKitab account uses the email %', v_owner_email;
+    RAISE EXCEPTION 'No KitnaPay account uses the email %', v_owner_email;
   END IF;
 
   CREATE TEMP TABLE seed_biz (

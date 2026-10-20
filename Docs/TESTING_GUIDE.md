@@ -1,4 +1,4 @@
-# Manual Testing Guide — HisabKitab
+# Manual Testing Guide — KitnaPay
 
 Click-by-click walkthroughs for every user-facing flow currently built. Follow
 them in order the first time — several later flows (Team, Staff & Payroll)
@@ -60,13 +60,13 @@ You run both servers yourself — nothing here starts them for you.
    needed (`node -v`). The new build installs over the old one, because the
    debug signing key did not change.
 3. **On a physical phone**, the app has to be able to reach the API — this is
-   the usual cause of a login that fails with "cannot reach the HisabKitab server".
+   the usual cause of a login that fails with "cannot reach the KitnaPay server".
    Pick whichever matches how the phone is connected, and make sure
    `frontend/.env`'s `EXPO_PUBLIC_API_URL` agrees:
    - **USB cable** (works even on mobile data, and needs no firewall rule):
      set the URL to `http://localhost:4000/api`. `npm start` and
      `npm run android` set the forward up for you. If the app loads fine but
-     every request fails with "Cannot reach the HisabKitab server", the forward was
+     every request fails with "Cannot reach the KitnaPay server", the forward was
      lost — replugging the device or restarting adb drops it, and Expo only
      restores its own Metro forward, not this one. Fix it with
      **`npm run adb:reverse`** (no restart needed; it is an OS-level port
@@ -111,13 +111,13 @@ or two different browsers. Flows 7 and 8 call this out explicitly.
 
 ## Flow 0 — Launch: the name, the icon and the splash
 
-The product is **HisabKitab**. Its launcher label, icon and system splash are
-compiled into the APK, so **a build from before the rename still shows "BizIQ"
+The product is **KitnaPay**. Its launcher label, icon and system splash are
+compiled into the APK, so **a build from before the rename still shows "HisabKitab"
 and the old indigo icon** — rebuild first (`npx expo prebuild -p android`, then
 `npm run android`). The web build has no launcher; steps 3–5 apply to it too.
 
 1. Find the app on the phone's home screen or in the app drawer.
-   - ✅ **Expected:** it is labelled **HisabKitab**, and its icon is the HK mark —
+   - ✅ **Expected:** it is labelled **KitnaPay**, and its icon is the HK mark —
      two dark stems crossed by a blue ribbon, with a blue arm — on white.
 2. Force-stop it (App info → **Force stop**), then open it.
    - ✅ **Expected:** the system's own splash is white with the whole mark in the
@@ -133,7 +133,7 @@ and the old indigo icon** — rebuild first (`npx expo prebuild -p android`, the
      apart (see CLAUDE.md, *Native Android builds*).
    - ✅ **Expected, in this order:** the left stem, then the right stem, rise into
      place; the blue ribbon sweeps across them from left to right; the arm of the
-     K flicks out; then the whole logo lifts a little as **HisabKitab** — "Hisab"
+     K flicks out; then the whole logo lifts a little as **KitnaPay** — "Hisab"
      in black, "Kitab" in blue — and the tagline **"Your Business. All in One."**
      fade in beneath it. After about two seconds it fades into the first screen.
    - Change the language (step 4) and relaunch: the tagline follows it (Gujarati:
@@ -142,14 +142,14 @@ and the old indigo icon** — rebuild first (`npx expo prebuild -p android`, the
    - With **Remove animations** on (Settings → Accessibility), the logo and the
      name appear whole instead of drawing themselves in.
 4. On **Login**:
-   - ✅ **Expected:** the header shows the mark and **HisabKitab** in the same two
+   - ✅ **Expected:** the header shows the mark and **KitnaPay** in the same two
      colours, with the language chip at the right. The heading reads **"Welcome
-     to HisabKitab"** with the name in blue. Tap the language chip: in Hindi it
-     reads *"HisabKitab में आपका स्वागत है"* — the name first, as Gujarati and
-     Marathi also put it. The button reads **"Sign in to HisabKitab"**.
+     to KitnaPay"** with the name in blue. Tap the language chip: in Hindi it
+     reads *"KitnaPay में आपका स्वागत है"* — the name first, as Gujarati and
+     Marathi also put it. The button reads **"Sign in to KitnaPay"**.
    - On a phone 360dp wide or narrower, the Gujarati and Marathi button label
      wraps onto two lines. That is the label fitting, not overflowing.
-5. Tap **"New to HisabKitab?"** to open sign-up.
+5. Tap **"New to KitnaPay?"** to open sign-up.
    - ✅ **Expected:** the same mark and name in the header, beside a back arrow.
      On a 320dp-wide phone the name stacks — "Hisab" above "Kitab" — rather than
      being cut off or pushing the language chip off screen.
@@ -160,7 +160,7 @@ Home's top bar is checked in Flow 1, once there is an account to reach it with.
 
 ## Flow 1 — Register as a business owner
 
-1. On the **Login** screen, tap **"New to HisabKitab? → Register your business and
+1. On the **Login** screen, tap **"New to KitnaPay? → Register your business and
    connect your first branch."**
 2. Fill in:
    - Full name — anything, e.g. `Priya Mehta`
@@ -180,7 +180,7 @@ Home's top bar is checked in Flow 1, once there is an account to reach it with.
    branches**, then **Open the counter**. The numbers lead because they are
    what Home is read for; everything below them is somewhere to go.
    - ✅ **Expected, in the top bar:** the HK mark draws itself in, then
-     **HisabKitab** and, after it, the language chip, the bell and your avatar
+     **KitnaPay** and, after it, the language chip, the bell and your avatar
      settle into place one after another. The branch count (**0 branches** here)
      sits beside your business name under the greeting, not in the top bar. On a
      320dp-wide phone the name in the top bar stacks onto two lines and every
@@ -199,7 +199,7 @@ appears under Confirm Password.
    open **Settings**.
 2. Scroll down, tap **"Log out."**
 3. ✅ **Expected:** you're back at the **Login** screen.
-4. Enter the same email/password, tap **"Sign in to HisabKitab."**
+4. Enter the same email/password, tap **"Sign in to KitnaPay."**
 5. ✅ **Expected:** back on **Home**, same business, same data.
 6. Now get the password **wrong** three or four times on purpose.
    - ✅ **Expected:** "Invalid email or password" each time, and nothing else
@@ -702,7 +702,7 @@ MANAGER or WAREHOUSE, because those two reach every branch.
 Everything up to here only ever *granted* access. This is the other direction.
 Do it as the OWNER, from **Settings → Team & permissions**.
 
-1. Invite an email that has no HisabKitab account (as in Flow 7), then, on the
+1. Invite an email that has no KitnaPay account (as in Flow 7), then, on the
    pending card, tap **Withdraw invite** and confirm.
    - ✅ **Expected:** the card disappears from the list.
 2. Now sign up with that same email, supplying business details.
@@ -1970,7 +1970,7 @@ first; Flow 17z repeats it as the accountant.
    - ✅ **Expected:** "That is not a UPI ID" under the field, and **Save** stays
      disabled.
 3. Type a real one — the UPI ID printed under any UPI QR, e.g. `yourname@okaxis` —
-   and a name such as `HisabKitab Warehouse`. Press **Save**.
+   and a name such as `KitnaPay Warehouse`. Press **Save**.
    - ✅ **Expected:** **Saved**, a test QR appears, and a line says who last
      changed it and when.
 4. Scan the test QR with your own UPI app — **do not pay**.
@@ -2279,7 +2279,7 @@ not only from the store listing. It is a public page the backend serves at
 1. **Settings → Privacy policy.**
    - ✅ **Expected:** the phone's browser opens the API server's `/privacy` page
      (with `.env` on `localhost` over `adb reverse`, the phone's browser reaches it
-     through the same tunnel). It shows the HisabKitab name, **Privacy policy**, a
+     through the same tunnel). It shows the KitnaPay name, **Privacy policy**, a
      *Last updated* date, and sections on what is collected, why, who sees it, how
      long it is kept, deleting your account, and your rights.
    - Until the company is registered it also shows a yellow box: **Operator
@@ -2354,13 +2354,13 @@ account from Flow 1, or the seed data's logins.
 
 1. Open `http://localhost:5173/`.
    - ✅ **Expected:** you are sent to `/login`. On a laptop-width window the page
-     is two columns — *Welcome to HisabKitab* with the blue hero card on the left,
+     is two columns — *Welcome to KitnaPay* with the blue hero card on the left,
      the sign-in card on the right. The mark draws itself in the top-left corner.
    - Narrow the window below about 960px: it becomes the app's single column, in
      the app's order. At phone width nothing scrolls sideways.
 2. Open the **EN** chip in the top-right corner and pick **ગુજરાતી**.
    - ✅ **Expected:** the whole page changes language at once, the name stays
-     "HisabKitab" and the chip shows **ગુજ**. Reload: it is still Gujarati. Switch
+     "KitnaPay" and the chip shows **ગુજ**. Reload: it is still Gujarati. Switch
      back to English.
 3. Sign in with a wrong password.
    - ✅ **Expected:** the card shakes once and says the email or password is wrong
@@ -2405,7 +2405,7 @@ account from Flow 1, or the seed data's logins.
 9. Open the avatar in the top-right corner and choose **Log out**.
    - ✅ **Expected:** back to sign-in. The browser's back button does not return to
      Home.
-10. Click **New to HisabKitab?** and fill in sign-up. Type an email that has a
+10. Click **New to KitnaPay?** and fill in sign-up. Type an email that has a
     pending invite (Flow 7).
     - ✅ **Expected:** the same rules as the app's sign-up — the password strength
       bar, *Passwords do not match yet*, and for the invited email a blue line
@@ -2551,7 +2551,7 @@ least two branches.
    - ✅ **Expected:** the product appears again, faded, with a *Withdrawn* pill; open it
      and put it back on sale. (The app cannot find it again once you leave it.)
 8. **Upload sales data** → **Download template**.
-   - ✅ **Expected:** `hisabkitab-sales-template.csv` is saved. **How to fill in the
+   - ✅ **Expected:** `kitnapay-sales-template.csv` is saved. **How to fill in the
      template** opens the column guide in the chosen language.
 9. Choose a branch, drop the untouched template on the file box, **Upload and import**.
    - ✅ **Expected:** *Nothing to import yet* — the template's example rows are never
@@ -3058,7 +3058,7 @@ no host.
 this flow — it opens Android's own picker, which is native and correct there.
 
 1. **Expenses → Add expense**, and tap the **date** field.
-   - ✅ **Expected:** HisabKitab's own calendar — the brand blue, the app's
+   - ✅ **Expected:** KitnaPay's own calendar — the brand blue, the app's
      rounded panel, the app's border. **Not** the browser's grey one.
    - ✅ **Expected:** **today has a ring, the chosen day is filled.** The two are
      never confusable.
@@ -3196,8 +3196,8 @@ this flow — it opens Android's own picker, which is native and correct there.
   one. Until `LEGAL_NAME`, `LEGAL_ADDRESS` and `SUPPORT_EMAIL` are set on the
   server they say the operator's details are being finalised — the company is
   not registered yet.
-- **The Android package is still `com.biziq.app`.** It becomes
-  `com.hisabkitab.app` before the first Play upload, once the new app is
+- **The Android package is still `com.kitnapay.app`.** It becomes
+  `com.kitnapay.app`, done at the rebrand; the matching Firebase app is
   registered in Firebase — see `Docs/PLAY_STORE_RELEASE.md` (A1). Nothing a
   person sees shows it, and renaming it later installs as a second app.
 - **No payment is detected automatically.** A UPI QR is paid in the payer's own UPI
@@ -3297,7 +3297,7 @@ this flow — it opens Android's own picker, which is native and correct there.
   Without it the rows are still written and the in-app centre still lists them —
   that is a supported mode, and the whole test suite runs in it — but nothing
   reaches a lock screen.
-- **iOS gets no pushes.** HisabKitab ships as an Android development build; iOS needs
+- **iOS gets no pushes.** KitnaPay ships as an Android development build; iOS needs
   its own Firebase app registration, a `GoogleService-Info.plist` and an APNs
   key before any of this reaches an iPhone.
 - **A notification is never re-sent.** If the push fails, the row stays and the
@@ -3348,4 +3348,4 @@ this flow — it opens Android's own picker, which is native and correct there.
 - **Some text from the server stays English by design**: CSV column names
   inside upload row errors (they are the literal headings in your file), the
   payslip document's own labels, and the occasional message that comes from a
-  third-party library rather than from HisabKitab.
+  third-party library rather than from KitnaPay.

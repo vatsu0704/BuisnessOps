@@ -42,7 +42,7 @@ async function siteFiles(dir: string, prefix = ''): Promise<string[]> {
 /** What `VITE_SERVICE_WORKER=off` publishes instead: a worker that removes itself and its caches. */
 const SELF_REMOVING_WORKER = `self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil((async () => {
-  for (const key of await caches.keys()) if (key.startsWith('hisabkitab-')) await caches.delete(key);
+  for (const key of await caches.keys()) if (key.startsWith('kitnapay-') || key.startsWith('hisabkitab-')) await caches.delete(key);
   await self.registration.unregister();
   for (const client of await self.clients.matchAll({ type: 'window' })) client.navigate(client.url);
 })()));
@@ -58,7 +58,7 @@ self.addEventListener('activate', (event) => event.waitUntil((async () => {
 function serviceWorker(): Plugin {
   let outDir = 'dist';
   return {
-    name: 'hisabkitab-service-worker',
+    name: 'kitnapay-service-worker',
     apply: 'build',
     configResolved(config) {
       outDir = path.resolve(config.root, config.build.outDir);

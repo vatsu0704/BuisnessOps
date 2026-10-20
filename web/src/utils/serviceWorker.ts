@@ -38,7 +38,7 @@ export function registerServiceWorker() {
   // A page loaded before a deploy can ask for a chunk the host no longer has:
   // load the current build, once — never in a loop.
   window.addEventListener('vite:preloadError', (event) => {
-    const key = 'hisabkitab_reloaded_for_chunk';
+    const key = 'kitnapay_reloaded_for_chunk';
     try {
       if (sessionStorage.getItem(key)) return;
       sessionStorage.setItem(key, '1');

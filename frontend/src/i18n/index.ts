@@ -9,9 +9,9 @@ import gu from './locales/gu.json';
 import hi from './locales/hi.json';
 import mr from './locales/mr.json';
 
-// Keeps the product's old name on purpose: renaming a stored key forgets every
-// user's language choice. A machine reads it; no person ever does.
-const LANGUAGE_KEY = 'biziq_language';
+// Renaming a stored key would forget every user's language, so the rename
+// carries the old name forward: see LEGACY_KEYS in utils/secureStorage.ts.
+const LANGUAGE_KEY = 'kitnapay_language';
 
 // Adding a language means adding a JSON file and one row here — no code changes
 // anywhere else in the app.

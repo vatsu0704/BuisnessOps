@@ -6,7 +6,7 @@
 # has the steps, and what must be set on the API afterwards (CORS_ORIGINS).
 services:
   - type: web
-    name: hisabkitab-web
+    name: kitnapay-web
     runtime: static
     # The whole repository, not just web/: the build reads the translations, the
     # permission matrix and the brand files straight out of frontend/src. It does

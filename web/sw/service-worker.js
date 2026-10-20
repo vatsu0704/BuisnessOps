@@ -2,7 +2,7 @@
 /// <reference lib="webworker" />
 
 /**
- * HisabKitab's service worker — what lets the web counter open with no
+ * KitnaPay's service worker — what lets the web counter open with no
  * connection at all, even after the browser has been closed (requirement 30).
  *
  * It keeps every file of one build — the page, each page's own chunk, the Hindi,
@@ -24,7 +24,7 @@
  */
 const BUILD = /* @hk-build */ { version: 'dev', files: /** @type {string[]} */ ([]) } /* @end */;
 
-const PREFIX = 'hisabkitab-shell-';
+const PREFIX = 'kitnapay-shell-';
 const CACHE = PREFIX + BUILD.version;
 const NAVIGATION_TIMEOUT_MS = 4000;
 

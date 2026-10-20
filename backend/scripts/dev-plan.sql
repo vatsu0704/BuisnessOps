@@ -1,5 +1,5 @@
 -- =============================================================================
--- HisabKitab — put a business into any subscription state, for testing (dev only)
+-- KitnaPay — put a business into any subscription state, for testing (dev only)
 -- =============================================================================
 --
 -- Requirement 28. A plan belongs to a BUSINESS, not to a person: this finds the

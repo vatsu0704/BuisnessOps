@@ -138,7 +138,7 @@ Two things worth knowing:
 | unique | (membershipId, branchId) | |
 
 ### `Invite`
-A pending invite for an email with no HisabKitab account yet — added alongside the Team screen so an owner can invite someone who hasn't signed up, not just someone who already has. Deliberately its own model rather than a `Membership` in `INVITED` status: `Membership.userId` is required (a membership is always for a real person). Signup checks for a `PENDING` match on the submitted email and, if found, joins that business with the stored role/branches instead of creating a new one — see `auth.service.js` and `invite.service.js`.
+A pending invite for an email with no KitnaPay account yet — added alongside the Team screen so an owner can invite someone who hasn't signed up, not just someone who already has. Deliberately its own model rather than a `Membership` in `INVITED` status: `Membership.userId` is required (a membership is always for a real person). Signup checks for a `PENDING` match on the submitted email and, if found, joins that business with the stored role/branches instead of creating a new one — see `auth.service.js` and `invite.service.js`.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -616,7 +616,7 @@ Two layers, per the NFR (no cross-tenant leakage under any condition):
 ## 11. Branch Operations — planned tables
 
 A second track running alongside the phase sequence, driven by
-[REQUIREMENTS.md](REQUIREMENTS.md), which turns HisabKitab from a product that
+[REQUIREMENTS.md](REQUIREMENTS.md), which turns KitnaPay from a product that
 analyses a business into one that runs it. **None of these tables exist yet** —
 they are listed here so the tables that do exist are designed not to need
 breaking changes when they arrive, which is the same reason sections 5–7 are

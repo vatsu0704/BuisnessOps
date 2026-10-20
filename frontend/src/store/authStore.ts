@@ -27,13 +27,14 @@ import { useCounterStore } from '@/store/counterStore';
 import { stopCounterSync } from '@/utils/counterSync';
 import { readJson, removeText, writeJson } from '@/utils/textStore';
 
-// Both keys keep the product's old name on purpose: renaming a stored key signs
-// every user out. A machine reads them; no person ever does.
-const TOKEN_KEY = 'biziq_token';
+// Renaming a stored key signs every user out, so the KitnaPay rename carries
+// the old names forward: see LEGACY_KEYS in utils/secureStorage.ts. A machine
+// reads these; no person ever does.
+const TOKEN_KEY = 'kitnapay_token';
 // Which business the switcher last settled on, remembered per device so the
 // app reopens where it was left rather than on whichever membership the API
 // happened to consider primary.
-const BUSINESS_KEY = 'biziq_business_id';
+const BUSINESS_KEY = 'kitnapay_business_id';
 
 /**
  * Reconcile the remembered choice against the memberships this session

@@ -20,7 +20,7 @@ const exclusive: CounterSyncDeps['exclusive'] =
   typeof navigator !== 'undefined' && navigator.locks
     ? async (businessId, drain) =>
         // Awaited here: the lock resolves with what the callback returns, a promise.
-        await navigator.locks.request(`hisabkitab-counter-sync:${businessId}`, { ifAvailable: true }, async (lock) => {
+        await navigator.locks.request(`kitnapay-counter-sync:${businessId}`, { ifAvailable: true }, async (lock) => {
           if (!lock) return 'busy' as const;
           await drain();
           return 'ran' as const;

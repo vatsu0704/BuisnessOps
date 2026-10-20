@@ -36,8 +36,8 @@ const OPEN_TIMEOUT_MS = 8000;
 const WRITE_TIMEOUT_MS = 10_000;
 const CHUNK_BYTES = 512;
 const IDLE_CLOSE_MS = 2 * 60 * 1000;
-const LOCK_NAME = 'hisabkitab-printer';
-const CHANNEL = 'hisabkitab-printer';
+const LOCK_NAME = 'kitnapay-printer';
+const CHANNEL = 'kitnapay-printer';
 
 /** Whether this browser can print to a Bluetooth printer, and if not, why. */
 export function serialSupport(): 'supported' | 'insecure' | 'unsupported' {

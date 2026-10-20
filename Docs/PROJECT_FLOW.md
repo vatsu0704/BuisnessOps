@@ -1,13 +1,13 @@
-# Project Flow — HisabKitab
+# Project Flow — KitnaPay
 
 This document translates the product requirements (PRD) into a buildable engineering sequence for this repo: **React Native/Expo (TypeScript) frontend + Node.js/Express backend + PostgreSQL via Prisma**. It exists so that at any point in the build, anyone can answer "what phase are we in, what does it depend on, and how do we know it's done."
 
-The product is named **HisabKitab** (2026-10-04), renamed from "BizIQ", which had itself replaced "BuisnessOps". Old names deliberately survive where a machine keys on them — the Android package `com.biziq.app` (until the Play release renames it, [PLAY_STORE_RELEASE.md](PLAY_STORE_RELEASE.md) A1), the EAS slug, the stored keys on every device, the repository folder and the Postgres database name `buisnessops` — and those are not typos to fix; `CLAUDE.md`'s *Naming* section has the full list.
+The product is named **KitnaPay** (2026-10-20), renamed from "HisabKitab", which had replaced "BizIQ", which had replaced "BuisnessOps". Old names deliberately survive where a machine keys on them — the Postgres databases `buisnessops*` (two destructive-operation guards match on them), the web's IndexedDB database `hisabkitab` (it holds unsent bills), the `// BizIQ:` comments inside `frontend/patches/`, the repository folder and the hosted `buisnessops.onrender.com` — and those are not typos to fix; `CLAUDE.md`'s *Naming* section has the full list, including the three carry-overs that move a stored key to its new name on first read.
 
 **Where the repo actually is:** Phases 0 and 1 (CSV path) are done. The app ships as an Expo **development build** rather than Expo Go, with its own icon, animated splash and a four-tab shell (Home, Staff, Reports, Settings). Phase 3's UI i18n is done ahead of order; the rest of Phase 3 and all of Phase 2 are not started. An **Attendance & Salary Slip module** was also added outside the phase sequence, on request — backend and frontend both done (see 4a below).
 
 **A second track is now running alongside this one.** *Branch Operations*
-(Section 13, driven by [REQUIREMENTS.md](REQUIREMENTS.md)) turns HisabKitab from a
+(Section 13, driven by [REQUIREMENTS.md](REQUIREMENTS.md)) turns KitnaPay from a
 product that analyses a business into one that runs it — counter billing,
 supply orders, expenses, net profit. Tasks 1-10 of that track have landed; Task 1
 amends Phase 0 (see the note under the Phase 0 exit criterion) and Task 8
@@ -104,7 +104,7 @@ Phases 0–4 are the MVP (PRD Phase 1). Phase 5 is PRD Phase 2. Phase 6 is PRD P
 
 Not part of the original PRD phase sequence — added on request, from a separate reference requirements doc. **Backend and frontend both done.**
 
-Rebuilt in a second pass (2026-09-20) after a Saral HRM quote (₹46,020/yr for 50 employees) and an eSSL biometric-device quote (₹80,500) raised the question of whether HisabKitab should do this job itself. That pass fixed three defects that made the first version unfit for a real business, and moved the feature out of Settings into the places it is actually used.
+Rebuilt in a second pass (2026-09-20) after a Saral HRM quote (₹46,020/yr for 50 employees) and an eSSL biometric-device quote (₹80,500) raised the question of whether KitnaPay should do this job itself. That pass fixed three defects that made the first version unfit for a real business, and moved the feature out of Settings into the places it is actually used.
 
 **The three defects the second pass fixed:**
 
@@ -307,7 +307,7 @@ What the Play Store requires before it will take an upload, tracked step by step
 | `npm run build:play` — the signed `.aab`, with its address, key, Firebase file and CPU architectures checked | ✅ done |
 | Play listing icon and feature graphic (`frontend/store-listing/`) | ✅ done |
 | Firebase credential accepted as inline JSON, for hosts without secret files | ✅ done |
-| Package rename `com.biziq.app` → `com.hisabkitab.app` | ⏸ deferred — needs the new Android app registered in Firebase first |
+| Package rename `com.biziq.app` → `com.kitnapay.app` | ✅ done 2026-10-20 with the KitnaPay rebrand; Firebase must register the new app |
 | Company registration, D-U-N-S, domain, Play Console organization account | ⏳ the owner's, in progress |
 
 Account deletion is a store requirement rather than a Branch Operations one, so it lives here and not in `REQUIREMENTS.md`. Its rules: a business owned alone goes with the account; a business that still has other active members stops the deletion until they are removed; records an employer keeps about someone (attendance, payslips) stay with the employer; the user row is anonymised rather than deleted, because other businesses' audit trails point at it (see `database-table.md`).
@@ -316,11 +316,11 @@ Account deletion is a store requirement rather than a Branch Operations one, so 
 
 ## 11. Immediate Next Steps (from current repo state)
 
-Done and verified: Phases 0 and 1's CSV path (schema, migrations, tests, CI, Postman collection); the HisabKitab brand (one traced drawing of the mark rendered into the icon, adaptive icon, splash and notification icon, and an animated splash that draws it in); a designed and animated Login/Signup/Home; a four-tab app shell; Phase 3's UI i18n in four languages; the Attendance & Salary Slip module (4a); and Home's stat tiles now reading real sales figures instead of just counting branches.
+Done and verified: Phases 0 and 1's CSV path (schema, migrations, tests, CI, Postman collection); the KitnaPay brand (one traced drawing of the mark rendered into the icon, adaptive icon, splash and notification icon, and an animated splash that draws it in); a designed and animated Login/Signup/Home; a four-tab app shell; Phase 3's UI i18n in four languages; the Attendance & Salary Slip module (4a); and Home's stat tiles now reading real sales figures instead of just counting branches.
 
 An onboarding path now exists end to end: register → add a branch → upload sales data → invite the team. Branch creation, CSV/Excel upload, and team invites are all reachable from Home/Settings as modal screens, so nothing requires Postman to use.
 
-**Team & permissions**, reachable from Settings (OWNER/ADMIN only): `GET /memberships` lists the business's team with each person's role and granted branches. The invite screen (`POST /memberships`) now handles both cases in one call — if the email already has a HisabKitab account, they join immediately; if not, it creates a `PENDING Invite` (own model, not a `Membership` — see `database-table.md`) that's claimed automatically the moment that email signs up, via a public `GET /invites/lookup` the signup screen checks as you type. An invited signup joins the inviting business with the role/branches already chosen instead of creating a new business of their own, which is also what fixes the multi-membership bug below for this path. For MANAGER/STAFF invites, the screen requires picking at least one branch before it lets you submit, granted immediately (existing account) or stored on the invite (pending, granted at claim time).
+**Team & permissions**, reachable from Settings (OWNER/ADMIN only): `GET /memberships` lists the business's team with each person's role and granted branches. The invite screen (`POST /memberships`) now handles both cases in one call — if the email already has a KitnaPay account, they join immediately; if not, it creates a `PENDING Invite` (own model, not a `Membership` — see `database-table.md`) that's claimed automatically the moment that email signs up, via a public `GET /invites/lookup` the signup screen checks as you type. An invited signup joins the inviting business with the role/branches already chosen instead of creating a new business of their own, which is also what fixes the multi-membership bug below for this path. For MANAGER/STAFF invites, the screen requires picking at least one branch before it lets you submit, granted immediately (existing account) or stored on the invite (pending, granted at claim time).
 
 **Access control now goes both ways.** Granting was the only direction that existed: an invite could be sent but never withdrawn, and a branch grant never narrowed.
 
@@ -391,7 +391,7 @@ it live*):
 
 **Google Play** (Section 10, 7a; `PLAY_STORE_RELEASE.md`):
 
-- [ ] A1 — the package rename `com.biziq.app` → `com.hisabkitab.app`, once the new
+- [x] A1 — the package rename to `com.kitnapay.app`, done 2026-10-20. The new
   Android app is registered in Firebase. Permanent once published.
 - [ ] The on-device edge-to-edge design pass, with gesture **and** 3-button navigation.
 - [ ] Part B, the owner's steps B1–B11: company registration, D-U-N-S, domain and
@@ -471,7 +471,7 @@ Sections 13–15 marked ✅.*
 ## 13. Branch Operations (a separate track, started 2026-09-23)
 
 A second track, running alongside the phase sequence above rather than inside
-it. Where Phases 0–7 make HisabKitab *analyse* a business, this track makes it *run*
+it. Where Phases 0–7 make KitnaPay *analyse* a business, this track makes it *run*
 one: counter billing with tokens, branch-to-warehouse and vendor supply orders
 paid by UPI QR — by the branch, or by accounts for company-operated branches — branch expense logging, and net profit per branch per
 month across several businesses in one account.
@@ -1975,7 +1975,7 @@ been deployed.
 - **One addition, the map link.** A laptop's location is usually a Wi-Fi fix good to
   tens of metres, so *See it on the map* opens the typed point in Google Maps before
   a radius is measured from it. When the browser blocks location the page says how
-  to allow it, rather than the app's "allow HisabKitab" sentence.
+  to allow it, rather than the app's "allow KitnaPay" sentence.
 - **Workweek & holidays**: the weekly off as chips that save on click (the seventh
   is disabled once six are off, with the reason under it), *Days with no record*,
   adding a holiday, and the year's list. Two columns on a wide window.
@@ -2121,7 +2121,7 @@ Bluetooth printer where the browser allows it.
   tabs never issue the same token, and a sale is on disk before its token shows. One tab
   sends at a time (a Web Lock); the others hear of changes on a BroadcastChannel. A
   browser that keeps no data takes no bill. The session is kept like the app's
-  (`hisabkitab_session_cache`), and a **service worker** keeps the whole build, so the
+  (`kitnapay_session_cache`), and a **service worker** keeps the whole build, so the
   page opens with no connection after a browser restart — network first for pages, the
   API never cached, `/sw.js` never cached (`render.yaml`), a kill switch
   (`VITE_SERVICE_WORKER=off`). No new dependency for any of it.
@@ -2578,7 +2578,7 @@ web tests, the translation, permission, shared-import and prose gates.
 ### Stage 6 — The web's own calendar ✅
 
 Stage 4's day cursor put a date field on the counter, and Vatsal opened it: the
-panel that dropped down was Chrome's, not HisabKitab's. Every web date came from
+panel that dropped down was Chrome's, not KitnaPay's. Every web date came from
 `<input type="date">`, which carries the browser's own calendar — a different
 panel in Chrome, Firefox and Safari, none of them reachable from `tokens.css`
 (`::-webkit-calendar-picker-indicator` styles the little icon and nothing behind

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# The HisabKitab API as a deployable image.
+# The KitnaPay API as a deployable image.
 #
 # Two things about this project shape it, and neither is obvious from the
 # outside:

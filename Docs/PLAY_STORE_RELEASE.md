@@ -1,4 +1,4 @@
-# Publishing HisabKitab on Google Play
+# Publishing KitnaPay on Google Play
 
 This is the whole route from "the app runs on my phone" to "anyone can install it
 from the Play Store". It covers two kinds of work:
@@ -23,7 +23,7 @@ Three Google rules blocked an upload. All three are now met in code
 and Part B.
 
 1. **Target Android 16 (API level 36).** Since 31 August 2026, every new app and
-   every update must target it. HisabKitab was on Expo SDK 51 / React Native 0.74,
+   every update must target it. KitnaPay was on Expo SDK 51 / React Native 0.74,
    which targets API 34. **Done:** upgraded to Expo SDK 54 / React Native 0.81 (A2).
 2. **Account deletion.** Any app that lets people sign up must offer it **inside
    the app**, plus a **public web page** where someone can ask for it without the
@@ -35,7 +35,7 @@ and Part B.
 Two more things become permanent the moment the app is published:
 
 - **The package name.** It can never change afterwards. It moves from
-  `com.biziq.app` to `com.hisabkitab.app` before the first upload (A1).
+  `com.biziq.app` to `com.kitnapay.app`, done at the KitnaPay rebrand (A1).
 - **The API address compiled into the app.** `EXPO_PUBLIC_API_URL` is fixed at
   build time. If the published app points at `buisnessops.onrender.com`, moving
   off Render means shipping an app update and waiting for every phone to install
@@ -49,7 +49,7 @@ Two more things become permanent the moment the app is published:
 
 | Question | Decision |
 | --- | --- |
-| Package name | `com.hisabkitab.app` (Android and iOS) — **deferred** until the new app is registered in Firebase (2026-10-06) |
+| Package name | `com.kitnapay.app` (Android and iOS) — renamed 2026-10-20; needs the matching Firebase app registered before a build |
 | Play developer account | **Organization** — so the 12-testers-for-14-days rule for new personal accounts does not apply |
 | Where the release build is made | **This laptop, with Gradle** — free, no EAS subscription |
 | An owner deletes their account | If any business they own still has other active members, refuse and ask them to remove the team first. If they are alone, delete the account, the business and all its data |
@@ -64,7 +64,7 @@ Two more things become permanent the moment the app is published:
 
 | # | Work | Status |
 | --- | --- | --- |
-| A1 | Rename the package to `com.hisabkitab.app` | **Deferred** — waiting for the new Android app in Firebase (B4) |
+| A1 | Rename the package to `com.kitnapay.app` | ✅ done 2026-10-20 — Firebase must now register `com.kitnapay.app` (B4) |
 | A2 | Upgrade Expo SDK 51 → 54 (targets API 36) | **Done** — needs a fresh dev build and the on-device design pass |
 | A3 | Account deletion — in the app and on the API | **Done** |
 | A4 | Privacy policy and delete-account web pages | **Done** — operator details pending the company |
@@ -78,15 +78,15 @@ Two more things become permanent the moment the app is published:
 What it will take, when B4 is done:
 
 - `frontend/app.json`: `android.package` and `ios.bundleIdentifier` become
-  `com.hisabkitab.app`.
+  `com.kitnapay.app`.
 - **Not** renamed, on purpose (see *Naming* in `CLAUDE.md`): the EAS `slug`
-  `biziq`, the SecureStore keys `biziq_*`, the npm package name.
+  the SecureStore keys (carried over on first read), the npm package names.
 - The new `google-services.json` from Firebase replaces the old one. Without it
   the Android build fails outright — Google's Gradle plugin finds no entry for the
   new package — and `npm run build:play` refuses before Gradle starts.
 - `android/` regenerated (`expo prebuild --clean`, then restore the machine-local
   files `CLAUDE.md` lists).
-- The old `com.biziq.app` build on test phones becomes a separate app. Uninstall
+- The old `com.kitnapay.app` build on test phones becomes a separate app. Uninstall
   it.
 - `CLAUDE.md`'s *Naming* section: the package stops being a name that "keeps the
   old name on purpose" and becomes a published, permanent one.
@@ -303,10 +303,10 @@ Whichever you pick:
 This needs no company and takes five minutes, and it is what unblocks A1.
 
 - [ ] In the Firebase console, in the **same** project, add an Android app with
-      package `com.hisabkitab.app`.
+      package `com.kitnapay.app`.
 - [ ] Download its `google-services.json` into `frontend/`, replacing the old
       one — then ask for A1. The old file must not be replaced before A1 is
-      done: until then the app's package is still `com.biziq.app`, and the build
+      done: until then the app's package is still `com.kitnapay.app`, and the build
       looks the old one up.
 - [ ] Nothing changes on the backend — `firebase-service-account.json` belongs
       to the project, not to the app.
@@ -333,7 +333,7 @@ This needs no company and takes five minutes, and it is what unblocks A1.
 
 ### B7. Create the app and fill in "App content"
 
-- [ ] **Create app:** name "HisabKitab", type App, Free.
+- [ ] **Create app:** name "KitnaPay", type App, Free.
 - [ ] **Privacy policy:** `https://api.yourdomain.in/privacy`
 - [ ] **App access.** Everything is behind a login, so the reviewer needs a
       working account:
@@ -391,7 +391,7 @@ email provider is a processor, like the hosting company below.
 
 ### B9. Store listing
 
-- [ ] **App name:** HisabKitab (up to 30 characters).
+- [ ] **App name:** KitnaPay (up to 30 characters).
 - [ ] **Short description:** up to 80 characters.
 - [ ] **Full description:** up to 4,000 characters.
 - [ ] **App icon:** `frontend/store-listing/play-icon-512.png` (A7).
@@ -478,7 +478,7 @@ Checked on 2026-10-07/10, on this machine:
   - account deletion behaves correctly in every case (Flow 21).
 
 To repeat the package-level checks after A1, the regenerated `android/` project
-should also show package `com.hisabkitab.app`.
+should also show package `com.kitnapay.app`.
 
 ---
 
