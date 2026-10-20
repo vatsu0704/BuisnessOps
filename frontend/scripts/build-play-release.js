@@ -17,8 +17,10 @@
  *    file that is not there, the release is signed with the debug key — and
  *    Play refuses a debug-signed upload only after you have filled in the form.
  *  - **The Firebase file.** `google-services.json` must belong to the package
- *    in `app.json`. After a package rename the old file still builds, and no
- *    push notification ever arrives.
+ *    in `app.json`. Gradle does refuse a mismatch, but eighteen seconds in and
+ *    from a task nobody has heard of, so `scripts/check-firebase-package.js`
+ *    says it first and says what to do — and every Android build runs it, not
+ *    only this one.
  *  - **The CPU architectures.** Day-to-day debug builds are arm64-only (see
  *    plugins/withAndroidArchitectures.js); a Play bundle must carry every ABI
  *    real phones use. Passed to Gradle as `-P`, so it does not touch the
@@ -34,6 +36,7 @@
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { checkFirebasePackage } = require('./check-firebase-package');
 
 const FRONTEND = path.join(__dirname, '..');
 const ANDROID = path.join(FRONTEND, 'android');
@@ -109,18 +112,8 @@ function checkKeystore() {
 }
 
 function checkFirebase(androidPackage) {
-  const file = path.join(FRONTEND, 'google-services.json');
-  if (!fs.existsSync(file)) {
-    refuse('frontend/google-services.json is missing — no push notification would ever arrive. See Docs/FIREBASE_SETUP.md.');
-  }
-  const json = JSON.parse(fs.readFileSync(file, 'utf8'));
-  const packages = (json.client ?? []).map((c) => c.client_info?.android_client_info?.package_name);
-  if (!packages.includes(androidPackage)) {
-    refuse(
-      `google-services.json is for ${packages.join(', ') || 'no package'}, not ${androidPackage}. ` +
-        'Download the file for this package from the Firebase console.'
-    );
-  }
+  const problems = checkFirebasePackage(androidPackage);
+  if (problems.length) refuse(problems.join(' '));
 }
 
 function run(command, args, options) {

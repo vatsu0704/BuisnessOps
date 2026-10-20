@@ -14,7 +14,7 @@
     "lint:permissions": "node scripts/check-permission-parity.js",
     "adb:reverse": "node scripts/adb-reverse.js",
     "prestart": "node scripts/adb-reverse.js",
-    "preandroid": "node scripts/adb-reverse.js",
+    "preandroid": "node scripts/check-firebase-package.js && node scripts/adb-reverse.js",
     "lint:backend-i18n": "node scripts/check-backend-i18n-parity.js",
     "lint:notification-prose": "node scripts/check-notification-prose.js",
     "lint:receipt-prose": "node scripts/check-receipt-prose.js",

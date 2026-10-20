@@ -825,7 +825,14 @@ The app ships as a **development build** (`expo-dev-client`), not Expo Go.
 - **`frontend/google-services.json` must exist before a build**, or the app has
   no Firebase config compiled into it and no push will ever arrive — the same
   build-time trap as `EXPO_PUBLIC_API_URL`, and just as silent. It is gitignored;
-  `Docs/FIREBASE_SETUP.md` is how to produce it. **On EAS that gitignore is the
+  `Docs/FIREBASE_SETUP.md` is how to produce it. **And it must be the file issued
+  for `expo.android.package`**: Gradle's Google Services plugin matches the name
+  exactly and fails with `No matching client found for package name …` eighteen
+  seconds in, from a task nobody has heard of, which is what a package rename
+  feels like from the outside. `scripts/check-firebase-package.js` runs on
+  `preandroid` and from `build:play` — one copy of the rule, before Gradle starts
+  — and it checks the copy inside `android/app/` too, because replacing the root
+  file does nothing until `expo prebuild` has carried it across. **On EAS that gitignore is the
   problem**: EAS Build uploads only git-tracked files, so prebuild there fails
   outright with "google-services.json is missing". `frontend/app.config.js`
   exists solely to take the path from a `GOOGLE_SERVICES_JSON` file-type EAS
